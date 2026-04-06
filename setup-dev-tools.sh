@@ -3634,8 +3634,10 @@ else
             "title": "cyan"
         },
         "bar": {
-            "charElapsed": "█",
-            "charTotal": "░",
+            "char": {
+                "elapsed": "█",
+                "total": "░"
+            },
             "width": 20
         }
     },
