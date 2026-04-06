@@ -6633,12 +6633,13 @@ if type brew &>/dev/null; then
     FPATH="$(brew --prefix)/share/zsh/site-functions:${FPATH}"
 fi
 autoload -Uz compinit && compinit -C
+# Enable bash completion compatibility (needed for aws_completer)
+autoload -Uz bashcompinit && bashcompinit
 # kubectl completion
 [[ -x "$(command -v kubectl)" ]] && source <(kubectl completion zsh)
-# docker completion (loaded from brew site-functions if installed)
 # gh completion
 [[ -x "$(command -v gh)" ]] && source <(gh completion -s zsh)
-# aws completion
+# aws completion (uses bash-style complete, needs bashcompinit above)
 [[ -x "$(command -v aws_completer)" ]] && complete -C "$(which aws_completer)" aws
 
 # -- Modern Tool Aliases (replacements for built-in commands) -----------------
@@ -6743,27 +6744,8 @@ if [[ "$TERM_PROGRAM" != "vscode" ]] && [[ -z "$INSIDE_EMACS" ]]; then
     if command -v fastfetch &>/dev/null; then
         fastfetch --logo small 2>/dev/null
     fi
-    # Daily greeting with date and a random dev tip
     echo ""
-    printf "\033[0;35m  %s\033[0m  " "$(date '+%A, %B %d %Y  •  %H:%M')"
-    TIPS=(
-        "💡 git stash -u  — stash untracked files too"
-        "💡 fd -e ts -x wc -l  — count lines in every .ts file"
-        "💡 rg TODO --glob '!node_modules'  — search TODOs"
-        "💡 just --list  — see all task runner recipes"
-        "💡 gh pr create --web  — open PR in browser"
-        "💡 btop  — beautiful system monitor"
-        "💡 yazi  — terminal file manager with preview"
-        "💡 oha -n 500 http://localhost:3000  — quick load test"
-        "💡 sd 'old' 'new' file.ts  — fast find & replace"
-        "💡 dust ~/Code  — visual disk usage of your projects"
-        "💡 dog example.com AAAA  — colorized DNS lookup"
-        "💡 hyperfine 'cmd1' 'cmd2'  — benchmark two commands"
-        "💡 fx data.json  — interactive JSON explorer"
-        "💡 gj ports  — list all listening ports"
-        "💡 hc  — quick system health check"
-    )
-    echo "${TIPS[$((RANDOM % ${#TIPS[@]}))]}"
+    printf "\033[0;35m  %s\033[0m\n" "$(date '+%A, %B %d %Y  •  %H:%M')"
     echo ""
 fi
 
