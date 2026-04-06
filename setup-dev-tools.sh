@@ -6584,10 +6584,11 @@ fi
 
 # GNU coreutils (use Linux-compatible versions by default)
 if type brew &>/dev/null; then
-    for pkg in coreutils gnu-sed gnu-tar gawk findutils; do
-        local gnubin="$(brew --prefix "$pkg" 2>/dev/null)/libexec/gnubin"
-        [[ -d "$gnubin" ]] && export PATH="$gnubin:$PATH"
+    for _pkg in coreutils gnu-sed gnu-tar gawk findutils; do
+        _gnubin="$(brew --prefix "$_pkg" 2>/dev/null)/libexec/gnubin"
+        [[ -d "$_gnubin" ]] && export PATH="$_gnubin:$PATH"
     done
+    unset _pkg _gnubin
 fi
 
 # mise (universal version manager — Node, Python, Go, Ruby, etc.)
@@ -6636,9 +6637,10 @@ export FZF_ALT_C_OPTS="--preview 'eza --tree --icons --level=2 --color=always {}
 
 # zsh plugins
 if type brew &>/dev/null; then
-    local brew_prefix="$(brew --prefix)"
-    [[ -f "$brew_prefix/share/zsh-autosuggestions/zsh-autosuggestions.zsh" ]] && source "$brew_prefix/share/zsh-autosuggestions/zsh-autosuggestions.zsh"
-    [[ -f "$brew_prefix/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh" ]] && source "$brew_prefix/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh"
+    _brew_prefix="$(brew --prefix)"
+    [[ -f "$_brew_prefix/share/zsh-autosuggestions/zsh-autosuggestions.zsh" ]] && source "$_brew_prefix/share/zsh-autosuggestions/zsh-autosuggestions.zsh"
+    [[ -f "$_brew_prefix/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh" ]] && source "$_brew_prefix/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh"
+    unset _brew_prefix
 fi
 
 # -- Completions (docker, kubectl, aws, gh) -----------------------------------
