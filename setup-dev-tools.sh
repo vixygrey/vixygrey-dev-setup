@@ -3208,29 +3208,6 @@ defaults write com.apple.menuextra.battery ShowPercent -string "YES" 2>/dev/null
 defaults write NSGlobalDomain AppleHighlightColor -string "0.741176 0.576471 0.976471 Purple"
 success "Misc macOS defaults configured"
 
-# -- Wallpaper --
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-WALLPAPER_SRC="$SCRIPT_DIR/assets/wolf-wallpaper.jpg"
-WALLPAPER_DEST="$HOME/Media/wallpapers/wolf-wallpaper.jpg"
-if [[ -f "$WALLPAPER_SRC" ]]; then
-    mkdir -p "$HOME/Media/wallpapers"
-    cp -f "$WALLPAPER_SRC" "$WALLPAPER_DEST"
-    if [[ "$DRY_RUN" != "true" ]]; then
-        # Set wallpaper on all desktops (macOS Sonoma+ uses desktoppr or osascript)
-        if command -v osascript &>/dev/null; then
-            osascript -e "tell application \"System Events\" to tell every desktop to set picture to POSIX file \"$WALLPAPER_DEST\"" 2>/dev/null || true
-        fi
-        # Also set via desktoppr if available (more reliable on Sonoma+)
-        if command -v desktoppr &>/dev/null; then
-            desktoppr "$WALLPAPER_DEST" 2>/dev/null || true
-        fi
-        success "Wallpaper set to wolf-wallpaper.jpg"
-    else
-        info "[DRY RUN] Would set wallpaper to wolf-wallpaper.jpg"
-    fi
-else
-    warn "Wallpaper not found at $WALLPAPER_SRC — skipping"
-fi
 
 # -- Screensaver (Evangelion Clock) --
 SCREENSAVER_SRC_DIR="$SCRIPT_DIR/assets/evangelion-clock-screensaver-master"
