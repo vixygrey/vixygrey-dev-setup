@@ -84,8 +84,8 @@ progress() {
     local bar_len=$((pct / 2))
     local bar=$(printf '█%.0s' $(seq 1 $bar_len 2>/dev/null) 2>/dev/null || echo "")
     local spaces=$(printf ' %.0s' $(seq 1 $((50 - bar_len)) 2>/dev/null) 2>/dev/null || echo "")
-    echo -ne "\r${DIM}[${CYAN}${bar}${DIM}${spaces}] ${pct}% (${INSTALL_CURRENT}/${INSTALL_TOTAL})${NC}  "
-    echo ""
+    # \033[2K clears the entire line, \r returns to start
+    printf "\033[2K\r${DIM}[${CYAN}${bar}${DIM}${spaces}] ${pct}% (${INSTALL_CURRENT}/${INSTALL_TOTAL})${NC}\n"
 }
 
 # -- State flags --------------------------------------------------------------
@@ -768,6 +768,7 @@ brew_install "cmake" "CMake"
 brew_install "pkg-config" "pkg-config"
 
 # Rust (rustup manages the toolchain — installs rustc, cargo, etc.)
+progress
 if ! installed rustup; then
     info "Installing Rust via rustup..."
     if [[ "$DRY_RUN" == "true" ]]; then
@@ -788,6 +789,7 @@ brew_cask_install "orbstack" "OrbStack (Docker runtime — faster, 2-5x less mem
 brew_install "oven-sh/bun/bun" "bun (fast JS runtime/bundler/test runner)"
 
 # pnpm
+progress
 if ! installed pnpm; then
     info "Installing pnpm..."
     curl -fsSL https://get.pnpm.io/install.sh | sh -
@@ -866,11 +868,15 @@ brew_install "cfn-lint" "CloudFormation Linter"
 brew_cask_install "session-manager-plugin" "AWS SSM Session Manager Plugin"
 
 # Granted (multi-account credential switching)
+progress
 if ! installed granted && ! installed assume; then
     info "Installing Granted (AWS SSO credential switching)..."
-    brew tap common-fate/granted
-    brew install granted
-    success "Granted installed"
+    brew tap common-fate/granted >> "$LOG_FILE" 2>&1 || true
+    if brew install granted >> "$LOG_FILE" 2>&1; then
+        success "Granted installed"
+    else
+        error "Failed to install Granted"
+    fi
 else
     warn "Granted already installed"
 fi
@@ -912,6 +918,7 @@ brew_install "semgrep" "semgrep (static analysis — bugs & security issues)"
 brew_install "cosign" "cosign (sign & verify container images)"
 
 # snyk CLI
+progress
 if ! installed snyk; then
     info "Installing Snyk CLI..."
     brew tap snyk/tap >> "$LOG_FILE" 2>&1 || true
@@ -1146,6 +1153,7 @@ banner "Kubernetes & GitHub Extras"
 brew_install "stern" "stern (multi-pod log tailing for k8s)"
 
 # gh-dash (GitHub dashboard extension)
+progress
 if installed gh; then
     if gh extension list 2>/dev/null | grep -q "gh-dash"; then
         warn "gh-dash already installed"
@@ -1165,6 +1173,7 @@ banner "Database & Data"
 brew_install "pgcli" "pgcli (auto-completing Postgres CLI)"
 brew_install "mycli" "mycli (auto-completing MySQL CLI)"
 # usql — not in Homebrew, install via Go
+progress
 if installed go; then
     if command -v usql &>/dev/null; then
         warn "usql (universal SQL CLI) already installed"
@@ -1247,6 +1256,7 @@ if installed npm; then
     npm_global_install "@anthropic-ai/claude-code" "Claude Code (AI-assisted coding in terminal)"
 fi
 # GitHub Copilot CLI (installed as gh extension)
+progress
 if installed gh; then
     if gh extension list 2>/dev/null | grep -q "gh-copilot"; then
         warn "GitHub Copilot CLI already installed"
@@ -6573,26 +6583,27 @@ fi
 # -- Tool Initialization ------------------------------------------------------
 
 # GNU coreutils (use Linux-compatible versions by default)
-export PATH="$(brew --prefix coreutils)/libexec/gnubin:$PATH"
-export PATH="$(brew --prefix gnu-sed)/libexec/gnubin:$PATH"
-export PATH="$(brew --prefix gnu-tar)/libexec/gnubin:$PATH"
-export PATH="$(brew --prefix gawk)/libexec/gnubin:$PATH"
-export PATH="$(brew --prefix findutils)/libexec/gnubin:$PATH"
+if type brew &>/dev/null; then
+    for pkg in coreutils gnu-sed gnu-tar gawk findutils; do
+        local gnubin="$(brew --prefix "$pkg" 2>/dev/null)/libexec/gnubin"
+        [[ -d "$gnubin" ]] && export PATH="$gnubin:$PATH"
+    done
+fi
 
 # mise (universal version manager — Node, Python, Go, Ruby, etc.)
-eval "$(mise activate zsh)"
+command -v mise &>/dev/null && eval "$(mise activate zsh)"
 
 # direnv
-eval "$(direnv hook zsh)"
+command -v direnv &>/dev/null && eval "$(direnv hook zsh)"
 
 # zoxide
-eval "$(zoxide init zsh)"
+command -v zoxide &>/dev/null && eval "$(zoxide init zsh)"
 
 # starship prompt
-eval "$(starship init zsh)"
+command -v starship &>/dev/null && eval "$(starship init zsh)"
 
 # atuin (replaces ctrl-r shell history)
-eval "$(atuin init zsh)"
+command -v atuin &>/dev/null && eval "$(atuin init zsh)"
 
 # fzf
 [ -f ~/.fzf.zsh ] && source ~/.fzf.zsh
@@ -6624,8 +6635,11 @@ export FZF_ALT_C_COMMAND='fd --type d --hidden --follow --exclude .git'
 export FZF_ALT_C_OPTS="--preview 'eza --tree --icons --level=2 --color=always {}' --preview-window='right:50%:wrap'"
 
 # zsh plugins
-[[ -f "$(brew --prefix)/share/zsh-autosuggestions/zsh-autosuggestions.zsh" ]] && source "$(brew --prefix)/share/zsh-autosuggestions/zsh-autosuggestions.zsh"
-[[ -f "$(brew --prefix)/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh" ]] && source "$(brew --prefix)/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh"
+if type brew &>/dev/null; then
+    local brew_prefix="$(brew --prefix)"
+    [[ -f "$brew_prefix/share/zsh-autosuggestions/zsh-autosuggestions.zsh" ]] && source "$brew_prefix/share/zsh-autosuggestions/zsh-autosuggestions.zsh"
+    [[ -f "$brew_prefix/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh" ]] && source "$brew_prefix/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh"
+fi
 
 # -- Completions (docker, kubectl, aws, gh) -----------------------------------
 # Load brew-installed completions

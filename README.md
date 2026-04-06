@@ -173,7 +173,6 @@ All scripts share the same flags:
 | **cosign** | Sign and verify container images and artifacts |
 | **snyk** | Dependency vulnerability scanning for npm, pip, Go, etc. |
 | **mkcert** | Create locally-trusted HTTPS certificates for development |
-| **wireshark** | Network protocol analyzer -- deep packet inspection GUI |
 | **ssh-audit** | Audit SSH server and client configuration for security |
 | **clamav** | Open-source antivirus engine -- on-demand malware scanning |
 | **BlockBlock** | Alerts when software installs persistent components (launch daemons) |
@@ -423,14 +422,12 @@ Preview files in Finder by pressing spacebar.
 |-----|-------------|
 | **Pearcleaner** | Open-source deep app uninstaller -- finds leftover files and preferences |
 | **Stats** | Free menubar system monitor -- CPU, RAM, network, disk, battery |
-| **Ice** | Open-source menubar icon manager (Bartender replacement) |
 | **Amphetamine** | Prevent Mac from sleeping during presentations or long tasks |
 | **LuLu** | Free open-source outbound firewall -- see what phones home |
 | **Proton VPN** | Privacy-focused VPN |
 | **Proton Mail** | End-to-end encrypted email client |
 | **Proton Pass** | Password manager with end-to-end encryption |
 | **Proton Drive** | Encrypted cloud storage |
-| **TopNotch** | Hides MacBook notch with a black menu bar |
 
 ---
 
@@ -442,7 +439,7 @@ Preview files in Finder by pressing spacebar.
 | **Notion Calendar** | Calendar app with Notion integration |
 | **Notion Mail** | Email client with Notion integration |
 | **Shottr** | Free screenshot tool with pixel measuring, OCR, and color picker |
-| **Espanso** | Open-source text expander -- snippets, date macros, code templates |
+| **Claude** | AI assistant |
 | **Skim** | Lightweight PDF reader with annotations -- faster than Preview |
 | **Transmit** | Premium SFTP/S3 file transfer client -- fast, dual-pane |
 
@@ -463,7 +460,6 @@ Preview files in Finder by pressing spacebar.
 | App | Description |
 |-----|-------------|
 | **Firefox** | Privacy-focused browser for cross-browser testing |
-| **Arc** | Modern Chromium browser with spaces, tabs management, and split view |
 | **Brave** | Privacy-focused Chromium browser with built-in ad blocking |
 
 ---
@@ -477,7 +473,6 @@ Preview files in Finder by pressing spacebar.
 | **Gifski** | Convert video clips to high-quality animated GIFs |
 | **Keka** | File archiver and compressor |
 | **LibreOffice** | Free office suite -- documents, spreadsheets, presentations |
-| **Hand Mirror** | Quick webcam check from menubar before meetings |
 
 ---
 
@@ -487,7 +482,6 @@ Preview files in Finder by pressing spacebar.
 |-----|-------------|
 | **Google Drive** | Cloud storage with Docs, Sheets, and Slides integration |
 | **rclone** | Sync files to any cloud -- Google Drive, S3, Dropbox, etc. |
-| **Syncthing** | Real-time file sync between devices -- no cloud middleman |
 | **borg** | Deduplicated encrypted backups -- better than Time Machine for offsite |
 | **borgmatic** | Automated borg backup scheduling and configuration |
 
@@ -820,7 +814,6 @@ The script generates config files with sensible defaults:
 | `~/.gemrc` | Ruby | No docs on gem install |
 | `~/Library/.../Code/User/settings.json` | VS Code | Dracula, JetBrains Mono, format on save, 27 extensions, file nesting, bracket pair colorization, per-language formatters (ruff for Python, go for Go, rust-analyzer for Rust) |
 | `~/Library/.../Code/User/keybindings.json` | VS Code | Custom keyboard shortcuts |
-| `~/Library/.../espanso/match/base.yml` | Espanso | Date/time macros, UUID generation, lorem ipsum, regex patterns (email/URL/IP/phone), dev snippets, Markdown blocks, git commands, PR/meeting/bug templates, arrow symbols |
 | `~/Library/.../lazygit/config.yml` | lazygit | Dracula theme, delta pager, nerd fonts, auto-fetch, VS Code editor, rounded borders |
 | `~/Library/.../k9s/skins/dracula.yaml` | k9s | Full Dracula skin |
 
@@ -978,24 +971,6 @@ All aliases are auto-written to `~/.zshrc`:
 
 ---
 
-## Espanso Text Expansion
-
-Trigger categories configured in Espanso:
-
-| Category | Triggers | Examples |
-|----------|----------|---------|
-| **Date/Time** | `;date`, `;time`, `;datetime`, `;iso` | 2026-04-06, 14:30, ISO 8601 |
-| **UUID** | `;uuid` | Generates a random UUID |
-| **Lorem Ipsum** | `;lorem`, `;loremshort` | Full paragraph or single sentence |
-| **Regex Patterns** | `;rxemail`, `;rxurl`, `;rxip`, `;rxphone` | Common validation patterns |
-| **Dev Snippets** | `;clog`, `;todo`, `;fixme` | `console.log('')`, `// TODO:`, `// FIXME:` |
-| **Markdown** | `;cb`, `;cbt`, `;cbp`, `;cbb`, `;table` | Code blocks (plain, TS, Python, Bash), table |
-| **Git** | `;gcm`, `;gca`, `;gpush` | Commit, add+commit, push current branch |
-| **Templates** | `;prdesc`, `;meeting`, `;bug` | PR description, meeting notes, bug report |
-| **Symbols** | `;arrow`, `;check`, `;cross`, `;bullet`, `;shrug`, `;rarr`, `;larr`, `;uarr`, `;darr`, `;mdash`, `;deg`, `;tm`, `;copy` | Arrows, checkmarks, special characters |
-
----
-
 ## Chrome Extensions (manual install)
 
 | Extension | Purpose |
@@ -1099,7 +1074,6 @@ This prints a full guide for removing all installed tools, configs, and settings
 | Transmit | **WinSCP** |
 | LuLu (firewall) | **simplewall** |
 | Quick Look plugins | **QuickLook** (winget) |
-| Ice (menubar) | N/A (taskbar built-in) |
 | Amphetamine | PowerToys Awake (built-in) |
 | entr (file watcher) | **watchexec** |
 | tmux | N/A (use Windows Terminal panes) |
@@ -1230,7 +1204,7 @@ These 150+ CLI tools and configs are installed on every platform:
 
 **IaC:** opentofu, tflint, infracost
 
-**Security:** detect-secrets, gitleaks, trivy, semgrep, cosign, snyk, mkcert, wireshark, ssh-audit, clamav, age, sops
+**Security:** detect-secrets, gitleaks, trivy, semgrep, cosign, snyk, mkcert, ssh-audit, clamav, age, sops
 
 **Data:** yq, miller, csvkit, pandoc, imagemagick, ffmpeg, yt-dlp
 
@@ -1248,12 +1222,12 @@ These 150+ CLI tools and configs are installed on every platform:
 
 **JS tooling:** TypeScript, tsx, Turborepo, Storybook, Playwright, Lighthouse, Mermaid CLI
 
-**Backup:** rclone, Syncthing, borg, borgmatic
+**Backup:** rclone, borg, borgmatic
 
 ## 60+ Shared Config Files
 
 Identical content across all platforms (paths adjusted per OS):
-starship, atuin, glow, btop, lazygit, lazydocker, k9s, yazi, gh-dash, stern, mise, fastfetch, direnv, caddy, ngrok, yt-dlp, asciinema, pgcli, zed, ghostty, .editorconfig, .prettierrc, .shellcheckrc, .curlrc, .npmrc, .ripgreprc, .fdignore, .vimrc, .nanorc, .gitignore_global, .gitmessage, .myclirc, .gemrc, .actrc, .mlrrc, .justfile, VS Code settings/keybindings/extensions, Espanso, Docker, AWS CLI, GitHub CLI, pip, git global config, SSH config, Claude Code config (settings, CLAUDE.md, 6 rules, 3 hooks, 10 commands)
+starship, atuin, glow, btop, lazygit, lazydocker, k9s, yazi, gh-dash, stern, mise, fastfetch, direnv, caddy, ngrok, yt-dlp, asciinema, pgcli, zed, ghostty, .editorconfig, .prettierrc, .shellcheckrc, .curlrc, .npmrc, .ripgreprc, .fdignore, .vimrc, .nanorc, .gitignore_global, .gitmessage, .myclirc, .gemrc, .actrc, .mlrrc, .justfile, VS Code settings/keybindings/extensions, Docker, AWS CLI, GitHub CLI, pip, git global config, SSH config, Claude Code config (settings, CLAUDE.md, 6 rules, 3 hooks, 10 commands)
 
 ---
 

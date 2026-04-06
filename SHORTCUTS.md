@@ -1,6 +1,6 @@
 # Keyboard Shortcuts & Aliases Reference
 
-Quick reference for all **257+ shortcuts** configured by the setup scripts.
+Quick reference for all **219+ shortcuts** configured by the setup scripts.
 
 ---
 
@@ -320,84 +320,6 @@ Use as `gh <alias>`, e.g., `gh co`, `gh pm`.
 
 ---
 
-## Espanso Text Expansions
-
-Type the trigger anywhere and it auto-expands.
-
-### Date & Time
-
-| Trigger | Expands to |
-|---------|-----------|
-| `;date` | `2026-04-06` (today's date) |
-| `;time` | `14:32` (current time) |
-| `;datetime` | `2026-04-06 14:32` |
-| `;iso` | `2026-04-06T14:32:00-0700` |
-
-### Symbols & Unicode
-
-| Trigger | Expands to |
-|---------|-----------|
-| `;shrug` | `\_(ツ)_/` |
-| `;arrow` / `;rarr` | right arrow |
-| `;larr` | left arrow |
-| `;uarr` | up arrow |
-| `;darr` | down arrow |
-| `;check` | checkmark |
-| `;cross` | cross mark |
-| `;bullet` | bullet |
-| `;mdash` | em dash |
-| `;deg` | degree |
-| `;tm` | trademark |
-| `;copy` | copyright |
-
-### Code Snippets
-
-| Trigger | Expands to |
-|---------|-----------|
-| `;clog` | `console.log('...');` |
-| `;todo` | `// TODO: ` |
-| `;fixme` | `// FIXME: ` |
-| `;cb` | Markdown code block |
-| `;cbt` | TypeScript code block |
-| `;cbp` | Python code block |
-| `;cbb` | Bash code block |
-| `;table` | Markdown table (3 columns) |
-
-### Git
-
-| Trigger | Expands to |
-|---------|-----------|
-| `;gcm` | `git commit -m "` |
-| `;gca` | `git add -A && git commit -m "` |
-| `;gpush` | `git push origin <current-branch>` |
-
-### Generators
-
-| Trigger | Expands to |
-|---------|-----------|
-| `;uuid` | Random UUID (lowercase) |
-| `;lorem` | Lorem ipsum paragraph |
-| `;loremshort` | Short lorem ipsum |
-
-### Regex Patterns
-
-| Trigger | Pattern for |
-|---------|------------|
-| `;rxemail` | Email validation |
-| `;rxurl` | URL validation |
-| `;rxip` | IP address |
-| `;rxphone` | Phone number |
-
-### Templates
-
-| Trigger | Template |
-|---------|---------|
-| `;prdesc` | Pull request description (Summary, Changes, Test plan) |
-| `;meeting` | Meeting notes (Attendees, Agenda, Action Items, Decisions) |
-| `;bug` | Bug report (Environment, Steps, Expected, Actual) |
-
----
-
 ## Global Justfile Recipes
 
 Run from anywhere with `gj <recipe>` (or `just --justfile ~/.justfile <recipe>`).
@@ -534,9 +456,8 @@ Script sets: Almost maximize (95%), 8px gaps, snap on drag.
 | fzf keybindings | 7 |
 | Git aliases | 30 |
 | GitHub CLI aliases | 15 |
-| Espanso text expansions | 38 |
 | Global justfile recipes | 27 |
 | macOS hot corners | 4 |
 | Rectangle window shortcuts | 10 |
 | Claude Code commands | 20 |
-| **Total** | **257** |
+| **Total** | **219** |
