@@ -225,12 +225,12 @@ list_categories() {
     printf "  %-25s %s\n" "ui"                  "Storybook, Playwright, Chrome"
     printf "  %-25s %s\n" "ux"                  "Lighthouse"
     printf "  %-25s %s\n" "docs"                "d2, Mermaid CLI"
-    printf "  %-25s %s\n" "mac-system"          "Pearcleaner, Stats, Ice, Quick Look plugins"
-    printf "  %-25s %s\n" "mac-productivity"    "Notion, Shottr, Espanso, Skim, Transmit, Cyberduck"
+    printf "  %-25s %s\n" "mac-system"          "Pearcleaner, Stats, Quick Look plugins"
+    printf "  %-25s %s\n" "mac-productivity"    "Notion, Shottr, Skim, Transmit"
     printf "  %-25s %s\n" "mac-communication"   "Slack, Telegram, Signal"
-    printf "  %-25s %s\n" "mac-browsers"        "Firefox, Arc, Brave"
+    printf "  %-25s %s\n" "mac-browsers"        "Firefox, Brave"
     printf "  %-25s %s\n" "mac-media"           "IINA, ImageOptim, LibreOffice"
-    printf "  %-25s %s\n" "mac-cloud"           "Google Drive, rclone, Syncthing, borg"
+    printf "  %-25s %s\n" "mac-cloud"           "Google Drive, rclone, borg"
     printf "  %-25s %s\n" "mac-focus"           "Reeder"
     printf "  %-25s %s\n" "mac-disk"            "dust, duf (CLI disk analyzers)"
     printf "  %-25s %s\n" "mac-bloat"           "Remove pre-installed Apple apps (GarageBand)"
@@ -557,11 +557,18 @@ if [[ "$CLEANUP" == "true" ]]; then
         "cask:soulver:Soulver 3:removed"
         "cask:numi:Numi:removed"
         "cask:hazel:Hazel:macOS Automator/scripts"
-        "cask:popclip:PopClip:Espanso"
+        "cask:popclip:PopClip:removed"
+        "cask:espanso:Espanso:removed"
+        "cask:wireshark:Wireshark:removed"
+        "cask:topnotch:TopNotch:removed"
+        "cask:syncthing:Syncthing:removed"
+        "cask:arc:Arc:Brave"
         "cask:daisydisk:DaisyDisk:dust + duf (CLI)"
         "cask:proxyman:Proxyman:mitmproxy"
         "cask:appcleaner:AppCleaner:Pearcleaner"
-        "cask:bartender:Bartender:Ice"
+        "cask:bartender:Bartender:removed"
+        "cask:jordanbaird-ice:Ice:removed"
+        "mas:1502839586:Hand Mirror:removed"
         "formula:dog:dog (DNS tool):doggo"
         "cask:tailscale:Tailscale:removed"
         "cask:alt-tab:AltTab:removed (macOS alt-tab is sufficient)"
@@ -919,7 +926,6 @@ fi
 
 # Network security
 brew_install "mkcert" "mkcert (local HTTPS certs for dev)"
-brew_cask_install "wireshark" "Wireshark (network packet analysis)"
 brew_install "ssh-audit" "ssh-audit (audit SSH server/client config)"
 
 # Endpoint & system security (Objective-See tools)
@@ -1346,7 +1352,6 @@ if should_run "mac-system"; then
 banner "Mac Apps — System & Utilities"
 
 brew_cask_install "stats" "Stats (menubar system monitor)"
-brew_cask_install "jordanbaird-ice" "Ice (menubar icon manager — open-source Bartender replacement)"
 # Amphetamine is Mac App Store only — install via mas
 progress
 if installed mas && [[ "$MAS_SIGNED_IN" == "true" ]]; then
@@ -1367,7 +1372,6 @@ brew_cask_install "proton-drive" "Proton Drive (encrypted cloud storage)"
 
 # Utilities
 brew_cask_install "pearcleaner" "Pearcleaner (open-source deep app uninstaller)"
-brew_cask_install "topnotch" "TopNotch (hides MacBook notch with black menu bar)"
 
 # Quick Look plugins (preview files in Finder with spacebar)
 brew_cask_install "qlmarkdown" "QLMarkdown (preview Markdown in Finder)"
@@ -1381,11 +1385,11 @@ fi  # mac-system
 if should_run "mac-productivity"; then
 banner "Mac Apps — Productivity"
 
+brew_cask_install "claude" "Claude (AI assistant)"
 brew_cask_install "notion" "Notion (docs, wikis, project tracking)"
 brew_cask_install "notion-calendar" "Notion Calendar"
 brew_cask_install "notion-mail" "Notion Mail"
 brew_cask_install "shottr" "Shottr (screenshots, pixel measuring, OCR — free)"
-brew_cask_install "espanso" "Espanso (open-source text expander — snippets, templates)"
 
 # PDF & documents
 brew_cask_install "skim" "Skim (lightweight PDF reader with annotations — faster than Preview)"
@@ -1410,7 +1414,6 @@ if should_run "mac-browsers"; then
 banner "Mac Apps — Browsers"
 
 brew_cask_install "firefox" "Firefox"
-brew_cask_install "arc" "Arc (modern Chromium browser)"
 brew_cask_install "brave-browser" "Brave Browser (privacy-focused Chromium)"
 
 fi  # mac-browsers
@@ -1425,18 +1428,6 @@ brew_cask_install "imageoptim" "ImageOptim (lossless image compression)"
 brew_install "gifski" "gifski (video to high-quality GIF)"
 brew_cask_install "keka" "Keka (file archiver/compressor)"
 brew_cask_install "libreoffice" "LibreOffice (free office suite)"
-# Hand Mirror is Mac App Store only — install via mas
-progress
-if installed mas && [[ "$MAS_SIGNED_IN" == "true" ]]; then
-    if mas list 2>/dev/null | grep -q "1502839586"; then
-        warn "Hand Mirror already installed"
-    else
-        info "Installing Hand Mirror from Mac App Store..."
-        mas install 1502839586 >> "$LOG_FILE" 2>&1 && success "Hand Mirror installed" || error "Failed to install Hand Mirror (sign into App Store first)"
-    fi
-else
-    warn "Hand Mirror skipped (App Store not signed in)"
-fi
 
 fi  # mac-media
 
@@ -1448,7 +1439,6 @@ brew_cask_install "google-drive" "Google Drive (cloud storage with Docs/Sheets)"
 
 # Backup & sync
 brew_install "rclone" "rclone (sync files to any cloud — Google Drive, S3, Dropbox, etc.)"
-brew_cask_install "syncthing" "Syncthing (real-time file sync between devices — no cloud middleman)"
 brew_install "borgbackup" "borg (deduplicated encrypted backups — better than Time Machine for offsite)"
 brew_install "borgmatic" "borgmatic (automated borg backup scheduling and config)"
 
@@ -4639,206 +4629,6 @@ success "Rectangle configured (almost maximize, 8px gaps, snap on drag)"
 # Set RIPGREP_CONFIG_PATH in zshrc (needed for ripgrep to read config)
 # This will be in the managed block below
 
-# ---- Espanso config (text expander) ----
-ESPANSO_CONFIG_DIR="$HOME/Library/Application Support/espanso/match"
-ESPANSO_CONFIG="$ESPANSO_CONFIG_DIR/base.yml"
-if [[ -f "$ESPANSO_CONFIG" ]]; then
-    warn "Espanso config already exists"
-else
-    info "Creating Espanso configuration..."
-    mkdir -p "$ESPANSO_CONFIG_DIR"
-    cat > "$ESPANSO_CONFIG" <<'ESPANSO_CONF'
-# Espanso text expansion config
-# Docs: https://espanso.org/docs/
-
-matches:
-  # -- Date & Time -------------------------------------------------------
-  - trigger: ";date"
-    replace: "{{today}}"
-    vars:
-      - name: today
-        type: date
-        params:
-          format: "%Y-%m-%d"
-
-  - trigger: ";time"
-    replace: "{{now}}"
-    vars:
-      - name: now
-        type: date
-        params:
-          format: "%H:%M"
-
-  - trigger: ";datetime"
-    replace: "{{dt}}"
-    vars:
-      - name: dt
-        type: date
-        params:
-          format: "%Y-%m-%d %H:%M"
-
-  - trigger: ";iso"
-    replace: "{{iso}}"
-    vars:
-      - name: iso
-        type: date
-        params:
-          format: "%Y-%m-%dT%H:%M:%S%z"
-
-  # -- Dev Shortcuts -----------------------------------------------------
-  - trigger: ";shrug"
-    replace: "¯\\_(ツ)_/¯"
-
-  - trigger: ";arrow"
-    replace: "→"
-
-  - trigger: ";check"
-    replace: "✓"
-
-  - trigger: ";cross"
-    replace: "✗"
-
-  - trigger: ";bullet"
-    replace: "•"
-
-  # -- Code Snippets -----------------------------------------------------
-  - trigger: ";clog"
-    replace: "console.log('$|$');"
-
-  - trigger: ";todo"
-    replace: "// TODO: "
-
-  - trigger: ";fixme"
-    replace: "// FIXME: "
-
-  # -- Markdown ----------------------------------------------------------
-  - trigger: ";cb"
-    replace: "```\n$|$\n```"
-
-  - trigger: ";cbt"
-    replace: "```typescript\n$|$\n```"
-
-  - trigger: ";cbp"
-    replace: "```python\n$|$\n```"
-
-  - trigger: ";cbb"
-    replace: "```bash\n$|$\n```"
-
-  - trigger: ";table"
-    replace: "| Column 1 | Column 2 | Column 3 |\n|----------|----------|----------|\n| | | |"
-
-  # -- Git ---------------------------------------------------------------
-  - trigger: ";gcm"
-    replace: "git commit -m \""
-
-  - trigger: ";gca"
-    replace: "git add -A && git commit -m \""
-
-  - trigger: ";gpush"
-    replace: "git push origin $(git branch --show-current)"
-
-  # -- UUID & Random ----------------------------------------------------------
-  - trigger: ";uuid"
-    replace: "{{uuid}}"
-    vars:
-      - name: uuid
-        type: shell
-        params:
-          cmd: "uuidgen | tr '[:upper:]' '[:lower:]'"
-
-  - trigger: ";lorem"
-    replace: "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris."
-
-  - trigger: ";loremshort"
-    replace: "Lorem ipsum dolor sit amet, consectetur adipiscing elit."
-
-  # -- Common Regex Patterns --------------------------------------------------
-  - trigger: ";rxemail"
-    replace: "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$"
-
-  - trigger: ";rxurl"
-    replace: "https?://[\\w\\-]+(\\.[\\w\\-]+)+[\\w\\-.,@?^=%&:/~+#]*"
-
-  - trigger: ";rxip"
-    replace: "\\b\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\b"
-
-  - trigger: ";rxphone"
-    replace: "^\\+?[1-9]\\d{1,14}$"
-
-  # -- Templates --------------------------------------------------------------
-  - trigger: ";prdesc"
-    replace: |
-      ## Summary
-      <!-- What does this PR do? -->
-
-      ## Changes
-      -
-
-      ## Test plan
-      - [ ] Unit tests pass
-      - [ ] Manual testing done
-      - [ ] No regressions
-
-      ## Screenshots
-      <!-- If applicable -->
-
-  - trigger: ";meeting"
-    replace: |
-      ## Meeting Notes — {{today}}
-      **Attendees:**
-      **Agenda:**
-      1.
-
-      **Action Items:**
-      - [ ]
-
-      **Decisions:**
-      -
-    vars:
-      - name: today
-        type: date
-        params:
-          format: "%Y-%m-%d"
-
-  - trigger: ";bug"
-    replace: |
-      ## Bug Report
-      **Environment:**
-      **Steps to Reproduce:**
-      1.
-
-      **Expected:**
-      **Actual:**
-      **Screenshots:**
-
-  # -- Arrows & Symbols -------------------------------------------------------
-  - trigger: ";rarr"
-    replace: "→"
-
-  - trigger: ";larr"
-    replace: "←"
-
-  - trigger: ";uarr"
-    replace: "↑"
-
-  - trigger: ";darr"
-    replace: "↓"
-
-  - trigger: ";mdash"
-    replace: "—"
-
-  - trigger: ";deg"
-    replace: "°"
-
-  - trigger: ";tm"
-    replace: "™"
-
-  - trigger: ";copy"
-    replace: "©"
-ESPANSO_CONF
-    success "Espanso configured (dates, dev shortcuts, Markdown, git, templates, regex, symbols)"
-fi
-
 
 # ---- Filesystem Structure ----
 if should_run "filesystem"; then
@@ -5687,17 +5477,15 @@ info "Tip: Disable iCloud Desktop & Documents in System Settings > Apple ID > iC
 # ---- Login items (auto-start at login) ----
 info "Configuring login items..."
 LOGIN_APPS=(
-    "/Applications/Ice.app"
     "/Applications/Stats.app"
     "/Applications/Rectangle.app"
-    "/Applications/Espanso.app"
 )
 for app in "${LOGIN_APPS[@]}"; do
     if [[ -d "$app" ]]; then
         osascript -e "tell application \"System Events\" to make login item at end with properties {path:\"$app\", hidden:true}" 2>/dev/null || true
     fi
 done
-success "Login items configured (Ice, Stats, Rectangle, Espanso)"
+success "Login items configured (Stats, Rectangle)"
 
 # ---- macOS defaults for installed apps ----
 info "Setting macOS defaults for apps..."
