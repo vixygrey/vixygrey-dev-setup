@@ -2810,6 +2810,19 @@ else
     warn "Evangelion Clock screensaver source not found — skipping"
 fi
 
+# -- Clear Dock (remove all default pinned apps so user can set their own) --
+if [[ "$DRY_RUN" != "true" ]]; then
+    info "Clearing all default apps from Dock (pin your own via drag-and-drop)..."
+    defaults write com.apple.dock persistent-apps -array
+    defaults write com.apple.dock persistent-others -array
+    # Re-add the two spacers (they were cleared too)
+    defaults write com.apple.dock persistent-apps -array-add '{"tile-type"="spacer-tile";}'
+    defaults write com.apple.dock persistent-apps -array-add '{"tile-type"="spacer-tile";}'
+    success "Dock cleared — drag apps to Dock to pin them"
+else
+    info "[DRY RUN] Would clear all default apps from Dock"
+fi
+
 # Restart Dock to apply all Dock/Hot Corner/Mission Control changes
 killall Dock 2>/dev/null || true
 

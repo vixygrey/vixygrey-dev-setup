@@ -3763,6 +3763,33 @@ if (-not $DRY_RUN) {
         Write-Success "Bing search in Start Menu disabled"
     } catch { Write-Err "Failed to disable Bing search: $_" }
 
+    # -- Clear Taskbar (remove all default pinned apps so user can set their own) --
+    if (-not $DRY_RUN) {
+        Write-Info "Clearing default pinned apps from taskbar (pin your own via right-click)..."
+        try {
+            # Remove all pinned apps from taskbar (Windows 11)
+            # Delete the TaskbarLayout XML and the pinned items cache
+            $taskbarPath = "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Taskband"
+            Remove-ItemProperty -Path $taskbarPath -Name "Favorites" -ErrorAction SilentlyContinue
+            Remove-ItemProperty -Path $taskbarPath -Name "FavoritesResolve" -ErrorAction SilentlyContinue
+
+            # Unpin default taskbar items by clearing the layout
+            $layoutPath = Join-Path $env:LOCALAPPDATA "Microsoft\Windows\Shell\LayoutModification.xml"
+            if (Test-Path $layoutPath) { Remove-Item $layoutPath -Force -ErrorAction SilentlyContinue }
+
+            # Disable default taskbar items: Task View, Widgets, Chat
+            Set-ItemProperty -Path "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name "ShowTaskViewButton" -Value 0 -ErrorAction SilentlyContinue
+            Set-ItemProperty -Path "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name "TaskbarDa" -Value 0 -ErrorAction SilentlyContinue  # Widgets
+            Set-ItemProperty -Path "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name "TaskbarMn" -Value 0 -ErrorAction SilentlyContinue  # Chat
+
+            Write-Success "Taskbar cleared — right-click apps to pin them"
+        } catch {
+            Write-Err "Failed to clear taskbar: $_"
+        }
+    } else {
+        Write-Info "[DRY RUN] Would clear default pinned apps from taskbar"
+    }
+
     Write-Info "Restart Explorer or log out/in for all changes to take effect."
 
     # -- Wallpaper --

@@ -5402,6 +5402,17 @@ if command -v gsettings &>/dev/null; then
     gsettings set org.gnome.shell.extensions.dash-to-dock autohide true 2>/dev/null || true
     gsettings set org.gnome.shell.extensions.dash-to-dock dash-max-icon-size 40 2>/dev/null || true
 
+    # Clear dock/dash favorites (remove all default pinned apps so user can set their own)
+    if [[ "$DRY_RUN" != "true" ]]; then
+        info "Clearing default pinned apps from dock/dash..."
+        gsettings set org.gnome.shell favorite-apps "[]" 2>/dev/null || true
+        # Also clear dash-to-dock favorites if the extension is present
+        gsettings set org.gnome.shell.extensions.dash-to-dock favorite-apps "[]" 2>/dev/null || true
+        success "Dock cleared — right-click apps or drag to dock to pin them"
+    else
+        info "[DRY RUN] Would clear default pinned apps from dock"
+    fi
+
     # Screenshots location
     mkdir -p "$HOME/Screenshots"
     gsettings set org.gnome.gnome-screenshot auto-save-directory "file://$HOME/Screenshots" 2>/dev/null || true
@@ -5409,6 +5420,17 @@ if command -v gsettings &>/dev/null; then
     success "GNOME desktop settings configured"
 else
     info "gsettings not available — skipping GNOME defaults (not running GNOME?)"
+fi
+
+# KDE Plasma: clear default taskbar pinned apps
+if [[ "$XDG_CURRENT_DESKTOP" == *"KDE"* ]] && [[ "$DRY_RUN" != "true" ]]; then
+    info "Clearing default pinned apps from KDE taskbar..."
+    PLASMA_TASKBAR="$HOME/.config/plasma-org.kde.plasma.desktop-appletsrc"
+    if [[ -f "$PLASMA_TASKBAR" ]]; then
+        # Remove launchers from the task manager applet
+        sed -i 's/^launchers=.*/launchers=/' "$PLASMA_TASKBAR" 2>/dev/null || true
+        success "KDE taskbar cleared — right-click apps to pin them"
+    fi
 fi
 
 # DNS (systemd-resolved)
