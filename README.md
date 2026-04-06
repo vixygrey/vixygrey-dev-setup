@@ -37,6 +37,7 @@ All scripts share the same flags:
 ./setup-dev-tools.sh --dry-run           # Preview changes without installing
 ./setup-dev-tools.sh --resume            # Continue from where a previous run left off
 ./setup-dev-tools.sh --uninstall         # Show commands to remove everything (no changes made)
+./setup-dev-tools.sh --cleanup           # Remove tools from previous versions no longer in script
 ./setup-dev-tools.sh --list-categories   # List all available categories
 ./setup-dev-tools.sh --skip mac-media,mac-cloud  # Skip specific categories
 ./setup-dev-tools.sh --only core,git,aws,dx      # Only install specific categories
@@ -70,6 +71,7 @@ All scripts share the same flags:
 | **Dry run** | Preview all changes with `--dry-run` |
 | **Resume** | Continue after a failure with `--resume` -- skips previously completed items |
 | **Uninstall guide** | Show removal commands with `--uninstall` (no destructive actions taken) |
+| **Cleanup** | Remove tools from previous versions with `--cleanup` (auto-detects deprecated tools) |
 | **Lockfile** | Prevents concurrent runs via PID-based lock |
 | **Category filtering** | Install only what you need with `--only` / `--skip` |
 | **Progress bar** | Visual progress counter with dynamic total (includes mas installs) |
@@ -504,7 +506,6 @@ Preview files in Finder by pressing spacebar.
 | App | Description |
 |-----|-------------|
 | **Google Drive** | Cloud storage with Docs, Sheets, and Slides integration |
-| **Tailscale** | Zero-config mesh VPN between your devices |
 | **rclone** | Sync files to any cloud -- Google Drive, S3, Dropbox, etc. |
 | **Syncthing** | Real-time file sync between devices -- no cloud middleman |
 | **borg** | Deduplicated encrypted backups -- better than Time Machine for offsite |
@@ -1210,7 +1211,6 @@ The script adds official repositories for tools not in default repos:
 - Brave Browser (brave.com)
 - Google Chrome (google.com)
 - VS Code (microsoft.com)
-- Tailscale (tailscale.com)
 - Trivy (aquasecurity)
 
 ## Ubuntu/Debian Notes

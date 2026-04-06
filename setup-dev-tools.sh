@@ -230,7 +230,7 @@ list_categories() {
     printf "  %-25s %s\n" "mac-communication"   "Slack, Discord, Telegram, Signal"
     printf "  %-25s %s\n" "mac-browsers"        "Firefox, Arc, Brave"
     printf "  %-25s %s\n" "mac-media"           "IINA, ImageOptim, LibreOffice, Pocket Casts"
-    printf "  %-25s %s\n" "mac-cloud"           "Google Drive, Tailscale, rclone, Syncthing, borg"
+    printf "  %-25s %s\n" "mac-cloud"           "Google Drive, rclone, Syncthing, borg"
     printf "  %-25s %s\n" "mac-focus"           "Flow, Anki, Reeder"
     printf "  %-25s %s\n" "mac-disk"            "dust, duf (CLI disk analyzers)"
     printf "  %-25s %s\n" "mac-bloat"           "Remove pre-installed Apple apps (GarageBand, News, etc.)"
@@ -1403,7 +1403,6 @@ if should_run "mac-cloud"; then
 banner "Mac Apps — Cloud Storage"
 
 brew_cask_install "google-drive" "Google Drive (cloud storage with Docs/Sheets)"
-brew_cask_install "tailscale" "Tailscale (zero-config mesh VPN between your devices)"
 
 # Backup & sync
 brew_install "rclone" "rclone (sync files to any cloud — Google Drive, S3, Dropbox, etc.)"

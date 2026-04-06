@@ -238,7 +238,7 @@ function Show-Categories {
         @("win-communication",     "Slack, Discord, Telegram, Signal")
         @("win-browsers",          "Firefox, Arc, Brave")
         @("win-media",             "mpv, LibreOffice, gifski")
-        @("win-cloud",             "Google Drive, Tailscale, rclone, Syncthing")
+        @("win-cloud",             "Google Drive, rclone, Syncthing")
         @("win-focus",             "Anki")
         @("win-disk",              "dust, duf")
         @("win-bloat",             "Remove pre-installed Windows apps (Clipchamp, Xbox, etc.)")
@@ -1219,7 +1219,6 @@ if (Test-ShouldRun "win-cloud") {
 Write-Banner "Windows Apps -- Cloud Storage"
 
 Install-WingetPackage "Google.GoogleDrive" "Google Drive (cloud storage with Docs/Sheets)"
-Install-WingetPackage "Tailscale.Tailscale" "Tailscale (zero-config mesh VPN between your devices)"
 Install-ScoopPackage "rclone" "rclone (sync to any cloud)"
 Install-WingetPackage "Syncthing.Syncthing" "Syncthing (real-time device sync)"
 

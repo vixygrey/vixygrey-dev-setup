@@ -227,7 +227,7 @@ list_categories() {
     printf "  %-25s %s\n" "linux-communication" "Slack, Discord, Telegram, Signal"
     printf "  %-25s %s\n" "linux-browsers"      "Firefox, Brave, Chrome"
     printf "  %-25s %s\n" "linux-media"         "mpv, LibreOffice, gifski, Pocket Casts"
-    printf "  %-25s %s\n" "linux-cloud"         "Tailscale, rclone, syncthing, borgbackup, borgmatic"
+    printf "  %-25s %s\n" "linux-cloud"         "rclone, syncthing, borgbackup, borgmatic"
     printf "  %-25s %s\n" "linux-focus"         "Anki, Pomodoro, NewsFlash"
     printf "  %-25s %s\n" "linux-disk"          "ncdu"
     printf "  %-25s %s\n" "dracula"             "Dracula theme for all tools"
@@ -828,28 +828,6 @@ VSCODE_REPO
     esac
 }
 
-setup_tailscale_repo() {
-    case "$PKG_MANAGER" in
-        apt)
-            if [[ ! -f /etc/apt/sources.list.d/tailscale.list ]]; then
-                info "Adding Tailscale apt repository..."
-                curl -fsSL "https://pkgs.tailscale.com/stable/$DISTRO_ID/$(. /etc/os-release && echo "$VERSION_CODENAME").noarmor.gpg" | sudo tee /usr/share/keyrings/tailscale-archive-keyring.gpg > /dev/null
-                curl -fsSL "https://pkgs.tailscale.com/stable/$DISTRO_ID/$(. /etc/os-release && echo "$VERSION_CODENAME").tailscale-keyring.list" | sudo tee /etc/apt/sources.list.d/tailscale.list > /dev/null
-                sudo apt-get update >> "$LOG_FILE" 2>&1
-            fi
-            ;;
-        dnf)
-            if [[ ! -f /etc/yum.repos.d/tailscale.repo ]]; then
-                info "Adding Tailscale dnf repository..."
-                sudo dnf config-manager --add-repo "https://pkgs.tailscale.com/stable/fedora/tailscale.repo" 2>/dev/null || \
-                sudo dnf config-manager addrepo --from-repofile="https://pkgs.tailscale.com/stable/fedora/tailscale.repo" 2>/dev/null || true
-            fi
-            ;;
-        pacman)
-            # tailscale is in community repo
-            ;;
-    esac
-}
 
 setup_trivy_repo() {
     case "$PKG_MANAGER" in
@@ -2700,13 +2678,6 @@ fi  # linux-media
 # =============================================================================
 if should_run "linux-cloud"; then
 banner "Linux Apps — Cloud"
-
-# Tailscale
-setup_tailscale_repo
-pkg_install "tailscale" "tailscale" "tailscale" "Tailscale (mesh VPN)"
-if [[ "$DRY_RUN" != "true" ]]; then
-    sudo systemctl enable --now tailscaled >> "$LOG_FILE" 2>&1 || true
-fi
 
 # rclone (Google Drive mount)
 if ! installed rclone; then
@@ -7623,7 +7594,6 @@ echo "  3. Generate SSH key: ssh-keygen -t ed25519 -C \"your_email@example.com\"
 echo "  4. Add SSH key to GitHub: gh ssh-key add ~/.ssh/id_ed25519.pub"
 echo "  5. Set up ngrok: ngrok config add-authtoken <TOKEN>"
 echo "  6. Set up chezmoi: chezmoi init && chezmoi add ~/.zshrc"
-echo "  7. Configure Tailscale: sudo tailscale up"
 echo ""
 echo -e "${GREEN}${BOLD}  Restart your terminal to activate everything.${NC}"
 echo ""
