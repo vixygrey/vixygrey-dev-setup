@@ -6,7 +6,7 @@
 # Platform: Windows 10/11 (x64)
 # Run:      Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned
 #           .\setup-dev-tools-windows.ps1
-# Flags:    --dry-run, --skip <categories>, --only <categories>, --help
+# Flags:    --dry-run, --skip <categories>, --only <categories>, --cleanup, --help
 # =============================================================================
 
 $SCRIPT_VERSION = "2.0.0"
@@ -96,6 +96,7 @@ function Show-Progress {
 $DRY_RUN = $false
 $RESUME = $false
 $UNINSTALL = $false
+$CLEANUP = $false
 $SKIP_CATEGORIES = @()
 $ONLY_CATEGORIES = @()
 
@@ -189,6 +190,7 @@ function Show-Help {
     Write-Host "  --dry-run           Preview what would be installed (no changes)"
     Write-Host "  --resume            Skip items that succeeded in a previous run"
     Write-Host "  --uninstall         Show commands to remove everything (no changes made)"
+    Write-Host "  --cleanup           Remove tools from previous versions no longer in this script"
     Write-Host "  --skip <cats>       Skip categories (comma-separated)"
     Write-Host "  --only <cats>       Only run these categories (comma-separated)"
     Write-Host "  --list-categories   List all available categories"
@@ -199,6 +201,7 @@ function Show-Help {
     Write-Host "  .\setup-dev-tools-windows.ps1 --dry-run                # Preview only"
     Write-Host "  .\setup-dev-tools-windows.ps1 --resume                 # Continue after a failure"
     Write-Host "  .\setup-dev-tools-windows.ps1 --uninstall              # Show removal commands"
+    Write-Host "  .\setup-dev-tools-windows.ps1 --cleanup                # Remove dropped tools from previous versions"
     Write-Host "  .\setup-dev-tools-windows.ps1 --skip win-media,win-cloud"
     Write-Host "  .\setup-dev-tools-windows.ps1 --only core,git,aws,dx"
     Write-Host ""
@@ -226,7 +229,7 @@ function Show-Categories {
         @("containers",            "lazydocker, dive, colima, kubectl, k9s")
         @("api",                   "Bruno, grpcurl")
         @("networking",            "mtr/WinMTR, bandwhich, nmap")
-        @("dx",                    "fzf, starship, atuin, VS Code, Cursor, Alacritty, PowerToys")
+        @("dx",                    "fzf, starship, atuin, VS Code, Zed, Alacritty, PowerToys")
         @("ui",                    "Storybook, Playwright, Chrome")
         @("ux",                    "Figma, Lighthouse")
         @("docs",                  "d2, Mermaid CLI")
@@ -237,7 +240,7 @@ function Show-Categories {
         @("win-media",             "mpv, LibreOffice, gifski")
         @("win-cloud",             "Google Drive, Tailscale, rclone, Syncthing")
         @("win-focus",             "Anki")
-        @("win-disk",              "WizTree")
+        @("win-disk",              "dust, duf")
         @("win-bloat",             "Remove pre-installed Windows apps (Clipchamp, Xbox, etc.)")
         @("dracula",               "Dracula theme for all tools")
         @("configs",               "All dotfiles and tool configurations")
@@ -263,6 +266,7 @@ while ($i -lt $argList.Count) {
         "--dry-run" { $DRY_RUN = $true }
         "--resume"  { $RESUME = $true }
         "--uninstall" { $UNINSTALL = $true }
+        "--cleanup" { $CLEANUP = $true }
         "--skip" {
             $i++
             if ($i -lt $argList.Count) { $SKIP_CATEGORIES = $argList[$i] -split "," }
@@ -503,6 +507,65 @@ if ($UNINSTALL) {
     Write-Host "  Remove-Item -Recurse -Force ~\.local\share\dev-setup"
     Write-Host ""
     Write-Host "Review each command before running. This does NOT auto-execute." -ForegroundColor Yellow
+    exit 0
+}
+
+# -- Handle --cleanup (remove tools from previous versions no longer in script)
+if ($CLEANUP) {
+    Write-Host ""
+    Write-Host "Cleanup: Removing tools from previous versions" -ForegroundColor Cyan
+    Write-Host ""
+
+    # Tools removed in current version (were in previous versions, now replaced or dropped)
+    $deprecatedTools = @(
+        @{ Type="scoop"; Id="warp"; Name="Warp terminal"; Replacement="Windows Terminal + Alacritty" }
+        @{ Type="winget"; Id="CursorAI.Cursor"; Name="Cursor (AI editor)"; Replacement="VS Code + Claude Code" }
+        @{ Type="winget"; Id="Telerik.Fiddler.Classic"; Name="Fiddler"; Replacement="mitmproxy" }
+        @{ Type="scoop"; Id="dog"; Name="dog (DNS tool)"; Replacement="doggo" }
+    )
+
+    $cleanupCount = 0
+    $cleanupSkipped = 0
+
+    foreach ($tool in $deprecatedTools) {
+        $installed = $false
+
+        switch ($tool.Type) {
+            "winget" {
+                $result = winget list --id $tool.Id 2>$null
+                if ($LASTEXITCODE -eq 0 -and $result -match $tool.Id) { $installed = $true }
+            }
+            "scoop" {
+                if (scoop list $tool.Id 2>$null | Select-String $tool.Id) { $installed = $true }
+            }
+        }
+
+        if ($installed) {
+            if ($DRY_RUN) {
+                Write-Info "[DRY RUN] Would remove: $($tool.Name) (replaced by $($tool.Replacement))"
+            } else {
+                Write-Info "Removing $($tool.Name) (replaced by $($tool.Replacement))..."
+                switch ($tool.Type) {
+                    "winget" {
+                        winget uninstall --id $tool.Id --silent 2>$null >> $LOG_FILE
+                        if ($?) { Write-Success "$($tool.Name) removed" } else { Write-Error "$($tool.Name) — failed to remove" }
+                    }
+                    "scoop" {
+                        scoop uninstall $tool.Id 2>$null >> $LOG_FILE
+                        if ($?) { Write-Success "$($tool.Name) removed" } else { Write-Error "$($tool.Name) — failed to remove" }
+                    }
+                }
+                $cleanupCount++
+            }
+        } else {
+            $cleanupSkipped++
+        }
+    }
+
+    Write-Host ""
+    if (-not $DRY_RUN) {
+        Write-Success "Cleanup complete: $cleanupCount removed, $cleanupSkipped not found (already clean)"
+    }
     exit 0
 }
 
@@ -985,7 +1048,6 @@ Install-ScoopPackage "chezmoi" "chezmoi (dotfile manager -- backup/restore confi
 
 # Editors & terminals
 Install-WingetPackage "Microsoft.VisualStudioCode" "VS Code"
-Install-WingetPackage "Anysphere.Cursor" "Cursor (AI-native code editor)"
 Install-ScoopPackage "alacritty" "Alacritty (fast GPU-accelerated terminal)"
 
 # Zed
@@ -1017,7 +1079,18 @@ if (Test-Command "gh") {
 }
 
 # HTTP debugging
-Install-WingetPackage "Telerik.Fiddler.Classic" "Fiddler Classic (HTTP debugging proxy -- replaces Proxyman)"
+# mitmproxy (replaces Proxyman / Fiddler)
+if (Test-Command "pip") {
+    if (-not (Test-Command "mitmproxy")) {
+        if (-not $DRY_RUN) {
+            Write-Info "Installing mitmproxy via pip..."
+            pip install mitmproxy 2>&1 | Out-File $LOG_FILE -Append
+            Write-Success "mitmproxy installed"
+        }
+    } else {
+        Write-Warn "mitmproxy already installed"
+    }
+}
 
 # Node/JS tooling (via npm)
 if (Test-Command "npm") {
@@ -1096,7 +1169,7 @@ Write-Banner "Windows Apps -- Productivity"
 
 Install-WingetPackage "Notion.Notion" "Notion (docs, wikis, project tracking)"
 Install-WingetPackage "Notion.NotionCalendar" "Notion Calendar"
-Install-ScoopPackage "sharex" "ShareX (replaces CleanShot/Shottr -- screenshots & recording)"
+Install-ScoopPackage "sharex" "ShareX (replaces Shottr -- screenshots & recording)"
 Install-ScoopPackage "espanso" "Espanso (open-source text expander -- snippets, templates)"
 Install-ScoopPackage "sumatrapdf" "SumatraPDF (lightweight PDF reader -- replaces Skim)"
 Install-WingetPackage "GIMP.GIMP" "GIMP (replaces Pixelmator Pro -- image editing)"
@@ -1167,7 +1240,7 @@ Write-Info "Reeder: macOS-only RSS reader. Alternatives: Fluent Reader (winget: 
 if (Test-ShouldRun "win-disk") {
 Write-Banner "Windows Apps -- Disk & File Utilities"
 
-Install-ScoopPackage "wiztree" "WizTree (visual disk space analyzer -- replaces DaisyDisk)"
+# DaisyDisk equivalent removed -- dust and duf (installed in modern-replacements) cover disk analysis
 
 } # win-disk
 
@@ -4760,7 +4833,7 @@ if (Test-Path $claudeMd) {
 
 ## Environment
 - Shell: PowerShell with Starship prompt
-- Editor: VS Code / Cursor / Zed (Dracula theme, JetBrains Mono)
+- Editor: VS Code / Zed (Dracula theme, JetBrains Mono)
 - Terminal: Windows Terminal / Alacritty (Dracula theme)
 - Package managers: pnpm (preferred), npm, bun
 - Python: uv for packages (not pip), ruff for linting (not flake8/black)

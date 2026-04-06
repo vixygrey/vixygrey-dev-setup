@@ -7,7 +7,7 @@
 # Updated:  2026-04-06
 # Platform: Linux (Ubuntu/Debian, Fedora/RHEL, Arch/Manjaro)
 # Run:      chmod +x setup-dev-tools-linux.sh && ./setup-dev-tools-linux.sh
-# Flags:    --dry-run, --skip <categories>, --only <categories>, --help
+# Flags:    --dry-run, --skip <categories>, --only <categories>, --cleanup, --help
 # =============================================================================
 
 SCRIPT_VERSION="2.0.0"
@@ -90,6 +90,7 @@ progress() {
 DRY_RUN=false
 RESUME=false
 UNINSTALL=false
+CLEANUP=false
 SKIP_CATEGORIES=()
 ONLY_CATEGORIES=()
 
@@ -179,6 +180,7 @@ show_help() {
     echo "  --dry-run           Preview what would be installed (no changes)"
     echo "  --resume            Skip items that succeeded in a previous run"
     echo "  --uninstall         Show commands to remove everything (no changes made)"
+    echo "  --cleanup           Remove tools from previous versions no longer in this script"
     echo "  --skip <cats>       Skip categories (comma-separated)"
     echo "  --only <cats>       Only run these categories (comma-separated)"
     echo "  --list-categories   List all available categories"
@@ -189,6 +191,7 @@ show_help() {
     echo "  ./setup-dev-tools-linux.sh --dry-run                # Preview only"
     echo "  ./setup-dev-tools-linux.sh --resume                 # Continue after a failure"
     echo "  ./setup-dev-tools-linux.sh --uninstall              # Show removal commands"
+    echo "  ./setup-dev-tools-linux.sh --cleanup                # Remove dropped tools from previous versions"
     echo "  ./setup-dev-tools-linux.sh --skip linux-media,linux-cloud"
     echo "  ./setup-dev-tools-linux.sh --only core,git,aws,dx"
     echo ""
@@ -215,7 +218,7 @@ list_categories() {
     printf "  %-25s %s\n" "containers"          "lazydocker, dive, kubectl, k9s"
     printf "  %-25s %s\n" "api"                 "Bruno, grpcurl"
     printf "  %-25s %s\n" "networking"          "mtr, bandwhich, nmap"
-    printf "  %-25s %s\n" "dx"                  "fzf, starship, atuin, VS Code, Cursor, Zed, Alacritty, tmux"
+    printf "  %-25s %s\n" "dx"                  "fzf, starship, atuin, VS Code, Zed, Alacritty, tmux"
     printf "  %-25s %s\n" "ui"                  "Storybook, Playwright, Chrome"
     printf "  %-25s %s\n" "ux"                  "Figma (Linux), Lighthouse"
     printf "  %-25s %s\n" "docs"                "d2, Mermaid CLI"
@@ -255,6 +258,10 @@ while [[ $# -gt 0 ]]; do
             ;;
         --uninstall)
             UNINSTALL=true
+            shift
+            ;;
+        --cleanup)
+            CLEANUP=true
             shift
             ;;
         --skip)
@@ -1003,6 +1010,72 @@ if [[ "$UNINSTALL" == "true" ]]; then
     echo "  rm -rf ~/.local/share/dev-setup"
     echo ""
     echo -e "${YELLOW}Review each command before running. This does NOT auto-execute.${NC}"
+    exit 0
+fi
+
+# -- Handle --cleanup (remove tools from previous versions no longer in script)
+if [[ "$CLEANUP" == "true" ]]; then
+    echo ""
+    echo -e "${BOLD}${CYAN}Cleanup: Removing tools from previous versions${NC}"
+    echo ""
+
+    # Tools removed in current version (were in previous versions, now replaced or dropped)
+    # Format: "type:name:display-name:replacement"
+    DEPRECATED_TOOLS=(
+        "pkg:dog:dog (DNS tool):doggo"
+        "snap:cursor:Cursor (AI editor):VS Code + Claude Code"
+    )
+
+    CLEANUP_COUNT=0
+    CLEANUP_SKIPPED=0
+
+    for entry in "${DEPRECATED_TOOLS[@]}"; do
+        IFS=':' read -r type name display replacement <<< "$entry"
+
+        case "$type" in
+            pkg)
+                local_installed=false
+                case "$PKG_MANAGER" in
+                    apt) dpkg -s "$name" &>/dev/null 2>&1 && local_installed=true ;;
+                    dnf) rpm -q "$name" &>/dev/null 2>&1 && local_installed=true ;;
+                    pacman) pacman -Qi "$name" &>/dev/null 2>&1 && local_installed=true ;;
+                esac
+                if [[ "$local_installed" == "true" ]]; then
+                    if [[ "$DRY_RUN" == "true" ]]; then
+                        info "[DRY RUN] Would remove: $display (replaced by $replacement)"
+                    else
+                        info "Removing $display (replaced by $replacement)..."
+                        case "$PKG_MANAGER" in
+                            apt) sudo apt-get remove -y "$name" >> "$LOG_FILE" 2>&1 && success "$display removed" || error "Failed to remove $display" ;;
+                            dnf) sudo dnf remove -y "$name" >> "$LOG_FILE" 2>&1 && success "$display removed" || error "Failed to remove $display" ;;
+                            pacman) sudo pacman -R --noconfirm "$name" >> "$LOG_FILE" 2>&1 && success "$display removed" || error "Failed to remove $display" ;;
+                        esac
+                        ((CLEANUP_COUNT++))
+                    fi
+                else
+                    ((CLEANUP_SKIPPED++))
+                fi
+                ;;
+            snap)
+                if snap list "$name" &>/dev/null 2>&1; then
+                    if [[ "$DRY_RUN" == "true" ]]; then
+                        info "[DRY RUN] Would remove: $display (replaced by $replacement)"
+                    else
+                        info "Removing $display (replaced by $replacement)..."
+                        sudo snap remove "$name" >> "$LOG_FILE" 2>&1 && success "$display removed" || error "Failed to remove $display"
+                        ((CLEANUP_COUNT++))
+                    fi
+                else
+                    ((CLEANUP_SKIPPED++))
+                fi
+                ;;
+        esac
+    done
+
+    echo ""
+    if [[ "$DRY_RUN" != "true" ]]; then
+        success "Cleanup complete: $CLEANUP_COUNT removed, $CLEANUP_SKIPPED not found (already clean)"
+    fi
     exit 0
 fi
 
@@ -2359,10 +2432,7 @@ if ! installed code && [[ "$PKG_MANAGER" == "pacman" ]]; then
     snap_install "code" "VS Code" "classic"
 fi
 
-# Cursor — AppImage
-if ! installed cursor; then
-    info "Cursor: download AppImage from https://cursor.sh"
-fi
+# Cursor removed (paid) — use VS Code + Zed
 
 # Zed
 if ! installed zed; then
@@ -2548,8 +2618,8 @@ fi  # linux-system
 if should_run "linux-productivity"; then
 banner "Linux Apps — Productivity"
 
-# Flameshot (replaces CleanShot + Shottr)
-pkg_install "flameshot" "flameshot" "flameshot" "Flameshot (screenshots — CleanShot equivalent)"
+# Flameshot (replaces Shottr)
+pkg_install "flameshot" "flameshot" "flameshot" "Flameshot (screenshots — Shottr equivalent)"
 
 # Espanso
 if ! installed espanso; then
@@ -2708,7 +2778,7 @@ fi  # linux-focus
 if should_run "linux-disk"; then
 banner "Linux Apps — Disk"
 
-pkg_install "ncdu" "ncdu" "ncdu" "ncdu (disk usage analyzer — DaisyDisk equivalent)"
+pkg_install "ncdu" "ncdu" "ncdu" "ncdu (interactive disk usage analyzer)"
 
 fi  # linux-disk
 
@@ -5644,7 +5714,7 @@ else
 
 ## Environment
 - Shell: zsh with starship prompt, atuin history, fzf fuzzy finder
-- Editor: VS Code / Cursor / Zed (Dracula theme, JetBrains Mono)
+- Editor: VS Code / Zed (Dracula theme, JetBrains Mono)
 - Terminal: Alacritty / kitty / Ghostty (Dracula theme)
 - Package managers: pnpm (preferred), npm, bun
 - Python: uv for packages (not pip), ruff for linting (not flake8/black)

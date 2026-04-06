@@ -92,6 +92,7 @@ progress() {
 DRY_RUN=false
 RESUME=false
 UNINSTALL=false
+CLEANUP=false
 SKIP_CATEGORIES=()
 ONLY_CATEGORIES=()
 
@@ -182,6 +183,7 @@ show_help() {
     echo "  --dry-run           Preview what would be installed (no changes)"
     echo "  --resume            Skip items that succeeded in a previous run"
     echo "  --uninstall         Show commands to remove everything (no changes made)"
+    echo "  --cleanup           Remove tools from previous versions no longer in this script"
     echo "  --skip <cats>       Skip categories (comma-separated)"
     echo "  --only <cats>       Only run these categories (comma-separated)"
     echo "  --list-categories   List all available categories"
@@ -192,6 +194,7 @@ show_help() {
     echo "  ./setup-dev-tools.sh --dry-run                # Preview only"
     echo "  ./setup-dev-tools.sh --resume                 # Continue after a failure"
     echo "  ./setup-dev-tools.sh --uninstall              # Show removal commands"
+    echo "  ./setup-dev-tools.sh --cleanup                # Remove dropped tools from previous versions"
     echo "  ./setup-dev-tools.sh --skip mac-media,mac-cloud"
     echo "  ./setup-dev-tools.sh --only core,git,aws,dx"
     echo ""
@@ -222,14 +225,14 @@ list_categories() {
     printf "  %-25s %s\n" "ui"                  "Storybook, Playwright, Chrome"
     printf "  %-25s %s\n" "ux"                  "Figma, Lighthouse"
     printf "  %-25s %s\n" "docs"                "d2, Mermaid CLI"
-    printf "  %-25s %s\n" "mac-system"          "AppCleaner, Pearcleaner, Stats, Ice, Quick Look plugins"
-    printf "  %-25s %s\n" "mac-productivity"    "Notion, CleanShot, Espanso, Hazel, Skim, Pixelmator, Velja"
+    printf "  %-25s %s\n" "mac-system"          "Pearcleaner, Stats, Ice, Quick Look plugins"
+    printf "  %-25s %s\n" "mac-productivity"    "Notion, Shottr, Espanso, Skim, GIMP, Velja"
     printf "  %-25s %s\n" "mac-communication"   "Slack, Discord, Telegram, Signal"
     printf "  %-25s %s\n" "mac-browsers"        "Firefox, Arc, Brave"
     printf "  %-25s %s\n" "mac-media"           "IINA, ImageOptim, LibreOffice, Pocket Casts"
     printf "  %-25s %s\n" "mac-cloud"           "Google Drive, Tailscale, rclone, Syncthing, borg"
     printf "  %-25s %s\n" "mac-focus"           "Flow, Anki, Reeder"
-    printf "  %-25s %s\n" "mac-disk"            "DaisyDisk"
+    printf "  %-25s %s\n" "mac-disk"            "dust, duf (CLI disk analyzers)"
     printf "  %-25s %s\n" "mac-bloat"           "Remove pre-installed Apple apps (GarageBand, News, etc.)"
     printf "  %-25s %s\n" "dracula"             "Dracula theme for all tools"
     printf "  %-25s %s\n" "configs"             "All dotfiles and tool configurations"
@@ -259,6 +262,10 @@ while [[ $# -gt 0 ]]; do
             ;;
         --uninstall)
             UNINSTALL=true
+            shift
+            ;;
+        --cleanup)
+            CLEANUP=true
             shift
             ;;
         --skip)
@@ -528,6 +535,91 @@ if [[ "$UNINSTALL" == "true" ]]; then
     exit 0
 fi
 
+# -- Handle --cleanup (remove tools from previous versions no longer in script)
+if [[ "$CLEANUP" == "true" ]]; then
+    echo ""
+    echo -e "${BOLD}${CYAN}Cleanup: Removing tools from previous versions${NC}"
+    echo ""
+
+    # Tools removed in current version (were in previous versions, now replaced or dropped)
+    # Format: "type:name:display-name:replacement"
+    DEPRECATED_TOOLS=(
+        "cask:docker:Docker Desktop:OrbStack"
+        "cask:warp:Warp terminal:Ghostty + iTerm2"
+        "cask:cursor:Cursor (AI editor):VS Code + Claude Code"
+        "cask:cleanshot:CleanShot X:Shottr"
+        "cask:soulver:Soulver 3:Numi"
+        "cask:hazel:Hazel:macOS Automator/scripts"
+        "cask:popclip:PopClip:Espanso"
+        "cask:daisydisk:DaisyDisk:dust + duf (CLI)"
+        "cask:proxyman:Proxyman:mitmproxy"
+        "cask:appcleaner:AppCleaner:Pearcleaner"
+        "cask:bartender:Bartender:Ice"
+        "formula:dog:dog (DNS tool):doggo"
+        "mas:1289583905:Pixelmator Pro:GIMP"
+    )
+
+    CLEANUP_COUNT=0
+    CLEANUP_SKIPPED=0
+
+    for entry in "${DEPRECATED_TOOLS[@]}"; do
+        IFS=':' read -r type name display replacement <<< "$entry"
+
+        case "$type" in
+            formula)
+                if brew list "$name" &>/dev/null 2>&1; then
+                    if [[ "$DRY_RUN" == "true" ]]; then
+                        info "[DRY RUN] Would remove: $display (replaced by $replacement)"
+                    else
+                        info "Removing $display (replaced by $replacement)..."
+                        brew uninstall "$name" >> "$LOG_FILE" 2>&1 && success "$display removed" || error "Failed to remove $display"
+                        ((CLEANUP_COUNT++))
+                    fi
+                else
+                    ((CLEANUP_SKIPPED++))
+                fi
+                ;;
+            cask)
+                if brew list --cask "$name" &>/dev/null 2>&1; then
+                    if [[ "$DRY_RUN" == "true" ]]; then
+                        info "[DRY RUN] Would remove: $display (replaced by $replacement)"
+                    else
+                        info "Removing $display (replaced by $replacement)..."
+                        brew uninstall --cask "$name" >> "$LOG_FILE" 2>&1 && success "$display removed" || error "Failed to remove $display"
+                        ((CLEANUP_COUNT++))
+                    fi
+                else
+                    ((CLEANUP_SKIPPED++))
+                fi
+                ;;
+            mas)
+                if mas list 2>/dev/null | grep -q "$name"; then
+                    if [[ "$DRY_RUN" == "true" ]]; then
+                        info "[DRY RUN] Would remove: $display (replaced by $replacement)"
+                    else
+                        info "Removing $display (replaced by $replacement)..."
+                        sudo rm -rf "/Applications/$display.app" 2>/dev/null || true
+                        ((CLEANUP_COUNT++))
+                        success "$display removed"
+                    fi
+                else
+                    ((CLEANUP_SKIPPED++))
+                fi
+                ;;
+        esac
+    done
+
+    echo ""
+    if [[ "$DRY_RUN" != "true" ]]; then
+        success "Cleanup complete: $CLEANUP_COUNT removed, $CLEANUP_SKIPPED not found (already clean)"
+        if [[ "$CLEANUP_COUNT" -gt 0 ]]; then
+            info "Running brew cleanup..."
+            brew cleanup >> "$LOG_FILE" 2>&1 || true
+        fi
+    fi
+    exit 0
+fi
+
 preflight
 acquire_lock
 
@@ -640,8 +732,7 @@ else
 fi
 
 # Docker (OrbStack is faster alternative — both installed, pick your preference)
-brew_cask_install "docker" "Docker Desktop"
-brew_cask_install "orbstack" "OrbStack (faster Docker Desktop alternative — 2-5x less memory)"
+brew_cask_install "orbstack" "OrbStack (Docker runtime — faster, 2-5x less memory than Docker Desktop)"
 
 # bun (fast JS runtime, bundler, test runner — alternative to Node for scripts)
 brew_install "oven-sh/bun/bun" "bun (fast JS runtime/bundler/test runner)"
@@ -1069,10 +1160,8 @@ brew_install "mise" "mise (universal version manager — nvm + pyenv + rbenv in 
 
 # Editors & terminals
 brew_cask_install "visual-studio-code" "VS Code"
-brew_cask_install "cursor" "Cursor (AI-native code editor — VS Code fork with built-in AI)"
 brew_cask_install "zed" "Zed (fast native editor from ex-Atom team — GPU-rendered)"
-brew_cask_install "warp" "Warp terminal"
-brew_cask_install "iterm2" "iTerm2 (classic terminal, tmux integration)"
+brew_cask_install "iterm2" "iTerm2 (classic terminal, deep tmux integration)"
 brew_cask_install "ghostty" "Ghostty (fast GPU-accelerated terminal)"
 brew_install "tmux" "tmux (terminal multiplexer)"
 
@@ -1100,7 +1189,8 @@ brew_cask_install "rectangle" "Rectangle (window management keyboard shortcuts)"
 brew_install "chezmoi" "chezmoi (dotfile manager — backup/restore configs across machines)"
 
 # HTTP debugging
-brew_cask_install "proxyman" "Proxyman (native macOS HTTP debugging proxy)"
+# HTTP debugging (mitmproxy — free, open-source)
+brew_install "mitmproxy" "mitmproxy (HTTP/HTTPS debugging proxy — free Proxyman alternative)"
 
 # Node/JS tooling (via npm)
 if installed npm; then
@@ -1158,15 +1248,39 @@ fi
 fi  # docs
 
 # =============================================================================
+# Check if signed into Mac App Store (needed for mas installs in mac-* categories)
+MAS_SIGNED_IN=false
+if installed mas; then
+    # mas list returns installed apps; if it works, we can install too
+    # On modern macOS, mas requires the user to be signed in via System Settings
+    if mas list &>/dev/null 2>&1; then
+        MAS_SIGNED_IN=true
+    else
+        echo ""
+        echo -e "${YELLOW}${BOLD}  Mac App Store: Not signed in${NC}"
+        echo -e "${YELLOW}  Some apps require the App Store. Sign in to install them:${NC}"
+        echo -e "${YELLOW}    1. Open App Store (Cmd+Space → 'App Store')${NC}"
+        echo -e "${YELLOW}    2. Click 'Sign In' and enter your Apple ID${NC}"
+        echo -e "${YELLOW}    3. Re-run this script (or use --only mac-system,mac-focus,mac-media,mac-productivity)${NC}"
+        echo ""
+        read -p "Continue without App Store apps? [Y/n] " mas_confirm
+        if [[ "$mas_confirm" =~ ^[Nn]$ ]]; then
+            info "Opening App Store for sign-in..."
+            open -a "App Store"
+            echo "Sign in, then re-run the script."
+            exit 0
+        fi
+    fi
+fi
+
 if should_run "mac-system"; then
 banner "Mac Apps — System & Utilities"
 
-brew_cask_install "appcleaner" "AppCleaner (full app uninstaller)"
 brew_cask_install "the-unarchiver" "The Unarchiver (any archive format)"
 brew_cask_install "stats" "Stats (menubar system monitor)"
 brew_cask_install "jordanbaird-ice" "Ice (menubar icon manager — open-source Bartender replacement)"
 # Amphetamine is Mac App Store only — install via mas
-if installed mas; then
+if installed mas && [[ "$MAS_SIGNED_IN" == "true" ]]; then
     if mas list 2>/dev/null | grep -q "937984704"; then
         warn "Amphetamine already installed"
     else
@@ -1176,7 +1290,7 @@ if installed mas; then
 fi
 brew_cask_install "alt-tab" "AltTab (Windows-style window switcher)"
 # Dato is Mac App Store only — install via mas
-if installed mas; then
+if installed mas && [[ "$MAS_SIGNED_IN" == "true" ]]; then
     if mas list 2>/dev/null | grep -q "1470584107"; then
         warn "Dato already installed"
     else
@@ -1211,13 +1325,9 @@ banner "Mac Apps — Productivity"
 brew_cask_install "notion" "Notion (docs, wikis, project tracking)"
 brew_cask_install "notion-calendar" "Notion Calendar"
 brew_cask_install "notion-mail" "Notion Mail"
-brew_cask_install "cleanshot" "CleanShot X (screenshots & recording)"
-brew_cask_install "shottr" "Shottr (free screenshot tool, pixel measuring, OCR)"
+brew_cask_install "shottr" "Shottr (screenshots, pixel measuring, OCR — free)"
 brew_cask_install "numi" "Numi (natural language calculator notepad)"
-brew_cask_install "soulver" "Soulver 3 (smart calculator/spreadsheet hybrid)"
 brew_cask_install "espanso" "Espanso (open-source text expander — snippets, templates)"
-brew_cask_install "hazel" "Hazel (automated file organization rules)"
-brew_cask_install "popclip" "PopClip (text actions on select — copy, search, format)"
 brew_cask_install "yoink" "Yoink (drag and drop shelf — stage files between apps)"
 brew_cask_install "raindropio" "Raindrop.io (bookmark manager — collections, tags, search)"
 
@@ -1226,7 +1336,7 @@ brew_cask_install "skim" "Skim (lightweight PDF reader with annotations — fast
 
 # Browser link routing
 # Velja is Mac App Store only — install via mas
-if installed mas; then
+if installed mas && [[ "$MAS_SIGNED_IN" == "true" ]]; then
     if mas list 2>/dev/null | grep -q "1607635845"; then
         warn "Velja already installed"
     else
@@ -1236,15 +1346,7 @@ if installed mas; then
 fi
 
 # Image editing
-# Pixelmator Pro is Mac App Store only — install via mas
-if installed mas; then
-    if mas list 2>/dev/null | grep -q "1289583905"; then
-        warn "Pixelmator Pro already installed"
-    else
-        info "Installing Pixelmator Pro from Mac App Store..."
-        mas install 1289583905 >> "$LOG_FILE" 2>&1 || error "Failed to install Pixelmator Pro (sign into App Store first)"
-    fi
-fi
+brew_cask_install "gimp" "GIMP (free open-source image editor — Photoshop alternative)"
 
 # File transfer
 brew_cask_install "transmit" "Transmit (fast SFTP/S3 client, dual-pane)"
@@ -1285,7 +1387,7 @@ brew_cask_install "keka" "Keka (file archiver/compressor)"
 brew_cask_install "libreoffice" "LibreOffice (free office suite)"
 brew_cask_install "pocket-casts" "Pocket Casts (podcast player)"
 # Hand Mirror is Mac App Store only — install via mas
-if installed mas; then
+if installed mas && [[ "$MAS_SIGNED_IN" == "true" ]]; then
     if mas list 2>/dev/null | grep -q "1502839586"; then
         warn "Hand Mirror already installed"
     else
@@ -1316,7 +1418,7 @@ if should_run "mac-focus"; then
 banner "Mac Apps — Focus & Learning"
 
 # Flow is Mac App Store only (brew cask disabled 2025-11) — install via mas
-if installed mas; then
+if installed mas && [[ "$MAS_SIGNED_IN" == "true" ]]; then
     if mas list 2>/dev/null | grep -q "1423210932"; then
         warn "Flow already installed"
     else
@@ -1326,7 +1428,7 @@ if installed mas; then
 fi
 brew_cask_install "anki" "Anki (spaced repetition flashcards)"
 # Reeder is Mac App Store only — install via mas (6475002485 = Reeder, 1529448980 = Reeder Classic)
-if installed mas; then
+if installed mas && [[ "$MAS_SIGNED_IN" == "true" ]]; then
     if mas list 2>/dev/null | grep -q "6475002485"; then
         warn "Reeder already installed"
     else
@@ -1341,7 +1443,7 @@ fi  # mac-focus
 if should_run "mac-disk"; then
 banner "Mac Apps — Disk & File Utilities"
 
-brew_cask_install "daisydisk" "DaisyDisk (visual disk space analyzer)"
+# Disk analysis handled by dust and duf (free CLI tools already installed)
 
 fi  # mac-disk
 
@@ -1388,12 +1490,22 @@ for entry in "${BLOAT_APPS[@]}"; do
         continue
     fi
 
+    # Check if app is in /System/Applications (SIP-protected)
+    if [[ "$app_path" == /System/Applications/* ]]; then
+        # Check if SIP is enabled
+        if csrutil status 2>/dev/null | grep -q "enabled"; then
+            warn "$app_name skipped — SIP is enabled (System app, cannot remove)"
+            ((BLOAT_SKIPPED++))
+            continue
+        fi
+    fi
+
     info "Removing $app_name..."
     if sudo rm -rf "$app_path" 2>> "$LOG_FILE"; then
         success "$app_name removed"
         ((BLOAT_REMOVED++))
     else
-        error "Failed to remove $app_name (SIP may be enabled — see banner note above)"
+        warn "$app_name could not be removed (may require SIP disabled)"
         ((BLOAT_FAILED++))
     fi
 done
@@ -1401,10 +1513,17 @@ done
 echo ""
 if [[ "$DRY_RUN" != "true" ]]; then
     info "Bloat removal: $BLOAT_REMOVED removed, $BLOAT_SKIPPED skipped, $BLOAT_FAILED failed"
-    if [[ "$BLOAT_FAILED" -gt 0 ]]; then
-        echo -e "  ${DIM}Tip: System apps require SIP disabled to remove.${NC}"
-        echo -e "  ${DIM}Boot into Recovery (Cmd+R) > Terminal > csrutil disable > reboot.${NC}"
-        echo -e "  ${DIM}Re-enable after removal: csrutil enable${NC}"
+    if [[ "$BLOAT_FAILED" -gt 0 ]] || [[ "$BLOAT_SKIPPED" -gt 0 ]]; then
+        if csrutil status 2>/dev/null | grep -q "enabled"; then
+            echo ""
+            echo -e "  ${YELLOW}System apps require SIP disabled to remove.${NC}"
+            echo -e "  ${DIM}To disable SIP (optional — only if you want to remove system apps):${NC}"
+            echo -e "  ${DIM}  1. Restart and hold Cmd+R (Intel) or Power button (Apple Silicon) for Recovery${NC}"
+            echo -e "  ${DIM}  2. Open Terminal from Utilities menu${NC}"
+            echo -e "  ${DIM}  3. Run: csrutil disable${NC}"
+            echo -e "  ${DIM}  4. Reboot and re-run: ./setup-dev-tools.sh --only mac-bloat${NC}"
+            echo -e "  ${DIM}  5. Re-enable SIP after: csrutil enable${NC}"
+        fi
     fi
 fi
 
@@ -1459,10 +1578,6 @@ else
     echo "  -> Open iTerm2 > Preferences > Profiles > Colors > Import from $DRACULA_ITERM_DIR"
 fi
 
-# Warp Dracula theme (built-in, just print instructions)
-if brew list --cask warp &>/dev/null 2>&1; then
-    info "Warp has Dracula built-in: Settings > Appearance > Theme > Dracula"
-fi
 
 # fzf Dracula colors
 FZF_DRACULA='export FZF_DEFAULT_OPTS="--color=fg:#f8f8f2,bg:#282a36,hl:#bd93f9 --color=fg+:#f8f8f2,bg+:#44475a,hl+:#bd93f9 --color=info:#ffb86c,prompt:#50fa7b,pointer:#ff79c6 --color=marker:#ff79c6,spinner:#ffb86c,header:#6272a4"'
@@ -4754,15 +4869,6 @@ ESPANSO_CONF
     success "Espanso configured (dates, dev shortcuts, Markdown, git, templates, regex, symbols)"
 fi
 
-# ---- Hazel config note ----
-if brew list --cask hazel &>/dev/null 2>&1; then
-    info "Hazel tip: Set up rules for ~/Downloads (auto-sort by file type, clean old files)"
-    echo "  Suggested rules:"
-    echo "    - Move .dmg/.pkg to ~/Downloads/Installers after 1 day"
-    echo "    - Move .pdf to ~/Documents after 1 day"
-    echo "    - Move screenshots to ~/Screenshots"
-    echo "    - Trash files older than 30 days"
-fi
 
 # ---- Filesystem Structure ----
 if should_run "filesystem"; then
@@ -5809,12 +5915,12 @@ else
 
 ## Environment
 - Shell: zsh with starship prompt, atuin history, fzf fuzzy finder
-- Editor: VS Code / Cursor / Zed (Dracula theme, JetBrains Mono)
-- Terminal: Warp / iTerm2 / Ghostty (Dracula theme)
+- Editor: VS Code / Zed (Dracula theme, JetBrains Mono)
+- Terminal: Ghostty (daily driver) / iTerm2 (tmux integration) — Dracula theme
 - Package managers: pnpm (preferred), npm, bun
 - Python: uv for packages (not pip), ruff for linting (not flake8/black)
 - Version managers: nvm (Node), pyenv (Python), mise (universal)
-- Container runtime: Docker Desktop or OrbStack (macOS), Docker Engine (Linux)
+- Container runtime: OrbStack (macOS), Docker Engine (Linux)
 - Task runner: just (prefer over make for project-level tasks)
 
 ## Available CLI Tools (use these instead of manual approaches)
@@ -6979,7 +7085,7 @@ echo "  4. Set up ngrok: ngrok config add-authtoken <TOKEN>"
 echo "  5. Set up chezmoi: chezmoi init && chezmoi add ~/.zshrc"
 echo "  6. Enable FileVault: System Settings > Privacy & Security > FileVault"
 echo "  7. Enable macOS Firewall: System Settings > Network > Firewall"
-echo "  8. Set OrbStack or Docker Desktop as default: open one and set as default"
+echo "  8. Open OrbStack and complete Docker setup"
 
 # =============================================================================
 # POST-INSTALL VERIFICATION

@@ -116,8 +116,7 @@ All scripts share the same flags:
 | **watchman** | File watching service (used by React Native, Jest, etc.) |
 | **cmake** | Cross-platform build system generator |
 | **pkg-config** | Helper tool for compiling libraries |
-| **Docker Desktop** | Container runtime with GUI for managing images and containers |
-| **OrbStack** | Faster Docker Desktop alternative -- 2-5x less memory, native macOS feel |
+| **OrbStack** | Fast container runtime -- 2-5x less memory than Docker Desktop, native macOS feel |
 
 ---
 
@@ -353,15 +352,13 @@ Faster, prettier, smarter replacements for standard Unix utilities.
 | **atuin** | Replaces shell history with SQLite-backed, fuzzy-searchable database |
 | **mise** | Universal version manager -- replaces nvm + pyenv + rbenv in one tool |
 | **VS Code** | Primary code editor and IDE |
-| **Cursor** | AI-native code editor -- VS Code fork with built-in AI pair programming |
 | **Zed** | Fast native editor from ex-Atom team -- GPU-rendered |
 | **Claude Code** | AI-assisted coding in the terminal |
 | **GitHub Copilot CLI** | AI suggestions in the terminal (via `gh copilot suggest`) |
 | **chezmoi** | Dotfile manager -- backup and restore configs across machines |
-| **Proxyman** | Native macOS HTTP debugging proxy -- inspect API calls from any app |
-| **Warp** | Modern GPU-accelerated terminal with AI and block-based output |
-| **iTerm2** | Classic macOS terminal with deep customization and tmux integration |
-| **Ghostty** | Fast GPU-accelerated terminal with native macOS feel |
+| **mitmproxy** | Free HTTP debugging proxy -- inspect and modify API calls from any app |
+| **Ghostty** | Fast GPU-accelerated terminal -- daily driver, native macOS feel |
+| **iTerm2** | Classic macOS terminal with deep tmux integration (backup) |
 | **tmux** | Terminal multiplexer -- persistent sessions, panes, and windows |
 | **Raycast** | Spotlight replacement with extensions, snippets, and workflows |
 | **Rectangle** | Window management with keyboard shortcuts |
@@ -429,8 +426,7 @@ Preview files in Finder by pressing spacebar.
 
 | App | Description |
 |-----|-------------|
-| **AppCleaner** | Fully uninstall apps -- removes leftover files and preferences |
-| **Pearcleaner** | Open-source deep app uninstaller -- finds more leftover files |
+| **Pearcleaner** | Open-source deep app uninstaller -- finds leftover files and preferences |
 | **The Unarchiver** | Opens any archive format -- RAR, 7z, tar, etc. |
 | **Stats** | Free menubar system monitor -- CPU, RAM, network, disk, battery |
 | **Ice** | Open-source menubar icon manager (Bartender replacement) |
@@ -455,18 +451,14 @@ Preview files in Finder by pressing spacebar.
 | **Notion** | All-in-one workspace -- docs, wikis, databases, project tracking |
 | **Notion Calendar** | Calendar app with Notion integration |
 | **Notion Mail** | Email client with Notion integration |
-| **CleanShot X** | Screenshot and recording tool with annotation, scrolling capture |
 | **Shottr** | Free screenshot tool with pixel measuring, OCR, and color picker |
 | **Numi** | Natural language calculator in a notepad ("$120 + 15% tax") |
-| **Soulver 3** | Smart calculator/spreadsheet hybrid for back-of-napkin math |
 | **Espanso** | Open-source text expander -- snippets, date macros, code templates |
-| **Hazel** | Automated file organization rules -- move, rename, tag, archive |
-| **PopClip** | Text actions on select -- copy, search, translate, format |
 | **Yoink** | Drag and drop shelf -- stage files between apps |
 | **Raindrop.io** | Bookmark manager with collections, tags, and full-text search |
 | **Skim** | Lightweight PDF reader with annotations -- faster than Preview |
 | **Velja** | Browser picker -- open links in the right browser based on rules |
-| **Pixelmator Pro** | Native image editor -- fast Photoshop alternative |
+| **GIMP** | Free image editor -- Photoshop alternative |
 | **Transmit** | Premium SFTP/S3 file transfer client -- fast, dual-pane |
 | **Cyberduck** | Free SFTP/S3 client with Cryptomator encryption and `duck` CLI |
 
@@ -530,12 +522,6 @@ Preview files in Finder by pressing spacebar.
 
 ---
 
-## Mac Apps -- Disk & File Utilities
-
-| App | Description |
-|-----|-------------|
-| **DaisyDisk** | Visual disk space analyzer -- find what's eating storage |
-
 ---
 
 ## Remove Pre-installed Apple Bloat
@@ -576,7 +562,6 @@ Applied consistently across all tools:
 | **bat** | Dracula syntax theme in config |
 | **delta** | Dracula syntax theme for git diffs |
 | **iTerm2** | Theme downloaded to `~/.dracula-iterm` |
-| **Warp** | Built-in (manual: Settings > Appearance > Dracula) |
 | **Ghostty** | Full 16-color Dracula palette in config |
 | **fzf** | Dracula colors in `FZF_DEFAULT_OPTS` |
 | **Starship** | Dracula color palette in `starship.toml` |
@@ -1129,15 +1114,14 @@ This prints a full guide for removing all installed tools, configs, and settings
 | macOS App | Windows Equivalent |
 |-----------|--------------------|
 | Raycast + Rectangle | **PowerToys** (FancyZones, Awake, Run, Color Picker) |
-| CleanShot X + Shottr | **ShareX** (screenshots, recording, OCR, annotations) |
-| iTerm2 / Warp / Ghostty | **Windows Terminal** (built-in) + **Alacritty** |
-| Proxyman | **Fiddler** (HTTP debugging proxy) |
+| Shottr | **ShareX** (screenshots, recording, OCR, annotations) |
+| iTerm2 / Ghostty | **Windows Terminal** (built-in) + **Alacritty** |
+| mitmproxy | **mitmproxy** (same tool, cross-platform) |
 | IINA | **mpv** |
-| DaisyDisk | **WizTree** |
 | Skim | **SumatraPDF** |
-| AppCleaner / Pearcleaner | **BCUninstaller** |
+| Pearcleaner | **BCUninstaller** |
 | Keka / The Unarchiver | **7-Zip** |
-| Pixelmator Pro | **GIMP** |
+| GIMP | **GIMP** (same tool, cross-platform) |
 | Transmit | **WinSCP** |
 | LuLu (firewall) | **simplewall** |
 | Quick Look plugins | **QuickLook** (winget) |
@@ -1198,20 +1182,20 @@ Also uses **snap**, **flatpak**, **cargo**, and **Linuxbrew** as fallbacks.
 | macOS App | Linux Equivalent |
 |-----------|-----------------|
 | Raycast | **ulauncher** |
-| CleanShot X + Shottr | **Flameshot** |
-| iTerm2 / Warp / Ghostty | **Alacritty** + **kitty** |
-| Proxyman | **mitmproxy** |
+| Shottr | **Flameshot** |
+| iTerm2 / Ghostty | **Alacritty** + **kitty** |
+| mitmproxy | **mitmproxy** (same tool, cross-platform) |
 | IINA | **mpv** |
-| DaisyDisk | **ncdu** |
+| dust/duf (disk analysis) | **ncdu** |
 | Skim | **Evince** (usually pre-installed) |
-| Pixelmator Pro | **GIMP** |
+| GIMP | **GIMP** (same tool, cross-platform) |
 | Transmit | **FileZilla** |
 | Maccy (clipboard) | **CopyQ** |
 | Amphetamine | **caffeine** |
 | Quick Look plugins | **GNOME Sushi** |
 | Flow (pomodoro) | **GNOME Pomodoro** (flatpak) |
 | Reeder (RSS) | **Newsflash** (flatpak) |
-| Docker Desktop / OrbStack | **Docker Engine** (native, no VM overhead) |
+| OrbStack | **Docker Engine** (native, no VM overhead) |
 | entr | entr (native on Linux) |
 
 GUI apps installed via snap/flatpak where native packages are unavailable.
@@ -1269,7 +1253,7 @@ JetBrains Mono, JetBrains Mono NF, MesloLGS NF, Fira Code, Fira Code NF, Inter, 
 
 These 150+ CLI tools and configs are installed on every platform:
 
-**Dev tools:** git, gh, node, python, go, rust, bun, uv, pnpm, jq, httpie, direnv, cmake, docker
+**Dev tools:** git, gh, node, python, go, rust, bun, uv, pnpm, jq, httpie, direnv, cmake, docker, mitmproxy
 
 **Modern replacements:** eza, bat, fd, ripgrep, zoxide, btop, sd, dust, duf, procs, gping, xh, doggo, tokei, viddy, hexyl, aria2, difftastic, vivid, just, yazi, fx, tldr, trash
 
@@ -1293,7 +1277,7 @@ These 150+ CLI tools and configs are installed on every platform:
 
 **Database:** pgcli, mycli, usql, sq, dbmate
 
-**Editors:** VS Code, Cursor, Zed
+**Editors:** VS Code, Zed
 
 **JS tooling:** TypeScript, tsx, Turborepo, Storybook, Playwright, Lighthouse, Mermaid CLI
 
