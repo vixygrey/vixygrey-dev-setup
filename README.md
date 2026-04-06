@@ -442,9 +442,7 @@ Preview files in Finder by pressing spacebar.
 | **Notion Calendar** | Calendar app with Notion integration |
 | **Notion Mail** | Email client with Notion integration |
 | **Shottr** | Free screenshot tool with pixel measuring, OCR, and color picker |
-| **Numi** | Natural language calculator in a notepad ("$120 + 15% tax") |
 | **Espanso** | Open-source text expander -- snippets, date macros, code templates |
-| **Raindrop.io** | Bookmark manager with collections, tags, and full-text search |
 | **Skim** | Lightweight PDF reader with annotations -- faster than Preview |
 | **Transmit** | Premium SFTP/S3 file transfer client -- fast, dual-pane |
 
