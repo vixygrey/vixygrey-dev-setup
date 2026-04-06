@@ -103,17 +103,15 @@ All scripts share the same flags:
 
 | Tool | Description |
 |------|-------------|
-| **nvm** | Node.js version manager -- run multiple Node versions side by side |
-| **Node.js LTS** | JavaScript runtime (latest Long Term Support version) |
+| **mise** | Universal version manager -- Node, Python, Go, Ruby all in one tool |
+| **Node.js LTS** | JavaScript runtime (latest Long Term Support version, installed via mise) |
 | **Go** | Go programming language |
-| **pyenv** | Python version manager |
-| **Python 3.12** | Python runtime |
+| **Python 3.12** | Python runtime (installed via mise) |
 | **uv** | Fast Python package manager -- 10-100x faster than pip |
 | **Rust** | Rust toolchain via rustup (rustc, cargo, etc.) |
 | **bun** | Fast JS runtime, bundler, and test runner |
 | **pnpm** | Fast, disk-efficient npm alternative |
 | **jq** | Lightweight command-line JSON processor |
-| **httpie** | Human-friendly HTTP client for API testing |
 | **direnv** | Per-directory environment variables (auto-loads `.envrc`) |
 | **watchman** | File watching service (used by React Native, Jest, etc.) |
 | **cmake** | Cross-platform build system generator |
@@ -166,8 +164,6 @@ All scripts share the same flags:
 
 | Tool | Description |
 |------|-------------|
-| **git-secrets** | Prevents committing AWS keys and secrets to git |
-| **trufflehog** | Scans git repos for leaked credentials and API keys |
 | **detect-secrets** | Yelp's pre-commit hook for catching secrets before they're committed |
 | **gitleaks** | Fast git secret scanning -- great for CI and pre-commit hooks |
 | **age** | Modern, simple file encryption (replaces GPG for file encryption) |
@@ -318,7 +314,6 @@ Faster, prettier, smarter replacements for standard Unix utilities.
 |------|-------------|
 | **lazydocker** | Terminal UI for Docker -- manage containers, images, volumes |
 | **dive** | Explore Docker image layers -- find what's taking up space |
-| **colima** | Lightweight Docker runtime -- free OrbStack alternative |
 | **kubectl** | Kubernetes CLI for managing clusters |
 | **k9s** | Terminal UI for Kubernetes -- navigate clusters with keyboard |
 
@@ -352,7 +347,7 @@ Faster, prettier, smarter replacements for standard Unix utilities.
 | **zsh-autosuggestions** | Fish-like inline suggestions as you type |
 | **zsh-syntax-highlighting** | Command coloring in the terminal -- red for errors |
 | **atuin** | Replaces shell history with SQLite-backed, fuzzy-searchable database |
-| **mise** | Universal version manager -- replaces nvm + pyenv + rbenv in one tool |
+| **mise** | Universal version manager -- Node, Python, Go, Ruby all in one (replaces nvm + pyenv + rbenv) |
 | **VS Code** | Primary code editor and IDE |
 | **Zed** | Fast native editor from ex-Atom team -- GPU-rendered |
 | **Claude Code** | AI-assisted coding in the terminal |
@@ -360,7 +355,6 @@ Faster, prettier, smarter replacements for standard Unix utilities.
 | **chezmoi** | Dotfile manager -- backup and restore configs across machines |
 | **mitmproxy** | Free HTTP debugging proxy -- inspect and modify API calls from any app |
 | **Ghostty** | Fast GPU-accelerated terminal -- daily driver, native macOS feel |
-| **iTerm2** | Classic macOS terminal with deep tmux integration (backup) |
 | **tmux** | Terminal multiplexer -- persistent sessions, panes, and windows |
 | **Raycast** | Spotlight replacement with extensions, snippets, and workflows |
 | **Rectangle** | Window management with keyboard shortcuts |
@@ -384,7 +378,6 @@ Faster, prettier, smarter replacements for standard Unix utilities.
 
 | Tool | Description |
 |------|-------------|
-| **Figma** | Collaborative design and prototyping tool |
 | **Lighthouse** | Web performance, accessibility, and SEO auditing CLI |
 
 ---
@@ -429,19 +422,14 @@ Preview files in Finder by pressing spacebar.
 | App | Description |
 |-----|-------------|
 | **Pearcleaner** | Open-source deep app uninstaller -- finds leftover files and preferences |
-| **The Unarchiver** | Opens any archive format -- RAR, 7z, tar, etc. |
 | **Stats** | Free menubar system monitor -- CPU, RAM, network, disk, battery |
 | **Ice** | Open-source menubar icon manager (Bartender replacement) |
 | **Amphetamine** | Prevent Mac from sleeping during presentations or long tasks |
-| **AltTab** | Windows-style alt-tab with window previews |
-| **Dato** | Menubar clock with calendar, timezones, and meeting countdown |
-| **Maccy** | Lightweight clipboard manager with search |
 | **LuLu** | Free open-source outbound firewall -- see what phones home |
 | **Proton VPN** | Privacy-focused VPN |
 | **Proton Mail** | End-to-end encrypted email client |
 | **Proton Pass** | Password manager with end-to-end encryption |
 | **Proton Drive** | Encrypted cloud storage |
-| **KeyboardCleanTool** | One-click keyboard lock for cleaning |
 | **TopNotch** | Hides MacBook notch with a black menu bar |
 
 ---
@@ -456,13 +444,9 @@ Preview files in Finder by pressing spacebar.
 | **Shottr** | Free screenshot tool with pixel measuring, OCR, and color picker |
 | **Numi** | Natural language calculator in a notepad ("$120 + 15% tax") |
 | **Espanso** | Open-source text expander -- snippets, date macros, code templates |
-| **Yoink** | Drag and drop shelf -- stage files between apps |
 | **Raindrop.io** | Bookmark manager with collections, tags, and full-text search |
 | **Skim** | Lightweight PDF reader with annotations -- faster than Preview |
-| **Velja** | Browser picker -- open links in the right browser based on rules |
-| **GIMP** | Free image editor -- Photoshop alternative |
 | **Transmit** | Premium SFTP/S3 file transfer client -- fast, dual-pane |
-| **Cyberduck** | Free SFTP/S3 client with Cryptomator encryption and `duck` CLI |
 
 ---
 
@@ -471,7 +455,6 @@ Preview files in Finder by pressing spacebar.
 | App | Description |
 |-----|-------------|
 | **Slack** | Team messaging and collaboration |
-| **Discord** | Community chat -- voice, video, and text |
 | **Telegram** | Encrypted messaging with channels and bots |
 | **Signal** | End-to-end encrypted messaging -- privacy focused |
 
@@ -496,7 +479,6 @@ Preview files in Finder by pressing spacebar.
 | **Gifski** | Convert video clips to high-quality animated GIFs |
 | **Keka** | File archiver and compressor |
 | **LibreOffice** | Free office suite -- documents, spreadsheets, presentations |
-| **Pocket Casts** | Podcast player with cross-device sync |
 | **Hand Mirror** | Quick webcam check from menubar before meetings |
 
 ---
@@ -517,8 +499,6 @@ Preview files in Finder by pressing spacebar.
 
 | App | Description |
 |-----|-------------|
-| **Flow** | Pomodoro timer that lives in the menubar |
-| **Anki** | Spaced repetition flashcards -- great for learning new tech |
 | **Reeder** | RSS reader -- follow blogs, release notes, changelogs |
 
 ---
@@ -562,7 +542,6 @@ Applied consistently across all tools:
 | **Zed** | Dracula theme set in settings.json |
 | **bat** | Dracula syntax theme in config |
 | **delta** | Dracula syntax theme for git diffs |
-| **iTerm2** | Theme downloaded to `~/.dracula-iterm` |
 | **Ghostty** | Full 16-color Dracula palette in config |
 | **fzf** | Dracula colors in `FZF_DEFAULT_OPTS` |
 | **Starship** | Dracula color palette in `starship.toml` |
@@ -874,9 +853,6 @@ The script generates config files with sensible defaults:
 | **Time Machine** | Excluded node_modules, Docker, caches, Downloads from backups |
 | **Siri** | Disabled and removed from menubar |
 | **Rectangle** | Almost maximize (95%), 8px gaps between windows, snap on drag, launch at login |
-| **Maccy** | Paste on select, 200 history items, launch at login |
-| **AltTab** | Current space only, show minimized windows |
-| **iTerm2** | Suppress quit prompt |
 
 ---
 
@@ -1116,21 +1092,17 @@ This prints a full guide for removing all installed tools, configs, and settings
 |-----------|--------------------|
 | Raycast + Rectangle | **PowerToys** (FancyZones, Awake, Run, Color Picker) |
 | Shottr | **ShareX** (screenshots, recording, OCR, annotations) |
-| iTerm2 / Ghostty | **Windows Terminal** (built-in) + **Alacritty** |
+| Ghostty | **Windows Terminal** (built-in) + **Alacritty** |
 | mitmproxy | **mitmproxy** (same tool, cross-platform) |
 | IINA | **mpv** |
 | Skim | **SumatraPDF** |
 | Pearcleaner | **BCUninstaller** |
-| Keka / The Unarchiver | **7-Zip** |
-| GIMP | **GIMP** (same tool, cross-platform) |
+| Keka | **7-Zip** |
 | Transmit | **WinSCP** |
 | LuLu (firewall) | **simplewall** |
 | Quick Look plugins | **QuickLook** (winget) |
 | Ice (menubar) | N/A (taskbar built-in) |
-| Maccy (clipboard) | N/A (Win+V built-in) |
 | Amphetamine | PowerToys Awake (built-in) |
-| AltTab | N/A (built-in alt-tab) |
-| Dato (clock) | N/A (built-in clock) |
 | entr (file watcher) | **watchexec** |
 | tmux | N/A (use Windows Terminal panes) |
 
@@ -1184,17 +1156,14 @@ Also uses **snap**, **flatpak**, **cargo**, and **Linuxbrew** as fallbacks.
 |-----------|-----------------|
 | Raycast | **ulauncher** |
 | Shottr | **Flameshot** |
-| iTerm2 / Ghostty | **Alacritty** + **kitty** |
+| Ghostty | **Alacritty** + **kitty** |
 | mitmproxy | **mitmproxy** (same tool, cross-platform) |
 | IINA | **mpv** |
 | dust/duf (disk analysis) | **ncdu** |
 | Skim | **Evince** (usually pre-installed) |
-| GIMP | **GIMP** (same tool, cross-platform) |
 | Transmit | **FileZilla** |
-| Maccy (clipboard) | **CopyQ** |
 | Amphetamine | **caffeine** |
 | Quick Look plugins | **GNOME Sushi** |
-| Flow (pomodoro) | **GNOME Pomodoro** (flatpak) |
 | Reeder (RSS) | **Newsflash** (flatpak) |
 | OrbStack | **Docker Engine** (native, no VM overhead) |
 | entr | entr (native on Linux) |
@@ -1236,7 +1205,7 @@ GNOME settings applied via `gsettings` (skipped if not GNOME):
 
 Installs zsh and sets it as default shell. Managed block in `~/.zshrc` with:
 - Same aliases as macOS (eza, bat, fd, etc.)
-- Tool initialization (starship, atuin, zoxide, direnv, pyenv, nvm)
+- Tool initialization (starship, atuin, zoxide, direnv, mise)
 - Plugin paths auto-detected across distros
 - `xclip` for clipboard operations (replaces `pbcopy`)
 
@@ -1253,7 +1222,7 @@ JetBrains Mono, JetBrains Mono NF, MesloLGS NF, Fira Code, Fira Code NF, Inter, 
 
 These 150+ CLI tools and configs are installed on every platform:
 
-**Dev tools:** git, gh, node, python, go, rust, bun, uv, pnpm, jq, httpie, direnv, cmake, docker, mitmproxy
+**Dev tools:** git, gh, mise, node, python, go, rust, bun, uv, pnpm, jq, direnv, cmake, docker, mitmproxy
 
 **Modern replacements:** eza, bat, fd, ripgrep, zoxide, btop, sd, dust, duf, procs, gping, xh, doggo, tokei, viddy, hexyl, aria2, difftastic, vivid, just, yazi, fx, tldr, trash
 
@@ -1263,7 +1232,7 @@ These 150+ CLI tools and configs are installed on every platform:
 
 **IaC:** opentofu, tflint, infracost
 
-**Security:** git-secrets, trufflehog, detect-secrets, gitleaks, trivy, semgrep, cosign, snyk, mkcert, wireshark, ssh-audit, clamav, age, sops
+**Security:** detect-secrets, gitleaks, trivy, semgrep, cosign, snyk, mkcert, wireshark, ssh-audit, clamav, age, sops
 
 **Data:** yq, miller, csvkit, pandoc, imagemagick, ffmpeg, yt-dlp
 
@@ -1273,7 +1242,7 @@ These 150+ CLI tools and configs are installed on every platform:
 
 **Productivity:** glow, entr, pv, parallel, asciinema, topgrade, fastfetch, lnav, starship, atuin, fzf, chezmoi
 
-**K8s:** stern, kubectl, k9s, lazydocker, dive, colima
+**K8s:** stern, kubectl, k9s, lazydocker, dive
 
 **Database:** pgcli, mycli, usql, sq, dbmate
 

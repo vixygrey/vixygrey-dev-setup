@@ -213,11 +213,11 @@ function Show-Categories {
     Write-Host ""
     $cats = @(
         @("prerequisites",          "Scoop, Scoop buckets, Visual Studio Build Tools")
-        @("core",                   "Node, Python, Go, Rust, Docker, bun, uv, pnpm")
+        @("core",                   "mise (Node, Python), Go, Rust, Docker, bun, uv, pnpm")
         @("git",                    "Git, GitHub CLI, delta, lazygit, pre-commit")
         @("aws",                    "AWS CLI, CDK, SAM, Granted, cfn-lint")
         @("iac",                   "OpenTofu, tflint, infracost (Infrastructure as Code)")
-        @("security",              "git-secrets, gitleaks, trivy, semgrep, simplewall, Wireshark")
+        @("security",              "detect-secrets, gitleaks, trivy, semgrep, simplewall, Wireshark")
         @("replacements",          "eza, bat, fd, ripgrep, zoxide, btop, sd, dust, just, yazi, fx, etc.")
         @("data-processing",       "yq, miller, csvkit, pandoc, ffmpeg, ImageMagick")
         @("code-quality",          "shellcheck, shfmt, act, hadolint, ruff, npkill, commitizen")
@@ -226,20 +226,20 @@ function Show-Categories {
         @("terminal-productivity", "glow, watchexec, pv, parallel, topgrade, fastfetch, lnav")
         @("k8s-github",            "stern, gh-dash")
         @("database",              "pgcli, mycli, usql, sq, DBeaver")
-        @("containers",            "lazydocker, dive, colima, kubectl, k9s")
+        @("containers",            "lazydocker, dive, kubectl, k9s")
         @("api",                   "Bruno, grpcurl")
         @("networking",            "mtr/WinMTR, bandwhich, nmap")
         @("dx",                    "fzf, starship, atuin, VS Code, Zed, Alacritty, PowerToys")
         @("ui",                    "Storybook, Playwright, Chrome")
-        @("ux",                    "Figma, Lighthouse")
+        @("ux",                    "Lighthouse")
         @("docs",                  "d2, Mermaid CLI")
         @("win-system",            "BCUninstaller, 7zip, simplewall, QuickLook, PowerToys, Proton apps")
-        @("win-productivity",      "Notion, ShareX, Espanso, SumatraPDF, GIMP, Raindrop")
-        @("win-communication",     "Slack, Discord, Telegram, Signal")
+        @("win-productivity",      "Notion, ShareX, Espanso, SumatraPDF, Raindrop")
+        @("win-communication",     "Slack, Telegram, Signal")
         @("win-browsers",          "Firefox, Arc, Brave")
         @("win-media",             "mpv, LibreOffice, gifski")
         @("win-cloud",             "Google Drive, rclone, Syncthing")
-        @("win-focus",             "Anki")
+        @("win-focus",             "Reeder alternative")
         @("win-disk",              "dust, duf")
         @("win-bloat",             "Remove pre-installed Windows apps (Clipchamp, Xbox, etc.)")
         @("dracula",               "Dracula theme for all tools")
@@ -523,6 +523,16 @@ if ($CLEANUP) {
         @{ Type="winget"; Id="Telerik.Fiddler.Classic"; Name="Fiddler"; Replacement="mitmproxy" }
         @{ Type="scoop"; Id="dog"; Name="dog (DNS tool)"; Replacement="doggo" }
         @{ Type="winget"; Id="Tailscale.Tailscale"; Name="Tailscale"; Replacement="removed" }
+        @{ Type="winget"; Id="Figma.Figma"; Name="Figma"; Replacement="removed (use figma.com)" }
+        @{ Type="winget"; Id="Discord.Discord"; Name="Discord"; Replacement="removed" }
+        @{ Type="winget"; Id="GIMP.GIMP"; Name="GIMP"; Replacement="removed" }
+        @{ Type="winget"; Id="Anki.Anki"; Name="Anki"; Replacement="removed" }
+        @{ Type="scoop"; Id="nvm"; Name="nvm"; Replacement="mise" }
+        @{ Type="scoop"; Id="pyenv"; Name="pyenv-win"; Replacement="mise" }
+        @{ Type="scoop"; Id="httpie"; Name="HTTPie"; Replacement="xh" }
+        @{ Type="scoop"; Id="git-secrets"; Name="git-secrets"; Replacement="gitleaks + detect-secrets" }
+        @{ Type="scoop"; Id="trufflehog"; Name="trufflehog"; Replacement="gitleaks + detect-secrets" }
+        @{ Type="winget"; Id="Cyberduck.Cyberduck"; Name="Cyberduck"; Replacement="WinSCP" }
     )
 
     $cleanupCount = 0
@@ -628,29 +638,43 @@ Install-ScoopPackage "git" "Git"
 if (Test-ShouldRun "core") {
 Write-Banner "Core Development"
 
-Install-ScoopPackage "nvm" "nvm (Node Version Manager)"
+Install-ScoopPackage "mise" "mise (universal version manager -- Node, Python, Go, Ruby, etc.)"
 
-# Set up nvm and install latest LTS Node
-if (Test-Command "nvm") {
+# Activate mise for this script session and install Node/Python
+if (Test-Command "mise") {
     if (-not $DRY_RUN) {
-        $nodeVersions = nvm list 2>$null
-        if (-not ($nodeVersions -match "lts")) {
-            Write-Info "Installing latest Node.js LTS..."
-            nvm install lts 2>&1 | Out-File $LOG_FILE -Append
-            nvm use lts 2>&1 | Out-File $LOG_FILE -Append
-            Write-Success "Node.js LTS installed"
+        mise activate powershell 2>$null | Invoke-Expression
+
+        # Install Node.js LTS via mise
+        $miseNode = mise ls node 2>$null
+        if (-not ($miseNode -match "lts")) {
+            Write-Info "Installing Node.js LTS via mise..."
+            mise install node@lts 2>&1 | Out-File $LOG_FILE -Append
+            mise use --global node@lts 2>&1 | Out-File $LOG_FILE -Append
+            Write-Success "Node.js LTS installed via mise"
         } else {
-            Write-Warn "Node.js LTS already installed"
+            Write-Warn "Node.js LTS already installed via mise"
         }
+
+        # Install Python 3.12 via mise
+        $misePython = mise ls python 2>$null
+        if (-not ($misePython -match "3.12")) {
+            Write-Info "Installing Python 3.12 via mise..."
+            mise install python@3.12 2>&1 | Out-File $LOG_FILE -Append
+            mise use --global python@3.12 2>&1 | Out-File $LOG_FILE -Append
+            Write-Success "Python 3.12 installed via mise"
+        } else {
+            Write-Warn "Python 3.12 already installed via mise"
+        }
+
+        # Ensure mise shims are in PATH for the rest of this script
+        mise env 2>$null | Invoke-Expression
     }
 }
 
 Install-ScoopPackage "go" "Go (lang)"
-Install-ScoopPackage "pyenv" "pyenv-win (Python Version Manager)"
-Install-ScoopPackage "python" "Python 3"
 Install-ScoopPackage "uv" "uv (fast Python package manager -- 10-100x faster than pip)"
 Install-ScoopPackage "jq" "jq (JSON processor)"
-Install-ScoopPackage "httpie" "HTTPie (API client)"
 Install-ScoopPackage "direnv" "direnv (per-project env vars)"
 Install-ScoopPackage "cmake" "CMake"
 
@@ -684,6 +708,25 @@ Install-ScoopPackage "bun" "bun (fast JS runtime/bundler/test runner)"
 
 # pnpm
 Install-ScoopPackage "pnpm" "pnpm (fast, disk-efficient package manager)"
+
+# -- Verify all runtimes are in PATH for the rest of the script ----------------
+Write-Info "Verifying runtime paths..."
+# Refresh PATH to pick up scoop/winget installs
+$env:Path = [System.Environment]::GetEnvironmentVariable("Path", "Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path", "User")
+
+# mise - ensure mise shims are active
+if (Get-Command mise -ErrorAction SilentlyContinue) {
+    mise env 2>$null | Invoke-Expression
+}
+
+# Verify and log
+foreach ($tool in @("node", "npm", "go", "rustc", "cargo", "bun", "pnpm", "uv", "code")) {
+    if (Get-Command $tool -ErrorAction SilentlyContinue) {
+        Add-Content $LOG_FILE "RUNTIME: $tool found at $((Get-Command $tool).Source)"
+    } else {
+        Add-Content $LOG_FILE "RUNTIME: $tool NOT found in PATH"
+    }
+}
 
 } # core
 
@@ -785,17 +828,8 @@ Install-ScoopPackage "infracost" "infracost (cost estimation for Terraform)"
 if (Test-ShouldRun "security") {
 Write-Banner "Security & Secrets"
 
-Install-ScoopPackage "git-secrets" "git-secrets (prevents committing AWS keys)"
-Install-ScoopPackage "trufflehog" "trufflehog (scans repos for leaked credentials)"
 Install-ScoopPackage "age" "age (modern file encryption)"
 Install-ScoopPackage "sops" "sops (encrypt secrets in YAML/JSON, works with AWS KMS)"
-
-# Initialize git-secrets for AWS patterns
-if ((Test-Command "git-secrets") -and -not $DRY_RUN) {
-    Write-Info "Registering AWS patterns with git-secrets..."
-    git secrets --register-aws --global 2>$null
-    Write-Success "git-secrets AWS patterns registered"
-}
 
 Install-ScoopPackage "detect-secrets" "detect-secrets (pre-commit secret detection)"
 Install-ScoopPackage "gitleaks" "gitleaks (fast git secret scanning)"
@@ -1012,9 +1046,6 @@ Install-ScoopPackage "dive" "dive (explore Docker image layers)"
 Install-ScoopPackage "kubectl" "kubectl (Kubernetes CLI)"
 Install-ScoopPackage "k9s" "k9s (terminal UI for Kubernetes)"
 
-# Colima (Linux VM-based Docker -- may have limited Windows support)
-Write-Info "Colima: Primarily for macOS/Linux. Docker Desktop recommended for Windows."
-
 } # containers
 
 # =============================================================================
@@ -1044,7 +1075,6 @@ Write-Banner "Developer Experience"
 Install-ScoopPackage "fzf" "fzf (fuzzy finder)"
 Install-ScoopPackage "starship" "Starship (shell prompt)"
 Install-ScoopPackage "atuin" "atuin (replaces shell history -- SQLite-backed, searchable)"
-Install-ScoopPackage "mise" "mise (universal version manager -- nvm + pyenv + rbenv in one)"
 Install-ScoopPackage "chezmoi" "chezmoi (dotfile manager -- backup/restore configs across machines)"
 
 # Editors & terminals
@@ -1122,8 +1152,6 @@ Install-WingetPackage "Google.Chrome" "Google Chrome"
 if (Test-ShouldRun "ux") {
 Write-Banner "UX & Design"
 
-Install-WingetPackage "Figma.Figma" "Figma"
-
 if (Test-Command "npm") {
     Install-NpmGlobal "lighthouse" "Lighthouse CLI"
 }
@@ -1173,12 +1201,10 @@ Install-WingetPackage "Notion.NotionCalendar" "Notion Calendar"
 Install-ScoopPackage "sharex" "ShareX (replaces Shottr -- screenshots & recording)"
 Install-ScoopPackage "espanso" "Espanso (open-source text expander -- snippets, templates)"
 Install-ScoopPackage "sumatrapdf" "SumatraPDF (lightweight PDF reader -- replaces Skim)"
-Install-WingetPackage "GIMP.GIMP" "GIMP (replaces Pixelmator Pro -- image editing)"
 Install-WingetPackage "Raindrop.Raindrop" "Raindrop.io (bookmark manager -- collections, tags, search)"
 
 # File transfer
 Install-WingetPackage "WinSCP.WinSCP" "WinSCP (SFTP/SCP client -- replaces Transmit)"
-Install-WingetPackage "Cyberduck.Cyberduck" "Cyberduck (free SFTP/S3 client)"
 
 } # win-productivity
 
@@ -1187,7 +1213,6 @@ if (Test-ShouldRun "win-communication") {
 Write-Banner "Windows Apps -- Communication"
 
 Install-WingetPackage "SlackTechnologies.Slack" "Slack"
-Install-WingetPackage "Discord.Discord" "Discord"
 Install-WingetPackage "Telegram.TelegramDesktop" "Telegram"
 Install-WingetPackage "OpenWhisperSystems.Signal" "Signal (end-to-end encrypted messaging)"
 
@@ -1211,8 +1236,6 @@ Install-ScoopPackage "mpv" "mpv (modern video player -- replaces IINA)"
 Install-WingetPackage "TheDocumentFoundation.LibreOffice" "LibreOffice (free office suite)"
 Install-ScoopPackage "gifski" "gifski (video to high-quality GIF)"
 
-Write-Info "Pocket Casts: Use web app at https://play.pocketcasts.com or Microsoft Store"
-
 } # win-media
 
 # =============================================================================
@@ -1229,9 +1252,6 @@ Install-WingetPackage "Syncthing.Syncthing" "Syncthing (real-time device sync)"
 if (Test-ShouldRun "win-focus") {
 Write-Banner "Windows Apps -- Focus & Learning"
 
-Install-WingetPackage "Anki.Anki" "Anki (spaced repetition flashcards)"
-
-Write-Info "Flow: macOS-only Pomodoro timer. Alternatives: Focus To-Do (Microsoft Store)"
 Write-Info "Reeder: macOS-only RSS reader. Alternatives: Fluent Reader (winget: nicehash.fluentreader)"
 
 } # win-focus
@@ -3526,14 +3546,25 @@ if (Test-Path $miseConfig) {
         if (-not (Test-Path $miseDir)) { New-Item -ItemType Directory -Path $miseDir -Force | Out-Null }
         Set-Content -Path $miseConfig -Value @"
 # mise global tool versions
+# Docs: https://mise.jdx.dev/
+# These are defaults -- per-project .mise.toml takes precedence
+
 [tools]
-# node = "lts"
-# python = "3.12"
-# go = "latest"
+node = "lts"
+python = "3.12"
+# go = "latest"      # installed via scoop
+# rust = "latest"    # installed via rustup
+# java = "21"
+# ruby = "latest"
 
 [settings]
+# Automatically install tools when entering a directory with .mise.toml
 auto_install = true
+
+# Don't prompt to trust config files in ~/Code
 trusted_config_paths = ["~/Code"]
+
+# Quieter output
 quiet = false
 verbose = false
 "@
@@ -4611,6 +4642,31 @@ public class Wallpaper {
     }
 }
 
+    # ---- Auto-set timezone ----
+    try {
+        Set-TimeZone -Id "Central Standard Time" -ErrorAction SilentlyContinue
+        Write-Success "Timezone set to Central Standard Time"
+    } catch { Write-Err "Failed to set timezone: $_" }
+
+    # ---- Software Update: auto-check but don't auto-restart ----
+    if ($isAdmin) {
+        try {
+            $wuPath = "HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate\AU"
+            New-Item -Path $wuPath -Force -ErrorAction SilentlyContinue | Out-Null
+            Set-ItemProperty -Path $wuPath -Name NoAutoRebootWithLoggedOnUsers -Value 1 -ErrorAction SilentlyContinue
+            Write-Success "Windows Update: disabled auto-reboot with logged-on users"
+        } catch { Write-Err "Failed to set Windows Update policy: $_" }
+    } else {
+        Write-Warn "Skipping Windows Update policy (requires Administrator)"
+    }
+
+    # ---- Show Bluetooth in system tray (already visible by default on Windows) ----
+    Write-Info "Bluetooth is visible in system tray by default on Windows"
+
+    # ---- Login items (start at login) ----
+    $startupFolder = [Environment]::GetFolderPath("Startup")
+    # Clipboard history: use Windows built-in (Win+V) — no CopyQ needed
+
 } # windows-defaults
 
 # =============================================================================
@@ -4837,7 +4893,7 @@ if (Test-Path $claudeMd) {
 - Terminal: Windows Terminal / Alacritty (Dracula theme)
 - Package managers: pnpm (preferred), npm, bun
 - Python: uv for packages (not pip), ruff for linting (not flake8/black)
-- Version managers: nvm (Node), pyenv-win (Python), mise (universal)
+- Version manager: mise (Node, Python, Go, Ruby — all in one)
 - Container runtime: Docker Desktop
 - Task runner: just (prefer over make for project-level tasks)
 
@@ -5696,6 +5752,11 @@ if (Test-Path "`$HOME\.bun") {
 
 # -- Tool Initialization ------------------------------------------------------
 
+# mise (universal version manager — Node, Python, Go, Ruby, etc.)
+if (Get-Command mise -ErrorAction SilentlyContinue) {
+    mise activate powershell | Invoke-Expression
+}
+
 # Starship prompt
 if (Get-Command starship -ErrorAction SilentlyContinue) {
     Invoke-Expression (&starship init powershell)
@@ -5900,6 +5961,103 @@ $managedBlock
 }
 
 } # shell
+
+# =============================================================================
+# FIRST-RUN SETUP (interactive — only runs if not already configured)
+# =============================================================================
+if (-not $DRY_RUN) {
+Write-Banner "First-Run Setup"
+
+# ---- SSH Key Generation ----
+$sshKeyPath = Join-Path $HOME ".ssh\id_ed25519"
+if (-not (Test-Path $sshKeyPath)) {
+    Write-Host ""
+    $sshConfirm = Read-Host "Generate an SSH key? [Y/n]"
+    if ($sshConfirm -notmatch '^[Nn]$') {
+        $sshEmail = Read-Host "Email for SSH key"
+        if ($sshEmail) {
+            $sshDir = Join-Path $HOME ".ssh"
+            if (-not (Test-Path $sshDir)) { New-Item -ItemType Directory -Path $sshDir -Force | Out-Null }
+            & ssh-keygen.exe -t ed25519 -C $sshEmail -f $sshKeyPath
+            try {
+                Start-Service ssh-agent -ErrorAction SilentlyContinue
+                & ssh-add.exe $sshKeyPath 2>$null
+            } catch {
+                Write-Warn "Could not start ssh-agent: $_"
+            }
+            Write-Success "SSH key generated at ~/.ssh/id_ed25519"
+        }
+    }
+} else {
+    Write-Warn "SSH key already exists at ~/.ssh/id_ed25519"
+}
+
+# ---- GitHub Authentication ----
+if (Get-Command gh -ErrorAction SilentlyContinue) {
+    $ghAuth = & gh auth status 2>&1
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host ""
+        $ghConfirm = Read-Host "Authenticate with GitHub? [Y/n]"
+        if ($ghConfirm -notmatch '^[Nn]$') {
+            Write-Info "Opening GitHub authentication..."
+            & gh auth login
+            # Add SSH key to GitHub if it was just generated
+            $sshPubKey = Join-Path $HOME ".ssh\id_ed25519.pub"
+            if (Test-Path $sshPubKey) {
+                $sshGhConfirm = Read-Host "Add SSH key to GitHub? [Y/n]"
+                if ($sshGhConfirm -notmatch '^[Nn]$') {
+                    $keyTitle = "$env:COMPUTERNAME $(Get-Date -Format 'yyyy-MM-dd')"
+                    & gh ssh-key add $sshPubKey --title $keyTitle
+                    Write-Success "SSH key added to GitHub"
+                }
+            }
+        }
+    } else {
+        Write-Warn "GitHub CLI already authenticated"
+    }
+}
+
+# ---- Git Identity ----
+$gitconfigWork = Join-Path $HOME ".gitconfig-work"
+$gitconfigPersonal = Join-Path $HOME ".gitconfig-personal"
+
+# Work identity
+if ((Test-Path $gitconfigWork) -and (Select-String -Path $gitconfigWork -Pattern "^    # name = " -Quiet)) {
+    Write-Host ""
+    $workConfirm = Read-Host "Set up your work git identity? [Y/n]"
+    if ($workConfirm -notmatch '^[Nn]$') {
+        $workName = Read-Host "Work name"
+        $workEmail = Read-Host "Work email"
+        if ($workName -and $workEmail) {
+            Set-Content -Path $gitconfigWork -Value @"
+[user]
+    name = $workName
+    email = $workEmail
+"@
+            Write-Success "Work git identity set ($workEmail)"
+        }
+    }
+}
+
+# Personal identity
+if ((Test-Path $gitconfigPersonal) -and (Select-String -Path $gitconfigPersonal -Pattern "^    # name = " -Quiet)) {
+    Write-Host ""
+    $personalConfirm = Read-Host "Set up your personal git identity? [Y/n]"
+    if ($personalConfirm -notmatch '^[Nn]$') {
+        $personalName = Read-Host "Personal name"
+        $personalEmail = Read-Host "Personal email"
+        if ($personalName -and $personalEmail) {
+            Set-Content -Path $gitconfigPersonal -Value @"
+[user]
+    name = $personalName
+    email = $personalEmail
+"@
+            Write-Success "Personal git identity set ($personalEmail)"
+        }
+    }
+}
+
+}  # DRY_RUN (first-run setup)
 
 # =============================================================================
 # POST-INSTALL VERIFICATION

@@ -202,11 +202,11 @@ list_categories() {
     echo -e "${BOLD}Available categories:${NC}"
     echo ""
     printf "  %-25s %s\n" "prerequisites"       "Build tools, zsh, snap, flatpak, Linuxbrew"
-    printf "  %-25s %s\n" "core"                "Node, Python, Go, Rust, Docker Engine, bun, uv, pnpm"
+    printf "  %-25s %s\n" "core"                "mise (Node, Python), Go, Rust, Docker Engine, bun, uv, pnpm"
     printf "  %-25s %s\n" "git"                 "Git, GitHub CLI, delta, lazygit, pre-commit"
     printf "  %-25s %s\n" "aws"                 "AWS CLI, CDK, SAM, Granted, cfn-lint"
     printf "  %-25s %s\n" "iac"                 "OpenTofu (Terraform), tflint, infracost"
-    printf "  %-25s %s\n" "security"            "git-secrets, gitleaks, trivy, semgrep, Snyk, ClamAV"
+    printf "  %-25s %s\n" "security"            "detect-secrets, gitleaks, trivy, semgrep, Snyk, ClamAV"
     printf "  %-25s %s\n" "replacements"        "eza, bat, fd, ripgrep, zoxide, btop, sd, dust, just, yazi, fx, etc."
     printf "  %-25s %s\n" "data-processing"     "yq, miller, csvkit, pandoc, ffmpeg, ImageMagick"
     printf "  %-25s %s\n" "code-quality"        "shellcheck, shfmt, act, hadolint, ruff, commitizen, ni"
@@ -220,15 +220,15 @@ list_categories() {
     printf "  %-25s %s\n" "networking"          "mtr, bandwhich, nmap"
     printf "  %-25s %s\n" "dx"                  "fzf, starship, atuin, VS Code, Zed, Alacritty, tmux"
     printf "  %-25s %s\n" "ui"                  "Storybook, Playwright, Chrome"
-    printf "  %-25s %s\n" "ux"                  "Figma (Linux), Lighthouse"
+    printf "  %-25s %s\n" "ux"                  "Lighthouse"
     printf "  %-25s %s\n" "docs"                "d2, Mermaid CLI"
-    printf "  %-25s %s\n" "linux-system"        "p7zip, gnome-sushi, caffeine, copyq, Proton suite"
-    printf "  %-25s %s\n" "linux-productivity"  "Flameshot, Espanso, GIMP, Notion, Filezilla"
-    printf "  %-25s %s\n" "linux-communication" "Slack, Discord, Telegram, Signal"
+    printf "  %-25s %s\n" "linux-system"        "p7zip, gnome-sushi, caffeine, Proton suite"
+    printf "  %-25s %s\n" "linux-productivity"  "Flameshot, Espanso, Notion, Filezilla"
+    printf "  %-25s %s\n" "linux-communication" "Slack, Telegram, Signal"
     printf "  %-25s %s\n" "linux-browsers"      "Firefox, Brave, Chrome"
-    printf "  %-25s %s\n" "linux-media"         "mpv, LibreOffice, gifski, Pocket Casts"
+    printf "  %-25s %s\n" "linux-media"         "mpv, LibreOffice, gifski"
     printf "  %-25s %s\n" "linux-cloud"         "rclone, syncthing, borgbackup, borgmatic"
-    printf "  %-25s %s\n" "linux-focus"         "Anki, Pomodoro, NewsFlash"
+    printf "  %-25s %s\n" "linux-focus"         "NewsFlash (RSS)"
     printf "  %-25s %s\n" "linux-disk"          "ncdu"
     printf "  %-25s %s\n" "dracula"             "Dracula theme for all tools"
     printf "  %-25s %s\n" "configs"             "All dotfiles and tool configurations"
@@ -1003,6 +1003,16 @@ if [[ "$CLEANUP" == "true" ]]; then
         "pkg:dog:dog (DNS tool):doggo"
         "snap:cursor:Cursor (AI editor):VS Code + Claude Code"
         "pkg:tailscale:Tailscale:removed"
+        "snap:discord:Discord:removed"
+        "pkg:gimp:GIMP:removed"
+        "flatpak:io.github.nickvision_apps.Cavalier:Figma Linux (unofficial):removed (use figma.com)"
+        "flatpak:net.ankiweb.Anki:Anki:removed"
+        "pkg:nvm:nvm:mise"
+        "pkg:pyenv:pyenv:mise"
+        "pkg:httpie:HTTPie:xh"
+        "pkg:git-secrets:git-secrets:gitleaks + detect-secrets"
+        "pkg:trufflehog:trufflehog:gitleaks + detect-secrets"
+        "snap:cyberduck:Cyberduck:FileZilla"
     )
 
     CLEANUP_COUNT=0
@@ -1042,6 +1052,19 @@ if [[ "$CLEANUP" == "true" ]]; then
                     else
                         info "Removing $display (replaced by $replacement)..."
                         sudo snap remove "$name" >> "$LOG_FILE" 2>&1 && success "$display removed" || error "Failed to remove $display"
+                        ((CLEANUP_COUNT++))
+                    fi
+                else
+                    ((CLEANUP_SKIPPED++))
+                fi
+                ;;
+            flatpak)
+                if flatpak info "$name" &>/dev/null 2>&1; then
+                    if [[ "$DRY_RUN" == "true" ]]; then
+                        info "[DRY RUN] Would remove: $display (replaced by $replacement)"
+                    else
+                        info "Removing $display (replaced by $replacement)..."
+                        flatpak uninstall -y "$name" >> "$LOG_FILE" 2>&1 && success "$display removed" || error "Failed to remove $display"
                         ((CLEANUP_COUNT++))
                     fi
                 else
@@ -1163,57 +1186,54 @@ export HOMEBREW_NO_AUTO_UPDATE=1
 if should_run "core"; then
 banner "Core Development"
 
-# nvm
-if [[ ! -d "$HOME/.nvm" ]]; then
-    info "Installing nvm (Node Version Manager)..."
+# mise (universal version manager — replaces nvm, pyenv, rbenv in one tool)
+if ! installed mise; then
+    info "Installing mise (universal version manager)..."
     if [[ "$DRY_RUN" != "true" ]]; then
-        curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/master/install.sh 2>/dev/null | bash >> "$LOG_FILE" 2>&1
-        success "nvm installed"
+        curl https://mise.run 2>/dev/null | sh >> "$LOG_FILE" 2>&1
+        success "mise installed"
     else
-        info "[DRY RUN] Would install: nvm"
+        info "[DRY RUN] Would install: mise"
     fi
 else
-    warn "nvm already installed"
+    warn "mise already installed"
 fi
 
-# Set up nvm and install latest LTS Node
-export NVM_DIR="$HOME/.nvm"
-[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh" 2>/dev/null || true
-if installed nvm 2>/dev/null || type nvm &>/dev/null; then
-    if ! nvm ls --no-colors 2>/dev/null | grep -q "lts"; then
-        info "Installing latest Node.js LTS..."
+# Activate mise for this script session
+if installed mise; then
+    eval "$(mise activate bash 2>/dev/null)" || true
+fi
+
+# Install Node.js LTS and Python via mise
+if installed mise; then
+    if ! mise ls node 2>/dev/null | grep -q "lts"; then
+        info "Installing Node.js LTS via mise..."
         if [[ "$DRY_RUN" != "true" ]]; then
-            nvm install --lts >> "$LOG_FILE" 2>&1
-            nvm alias default lts/* >> "$LOG_FILE" 2>&1
-            success "Node.js LTS installed"
+            mise install node@lts >> "$LOG_FILE" 2>&1
+            mise use --global node@lts >> "$LOG_FILE" 2>&1
+            success "Node.js LTS installed via mise"
         fi
     else
-        warn "Node.js LTS already installed"
+        warn "Node.js LTS already installed via mise"
     fi
+
+    if ! mise ls python 2>/dev/null | grep -q "3.12"; then
+        info "Installing Python 3.12 via mise..."
+        if [[ "$DRY_RUN" != "true" ]]; then
+            mise install python@3.12 >> "$LOG_FILE" 2>&1
+            mise use --global python@3.12 >> "$LOG_FILE" 2>&1
+            success "Python 3.12 installed via mise"
+        fi
+    else
+        warn "Python 3.12 already installed via mise"
+    fi
+
+    # Ensure mise shims are in PATH for the rest of this script
+    eval "$(mise env 2>/dev/null)" || true
 fi
 
 # Go
 pkg_install "golang-go" "golang" "go" "Go (lang)"
-
-# pyenv
-if [[ ! -d "$HOME/.pyenv" ]]; then
-    info "Installing pyenv..."
-    if [[ "$DRY_RUN" != "true" ]]; then
-        # Install pyenv build dependencies first
-        case "$PKG_MANAGER" in
-            apt) sudo apt-get install -y make build-essential libssl-dev zlib1g-dev libbz2-dev libreadline-dev libsqlite3-dev llvm libncursesw5-dev xz-utils tk-dev libxml2-dev libxmlsec1-dev libffi-dev liblzma-dev >> "$LOG_FILE" 2>&1 ;;
-            dnf) sudo dnf install -y zlib-devel bzip2-devel readline-devel sqlite-devel openssl-devel xz-devel libffi-devel findutils tk-devel >> "$LOG_FILE" 2>&1 ;;
-            pacman) sudo pacman -S --noconfirm --needed base-devel openssl zlib xz tk >> "$LOG_FILE" 2>&1 ;;
-        esac
-        curl https://pyenv.run 2>/dev/null | bash >> "$LOG_FILE" 2>&1
-        export PYENV_ROOT="$HOME/.pyenv"
-        export PATH="$PYENV_ROOT/bin:$PATH"
-        eval "$(pyenv init -)" 2>/dev/null || true
-        success "pyenv installed"
-    fi
-else
-    warn "pyenv already installed"
-fi
 
 # Python3
 pkg_install "python3" "python3" "python3" "Python 3"
@@ -1232,7 +1252,6 @@ else
 fi
 
 pkg_install "jq" "jq" "jq" "jq (JSON processor)"
-pkg_install "httpie" "httpie" "httpie" "HTTPie (API client)"
 pkg_install "direnv" "direnv" "direnv" "direnv (per-project env vars)"
 
 # watchman — build from source or use brew
@@ -1331,6 +1350,46 @@ if ! installed pnpm; then
 else
     warn "pnpm already installed"
 fi
+
+# -- Verify all runtimes are in PATH for the rest of the script ----------------
+info "Verifying runtime paths..."
+# Go
+if ! installed go && [[ -d "/usr/local/go/bin" ]]; then
+    export PATH="/usr/local/go/bin:$PATH"
+fi
+# Rust/cargo
+if ! installed cargo && [[ -f "$HOME/.cargo/env" ]]; then
+    source "$HOME/.cargo/env" 2>/dev/null || true
+fi
+# mise
+if installed mise; then
+    eval "$(mise env 2>/dev/null)" || true
+fi
+# pnpm
+if ! installed pnpm && [[ -d "$HOME/.local/share/pnpm" ]]; then
+    export PATH="$HOME/.local/share/pnpm:$PATH"
+fi
+# bun
+if ! installed bun && [[ -d "$HOME/.bun/bin" ]]; then
+    export PATH="$HOME/.bun/bin:$PATH"
+fi
+# VS Code 'code' CLI (snap puts it in /snap/bin, apt in /usr/bin)
+if ! installed code; then
+    for code_path in /snap/bin/code /usr/share/code/bin/code /usr/bin/code; do
+        if [[ -f "$code_path" ]]; then
+            export PATH="$(dirname "$code_path"):$PATH"
+            break
+        fi
+    done
+fi
+# Report what's available
+for tool in node npm go cargo rustc bun pnpm uv code; do
+    if installed "$tool"; then
+        log "RUNTIME: $tool found at $(which "$tool")"
+    else
+        log "RUNTIME: $tool NOT found in PATH"
+    fi
+done
 
 fi  # core
 
@@ -1580,45 +1639,6 @@ fi  # iac
 # =============================================================================
 if should_run "security"; then
 banner "Security & Secrets"
-
-# git-secrets
-if ! installed git-secrets; then
-    if installed brew; then
-        brew_install "git-secrets" "git-secrets (prevents committing AWS keys)"
-    else
-        info "Installing git-secrets from source..."
-        if [[ "$DRY_RUN" != "true" ]]; then
-            tmp_dir=$(mktemp -d)
-            git clone https://github.com/awslabs/git-secrets.git "$tmp_dir/git-secrets" >> "$LOG_FILE" 2>&1
-            cd "$tmp_dir/git-secrets" && sudo make install >> "$LOG_FILE" 2>&1
-            cd - > /dev/null
-            rm -rf "$tmp_dir"
-            success "git-secrets installed"
-        fi
-    fi
-else
-    warn "git-secrets already installed"
-    progress
-fi
-
-# Initialize git-secrets for AWS patterns
-if installed git-secrets; then
-    info "Registering AWS patterns with git-secrets..."
-    git secrets --register-aws --global 2>/dev/null || true
-    success "git-secrets AWS patterns registered"
-fi
-
-# trufflehog
-if ! installed trufflehog; then
-    if installed brew; then
-        brew_install "trufflehog" "trufflehog (scans repos for leaked credentials)"
-    else
-        github_release_install "trufflesecurity/trufflehog" "trufflehog" "https://github.com/trufflesecurity/trufflehog/releases/download/VERSION/trufflehog_VVERSION_linux_ARCH.tar.gz" "trufflehog"
-    fi
-else
-    warn "trufflehog already installed"
-    progress
-fi
 
 # detect-secrets
 pip_install "detect-secrets" "detect-secrets (Yelp pre-commit secret detection)"
@@ -2393,17 +2413,6 @@ else
     warn "atuin already installed"
 fi
 
-# mise
-if ! installed mise; then
-    info "Installing mise (universal version manager)..."
-    if [[ "$DRY_RUN" != "true" ]]; then
-        curl https://mise.run 2>/dev/null | sh >> "$LOG_FILE" 2>&1
-        success "mise installed"
-    fi
-else
-    warn "mise already installed"
-fi
-
 # VS Code
 setup_vscode_repo
 pkg_install "code" "code" "code" "VS Code"
@@ -2536,13 +2545,6 @@ fi  # ui
 if should_run "ux"; then
 banner "UX & Design"
 
-# Figma (unofficial Linux client)
-flatpak_install "io.github.nickvision_apps.Cavalier" "Figma Linux (unofficial)"
-# Actually use the better figma-linux
-if ! flatpak info io.github.nickvision_apps.Cavalier &>/dev/null 2>&1; then
-    info "Figma: use the web version at figma.com or install figma-linux from GitHub"
-fi
-
 if installed npm; then
     npm_global_install "lighthouse" "Lighthouse CLI"
 fi
@@ -2584,8 +2586,6 @@ pkg_install "gnome-sushi" "-" "sushi" "gnome-sushi (file previewer — Quick Loo
 # caffeine (prevent sleep)
 pkg_install "caffeine" "caffeine" "-" "caffeine (prevent sleep — Amphetamine equivalent)"
 
-# copyq (clipboard manager — Maccy equivalent)
-pkg_install "copyq" "copyq" "copyq" "CopyQ (clipboard manager — Maccy equivalent)"
 
 # Proton suite
 info "Proton VPN/Mail/Pass/Drive: download from proton.me or install via flatpak"
@@ -2608,9 +2608,6 @@ fi
 # evince (PDF reader — usually pre-installed)
 pkg_install "evince" "evince" "evince" "Evince (PDF reader)"
 
-# GIMP (replaces Pixelmator Pro)
-pkg_install "gimp" "gimp" "gimp" "GIMP (image editor — Pixelmator equivalent)"
-
 # Notion
 snap_install "notion-snap-reborn" "Notion" ""
 
@@ -2620,9 +2617,6 @@ snap_install "raindrop" "Raindrop.io (bookmark manager)" ""
 # Filezilla (replaces Transmit)
 pkg_install "filezilla" "filezilla" "filezilla" "FileZilla (SFTP client — Transmit equivalent)"
 
-# Cyberduck
-snap_install "cyberduck" "Cyberduck (SFTP/S3 client)" ""
-
 fi  # linux-productivity
 
 # =============================================================================
@@ -2630,7 +2624,6 @@ if should_run "linux-communication"; then
 banner "Linux Apps — Communication"
 
 snap_install "slack" "Slack" "classic"
-snap_install "discord" "Discord" ""
 snap_install "telegram-desktop" "Telegram" ""
 snap_install "signal-desktop" "Signal" ""
 
@@ -2670,9 +2663,6 @@ pkg_install "libreoffice" "libreoffice" "libreoffice-fresh" "LibreOffice"
 
 # gifski
 cargo_install "gifski" "gifski (video to high-quality GIF)"
-
-# Pocket Casts
-info "Pocket Casts: use web app at pocketcasts.com or install via snap/flatpak"
 
 fi  # linux-media
 
@@ -2732,14 +2722,6 @@ fi  # linux-cloud
 # =============================================================================
 if should_run "linux-focus"; then
 banner "Linux Apps — Focus & Learning"
-
-# Anki
-if ! installed anki; then
-    flatpak_install "net.ankiweb.Anki" "Anki (spaced repetition flashcards)"
-fi
-
-# GNOME Pomodoro (replaces Flow)
-flatpak_install "org.gnome.Pomodoro" "GNOME Pomodoro (focus timer — Flow equivalent)"
 
 # NewsFlash (replaces Reeder)
 flatpak_install "io.gitlab.news_flash.NewsFlash" "NewsFlash (RSS reader — Reeder equivalent)"
@@ -5071,17 +5053,30 @@ else
     info "Creating mise configuration..."
     mkdir -p "$HOME/.config/mise"
     cat > "$MISE_CONFIG" <<'MISE_CONF'
+# mise global tool versions
+# Docs: https://mise.jdx.dev/
+# These are defaults — per-project .mise.toml takes precedence
+
 [tools]
-# node = "lts"
-# python = "3.12"
+node = "lts"
+python = "3.12"
+# go = "latest"      # installed via pkg manager
+# rust = "latest"    # installed via rustup
+# java = "21"
+# ruby = "latest"
 
 [settings]
+# Automatically install tools when entering a directory with .mise.toml
 auto_install = true
+
+# Don't prompt to trust config files in ~/Code
 trusted_config_paths = ["~/Code"]
+
+# Quieter output
 quiet = false
 verbose = false
 MISE_CONF
-    success "mise configured"
+    success "mise configured (auto-install, trust ~/Code)"
 fi
 
 # ---- topgrade config ----
@@ -5690,7 +5685,7 @@ else
 - Terminal: Alacritty / kitty / Ghostty (Dracula theme)
 - Package managers: pnpm (preferred), npm, bun
 - Python: uv for packages (not pip), ruff for linting (not flake8/black)
-- Version managers: nvm (Node), pyenv (Python), mise (universal)
+- Version manager: mise (Node, Python, Go, Ruby — all in one)
 - Container runtime: Docker Engine
 - Task runner: just (prefer over make for project-level tasks)
 
@@ -7163,6 +7158,49 @@ else
     warn "Wallpaper not found at $WALLPAPER_SRC — skipping"
 fi
 
+# ---- Auto-set timezone ----
+sudo timedatectl set-timezone "America/Chicago" 2>/dev/null || true
+sudo timedatectl set-ntp true 2>/dev/null || true
+success "Timezone set to America/Chicago with NTP enabled"
+
+# ---- Software update: auto-check (Ubuntu) ----
+if [[ "$PKG_MANAGER" == "apt" ]]; then
+    sudo dpkg-reconfigure -plow unattended-upgrades 2>/dev/null || true
+fi
+
+# ---- Login items / autostart ----
+mkdir -p "$HOME/.config/autostart"
+# Create autostart entries for flameshot, etc.
+if installed flameshot; then
+    if [[ ! -f "$HOME/.config/autostart/flameshot.desktop" ]]; then
+        cat > "$HOME/.config/autostart/flameshot.desktop" <<'AUTOSTART_FLAMESHOT'
+[Desktop Entry]
+Name=Flameshot
+Exec=flameshot
+Type=Application
+X-GNOME-Autostart-enabled=true
+AUTOSTART_FLAMESHOT
+        success "Flameshot added to autostart"
+    fi
+fi
+
+# ---- GNOME additional settings ----
+if command -v gsettings &>/dev/null; then
+    # Disable automatic screen lock timeout during work (15 min)
+    gsettings set org.gnome.desktop.session idle-delay 900 2>/dev/null || true
+
+    # Show battery percentage
+    gsettings set org.gnome.desktop.interface show-battery-percentage true 2>/dev/null || true
+
+    # Touchpad tap-to-click
+    gsettings set org.gnome.desktop.peripherals.touchpad tap-to-click true 2>/dev/null || true
+
+    # Natural scrolling
+    gsettings set org.gnome.desktop.peripherals.touchpad natural-scroll true 2>/dev/null || true
+
+    success "GNOME additional settings applied (idle-delay, battery, touchpad)"
+fi
+
 fi  # linux-defaults
 
 # =============================================================================
@@ -7232,19 +7270,8 @@ elif [[ -f \"\$HOME/.linuxbrew/bin/brew\" ]]; then
     eval \"\$(\"\$HOME/.linuxbrew/bin/brew\" shellenv)\"
 fi
 
-# nvm
-export NVM_DIR=\"\$HOME/.nvm\"
-[ -s \"\$NVM_DIR/nvm.sh\" ] && \\. \"\$NVM_DIR/nvm.sh\"
-[ -s \"\$NVM_DIR/bash_completion\" ] && \\. \"\$NVM_DIR/bash_completion\"
-
-# pyenv
-export PYENV_ROOT=\"\$HOME/.pyenv\"
-[[ -d \"\$PYENV_ROOT/bin\" ]] && export PATH=\"\$PYENV_ROOT/bin:\$PATH\"
-command -v pyenv &>/dev/null && eval \"\$(pyenv init -)\"
-
-# mise (universal version manager)
-# Uncomment to use mise INSTEAD of nvm/pyenv:
-# eval \"\$(mise activate zsh)\"
+# mise (universal version manager — Node, Python, Go, Ruby, etc.)
+eval \"\$(mise activate zsh)\"
 
 # direnv
 command -v direnv &>/dev/null && eval \"\$(direnv hook zsh)\"
@@ -7476,6 +7503,95 @@ ZSHRC_HEADER
 fi
 
 fi  # shell
+
+# =============================================================================
+# FIRST-RUN SETUP (interactive — only runs if not already configured)
+# =============================================================================
+if [[ "$DRY_RUN" == "false" ]]; then
+banner "First-Run Setup"
+
+# ---- SSH Key Generation ----
+if [[ ! -f "$HOME/.ssh/id_ed25519" ]]; then
+    echo ""
+    read -p "Generate an SSH key? [Y/n] " ssh_confirm
+    if [[ ! "$ssh_confirm" =~ ^[Nn]$ ]]; then
+        read -p "Email for SSH key: " ssh_email
+        if [[ -n "$ssh_email" ]]; then
+            mkdir -p "$HOME/.ssh"
+            chmod 700 "$HOME/.ssh"
+            ssh-keygen -t ed25519 -C "$ssh_email" -f "$HOME/.ssh/id_ed25519"
+            eval "$(ssh-agent -s)" 2>/dev/null || true
+            ssh-add "$HOME/.ssh/id_ed25519" 2>/dev/null || true
+            success "SSH key generated at ~/.ssh/id_ed25519"
+        fi
+    fi
+else
+    warn "SSH key already exists at ~/.ssh/id_ed25519"
+fi
+
+# ---- GitHub Authentication ----
+if installed gh; then
+    if ! gh auth status &>/dev/null 2>&1; then
+        echo ""
+        read -p "Authenticate with GitHub? [Y/n] " gh_confirm
+        if [[ ! "$gh_confirm" =~ ^[Nn]$ ]]; then
+            info "Opening GitHub authentication..."
+            gh auth login
+            # Add SSH key to GitHub if it was just generated
+            if [[ -f "$HOME/.ssh/id_ed25519.pub" ]]; then
+                read -p "Add SSH key to GitHub? [Y/n] " ssh_gh_confirm
+                if [[ ! "$ssh_gh_confirm" =~ ^[Nn]$ ]]; then
+                    gh ssh-key add "$HOME/.ssh/id_ed25519.pub" --title "$(hostname) $(date +%Y-%m-%d)"
+                    success "SSH key added to GitHub"
+                fi
+            fi
+        fi
+    else
+        warn "GitHub CLI already authenticated"
+    fi
+fi
+
+# ---- Git Identity ----
+GITCONFIG_WORK="$HOME/.gitconfig-work"
+GITCONFIG_PERSONAL="$HOME/.gitconfig-personal"
+
+# Work identity
+if [[ -f "$GITCONFIG_WORK" ]] && grep -q "^    # name = " "$GITCONFIG_WORK" 2>/dev/null; then
+    echo ""
+    read -p "Set up your work git identity? [Y/n] " work_confirm
+    if [[ ! "$work_confirm" =~ ^[Nn]$ ]]; then
+        read -p "Work name: " work_name
+        read -p "Work email: " work_email
+        if [[ -n "$work_name" ]] && [[ -n "$work_email" ]]; then
+            cat > "$GITCONFIG_WORK" <<GIT_WORK_ID
+[user]
+    name = $work_name
+    email = $work_email
+GIT_WORK_ID
+            success "Work git identity set ($work_email)"
+        fi
+    fi
+fi
+
+# Personal identity
+if [[ -f "$GITCONFIG_PERSONAL" ]] && grep -q "^    # name = " "$GITCONFIG_PERSONAL" 2>/dev/null; then
+    echo ""
+    read -p "Set up your personal git identity? [Y/n] " personal_confirm
+    if [[ ! "$personal_confirm" =~ ^[Nn]$ ]]; then
+        read -p "Personal name: " personal_name
+        read -p "Personal email: " personal_email
+        if [[ -n "$personal_name" ]] && [[ -n "$personal_email" ]]; then
+            cat > "$GITCONFIG_PERSONAL" <<GIT_PERSONAL_ID
+[user]
+    name = $personal_name
+    email = $personal_email
+GIT_PERSONAL_ID
+            success "Personal git identity set ($personal_email)"
+        fi
+    fi
+fi
+
+fi  # DRY_RUN (first-run setup)
 
 # =============================================================================
 # POST-INSTALL VERIFICATION

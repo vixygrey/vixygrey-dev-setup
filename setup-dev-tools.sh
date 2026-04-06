@@ -205,11 +205,11 @@ list_categories() {
     echo -e "${BOLD}Available categories:${NC}"
     echo ""
     printf "  %-25s %s\n" "prerequisites"       "Xcode CLI Tools, Rosetta 2, Homebrew, GNU coreutils"
-    printf "  %-25s %s\n" "core"                "Node, Python, Go, Rust, Docker, OrbStack, bun, uv, pnpm"
+    printf "  %-25s %s\n" "core"                "mise (Node, Python), Go, Rust, OrbStack, bun, uv, pnpm"
     printf "  %-25s %s\n" "git"                 "Git, GitHub CLI, delta, lazygit, pre-commit"
     printf "  %-25s %s\n" "aws"                 "AWS CLI, CDK, SAM, Granted, cfn-lint"
     printf "  %-25s %s\n" "iac"                 "OpenTofu (Terraform), tflint, infracost"
-    printf "  %-25s %s\n" "security"            "git-secrets, gitleaks, trivy, semgrep, Snyk, ClamAV, Objective-See"
+    printf "  %-25s %s\n" "security"            "detect-secrets, gitleaks, trivy, semgrep, Snyk, ClamAV, Objective-See"
     printf "  %-25s %s\n" "replacements"        "eza, bat, fd, ripgrep, zoxide, btop, sd, dust, just, yazi, fx, etc."
     printf "  %-25s %s\n" "data-processing"     "yq, miller, csvkit, pandoc, ffmpeg, ImageMagick"
     printf "  %-25s %s\n" "code-quality"        "shellcheck, shfmt, act, hadolint, ruff, commitizen, ni"
@@ -218,22 +218,22 @@ list_categories() {
     printf "  %-25s %s\n" "terminal-productivity" "glow, entr, pv, parallel, topgrade, fastfetch"
     printf "  %-25s %s\n" "k8s-github"          "stern, gh-dash"
     printf "  %-25s %s\n" "database"            "pgcli, mycli, usql, sq, TablePlus, DBeaver"
-    printf "  %-25s %s\n" "containers"          "lazydocker, dive, colima, kubectl, k9s"
+    printf "  %-25s %s\n" "containers"          "lazydocker, dive, kubectl, k9s"
     printf "  %-25s %s\n" "api"                 "Bruno, grpcurl"
     printf "  %-25s %s\n" "networking"          "mtr, bandwhich, nmap"
     printf "  %-25s %s\n" "dx"                  "fzf, starship, atuin, VS Code, Cursor, Zed, Ghostty, tmux, Raycast"
     printf "  %-25s %s\n" "ui"                  "Storybook, Playwright, Chrome"
-    printf "  %-25s %s\n" "ux"                  "Figma, Lighthouse"
+    printf "  %-25s %s\n" "ux"                  "Lighthouse"
     printf "  %-25s %s\n" "docs"                "d2, Mermaid CLI"
     printf "  %-25s %s\n" "mac-system"          "Pearcleaner, Stats, Ice, Quick Look plugins"
-    printf "  %-25s %s\n" "mac-productivity"    "Notion, Shottr, Espanso, Skim, GIMP, Velja"
-    printf "  %-25s %s\n" "mac-communication"   "Slack, Discord, Telegram, Signal"
+    printf "  %-25s %s\n" "mac-productivity"    "Notion, Shottr, Espanso, Skim, Transmit, Cyberduck"
+    printf "  %-25s %s\n" "mac-communication"   "Slack, Telegram, Signal"
     printf "  %-25s %s\n" "mac-browsers"        "Firefox, Arc, Brave"
-    printf "  %-25s %s\n" "mac-media"           "IINA, ImageOptim, LibreOffice, Pocket Casts"
+    printf "  %-25s %s\n" "mac-media"           "IINA, ImageOptim, LibreOffice"
     printf "  %-25s %s\n" "mac-cloud"           "Google Drive, rclone, Syncthing, borg"
-    printf "  %-25s %s\n" "mac-focus"           "Flow, Anki, Reeder"
+    printf "  %-25s %s\n" "mac-focus"           "Reeder"
     printf "  %-25s %s\n" "mac-disk"            "dust, duf (CLI disk analyzers)"
-    printf "  %-25s %s\n" "mac-bloat"           "Remove pre-installed Apple apps (GarageBand, News, etc.)"
+    printf "  %-25s %s\n" "mac-bloat"           "Remove pre-installed Apple apps (GarageBand)"
     printf "  %-25s %s\n" "dracula"             "Dracula theme for all tools"
     printf "  %-25s %s\n" "configs"             "All dotfiles and tool configurations"
     printf "  %-25s %s\n" "filesystem"          "Directory structure, helper scripts, git identity"
@@ -444,10 +444,15 @@ preflight() {
     fi
 
     # Admin check (some steps need sudo)
+    # Prompt for password ONCE here so it's cached for all later sudo calls
     if sudo -n true 2>/dev/null; then
         success "Admin privileges available"
     else
-        info "Some steps require admin privileges. You may be prompted for your password."
+        info "Some steps require admin privileges. Enter your password once now:"
+        sudo -v
+        success "Admin privileges granted"
+        # Keep sudo alive in background for the duration of the script
+        (while true; do sudo -n true; sleep 50; kill -0 "$$" || exit; done 2>/dev/null &)
     fi
 
     # Log file
@@ -545,7 +550,8 @@ if [[ "$CLEANUP" == "true" ]]; then
     # Format: "type:name:display-name:replacement"
     DEPRECATED_TOOLS=(
         "cask:docker:Docker Desktop:OrbStack"
-        "cask:warp:Warp terminal:Ghostty + iTerm2"
+        "cask:warp:Warp terminal:Ghostty"
+        "cask:iterm2:iTerm2:Ghostty"
         "cask:cursor:Cursor (AI editor):VS Code + Claude Code"
         "cask:cleanshot:CleanShot X:Shottr"
         "cask:soulver:Soulver 3:Numi"
@@ -557,7 +563,27 @@ if [[ "$CLEANUP" == "true" ]]; then
         "cask:bartender:Bartender:Ice"
         "formula:dog:dog (DNS tool):doggo"
         "cask:tailscale:Tailscale:removed"
-        "mas:1289583905:Pixelmator Pro:GIMP"
+        "cask:alt-tab:AltTab:removed (macOS alt-tab is sufficient)"
+        "cask:anki:Anki:removed"
+        "cask:discord:Discord:removed"
+        "cask:figma:Figma:removed"
+        "cask:gimp:GIMP:removed"
+        "cask:keyboardcleantool:KeyboardCleanTool:removed"
+        "cask:pocket-casts:Pocket Casts:removed"
+        "cask:yoink:Yoink:removed"
+        "mas:1289583905:Pixelmator Pro:removed"
+        "mas:1470584107:Dato:removed"
+        "mas:1607635845:Velja:removed"
+        "mas:1423210932:Flow:removed"
+        "cask:maccy:Maccy:Raycast Clipboard History"
+        "formula:nvm:nvm:mise"
+        "formula:pyenv:pyenv:mise"
+        "formula:httpie:HTTPie:xh"
+        "formula:git-secrets:git-secrets:gitleaks + detect-secrets"
+        "formula:trufflehog:trufflehog:gitleaks + detect-secrets"
+        "cask:the-unarchiver:The Unarchiver:Keka"
+        "cask:cyberduck:Cyberduck:Transmit"
+        "cask:colima:colima:OrbStack"
     )
 
     CLEANUP_COUNT=0
@@ -689,30 +715,45 @@ brew_install "findutils" "findutils (GNU find, xargs)"
 if should_run "core"; then
 banner "Core Development"
 
-brew_install "nvm" "nvm (Node Version Manager)"
+# mise (universal version manager — replaces nvm, pyenv, rbenv in one tool)
+brew_install "mise" "mise (universal version manager — Node, Python, Go, Ruby, etc.)"
 
-# Set up nvm and install latest LTS Node
-export NVM_DIR="$HOME/.nvm"
-if [[ -d "$(brew --prefix nvm)" ]]; then
-    source "$(brew --prefix nvm)/nvm.sh" 2>/dev/null || true
+# Activate mise for this script session
+if installed mise; then
+    eval "$(mise activate bash 2>/dev/null)" || true
 fi
-if installed nvm; then
-    if ! nvm ls --no-colors 2>/dev/null | grep -q "lts"; then
-        info "Installing latest Node.js LTS..."
-        nvm install --lts
-        nvm alias default lts/*
-        success "Node.js LTS installed"
+
+# Install Node.js LTS and Python via mise
+if installed mise; then
+    if ! mise ls node 2>/dev/null | grep -q "lts"; then
+        info "Installing Node.js LTS via mise..."
+        if [[ "$DRY_RUN" != "true" ]]; then
+            mise install node@lts >> "$LOG_FILE" 2>&1
+            mise use --global node@lts >> "$LOG_FILE" 2>&1
+            success "Node.js LTS installed via mise"
+        fi
     else
-        warn "Node.js LTS already installed"
+        warn "Node.js LTS already installed via mise"
     fi
+
+    if ! mise ls python 2>/dev/null | grep -q "3.12"; then
+        info "Installing Python 3.12 via mise..."
+        if [[ "$DRY_RUN" != "true" ]]; then
+            mise install python@3.12 >> "$LOG_FILE" 2>&1
+            mise use --global python@3.12 >> "$LOG_FILE" 2>&1
+            success "Python 3.12 installed via mise"
+        fi
+    else
+        warn "Python 3.12 already installed via mise"
+    fi
+
+    # Ensure mise shims are in PATH for the rest of this script
+    eval "$(mise env 2>/dev/null)" || true
 fi
 
 brew_install "go" "Go (lang)"
-brew_install "pyenv" "pyenv (Python Version Manager)"
-brew_install "python@3.12" "Python 3.12"
 brew_install "uv" "uv (fast Python package manager — 10-100x faster than pip)"
 brew_install "jq" "jq (JSON processor)"
-brew_install "httpie" "HTTPie (API client)"
 brew_install "direnv" "direnv (per-project env vars)"
 brew_install "watchman" "Watchman (file watcher)"
 brew_install "cmake" "CMake"
@@ -746,6 +787,33 @@ if ! installed pnpm; then
 else
     warn "pnpm already installed"
 fi
+
+# -- Verify all runtimes are in PATH for the rest of the script ----------------
+info "Verifying runtime paths..."
+# Go (brew puts it in PATH automatically, but verify)
+if ! installed go && [[ -d "/usr/local/go/bin" ]]; then
+    export PATH="/usr/local/go/bin:$PATH"
+fi
+# Rust/cargo
+if ! installed cargo && [[ -f "$HOME/.cargo/env" ]]; then
+    source "$HOME/.cargo/env" 2>/dev/null || true
+fi
+# pnpm
+if ! installed pnpm && [[ -d "$HOME/.local/share/pnpm" ]]; then
+    export PATH="$HOME/.local/share/pnpm:$PATH"
+fi
+# bun
+if ! installed bun && [[ -d "$HOME/.bun/bin" ]]; then
+    export PATH="$HOME/.bun/bin:$PATH"
+fi
+# Report what's available
+for tool in node npm go cargo rustc bun pnpm uv; do
+    if installed "$tool"; then
+        log "RUNTIME: $tool found at $(which "$tool")"
+    else
+        log "RUNTIME: $tool NOT found in PATH"
+    fi
+done
 
 fi  # core
 
@@ -822,17 +890,9 @@ if should_run "security"; then
 banner "Security & Secrets"
 
 # Secret management
-brew_install "git-secrets" "git-secrets (prevents committing AWS keys)"
-brew_install "trufflehog" "trufflehog (scans repos for leaked credentials)"
 brew_install "age" "age (modern file encryption)"
 brew_install "sops" "sops (encrypt secrets in YAML/JSON, works with AWS KMS)"
 
-# Initialize git-secrets for AWS patterns
-if installed git-secrets; then
-    info "Registering AWS patterns with git-secrets..."
-    git secrets --register-aws --global 2>/dev/null || true
-    success "git-secrets AWS patterns registered"
-fi
 
 # detect-secrets (Yelp's pre-commit secret detection) — available as brew formula
 brew_install "detect-secrets" "detect-secrets (Yelp pre-commit secret detection)"
@@ -846,9 +906,12 @@ brew_install "cosign" "cosign (sign & verify container images)"
 # snyk CLI
 if ! installed snyk; then
     info "Installing Snyk CLI..."
-    brew tap snyk/tap 2>/dev/null || true
-    brew install snyk 2>/dev/null || true
-    success "Snyk CLI installed"
+    brew tap snyk/tap >> "$LOG_FILE" 2>&1 || true
+    if brew install snyk >> "$LOG_FILE" 2>&1; then
+        success "Snyk CLI installed"
+    else
+        error "Failed to install Snyk CLI"
+    fi
 else
     warn "Snyk CLI already installed"
 fi
@@ -1118,7 +1181,6 @@ banner "Containers & Orchestration"
 
 brew_install "lazydocker" "lazydocker (terminal UI for Docker)"
 brew_install "dive" "dive (explore Docker image layers)"
-brew_install "colima" "colima (lightweight Docker runtime — free OrbStack alternative)"
 brew_install "kubectl" "kubectl (Kubernetes CLI)"
 brew_install "k9s" "k9s (terminal UI for Kubernetes)"
 
@@ -1157,12 +1219,18 @@ brew_install "zsh-syntax-highlighting" "zsh-syntax-highlighting (command colorin
 brew_install "atuin" "atuin (replaces shell history — SQLite-backed, searchable)"
 
 # mise (single tool version manager — can replace nvm + pyenv)
-brew_install "mise" "mise (universal version manager — nvm + pyenv + rbenv in one)"
+# mise already installed in core section
 
 # Editors & terminals
 brew_cask_install "visual-studio-code" "VS Code"
+# Ensure VS Code 'code' CLI is in PATH (brew cask installs the app but not the CLI symlink)
+VSCODE_CLI="/Applications/Visual Studio Code.app/Contents/Resources/app/bin/code"
+if [[ -f "$VSCODE_CLI" ]] && ! installed code; then
+    info "Adding VS Code 'code' CLI to PATH..."
+    ln -sf "$VSCODE_CLI" /usr/local/bin/code 2>/dev/null || \
+    sudo ln -sf "$VSCODE_CLI" /usr/local/bin/code 2>/dev/null || true
+fi
 brew_cask_install "zed" "Zed (fast native editor from ex-Atom team — GPU-rendered)"
-brew_cask_install "iterm2" "iTerm2 (classic terminal, deep tmux integration)"
 brew_cask_install "ghostty" "Ghostty (fast GPU-accelerated terminal)"
 brew_install "tmux" "tmux (terminal multiplexer)"
 
@@ -1227,7 +1295,6 @@ fi  # ui
 if should_run "ux"; then
 banner "UX & Design"
 
-brew_cask_install "figma" "Figma"
 
 # Lighthouse (via npm)
 if installed npm; then
@@ -1277,29 +1344,20 @@ fi
 if should_run "mac-system"; then
 banner "Mac Apps — System & Utilities"
 
-brew_cask_install "the-unarchiver" "The Unarchiver (any archive format)"
 brew_cask_install "stats" "Stats (menubar system monitor)"
 brew_cask_install "jordanbaird-ice" "Ice (menubar icon manager — open-source Bartender replacement)"
 # Amphetamine is Mac App Store only — install via mas
+progress
 if installed mas && [[ "$MAS_SIGNED_IN" == "true" ]]; then
     if mas list 2>/dev/null | grep -q "937984704"; then
         warn "Amphetamine already installed"
     else
         info "Installing Amphetamine from Mac App Store..."
-        mas install 937984704 >> "$LOG_FILE" 2>&1 || error "Failed to install Amphetamine (sign into App Store first)"
+        mas install 937984704 >> "$LOG_FILE" 2>&1 && success "Amphetamine installed" || error "Failed to install Amphetamine (sign into App Store first)"
     fi
+else
+    warn "Amphetamine skipped (App Store not signed in)"
 fi
-brew_cask_install "alt-tab" "AltTab (Windows-style window switcher)"
-# Dato is Mac App Store only — install via mas
-if installed mas && [[ "$MAS_SIGNED_IN" == "true" ]]; then
-    if mas list 2>/dev/null | grep -q "1470584107"; then
-        warn "Dato already installed"
-    else
-        info "Installing Dato from Mac App Store..."
-        mas install 1470584107 >> "$LOG_FILE" 2>&1 || error "Failed to install Dato (sign into App Store first)"
-    fi
-fi
-brew_cask_install "maccy" "Maccy (clipboard manager)"
 brew_cask_install "lulu" "LuLu (outbound firewall)"
 brew_cask_install "protonvpn" "Proton VPN"
 brew_cask_install "proton-mail" "Proton Mail"
@@ -1308,7 +1366,6 @@ brew_cask_install "proton-drive" "Proton Drive (encrypted cloud storage)"
 
 # Utilities
 brew_cask_install "pearcleaner" "Pearcleaner (open-source deep app uninstaller)"
-brew_cask_install "keyboardcleantool" "KeyboardCleanTool (lock keyboard for cleaning)"
 brew_cask_install "topnotch" "TopNotch (hides MacBook notch with black menu bar)"
 
 # Quick Look plugins (preview files in Finder with spacebar)
@@ -1329,29 +1386,13 @@ brew_cask_install "notion-mail" "Notion Mail"
 brew_cask_install "shottr" "Shottr (screenshots, pixel measuring, OCR — free)"
 brew_cask_install "numi" "Numi (natural language calculator notepad)"
 brew_cask_install "espanso" "Espanso (open-source text expander — snippets, templates)"
-brew_cask_install "yoink" "Yoink (drag and drop shelf — stage files between apps)"
 brew_cask_install "raindropio" "Raindrop.io (bookmark manager — collections, tags, search)"
 
 # PDF & documents
 brew_cask_install "skim" "Skim (lightweight PDF reader with annotations — faster than Preview)"
 
-# Browser link routing
-# Velja is Mac App Store only — install via mas
-if installed mas && [[ "$MAS_SIGNED_IN" == "true" ]]; then
-    if mas list 2>/dev/null | grep -q "1607635845"; then
-        warn "Velja already installed"
-    else
-        info "Installing Velja from Mac App Store..."
-        mas install 1607635845 >> "$LOG_FILE" 2>&1 || error "Failed to install Velja (sign into App Store first)"
-    fi
-fi
-
-# Image editing
-brew_cask_install "gimp" "GIMP (free open-source image editor — Photoshop alternative)"
-
 # File transfer
 brew_cask_install "transmit" "Transmit (fast SFTP/S3 client, dual-pane)"
-brew_cask_install "cyberduck" "Cyberduck (free SFTP/S3 client, Cryptomator, CLI)"
 
 fi  # mac-productivity
 
@@ -1360,7 +1401,6 @@ if should_run "mac-communication"; then
 banner "Mac Apps — Communication"
 
 brew_cask_install "slack" "Slack"
-brew_cask_install "discord" "Discord"
 brew_cask_install "telegram" "Telegram"
 brew_cask_install "signal" "Signal (end-to-end encrypted messaging)"
 
@@ -1386,15 +1426,17 @@ brew_cask_install "imageoptim" "ImageOptim (lossless image compression)"
 brew_install "gifski" "gifski (video to high-quality GIF)"
 brew_cask_install "keka" "Keka (file archiver/compressor)"
 brew_cask_install "libreoffice" "LibreOffice (free office suite)"
-brew_cask_install "pocket-casts" "Pocket Casts (podcast player)"
 # Hand Mirror is Mac App Store only — install via mas
+progress
 if installed mas && [[ "$MAS_SIGNED_IN" == "true" ]]; then
     if mas list 2>/dev/null | grep -q "1502839586"; then
         warn "Hand Mirror already installed"
     else
         info "Installing Hand Mirror from Mac App Store..."
-        mas install 1502839586 >> "$LOG_FILE" 2>&1 || error "Failed to install Hand Mirror (sign into App Store first)"
+        mas install 1502839586 >> "$LOG_FILE" 2>&1 && success "Hand Mirror installed" || error "Failed to install Hand Mirror (sign into App Store first)"
     fi
+else
+    warn "Hand Mirror skipped (App Store not signed in)"
 fi
 
 fi  # mac-media
@@ -1417,24 +1459,17 @@ fi  # mac-cloud
 if should_run "mac-focus"; then
 banner "Mac Apps — Focus & Learning"
 
-# Flow is Mac App Store only (brew cask disabled 2025-11) — install via mas
-if installed mas && [[ "$MAS_SIGNED_IN" == "true" ]]; then
-    if mas list 2>/dev/null | grep -q "1423210932"; then
-        warn "Flow already installed"
-    else
-        info "Installing Flow from Mac App Store..."
-        mas install 1423210932 >> "$LOG_FILE" 2>&1 || error "Failed to install Flow (sign into App Store first)"
-    fi
-fi
-brew_cask_install "anki" "Anki (spaced repetition flashcards)"
-# Reeder is Mac App Store only — install via mas (6475002485 = Reeder, 1529448980 = Reeder Classic)
+# Reeder is Mac App Store only — install via mas
+progress
 if installed mas && [[ "$MAS_SIGNED_IN" == "true" ]]; then
     if mas list 2>/dev/null | grep -q "6475002485"; then
         warn "Reeder already installed"
     else
         info "Installing Reeder from Mac App Store..."
-        mas install 6475002485 >> "$LOG_FILE" 2>&1 || error "Failed to install Reeder (sign into App Store first)"
+        mas install 6475002485 >> "$LOG_FILE" 2>&1 && success "Reeder installed" || error "Failed to install Reeder (sign into App Store first)"
     fi
+else
+    warn "Reeder skipped (App Store not signed in)"
 fi
 
 fi  # mac-focus
@@ -1451,29 +1486,15 @@ fi  # mac-disk
 if should_run "mac-bloat"; then
 banner "Remove Pre-installed Apple Apps"
 
-# These apps live in /Applications or /System/Applications and require sudo to remove.
-# macOS may re-install some System apps after a major OS update — re-run this section if needed.
-#
-# NOTE: Removing /System/Applications apps requires SIP (System Integrity Protection) to be
-# disabled on macOS Sonoma+. If removal fails, the script logs the error and continues.
-# To disable SIP: boot into Recovery Mode (Cmd+R) > Terminal > csrutil disable > reboot.
-# Re-enable after: csrutil enable.
+# Only removes apps in /Applications (not SIP-protected).
+# System apps in /System/Applications require SIP disabled and are skipped.
 
 BLOAT_APPS=(
-    # app-path                                  display-name
     "/Applications/GarageBand.app|GarageBand"
-    "/System/Applications/News.app|News"
-    "/System/Applications/Journal.app|Journal"
-    "/System/Applications/Chess.app|Chess"
-    "/System/Applications/Games.app|Games"
-    "/System/Applications/Stocks.app|Stocks"
-    "/System/Applications/Tips.app|Tips"
-    "/System/Applications/VoiceMemos.app|Voice Memos"
 )
 
 BLOAT_REMOVED=0
 BLOAT_SKIPPED=0
-BLOAT_FAILED=0
 
 for entry in "${BLOAT_APPS[@]}"; do
     app_path="${entry%%|*}"
@@ -1490,41 +1511,19 @@ for entry in "${BLOAT_APPS[@]}"; do
         continue
     fi
 
-    # Check if app is in /System/Applications (SIP-protected)
-    if [[ "$app_path" == /System/Applications/* ]]; then
-        # Check if SIP is enabled
-        if csrutil status 2>/dev/null | grep -q "enabled"; then
-            warn "$app_name skipped — SIP is enabled (System app, cannot remove)"
-            ((BLOAT_SKIPPED++))
-            continue
-        fi
-    fi
-
     info "Removing $app_name..."
     if sudo rm -rf "$app_path" 2>> "$LOG_FILE"; then
         success "$app_name removed"
         ((BLOAT_REMOVED++))
     else
-        warn "$app_name could not be removed (may require SIP disabled)"
-        ((BLOAT_FAILED++))
+        warn "$app_name could not be removed"
+        ((BLOAT_SKIPPED++))
     fi
 done
 
 echo ""
 if [[ "$DRY_RUN" != "true" ]]; then
-    info "Bloat removal: $BLOAT_REMOVED removed, $BLOAT_SKIPPED skipped, $BLOAT_FAILED failed"
-    if [[ "$BLOAT_FAILED" -gt 0 ]] || [[ "$BLOAT_SKIPPED" -gt 0 ]]; then
-        if csrutil status 2>/dev/null | grep -q "enabled"; then
-            echo ""
-            echo -e "  ${YELLOW}System apps require SIP disabled to remove.${NC}"
-            echo -e "  ${DIM}To disable SIP (optional — only if you want to remove system apps):${NC}"
-            echo -e "  ${DIM}  1. Restart and hold Cmd+R (Intel) or Power button (Apple Silicon) for Recovery${NC}"
-            echo -e "  ${DIM}  2. Open Terminal from Utilities menu${NC}"
-            echo -e "  ${DIM}  3. Run: csrutil disable${NC}"
-            echo -e "  ${DIM}  4. Reboot and re-run: ./setup-dev-tools.sh --only mac-bloat${NC}"
-            echo -e "  ${DIM}  5. Re-enable SIP after: csrutil enable${NC}"
-        fi
-    fi
+    info "Bloat removal: $BLOAT_REMOVED removed, $BLOAT_SKIPPED skipped"
 fi
 
 fi  # mac-bloat
@@ -1567,16 +1566,6 @@ else
     success "delta Dracula theme configured"
 fi
 
-# iTerm2 Dracula theme
-DRACULA_ITERM_DIR="$HOME/.dracula-iterm"
-if [[ -d "$DRACULA_ITERM_DIR" ]]; then
-    warn "iTerm2 Dracula theme already downloaded"
-else
-    info "Downloading Dracula theme for iTerm2..."
-    git clone https://github.com/dracula/iterm.git "$DRACULA_ITERM_DIR" 2>/dev/null || true
-    success "iTerm2 Dracula theme downloaded to $DRACULA_ITERM_DIR"
-    echo "  -> Open iTerm2 > Preferences > Profiles > Colors > Import from $DRACULA_ITERM_DIR"
-fi
 
 
 # fzf Dracula colors
@@ -3115,20 +3104,17 @@ info "Configuring macOS system defaults..."
 
 # -- Dock --
 # Auto-hide the Dock
-defaults write com.apple.dock autohide -bool true
-# Remove auto-hide delay
-defaults write com.apple.dock autohide-delay -float 0
-# Faster auto-hide animation
-defaults write com.apple.dock autohide-time-modifier -float 0.3
-# Smaller Dock icon size
-defaults write com.apple.dock tilesize -integer 40
+# Keep Dock visible but small
+defaults write com.apple.dock autohide -bool false
+# Small Dock icon size
+defaults write com.apple.dock tilesize -integer 36
 # Don't show recent applications
 defaults write com.apple.dock show-recents -bool false
 # Minimize windows using scale effect (faster than genie)
 defaults write com.apple.dock mineffect -string "scale"
 # Minimize windows into their application icon
 defaults write com.apple.dock minimize-to-application -bool true
-success "Dock configured (auto-hide, small icons, no recents, scale effect)"
+success "Dock configured (small icons, no recents, scale effect)"
 
 # -- Screenshots --
 # Save screenshots as PNG
@@ -3219,17 +3205,6 @@ defaults write com.apple.WindowManager GloballyEnabled -bool false 2>/dev/null |
 defaults write com.apple.WindowManager AutoHide -bool true 2>/dev/null || true
 success "Stage Manager disabled"
 
-# -- Dock spacers (visual separators to group icons) --
-# Add a thin invisible spacer to group Dock icons — run multiple times for more spacers
-# Note: only adds if Dock has fewer than 2 spacers already
-SPACER_COUNT=$(defaults read com.apple.dock persistent-apps 2>/dev/null | grep -c "spacer-tile" || echo 0)
-if [[ "$SPACER_COUNT" -lt 2 ]]; then
-    defaults write com.apple.dock persistent-apps -array-add '{"tile-type"="spacer-tile";}'
-    defaults write com.apple.dock persistent-apps -array-add '{"tile-type"="spacer-tile";}'
-    success "Dock spacers added (drag to reposition in Dock)"
-else
-    warn "Dock already has spacers"
-fi
 
 # -- Misc --
 # Disable the "Are you sure you want to open this application?" dialog
@@ -3308,9 +3283,6 @@ if [[ "$DRY_RUN" != "true" ]]; then
     info "Clearing all default apps from Dock (pin your own via drag-and-drop)..."
     defaults write com.apple.dock persistent-apps -array
     defaults write com.apple.dock persistent-others -array
-    # Re-add the two spacers (they were cleared too)
-    defaults write com.apple.dock persistent-apps -array-add '{"tile-type"="spacer-tile";}'
-    defaults write com.apple.dock persistent-apps -array-add '{"tile-type"="spacer-tile";}'
     success "Dock cleared — drag apps to Dock to pin them"
 else
     info "[DRY RUN] Would clear all default apps from Dock"
@@ -3608,11 +3580,10 @@ else
 # These are defaults — per-project .mise.toml takes precedence
 
 [tools]
-# Uncomment and set versions as needed:
-# node = "lts"
-# python = "3.12"
-# go = "latest"
-# rust = "latest"
+node = "lts"
+python = "3.12"
+# go = "latest"      # installed via brew
+# rust = "latest"    # installed via rustup
 # java = "21"
 # ruby = "latest"
 
@@ -5678,28 +5649,107 @@ else
     warn "Siri already disabled"
 fi
 
+# ---- Trackpad: Three-finger drag (essential for dev work) ----
+defaults write com.apple.AppleMultitouchTrackpad TrackpadThreeFingerDrag -bool true 2>/dev/null || true
+defaults write com.apple.driver.AppleBluetoothMultitouch.trackpad TrackpadThreeFingerDrag -bool true 2>/dev/null || true
+# Also enable via Accessibility (required on newer macOS)
+defaults write com.apple.AppleMultitouchTrackpad Dragging -bool true 2>/dev/null || true
+success "Three-finger drag enabled"
+
+# ---- Disable startup sound ----
+sudo nvram StartupMute=%01 2>/dev/null || true
+success "Startup sound disabled"
+
+# ---- Reduce transparency (slight performance boost, easier to read) ----
+defaults write com.apple.universalaccess reduceTransparency -bool true 2>/dev/null || true
+success "Transparency reduced"
+
+# ---- Show Bluetooth in menu bar ----
+defaults write com.apple.controlcenter "NSStatusItem Visible Bluetooth" -bool true 2>/dev/null || true
+success "Bluetooth shown in menu bar"
+
+# ---- Auto-set timezone ----
+sudo systemsetup -setusingnetworktime on 2>/dev/null || true
+sudo systemsetup -settimezone "America/Chicago" 2>/dev/null || true
+success "Timezone set to auto (America/Chicago)"
+
+# ---- Software Update: auto-check but don't auto-install ----
+defaults write com.apple.SoftwareUpdate AutomaticCheckEnabled -bool true 2>/dev/null || true
+defaults write com.apple.SoftwareUpdate AutomaticDownload -bool true 2>/dev/null || true
+defaults write com.apple.SoftwareUpdate AutomaticallyInstallMacOSUpdates -bool false 2>/dev/null || true
+defaults write com.apple.commerce AutoUpdate -bool false 2>/dev/null || true
+success "Software Update configured (auto-check, no auto-install)"
+
+# ---- Disable iCloud Desktop & Documents sync (prevents dev files syncing) ----
+# This prevents projects in ~/Desktop and ~/Documents from being uploaded to iCloud
+defaults write com.apple.bird optimize-storage -bool false 2>/dev/null || true
+info "Tip: Disable iCloud Desktop & Documents in System Settings > Apple ID > iCloud > iCloud Drive > Options"
+
+# ---- Login items (auto-start at login) ----
+info "Configuring login items..."
+LOGIN_APPS=(
+    "/Applications/Ice.app"
+    "/Applications/Stats.app"
+    "/Applications/Rectangle.app"
+    "/Applications/Espanso.app"
+)
+for app in "${LOGIN_APPS[@]}"; do
+    if [[ -d "$app" ]]; then
+        osascript -e "tell application \"System Events\" to make login item at end with properties {path:\"$app\", hidden:true}" 2>/dev/null || true
+    fi
+done
+success "Login items configured (Ice, Stats, Rectangle, Espanso)"
+
 # ---- macOS defaults for installed apps ----
 info "Setting macOS defaults for apps..."
 
-# Maccy: paste on select, launch at login, history size
-defaults write org.p0deje.Maccy pasteByDefault true 2>/dev/null || true
-defaults write org.p0deje.Maccy historySize 200 2>/dev/null || true
-defaults write org.p0deje.Maccy launchAtLogin true 2>/dev/null || true
-success "Maccy configured (paste on select, 200 history, launch at login)"
 
-# AltTab: show windows from current space only
-defaults write com.lwouis.alt-tab-macos spacesToShow 1 2>/dev/null || true
-# Show minimized windows
-defaults write com.lwouis.alt-tab-macos showMinimizedWindows 1 2>/dev/null || true
-success "AltTab configured (current space only)"
 
 # Rectangle: launch at login
 defaults write com.knollsoft.Rectangle launchOnLogin true 2>/dev/null || true
 success "Rectangle configured (launch at login)"
 
-# iTerm2: don't display the annoying prompt when quitting
-defaults write com.googlecode.iterm2 PromptOnQuit -bool false 2>/dev/null || true
-success "iTerm2 configured (suppress quit prompt)"
+# Shottr: screenshot settings
+defaults write cc.ffitch.shottr saveTo -string "$HOME/Screenshots" 2>/dev/null || true
+defaults write cc.ffitch.shottr launchAtLogin -bool true 2>/dev/null || true
+success "Shottr configured (save to ~/Screenshots, launch at login)"
+
+# Stats: show CPU, memory, disk, network in menu bar
+defaults write eu.exelban.Stats CPU_state -bool true 2>/dev/null || true
+defaults write eu.exelban.Stats RAM_state -bool true 2>/dev/null || true
+defaults write eu.exelban.Stats Disk_state -bool true 2>/dev/null || true
+defaults write eu.exelban.Stats Network_state -bool true 2>/dev/null || true
+defaults write eu.exelban.Stats Battery_state -bool false 2>/dev/null || true
+defaults write eu.exelban.Stats GPU_state -bool false 2>/dev/null || true
+defaults write eu.exelban.Stats Sensors_state -bool false 2>/dev/null || true
+defaults write eu.exelban.Stats Bluetooth_state -bool false 2>/dev/null || true
+success "Stats configured (CPU, memory, disk, network visible)"
+
+# ImageOptim: lossless by default, high compression
+defaults write net.pornel.ImageOptim PngOutEnabled -bool true 2>/dev/null || true
+defaults write net.pornel.ImageOptim OxiPngEnabled -bool true 2>/dev/null || true
+defaults write net.pornel.ImageOptim JpegOptimEnabled -bool true 2>/dev/null || true
+defaults write net.pornel.ImageOptim LossyEnabled -bool false 2>/dev/null || true
+defaults write net.pornel.ImageOptim StripMetadata -bool true 2>/dev/null || true
+success "ImageOptim configured (lossless compression, strip metadata)"
+
+# Keka: default to 7z format, normal compression
+defaults write com.aone.keka DefaultCompression -int 0 2>/dev/null || true
+defaults write com.aone.keka DefaultFormat -string "7z" 2>/dev/null || true
+# Set Keka as default archive handler
+# Set Keka as default archive handler (requires duti)
+if [[ -d "/Applications/Keka.app" ]]; then
+    if ! installed duti; then
+        brew install duti >> "$LOG_FILE" 2>&1 || true
+    fi
+    if installed duti; then
+        duti -s com.aone.keka .zip all 2>/dev/null || true
+        duti -s com.aone.keka .7z all 2>/dev/null || true
+        duti -s com.aone.keka .rar all 2>/dev/null || true
+        duti -s com.aone.keka .tar.gz all 2>/dev/null || true
+    fi
+fi
+success "Keka configured (7z default, set as archive handler)"
 
 fi  # macos-defaults (Finder, Touch ID, DNS, Spotlight, TM, Siri, app defaults)
 
@@ -5916,10 +5966,10 @@ else
 ## Environment
 - Shell: zsh with starship prompt, atuin history, fzf fuzzy finder
 - Editor: VS Code / Zed (Dracula theme, JetBrains Mono)
-- Terminal: Ghostty (daily driver) / iTerm2 (tmux integration) — Dracula theme
+- Terminal: Ghostty (Dracula theme)
 - Package managers: pnpm (preferred), npm, bun
 - Python: uv for packages (not pip), ruff for linting (not flake8/black)
-- Version managers: nvm (Node), pyenv (Python), mise (universal)
+- Version manager: mise (Node, Python, Go, Ruby — all in one)
 - Container runtime: OrbStack (macOS), Docker Engine (Linux)
 - Task runner: just (prefer over make for project-level tasks)
 
@@ -6765,19 +6815,8 @@ export PATH="$(brew --prefix gnu-tar)/libexec/gnubin:$PATH"
 export PATH="$(brew --prefix gawk)/libexec/gnubin:$PATH"
 export PATH="$(brew --prefix findutils)/libexec/gnubin:$PATH"
 
-# nvm
-export NVM_DIR="$HOME/.nvm"
-[ -s "$(brew --prefix nvm)/nvm.sh" ] && \. "$(brew --prefix nvm)/nvm.sh"
-[ -s "$(brew --prefix nvm)/etc/bash_completion.d/nvm" ] && \. "$(brew --prefix nvm)/etc/bash_completion.d/nvm"
-
-# pyenv
-export PYENV_ROOT="$HOME/.pyenv"
-export PATH="$PYENV_ROOT/bin:$PATH"
-eval "$(pyenv init -)"
-
-# mise (universal version manager — alternative to nvm/pyenv)
-# Uncomment to use mise INSTEAD of nvm/pyenv above:
-# eval "$(mise activate zsh)"
+# mise (universal version manager — Node, Python, Go, Ruby, etc.)
+eval "$(mise activate zsh)"
 
 # direnv
 eval "$(direnv hook zsh)"
@@ -7086,6 +7125,95 @@ echo "  5. Set up chezmoi: chezmoi init && chezmoi add ~/.zshrc"
 echo "  6. Enable FileVault: System Settings > Privacy & Security > FileVault"
 echo "  7. Enable macOS Firewall: System Settings > Network > Firewall"
 echo "  8. Open OrbStack and complete Docker setup"
+
+# =============================================================================
+# FIRST-RUN SETUP (interactive — only runs if not already configured)
+# =============================================================================
+if [[ "$DRY_RUN" == "false" ]]; then
+banner "First-Run Setup"
+
+# ---- SSH Key Generation ----
+if [[ ! -f "$HOME/.ssh/id_ed25519" ]]; then
+    echo ""
+    read -p "Generate an SSH key? [Y/n] " ssh_confirm
+    if [[ ! "$ssh_confirm" =~ ^[Nn]$ ]]; then
+        read -p "Email for SSH key: " ssh_email
+        if [[ -n "$ssh_email" ]]; then
+            mkdir -p "$HOME/.ssh"
+            chmod 700 "$HOME/.ssh"
+            ssh-keygen -t ed25519 -C "$ssh_email" -f "$HOME/.ssh/id_ed25519"
+            eval "$(ssh-agent -s)" 2>/dev/null || true
+            ssh-add "$HOME/.ssh/id_ed25519" 2>/dev/null || true
+            success "SSH key generated at ~/.ssh/id_ed25519"
+        fi
+    fi
+else
+    warn "SSH key already exists at ~/.ssh/id_ed25519"
+fi
+
+# ---- GitHub Authentication ----
+if installed gh; then
+    if ! gh auth status &>/dev/null 2>&1; then
+        echo ""
+        read -p "Authenticate with GitHub? [Y/n] " gh_confirm
+        if [[ ! "$gh_confirm" =~ ^[Nn]$ ]]; then
+            info "Opening GitHub authentication..."
+            gh auth login
+            # Add SSH key to GitHub if it was just generated
+            if [[ -f "$HOME/.ssh/id_ed25519.pub" ]]; then
+                read -p "Add SSH key to GitHub? [Y/n] " ssh_gh_confirm
+                if [[ ! "$ssh_gh_confirm" =~ ^[Nn]$ ]]; then
+                    gh ssh-key add "$HOME/.ssh/id_ed25519.pub" --title "$(hostname) $(date +%Y-%m-%d)"
+                    success "SSH key added to GitHub"
+                fi
+            fi
+        fi
+    else
+        warn "GitHub CLI already authenticated"
+    fi
+fi
+
+# ---- Git Identity ----
+GITCONFIG_WORK="$HOME/.gitconfig-work"
+GITCONFIG_PERSONAL="$HOME/.gitconfig-personal"
+
+# Work identity
+if [[ -f "$GITCONFIG_WORK" ]] && grep -q "^    # name = " "$GITCONFIG_WORK" 2>/dev/null; then
+    echo ""
+    read -p "Set up your work git identity? [Y/n] " work_confirm
+    if [[ ! "$work_confirm" =~ ^[Nn]$ ]]; then
+        read -p "Work name: " work_name
+        read -p "Work email: " work_email
+        if [[ -n "$work_name" ]] && [[ -n "$work_email" ]]; then
+            cat > "$GITCONFIG_WORK" <<GIT_WORK_ID
+[user]
+    name = $work_name
+    email = $work_email
+GIT_WORK_ID
+            success "Work git identity set ($work_email)"
+        fi
+    fi
+fi
+
+# Personal identity
+if [[ -f "$GITCONFIG_PERSONAL" ]] && grep -q "^    # name = " "$GITCONFIG_PERSONAL" 2>/dev/null; then
+    echo ""
+    read -p "Set up your personal git identity? [Y/n] " personal_confirm
+    if [[ ! "$personal_confirm" =~ ^[Nn]$ ]]; then
+        read -p "Personal name: " personal_name
+        read -p "Personal email: " personal_email
+        if [[ -n "$personal_name" ]] && [[ -n "$personal_email" ]]; then
+            cat > "$GITCONFIG_PERSONAL" <<GIT_PERSONAL_ID
+[user]
+    name = $personal_name
+    email = $personal_email
+GIT_PERSONAL_ID
+            success "Personal git identity set ($personal_email)"
+        fi
+    fi
+fi
+
+fi  # DRY_RUN
 
 # =============================================================================
 # POST-INSTALL VERIFICATION
