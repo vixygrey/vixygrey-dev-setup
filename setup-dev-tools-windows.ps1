@@ -522,6 +522,7 @@ if ($CLEANUP) {
         @{ Type="winget"; Id="CursorAI.Cursor"; Name="Cursor (AI editor)"; Replacement="VS Code + Claude Code" }
         @{ Type="winget"; Id="Telerik.Fiddler.Classic"; Name="Fiddler"; Replacement="mitmproxy" }
         @{ Type="scoop"; Id="dog"; Name="dog (DNS tool)"; Replacement="doggo" }
+        @{ Type="winget"; Id="Tailscale.Tailscale"; Name="Tailscale"; Replacement="removed" }
     )
 
     $cleanupCount = 0

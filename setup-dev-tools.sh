@@ -556,6 +556,7 @@ if [[ "$CLEANUP" == "true" ]]; then
         "cask:appcleaner:AppCleaner:Pearcleaner"
         "cask:bartender:Bartender:Ice"
         "formula:dog:dog (DNS tool):doggo"
+        "cask:tailscale:Tailscale:removed"
         "mas:1289583905:Pixelmator Pro:GIMP"
     )
 

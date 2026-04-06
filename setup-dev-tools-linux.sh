@@ -1002,6 +1002,7 @@ if [[ "$CLEANUP" == "true" ]]; then
     DEPRECATED_TOOLS=(
         "pkg:dog:dog (DNS tool):doggo"
         "snap:cursor:Cursor (AI editor):VS Code + Claude Code"
+        "pkg:tailscale:Tailscale:removed"
     )
 
     CLEANUP_COUNT=0
