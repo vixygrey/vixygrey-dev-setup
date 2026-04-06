@@ -3063,20 +3063,16 @@ defaults write com.apple.dock expose-animation-duration -float 0.15
 defaults write com.apple.dock expose-group-apps -bool true
 success "Mission Control configured (fixed spaces, fast animations)"
 
-# -- Hot Corners --
-# Top-left: Mission Control (value 2)
-defaults write com.apple.dock wvous-tl-corner -int 2
+# -- Hot Corners (all disabled to prevent accidental triggers) --
+defaults write com.apple.dock wvous-tl-corner -int 1
 defaults write com.apple.dock wvous-tl-modifier -int 0
-# Top-right: Desktop (value 4)
-defaults write com.apple.dock wvous-tr-corner -int 4
+defaults write com.apple.dock wvous-tr-corner -int 1
 defaults write com.apple.dock wvous-tr-modifier -int 0
-# Bottom-left: disabled (value 1)
 defaults write com.apple.dock wvous-bl-corner -int 1
 defaults write com.apple.dock wvous-bl-modifier -int 0
-# Bottom-right: disabled (value 1)
 defaults write com.apple.dock wvous-br-corner -int 1
 defaults write com.apple.dock wvous-br-modifier -int 0
-success "Hot corners configured (TL: Mission Control, TR: Desktop)"
+success "Hot corners disabled (all corners off)"
 
 # -- Safari --
 # Enable Developer menu
