@@ -1,38 +1,64 @@
-# macOS Development Environment Setup
+# Development Environment Setup
 
-A single idempotent script that installs and configures **191 tools** for development, GitHub, AWS/CDK, DX, UI/UX, security, and daily productivity on macOS. Safe to re-run — skips anything already installed.
+Three platform-specific scripts that install and configure **200+ tools** for development, GitHub, AWS/CDK, DX, UI/UX, security, and daily productivity. Safe to re-run — each skips anything already installed.
+
+| Platform | Script | Package Managers |
+|----------|--------|-----------------|
+| **macOS** | `setup-dev-tools.sh` | Homebrew + mas (App Store) |
+| **Windows** | `setup-dev-tools-windows.ps1` | winget + Scoop |
+| **Linux** | `setup-dev-tools-linux.sh` | apt / dnf / pacman + snap + flatpak |
 
 ## Quick Start
 
+### macOS
 ```bash
 chmod +x setup-dev-tools.sh
 ./setup-dev-tools.sh
 ```
 
-## CLI Options
+### Windows (PowerShell as Administrator)
+```powershell
+Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
+.\setup-dev-tools-windows.ps1
+```
+
+### Linux (Ubuntu/Debian, Fedora/RHEL, or Arch)
+```bash
+chmod +x setup-dev-tools-linux.sh
+./setup-dev-tools-linux.sh
+```
+
+## CLI Options (all three scripts)
+
+All scripts share the same flags:
 
 ```bash
 ./setup-dev-tools.sh --help              # Show all options
 ./setup-dev-tools.sh --dry-run           # Preview changes without installing
+./setup-dev-tools.sh --resume            # Continue from where a previous run left off
+./setup-dev-tools.sh --uninstall         # Show commands to remove everything (no changes made)
 ./setup-dev-tools.sh --list-categories   # List all available categories
 ./setup-dev-tools.sh --skip mac-media,mac-cloud  # Skip specific categories
 ./setup-dev-tools.sh --only core,git,aws,dx      # Only install specific categories
 ./setup-dev-tools.sh --version           # Show script version
 ```
 
+> Platform-specific categories use prefixes: `mac-*`, `win-*`, `linux-*` (e.g., `--skip win-bloat`)
+
 ## What It Does
 
 1. **Pre-flight checks** — verifies macOS version, disk space, internet, admin privileges
-2. Installs all tools via Homebrew, Cask, and npm with **progress tracking**
+2. Installs all tools via Homebrew, Cask, npm, and Mac App Store with **progress tracking**
 3. Configures every tool with sensible defaults
 4. Applies the **Dracula** theme everywhere
 5. Sets macOS system defaults (Dock, keyboard, Finder, screenshots, etc.)
-6. Auto-writes `~/.zshrc` with a managed block (preserves your customizations)
-7. Exports a `Brewfile` snapshot for reproducibility
-8. **Post-install verification** — verifies critical tools work
-9. Runs `brew cleanup` and `brew doctor`
-10. **Logs everything** to `~/.local/share/dev-setup/` for debugging
-11. Reports final summary with install/skip/fail counts and duration
+6. Optionally **removes pre-installed Apple bloat** (GarageBand, News, Stocks, etc.)
+7. Auto-writes `~/.zshrc` with a managed block (preserves your customizations)
+8. Exports a `Brewfile` snapshot (with descriptions) for reproducibility
+9. **Post-install verification** — verifies critical tools work
+10. Runs `brew cleanup` and `brew doctor`
+11. **Logs everything** to `~/.local/share/dev-setup/` for debugging
+12. Reports final summary with install/skip/fail counts and duration
 
 ## Features
 
@@ -40,8 +66,12 @@ chmod +x setup-dev-tools.sh
 |---------|-------------|
 | **Idempotent** | Safe to re-run — skips anything already installed |
 | **Dry run** | Preview all changes with `--dry-run` |
+| **Resume** | Continue after a failure with `--resume` — skips previously completed items |
+| **Uninstall guide** | Show removal commands with `--uninstall` (no destructive actions taken) |
+| **Lockfile** | Prevents concurrent runs via PID-based lock |
 | **Category filtering** | Install only what you need with `--only` / `--skip` |
-| **Progress bar** | Visual progress counter (47/193) |
+| **Progress bar** | Visual progress counter with dynamic total |
+| **Fast installs** | `HOMEBREW_NO_AUTO_UPDATE` set after initial update for faster installs |
 | **Error resilient** | Continues on failure, reports all failures at the end |
 | **Logging** | Full log file for debugging failed installs |
 | **Verification** | Post-install check that critical tools actually work |
@@ -71,8 +101,12 @@ chmod +x setup-dev-tools.sh
 |------|-------------|
 | **nvm** | Node.js version manager — run multiple Node versions side by side |
 | **Node.js LTS** | JavaScript runtime (latest Long Term Support version) |
+| **Go** | Go programming language |
 | **pyenv** | Python version manager |
 | **Python 3.12** | Python runtime |
+| **uv** | Fast Python package manager — 10-100x faster than pip |
+| **Rust** | Rust toolchain via rustup (rustc, cargo, etc.) |
+| **bun** | Fast JS runtime, bundler, and test runner |
 | **pnpm** | Fast, disk-efficient npm alternative |
 | **jq** | Lightweight command-line JSON processor |
 | **httpie** | Human-friendly HTTP client for API testing |
@@ -122,6 +156,7 @@ chmod +x setup-dev-tools.sh
 | **git-secrets** | Prevents committing AWS keys and secrets to git |
 | **trufflehog** | Scans git repos for leaked credentials and API keys |
 | **detect-secrets** | Yelp's pre-commit hook for catching secrets before they're committed |
+| **gitleaks** | Fast git secret scanning — great for CI and pre-commit hooks |
 | **age** | Modern, simple file encryption (replaces GPG for file encryption) |
 | **sops** | Encrypt secrets in YAML/JSON files — integrates with AWS KMS |
 | **trivy** | Vulnerability scanner for containers, filesystems, and IaC |
@@ -161,7 +196,7 @@ Faster, prettier, smarter replacements for standard Unix utilities.
 | `ps` | **procs** | Sortable process list with tree view, Docker-aware |
 | `ping` | **gping** | Real-time latency graph for multiple hosts |
 | `curl` | **xh** | Colorized HTTP client with JSON shortcuts |
-| `dig` | **dog** | Colorized DNS lookup with DoH/DoT support |
+| `dig` | **doggo** | Colorized DNS lookup with DoH/DoT support |
 | `wc` (code) | **tokei** | Count lines of code by language with statistics |
 | `watch` | **viddy** | Modern watch with diff highlighting and history |
 | `hexdump` | **hexyl** | Colorized hex viewer with ASCII sidebar |
@@ -169,6 +204,9 @@ Faster, prettier, smarter replacements for standard Unix utilities.
 | `rm` | **trash** | Moves files to macOS Trash instead of permanent delete |
 | `rsync` | **rsync** (latest) | Updated rsync with better progress and Apple metadata |
 | `tree` | **tree** | Directory listing in tree format |
+| `make` | **just** | Modern task runner — simpler syntax, no tab weirdness |
+| file manager | **yazi** | Terminal file manager with image preview, vim keys, bulk ops |
+| `jq` (interactive) | **fx** | Interactive JSON viewer/processor for exploring large JSON |
 
 ---
 
@@ -243,6 +281,7 @@ Faster, prettier, smarter replacements for standard Unix utilities.
 | **pgcli** | Auto-completing PostgreSQL CLI with syntax highlighting |
 | **mycli** | Auto-completing MySQL CLI with syntax highlighting |
 | **usql** | Universal SQL CLI — connects to Postgres, MySQL, SQLite, and more |
+| **sq** | jq for databases — query SQLite, Postgres, CSV from one tool |
 | **dbmate** | Lightweight, framework-agnostic database migration tool |
 | **TablePlus** | Native macOS database GUI — fast, clean, supports 20+ databases |
 | **DBeaver** | Advanced SQL editor with 100+ database support (community edition) |
@@ -255,6 +294,7 @@ Faster, prettier, smarter replacements for standard Unix utilities.
 |------|-------------|
 | **lazydocker** | Terminal UI for Docker — manage containers, images, volumes |
 | **dive** | Explore Docker image layers — find what's taking up space |
+| **colima** | Lightweight Docker runtime — free OrbStack alternative |
 | **kubectl** | Kubernetes CLI for managing clusters |
 | **k9s** | Terminal UI for Kubernetes — navigate clusters with keyboard |
 
@@ -291,12 +331,14 @@ Faster, prettier, smarter replacements for standard Unix utilities.
 | **mise** | Universal version manager — replaces nvm + pyenv + rbenv in one tool |
 | **VS Code** | Primary code editor and IDE |
 | **Cursor** | AI-native code editor — VS Code fork with built-in AI pair programming |
+| **Zed** | Fast native editor from ex-Atom team — GPU-rendered |
 | **Claude Code** | AI-assisted coding in the terminal |
 | **GitHub Copilot CLI** | AI suggestions in the terminal (via `gh copilot suggest`) |
 | **chezmoi** | Dotfile manager — backup and restore configs across machines |
 | **Proxyman** | Native macOS HTTP debugging proxy — inspect API calls from any app |
 | **Warp** | Modern GPU-accelerated terminal with AI and block-based output |
 | **iTerm2** | Classic macOS terminal with deep customization and tmux integration |
+| **Ghostty** | Fast GPU-accelerated terminal with native macOS feel |
 | **tmux** | Terminal multiplexer — persistent sessions, panes, and windows |
 | **Raycast** | Spotlight replacement with extensions, snippets, and workflows |
 | **Rectangle** | Window management with keyboard shortcuts |
@@ -357,7 +399,6 @@ Preview files in Finder by pressing spacebar.
 | **QLMarkdown** | Preview Markdown files with rendered formatting |
 | **Syntax Highlight** | Preview source code files with syntax coloring |
 | **QLStephen** | Preview plain text files that have no file extension |
-| **QuickLookJSON** | Preview JSON files with formatted, colorized output |
 
 ---
 
@@ -366,9 +407,10 @@ Preview files in Finder by pressing spacebar.
 | App | Description |
 |-----|-------------|
 | **AppCleaner** | Fully uninstall apps — removes leftover files and preferences |
+| **Pearcleaner** | Open-source deep app uninstaller — finds more leftover files |
 | **The Unarchiver** | Opens any archive format — RAR, 7z, tar, etc. |
 | **Stats** | Free menubar system monitor — CPU, RAM, network, disk, battery |
-| **Bartender** | Organize and hide menubar icons |
+| **Ice** | Open-source menubar icon manager (Bartender replacement) |
 | **Amphetamine** | Prevent Mac from sleeping during presentations or long tasks |
 | **AltTab** | Windows-style alt-tab with window previews |
 | **Dato** | Menubar clock with calendar, timezones, and meeting countdown |
@@ -377,6 +419,9 @@ Preview files in Finder by pressing spacebar.
 | **Proton VPN** | Privacy-focused VPN |
 | **Proton Mail** | End-to-end encrypted email client |
 | **Proton Pass** | Password manager with end-to-end encryption |
+| **Proton Drive** | Encrypted cloud storage |
+| **KeyboardCleanTool** | One-click keyboard lock for cleaning |
+| **TopNotch** | Hides MacBook notch with a black menu bar |
 
 ---
 
@@ -396,6 +441,9 @@ Preview files in Finder by pressing spacebar.
 | **PopClip** | Text actions on select — copy, search, translate, format |
 | **Yoink** | Drag and drop shelf — stage files between apps |
 | **Raindrop.io** | Bookmark manager with collections, tags, and full-text search |
+| **Skim** | Lightweight PDF reader with annotations — faster than Preview |
+| **Velja** | Browser picker — open links in the right browser based on rules |
+| **Pixelmator Pro** | Native image editor — fast Photoshop alternative |
 | **Transmit** | Premium SFTP/S3 file transfer client — fast, dual-pane |
 | **Cyberduck** | Free SFTP/S3 client with Cryptomator encryption and `duck` CLI |
 
@@ -441,6 +489,7 @@ Preview files in Finder by pressing spacebar.
 | App | Description |
 |-----|-------------|
 | **Google Drive** | Cloud storage with Docs, Sheets, and Slides integration |
+| **Tailscale** | Zero-config mesh VPN between your devices |
 
 ---
 
@@ -462,6 +511,33 @@ Preview files in Finder by pressing spacebar.
 
 ---
 
+## Remove Pre-installed Apple Bloat
+
+The `mac-bloat` category removes unused Apple apps (requires sudo, some need SIP disabled):
+
+| App | Location |
+|-----|----------|
+| **GarageBand** | `/Applications/GarageBand.app` |
+| **News** | `/System/Applications/News.app` |
+| **Journal** | `/System/Applications/Journal.app` |
+| **Chess** | `/System/Applications/Chess.app` |
+| **Games** | `/System/Applications/Games.app` |
+| **Stocks** | `/System/Applications/Stocks.app` |
+| **Tips** | `/System/Applications/Tips.app` |
+| **Voice Memos** | `/System/Applications/VoiceMemos.app` |
+
+```bash
+# Remove bloat only
+./setup-dev-tools.sh --only mac-bloat
+
+# Skip bloat removal in a full run
+./setup-dev-tools.sh --skip mac-bloat
+```
+
+> **Note:** `/System/Applications` apps require SIP disabled on macOS Sonoma+. Boot into Recovery (Cmd+R) > Terminal > `csrutil disable` > reboot. Re-enable after: `csrutil enable`.
+
+---
+
 ## Dracula Theme
 
 Applied consistently across all tools:
@@ -473,6 +549,7 @@ Applied consistently across all tools:
 | **delta** | Dracula syntax theme for git diffs |
 | **iTerm2** | Theme downloaded to `~/.dracula-iterm` |
 | **Warp** | Built-in (manual: Settings > Appearance > Dracula) |
+| **Ghostty** | Full 16-color Dracula palette in config |
 | **fzf** | Dracula colors in `FZF_DEFAULT_OPTS` |
 | **Starship** | Dracula color palette in `starship.toml` |
 | **lazygit** | Full Dracula color scheme in config |
@@ -480,6 +557,9 @@ Applied consistently across all tools:
 | **tmux** | Dracula status bar, pane borders, and colors |
 | **glow** | Dracula Markdown rendering style |
 | **gh-dash** | Dracula border and highlight colors |
+| **yazi** | Dracula file type colors and borders |
+| **btop** | Full Dracula theme with custom color palette |
+| **lazydocker** | Dracula borders and options colors |
 | **macOS** | System highlight color set to Dracula purple |
 
 ---
@@ -494,11 +574,20 @@ The script sets up Claude Code with sensible defaults for full-stack development
 |------|---------|
 | `~/.claude/settings.json` | Global permissions, file ignore patterns, env vars |
 | `~/.claude/CLAUDE.md` | Global memory — coding standards, React/Next.js/AWS/CDK conventions |
-| `~/.claude/settings.local.json` | Local settings — MCP servers (Notion) |
 | `~/.claude/rules/git.md` | Git workflow rules (no force-push, conventional commits) |
 | `~/.claude/rules/security.md` | Security rules (no hardcoded secrets, parameterized SQL) |
 | `~/.claude/rules/typescript.md` | TypeScript rules (strict mode, no any, zod schemas) |
 | `~/.claude/hooks/format-on-edit.sh` | Auto-format with Prettier after Claude edits files |
+
+### Custom Slash Commands
+
+| Command | Purpose |
+|---------|---------|
+| `/pr-review` | Review current branch changes vs main — flags security, bugs, edge cases |
+| `/test-plan` | Generate a test plan with unit/integration/e2e cases for recent changes |
+| `/dep-audit` | Audit dependencies for vulnerabilities, outdated packages, bundle size |
+| `/quick-doc` | Generate JSDoc/docstring documentation for a file or function |
+| `/cleanup` | Find dead code, unused imports, debug statements, empty catches |
 
 ### Permissions Pre-approved
 
@@ -520,29 +609,68 @@ Destructive commands are blocked:
 
 ## Filesystem Structure
 
-The script creates an organized directory layout:
+The scripts create an organized directory layout for both development and personal use:
 
 ```
 ~/
-├── Code/
-│   ├── work/                   # Work projects
-│   │   ├── <org-name>/         # Grouped by GitHub org
-│   │   └── scratch/            # Throwaway experiments
-│   ├── personal/               # Personal projects
+├── Code/                        # ── Development ──
+│   ├── work/                    # Work projects
+│   │   ├── <org-name>/          # Grouped by GitHub org
+│   │   └── scratch/             # Throwaway experiments
+│   ├── personal/                # Personal projects
 │   │   └── scratch/
-│   ├── oss/                    # Open source contributions
+│   ├── oss/                     # Open source contributions
 │   └── learning/
 │       ├── courses/
 │       └── playground/
-├── Documents/
-│   ├── notion-templates/
-│   ├── design/
-│   ├── contracts/
-│   └── receipts/
-├── Screenshots/                # macOS screenshots save here
-└── Scripts/
-    ├── bin/                    # Custom scripts (added to PATH)
-    └── cron/                   # Cron job scripts
+│
+├── Scripts/                     # ── Automation ──
+│   ├── bin/                     # Custom scripts (added to PATH)
+│   └── cron/                    # Cron job scripts
+│
+├── Screenshots/                 # Screenshots save here
+│
+├── Documents/                   # ── Life Admin ──
+│   ├── finance/
+│   │   ├── taxes/               # Tax returns, W-2s, 1099s
+│   │   ├── invoices/            # Sent/received invoices
+│   │   └── statements/          # Bank/credit card statements
+│   ├── health/                  # Medical records, insurance cards
+│   ├── legal/                   # Contracts, agreements, legal docs
+│   ├── travel/                  # Itineraries, bookings, visa docs
+│   ├── insurance/               # Policies, claims
+│   ├── contracts/               # Work/freelance contracts
+│   ├── receipts/                # Purchase receipts, warranties
+│   └── design/                  # Design files, mockups
+│
+├── Reference/                   # ── Quick-Access Knowledge ──
+│   ├── manuals/                 # Product/software manuals
+│   ├── cheatsheets/             # CLI, language, tool cheatsheets
+│   └── bookmarks-export/        # Exported browser bookmarks
+│
+├── Creative/                    # ── Creative Work ──
+│   ├── design/                  # Graphic design projects
+│   ├── writing/                 # Blog posts, drafts, notes
+│   ├── video-editing/           # Video projects, raw footage
+│   └── assets/
+│       ├── icons/               # Icon collections
+│       ├── fonts/               # Custom/downloaded fonts
+│       ├── stock-photos/        # Stock imagery
+│       └── templates/           # Document/design templates
+│
+├── Media/                       # ── Personal Media ──
+│   ├── photos/                  # Personal photos
+│   ├── videos/                  # Personal videos
+│   ├── music/                   # Music files
+│   └── wallpapers/              # Desktop/phone wallpapers
+│
+├── Projects/                    # ── Non-Code Projects ──
+│   ├── side-hustles/            # Business/freelance projects
+│   └── home/                    # Home improvement, DIY
+│
+└── Archive/                     # ── Cold Storage ──
+    ├── old-projects/            # Completed/abandoned projects
+    └── old-docs/                # Old documents for reference
 ```
 
 ### Helper Scripts (~/Scripts/bin/)
@@ -556,16 +684,33 @@ The script creates an organized directory layout:
 | `backup-dotfiles` | `dotback` | Push dotfile changes via chezmoi |
 | `project-stats` | `pstats` | Show repo counts, disk usage, recently modified projects |
 
+### Global Justfile (~/.justfile)
+
+Common task-runner recipes available from any directory via `gj`:
+
+| Recipe | Description |
+|--------|-------------|
+| `gj update` | Update everything via topgrade |
+| `gj info` | Show system info via fastfetch |
+| `gj flush-dns` | Flush DNS cache |
+| `gj ports` | Show listening ports |
+| `gj rebase` | Interactive rebase last N commits |
+| `gj undo` | Undo last commit (keep changes staged) |
+| `gj branches` | Show recent branches by last commit |
+| `gj docker-clean` | Clean unused Docker images, containers, volumes |
+| `gj serve` | Serve current directory on a port |
+| `gj uuid` | Generate a UUID |
+
 ### Directory Shortcut Aliases
 
 | Alias | Directory |
 |-------|-----------|
 | `cw` | `~/Code/work` |
-| `cp_` | `~/Code/personal` |
-| `co` | `~/Code/oss` |
-| `cl` | `~/Code/learning` |
-| `cs` | `~/Code/work/scratch` |
-| `sc` | `~/Scripts` |
+| `cper` | `~/Code/personal` |
+| `coss` | `~/Code/oss` |
+| `clearn` | `~/Code/learning` |
+| `cscratch` | `~/Code/work/scratch` |
+| `cscripts` | `~/Scripts` |
 
 ### Per-Directory Git Identity
 
@@ -607,7 +752,10 @@ The script generates config files with sensible defaults:
 | `~/.config/ngrok/ngrok.yml` | ngrok | Base config (add authtoken) |
 | `~/.config/caddy/Caddyfile` | Caddy | Development server template |
 | `~/.config/asciinema/config` | asciinema | 2s idle limit, no keystroke recording |
-| `~/.config/brewfile/Brewfile` | Homebrew | Snapshot of all installed packages |
+| `~/.config/yazi/yazi.toml` | yazi | Hidden files, VS Code opener, Dracula theme |
+| `~/.config/ghostty/config` | Ghostty | JetBrains Mono, Dracula palette, transparent titlebar |
+| `~/.justfile` | just | Global task-runner recipes (system, git, Docker, dev) |
+| `~/.config/brewfile/Brewfile` | Homebrew | Snapshot of all installed packages with descriptions |
 | `~/.shellcheckrc` | shellcheck | External sources, disabled false positives |
 | `~/.actrc` | act | Medium Ubuntu images, container reuse |
 | `~/.mlrrc` | miller | CSV input, pretty table output |
@@ -637,12 +785,13 @@ The script generates config files with sensible defaults:
 
 | Category | Changes |
 |----------|---------|
-| **Dock** | Auto-hide, small icons, no recents, scale minimize, no delay |
+| **Dock** | Auto-hide, small icons, no recents, scale minimize, no delay, spacers |
 | **Screenshots** | PNG format, saved to `~/Screenshots`, no shadow |
 | **Keyboard** | Fast key repeat, no press-and-hold, no auto-correct/capitalize/smart quotes |
 | **Trackpad** | Faster tracking speed |
 | **Mission Control** | Fixed spaces (no auto-rearrange), fast animations, group by app |
 | **Hot Corners** | Top-left: Mission Control, Top-right: Desktop |
+| **Stage Manager** | Disabled (prevents accidental activation) |
 | **Safari** | Developer menu enabled, full URL in address bar |
 | **TextEdit** | Plain text default, UTF-8 encoding |
 | **Finder** | Hidden files visible, path bar, status bar, list view, folders first, no .DS_Store on network |
@@ -668,22 +817,26 @@ All aliases are auto-written to `~/.zshrc`:
 | `la` | `eza -a --icons` | List all including hidden |
 | `lt` | `eza --tree --icons --level=3` | Tree view |
 | `cat` | `bat --paging=never` | Syntax-highlighted file viewer |
-| `find` | `fd` | Fast file finder |
-| `grep` | `rg` | Fast content search |
-| `cd` | `z` | Smart directory jumping |
 | `top` | `btop` | System monitor |
-| `sed` | `sd` | Find and replace |
 | `du` | `dust` | Disk usage |
 | `df` | `duf` | Disk free |
 | `ps` | `procs` | Process list |
 | `ping` | `gping` | Latency graph |
-| `dig` | `dog` | DNS lookup |
+| `dig` | `doggo` | DNS lookup |
 | `watch` | `viddy` | Watch command output |
 | `hexdump` | `hexyl` | Hex viewer |
 | `rm` | `trash` | Safe delete (Trash) |
-| `diff` | `difft` | Syntax-aware diff |
+| `make` | `just` | Task runner |
+| `y` | `yazi` | File manager |
+| `jx` | `fx` | Interactive JSON viewer |
+| `f` | `fd` | Fast find |
+| `dft` | `difft` | Syntax-aware diff |
 | `dl` | `aria2c` | Fast download |
 | `wget` | `aria2c` | Fast download |
+| `pip` | `uv pip` | Fast Python packages |
+| `venv` | `uv venv` | Fast virtualenv creation |
+| `pyrun` | `uv run` | Run Python with uv |
+| `gj` | `just --justfile ~/.justfile` | Global justfile recipes |
 | `lg` | `lazygit` | Git UI |
 | `lzd` | `lazydocker` | Docker UI |
 | `k` | `kubectl` | Kubernetes |
@@ -707,6 +860,8 @@ All aliases are auto-written to `~/.zshrc`:
 | `fmt-sh` | `shfmt -w -i 4` | Format shell scripts |
 | `csvp` | `csvlook` | Pretty-print CSV |
 | `watchrun` | `find ... \| entr -r` | Watch and rerun on changes |
+| `update` | `topgrade` | Update everything |
+| `sysinfo` | `fastfetch` | Quick system info |
 
 ---
 
@@ -760,13 +915,16 @@ Auto-installed by the script:
 # Option 1: Run the full script
 ./setup-dev-tools.sh
 
-# Option 2: Restore from Brewfile (packages only, no configs)
+# Option 2: Resume after a failure
+./setup-dev-tools.sh --resume
+
+# Option 3: Restore from Brewfile (packages only, no configs)
 brew bundle install --file=~/.config/brewfile/Brewfile
 
-# Option 3: Restore dotfiles via chezmoi
+# Option 4: Restore dotfiles via chezmoi
 chezmoi init <your-github-username> && chezmoi apply
 
-# Option 4: Run only specific categories
+# Option 5: Run only specific categories
 ./setup-dev-tools.sh --only core,git,dx,configs
 ```
 
@@ -794,21 +952,226 @@ The script will:
 
 ---
 
-## Troubleshooting
+## Uninstalling
 
 ```bash
-# Check the install log
+# Show removal commands (no changes made)
+./setup-dev-tools.sh --uninstall
+```
+
+This prints a full guide for removing all installed tools, configs, and settings. Review each command before running.
+
+---
+
+---
+
+# Windows Script (`setup-dev-tools-windows.ps1`)
+
+## Overview
+
+4,200+ lines of PowerShell. Uses **winget** for GUI/desktop apps and **Scoop** for CLI dev tools. Run as Administrator for registry edits.
+
+## Platform-Specific Substitutions
+
+| macOS App | Windows Equivalent |
+|-----------|--------------------|
+| Raycast + Rectangle | **PowerToys** (FancyZones, Awake, Run, Color Picker) |
+| CleanShot X + Shottr | **ShareX** (screenshots, recording, OCR, annotations) |
+| iTerm2 / Warp / Ghostty | **Windows Terminal** (built-in) + **Alacritty** |
+| Proxyman | **Fiddler** (HTTP debugging proxy) |
+| IINA | **mpv** |
+| DaisyDisk | **WizTree** |
+| Skim | **SumatraPDF** |
+| AppCleaner / Pearcleaner | **BCUninstaller** |
+| Keka / The Unarchiver | **7-Zip** |
+| Pixelmator Pro | **GIMP** |
+| Transmit | **WinSCP** |
+| LuLu (firewall) | **simplewall** |
+| Quick Look plugins | **QuickLook** (winget) |
+| Ice (menubar) | N/A (taskbar built-in) |
+| Maccy (clipboard) | N/A (Win+V built-in) |
+| Amphetamine | PowerToys Awake (built-in) |
+| AltTab | N/A (built-in alt-tab) |
+| Dato (clock) | N/A (built-in clock) |
+| entr (file watcher) | **watchexec** |
+| tmux | N/A (use Windows Terminal panes) |
+
+## Windows System Tweaks
+
+Registry edits applied by the `windows-defaults` category:
+- Fast keyboard repeat, no autocorrect
+- Show hidden files and file extensions
+- Small taskbar, disable web search in Start
+- Disable Copilot, reduce animations
+- DNS set to Cloudflare + Quad9 + Google
+
+## Windows Bloat Removal (`win-bloat`)
+
+Removes pre-installed Windows apps via `winget uninstall`:
+Clipchamp, Xbox Game Bar, Bing News, Get Help, Tips, Mail, Weather, Maps, People, Solitaire, Mixed Reality Portal, Cortana, Feedback Hub, Power Automate, Teams (free)
+
+## Shell: PowerShell Profile
+
+Managed block in `$PROFILE` with:
+- Starship, Atuin, Zoxide initialization
+- PSReadLine (prediction, ListView, tab completion — replaces zsh-autosuggestions)
+- All aliases translated to PowerShell (`Set-Alias` + wrapper functions)
+- Dracula fzf colors, environment variables
+
+## Windows Terminal
+
+Dracula color scheme and JetBrains Mono NF font auto-configured in Windows Terminal settings.
+
+---
+
+# Linux Script (`setup-dev-tools-linux.sh`)
+
+## Overview
+
+5,300+ lines of Bash. Auto-detects distro at runtime and supports:
+
+| Distro Family | Package Manager | Examples |
+|---------------|----------------|----------|
+| **Debian/Ubuntu** | apt | Ubuntu, Debian, Pop!_OS, Linux Mint, Elementary |
+| **Fedora/RHEL** | dnf | Fedora, RHEL, CentOS, Rocky, Alma |
+| **Arch** | pacman | Arch, Manjaro, EndeavourOS |
+
+Also uses **snap**, **flatpak**, **cargo**, and **Linuxbrew** as fallbacks.
+
+## Platform-Specific Substitutions
+
+| macOS App | Linux Equivalent |
+|-----------|-----------------|
+| Raycast | **ulauncher** |
+| CleanShot X + Shottr | **Flameshot** |
+| iTerm2 / Warp / Ghostty | **Alacritty** + **kitty** |
+| Proxyman | **mitmproxy** |
+| IINA | **mpv** |
+| DaisyDisk | **ncdu** |
+| Skim | **Evince** (usually pre-installed) |
+| Pixelmator Pro | **GIMP** |
+| Transmit | **FileZilla** |
+| Maccy (clipboard) | **CopyQ** |
+| Amphetamine | **caffeine** |
+| Quick Look plugins | **GNOME Sushi** |
+| Flow (pomodoro) | **GNOME Pomodoro** (flatpak) |
+| Reeder (RSS) | **Newsflash** (flatpak) |
+| Docker Desktop / OrbStack | **Docker Engine** (native, no VM overhead) |
+| entr | entr (native on Linux) |
+
+## External Repos Auto-Added
+
+The script adds official repositories for tools not in default repos:
+- Docker Engine (docker.com)
+- GitHub CLI (cli.github.com)
+- Brave Browser (brave.com)
+- Google Chrome (google.com)
+- VS Code (microsoft.com)
+- Tailscale (tailscale.com)
+- Trivy (aquasecurity)
+
+## Ubuntu/Debian Notes
+
+Some tools have different binary names on Debian-based systems. The script creates symlinks automatically:
+- `batcat` → `bat`
+- `fdfind` → `fd`
+
+Many Rust CLI tools not in apt are installed via `cargo install` as fallback (eza, zoxide, sd, procs, gping, xh, etc.).
+
+## Linux System Tweaks (`linux-defaults`)
+
+GNOME settings applied via `gsettings` (skipped if not GNOME):
+- Fast keyboard repeat, reduced animations
+- Show hidden files in Nautilus
+- Dark theme (Adwaita-dark)
+- Dock auto-hide and small icons
+- Screenshots to `~/Screenshots`
+- DNS via systemd-resolved (Cloudflare + Quad9 + Google)
+
+## Shell: zsh
+
+Installs zsh and sets it as default shell. Managed block in `~/.zshrc` with:
+- Same aliases as macOS (eza, bat, fd, etc.)
+- Tool initialization (starship, atuin, zoxide, direnv, pyenv, nvm)
+- Plugin paths auto-detected across distros
+- `xclip` for clipboard operations (replaces `pbcopy`)
+
+## Fonts
+
+Downloaded from GitHub to `~/.local/share/fonts/` and cached with `fc-cache -fv`:
+JetBrains Mono, JetBrains Mono NF, MesloLGS NF, Fira Code, Fira Code NF, Inter, Hack NF
+
+---
+
+# Cross-Platform Tool Coverage
+
+## Identical Across All Three Scripts
+
+These 150+ CLI tools and configs are installed on every platform:
+
+**Dev tools:** git, gh, node, python, go, rust, bun, uv, pnpm, jq, httpie, direnv, cmake, docker
+
+**Modern replacements:** eza, bat, fd, ripgrep, zoxide, btop, sd, dust, duf, procs, gping, xh, doggo, tokei, viddy, hexyl, aria2, difftastic, just, yazi, fx, tldr, trash
+
+**Git:** delta, lazygit, git-absorb, git-lfs, pre-commit, gnupg
+
+**AWS:** aws-cli, sam-cli, cdk, cfn-lint, granted
+
+**Security:** git-secrets, trufflehog, detect-secrets, gitleaks, trivy, semgrep, cosign, snyk, mkcert, wireshark, ssh-audit, clamav, age, sops
+
+**Data:** yq, miller, csvkit, pandoc, imagemagick, ffmpeg, yt-dlp
+
+**Code quality:** shellcheck, shfmt, act, hyperfine, oha
+
+**Servers:** ngrok, miniserve, caddy
+
+**Productivity:** glow, entr, pv, parallel, asciinema, topgrade, fastfetch, starship, atuin, fzf, chezmoi
+
+**K8s:** stern, kubectl, k9s, lazydocker, dive, colima
+
+**Database:** pgcli, mycli, usql, sq, dbmate
+
+**Editors:** VS Code, Cursor, Zed
+
+**JS tooling:** TypeScript, tsx, Turborepo, Storybook, Playwright, Lighthouse, Mermaid CLI
+
+## 40+ Shared Config Files
+
+Identical content across all platforms (paths adjusted per OS):
+starship, atuin, glow, btop, lazygit, lazydocker, k9s, yazi, gh-dash, stern, mise, fastfetch, direnv, caddy, ngrok, yt-dlp, asciinema, pgcli, .editorconfig, .prettierrc, .shellcheckrc, .curlrc, .npmrc, .ripgreprc, .fdignore, .vimrc, .nanorc, .gitignore_global, .gitmessage, .myclirc, .gemrc, .actrc, .mlrrc, .justfile, VS Code settings/keybindings/extensions, Espanso, Docker, AWS CLI, GitHub CLI, pip, git global config, SSH config, Claude Code config
+
+---
+
+## Troubleshooting
+
+### macOS
+```bash
 cat ~/.local/share/dev-setup/setup-*.log | grep ERROR
-
-# Run brew doctor
 brew doctor
+./setup-dev-tools.sh --resume
+```
 
-# Verify critical tools
-git --version && node --version && python3 --version
+### Windows (PowerShell)
+```powershell
+Get-Content $HOME\.local\share\dev-setup\setup-*.log | Select-String ERROR
+scoop checkup
+.\setup-dev-tools-windows.ps1 --resume
+```
 
-# Re-run just one category
-./setup-dev-tools.sh --only security
+### Linux
+```bash
+cat ~/.local/share/dev-setup/setup-*.log | grep ERROR
+./setup-dev-tools-linux.sh --resume
+```
 
+### All Platforms
+```bash
 # Preview without changes
 ./setup-dev-tools.sh --dry-run
+
+# Run only specific categories
+./setup-dev-tools.sh --only core,git,dx
+
+# Show removal commands
+./setup-dev-tools.sh --uninstall
 ```

@@ -71,8 +71,12 @@ INSTALL_SUCCESS=0
 INSTALL_SKIPPED=0
 INSTALL_FAILED=0
 INSTALL_CURRENT=0
-INSTALL_TOTAL=191
 FAILED_ITEMS=()
+
+# Dynamic total — count all install calls in this script so the progress bar stays accurate
+# when tools are added or removed. Counts brew_install, brew_cask_install, npm_global_install,
+# and mas install calls (including those inside conditionals).
+INSTALL_TOTAL=$(grep -cE '^\s*(brew_install|brew_cask_install|npm_global_install) ' "$0" 2>/dev/null || echo 200)
 
 progress() {
     ((INSTALL_CURRENT++)) || true
@@ -86,14 +90,54 @@ progress() {
 
 # -- State flags --------------------------------------------------------------
 DRY_RUN=false
+RESUME=false
+UNINSTALL=false
 SKIP_CATEGORIES=()
 ONLY_CATEGORIES=()
+
+# -- State file for --resume --------------------------------------------------
+STATE_DIR="$HOME/.local/share/dev-setup"
+STATE_FILE="$STATE_DIR/completed-items.txt"
+
+mark_done() {
+    echo "$1" >> "$STATE_FILE"
+}
+
+is_done() {
+    [[ "$RESUME" == "true" ]] && grep -qxF "$1" "$STATE_FILE" 2>/dev/null
+}
+
+# -- Lockfile (prevent concurrent runs) ---------------------------------------
+LOCKFILE="$STATE_DIR/setup.lock"
+
+acquire_lock() {
+    mkdir -p "$STATE_DIR"
+    if [[ -f "$LOCKFILE" ]]; then
+        local old_pid
+        old_pid=$(cat "$LOCKFILE" 2>/dev/null)
+        if kill -0 "$old_pid" 2>/dev/null; then
+            echo -e "${RED}ERROR: Another instance is running (PID $old_pid).${NC}"
+            echo "  Remove $LOCKFILE if this is stale."
+            exit 1
+        else
+            rm -f "$LOCKFILE"
+        fi
+    fi
+    echo $$ > "$LOCKFILE"
+}
+
+release_lock() {
+    rm -f "$LOCKFILE"
+}
+
+trap release_lock EXIT
 
 ALL_CATEGORIES=(
     prerequisites
     core
     git
     aws
+    iac
     security
     replacements
     data-processing
@@ -118,6 +162,7 @@ ALL_CATEGORIES=(
     mac-cloud
     mac-focus
     mac-disk
+    mac-bloat
     dracula
     configs
     filesystem
@@ -135,6 +180,8 @@ show_help() {
     echo "Options:"
     echo "  --help              Show this help message"
     echo "  --dry-run           Preview what would be installed (no changes)"
+    echo "  --resume            Skip items that succeeded in a previous run"
+    echo "  --uninstall         Show commands to remove everything (no changes made)"
     echo "  --skip <cats>       Skip categories (comma-separated)"
     echo "  --only <cats>       Only run these categories (comma-separated)"
     echo "  --list-categories   List all available categories"
@@ -143,6 +190,8 @@ show_help() {
     echo "Examples:"
     echo "  ./setup-dev-tools.sh                          # Install everything"
     echo "  ./setup-dev-tools.sh --dry-run                # Preview only"
+    echo "  ./setup-dev-tools.sh --resume                 # Continue after a failure"
+    echo "  ./setup-dev-tools.sh --uninstall              # Show removal commands"
     echo "  ./setup-dev-tools.sh --skip mac-media,mac-cloud"
     echo "  ./setup-dev-tools.sh --only core,git,aws,dx"
     echo ""
@@ -153,33 +202,35 @@ list_categories() {
     echo -e "${BOLD}Available categories:${NC}"
     echo ""
     printf "  %-25s %s\n" "prerequisites"       "Xcode CLI Tools, Rosetta 2, Homebrew, GNU coreutils"
-    printf "  %-25s %s\n" "core"                "Node, Python, Docker, OrbStack, pnpm"
+    printf "  %-25s %s\n" "core"                "Node, Python, Go, Rust, Docker, OrbStack, bun, uv, pnpm"
     printf "  %-25s %s\n" "git"                 "Git, GitHub CLI, delta, lazygit, pre-commit"
     printf "  %-25s %s\n" "aws"                 "AWS CLI, CDK, SAM, Granted, cfn-lint"
-    printf "  %-25s %s\n" "security"            "git-secrets, trivy, semgrep, Snyk, ClamAV, Objective-See"
-    printf "  %-25s %s\n" "replacements"        "eza, bat, fd, ripgrep, zoxide, btop, sd, dust, etc."
+    printf "  %-25s %s\n" "iac"                 "OpenTofu (Terraform), tflint, infracost"
+    printf "  %-25s %s\n" "security"            "git-secrets, gitleaks, trivy, semgrep, Snyk, ClamAV, Objective-See"
+    printf "  %-25s %s\n" "replacements"        "eza, bat, fd, ripgrep, zoxide, btop, sd, dust, just, yazi, fx, etc."
     printf "  %-25s %s\n" "data-processing"     "yq, miller, csvkit, pandoc, ffmpeg, ImageMagick"
-    printf "  %-25s %s\n" "code-quality"        "shellcheck, shfmt, act"
+    printf "  %-25s %s\n" "code-quality"        "shellcheck, shfmt, act, hadolint, ruff, commitizen, ni"
     printf "  %-25s %s\n" "perf-testing"        "hyperfine, oha"
     printf "  %-25s %s\n" "dev-servers"         "ngrok, miniserve, caddy"
     printf "  %-25s %s\n" "terminal-productivity" "glow, entr, pv, parallel, topgrade, fastfetch"
     printf "  %-25s %s\n" "k8s-github"          "stern, gh-dash"
-    printf "  %-25s %s\n" "database"            "pgcli, mycli, usql, TablePlus, DBeaver"
-    printf "  %-25s %s\n" "containers"          "lazydocker, dive, kubectl, k9s"
+    printf "  %-25s %s\n" "database"            "pgcli, mycli, usql, sq, TablePlus, DBeaver"
+    printf "  %-25s %s\n" "containers"          "lazydocker, dive, colima, kubectl, k9s"
     printf "  %-25s %s\n" "api"                 "Bruno, grpcurl"
     printf "  %-25s %s\n" "networking"          "mtr, bandwhich, nmap"
-    printf "  %-25s %s\n" "dx"                  "fzf, starship, atuin, VS Code, Cursor, tmux, Raycast"
+    printf "  %-25s %s\n" "dx"                  "fzf, starship, atuin, VS Code, Cursor, Zed, Ghostty, tmux, Raycast"
     printf "  %-25s %s\n" "ui"                  "Storybook, Playwright, Chrome"
     printf "  %-25s %s\n" "ux"                  "Figma, Lighthouse"
     printf "  %-25s %s\n" "docs"                "d2, Mermaid CLI"
-    printf "  %-25s %s\n" "mac-system"          "AppCleaner, Stats, Bartender, Quick Look plugins"
-    printf "  %-25s %s\n" "mac-productivity"    "Notion, CleanShot, Espanso, Hazel, Transmit"
+    printf "  %-25s %s\n" "mac-system"          "AppCleaner, Pearcleaner, Stats, Ice, Quick Look plugins"
+    printf "  %-25s %s\n" "mac-productivity"    "Notion, CleanShot, Espanso, Hazel, Skim, Pixelmator, Velja"
     printf "  %-25s %s\n" "mac-communication"   "Slack, Discord, Telegram, Signal"
     printf "  %-25s %s\n" "mac-browsers"        "Firefox, Arc, Brave"
     printf "  %-25s %s\n" "mac-media"           "IINA, ImageOptim, LibreOffice, Pocket Casts"
-    printf "  %-25s %s\n" "mac-cloud"           "Google Drive"
+    printf "  %-25s %s\n" "mac-cloud"           "Google Drive, Tailscale, rclone, Syncthing, borg"
     printf "  %-25s %s\n" "mac-focus"           "Flow, Anki, Reeder"
     printf "  %-25s %s\n" "mac-disk"            "DaisyDisk"
+    printf "  %-25s %s\n" "mac-bloat"           "Remove pre-installed Apple apps (GarageBand, News, etc.)"
     printf "  %-25s %s\n" "dracula"             "Dracula theme for all tools"
     printf "  %-25s %s\n" "configs"             "All dotfiles and tool configurations"
     printf "  %-25s %s\n" "filesystem"          "Directory structure, helper scripts, git identity"
@@ -200,6 +251,14 @@ while [[ $# -gt 0 ]]; do
             ;;
         --dry-run)
             DRY_RUN=true
+            shift
+            ;;
+        --resume)
+            RESUME=true
+            shift
+            ;;
+        --uninstall)
+            UNINSTALL=true
             shift
             ;;
         --skip)
@@ -249,6 +308,7 @@ brew_install() {
     local formula="$1"
     local name="${2:-$1}"
     progress
+    is_done "brew:$formula" && { warn "$name already completed (resume)"; return 0; }
     if [[ "$DRY_RUN" == "true" ]]; then
         if brew list "$formula" &>/dev/null 2>&1; then
             warn "[DRY RUN] $name — already installed"
@@ -259,10 +319,12 @@ brew_install() {
     fi
     if brew list "$formula" &>/dev/null 2>&1; then
         warn "$name already installed"
+        mark_done "brew:$formula"
     else
         info "Installing $name..."
         if brew install "$formula" >> "$LOG_FILE" 2>&1; then
             success "$name installed"
+            mark_done "brew:$formula"
         else
             error "Failed to install $name"
         fi
@@ -273,6 +335,7 @@ brew_cask_install() {
     local cask="$1"
     local name="${2:-$1}"
     progress
+    is_done "cask:$cask" && { warn "$name already completed (resume)"; return 0; }
     if [[ "$DRY_RUN" == "true" ]]; then
         if brew list --cask "$cask" &>/dev/null 2>&1; then
             warn "[DRY RUN] $name — already installed"
@@ -283,10 +346,12 @@ brew_cask_install() {
     fi
     if brew list --cask "$cask" &>/dev/null 2>&1; then
         warn "$name already installed"
+        mark_done "cask:$cask"
     else
         info "Installing $name..."
         if brew install --cask "$cask" >> "$LOG_FILE" 2>&1; then
             success "$name installed"
+            mark_done "cask:$cask"
         else
             error "Failed to install $name (cask may have been renamed)"
         fi
@@ -297,6 +362,7 @@ npm_global_install() {
     local pkg="$1"
     local name="${2:-$1}"
     progress
+    is_done "npm:$pkg" && { warn "$name already completed (resume)"; return 0; }
     if [[ "$DRY_RUN" == "true" ]]; then
         if npm list -g "$pkg" &>/dev/null 2>&1; then
             warn "[DRY RUN] $name — already installed"
@@ -307,10 +373,12 @@ npm_global_install() {
     fi
     if npm list -g "$pkg" &>/dev/null 2>&1; then
         warn "$name already installed globally"
+        mark_done "npm:$pkg"
     else
         info "Installing $name globally..."
         if npm install -g "$pkg" >> "$LOG_FILE" 2>&1; then
             success "$name installed"
+            mark_done "npm:$pkg"
         else
             error "Failed to install $name"
         fi
@@ -375,6 +443,18 @@ preflight() {
         echo -e "${YELLOW}${BOLD}  DRY RUN MODE — no changes will be made${NC}"
         echo ""
     fi
+
+    if [[ "$RESUME" == "true" ]]; then
+        if [[ -f "$STATE_FILE" ]]; then
+            local completed_count
+            completed_count=$(wc -l < "$STATE_FILE" | tr -d ' ')
+            echo ""
+            echo -e "${CYAN}${BOLD}  RESUME MODE — skipping $completed_count previously completed items${NC}"
+            echo ""
+        else
+            info "Resume mode enabled but no previous state found — running from scratch"
+        fi
+    fi
 }
 
 # =============================================================================
@@ -386,14 +466,62 @@ echo -e "${BOLD}${MAGENTA}"
 echo "  ╔══════════════════════════════════════════════════════════════╗"
 echo "  ║           macOS Dev Environment Setup v${SCRIPT_VERSION}              ║"
 echo "  ║                                                              ║"
-echo "  ║  191 tools · 50+ configs · Dracula theme · macOS defaults   ║"
+echo "  ║  200+ tools · 50+ configs · Dracula theme · macOS defaults  ║"
 echo "  ╚══════════════════════════════════════════════════════════════╝"
 echo -e "${NC}"
 
 # Don't exit on error — we count failures instead
 set +e
 
+# -- Handle --uninstall early (just prints commands, no changes) --------------
+if [[ "$UNINSTALL" == "true" ]]; then
+    echo ""
+    echo -e "${BOLD}${YELLOW}Uninstall Guide${NC}"
+    echo -e "${DIM}Run these commands to remove everything installed by this script.${NC}"
+    echo ""
+    echo "# Remove all Homebrew formulae and casks installed by this script:"
+    echo "  brew bundle cleanup --file=~/.config/brewfile/Brewfile --force"
+    echo ""
+    echo "# Remove config files:"
+    echo "  rm -f ~/.tmux.conf ~/.shellcheckrc ~/.editorconfig ~/.prettierrc"
+    echo "  rm -f ~/.curlrc ~/.npmrc ~/.ripgreprc ~/.fdignore ~/.nanorc ~/.vimrc"
+    echo "  rm -f ~/.hushlogin ~/.gitmessage ~/.myclirc ~/.gemrc ~/.actrc ~/.mlrrc"
+    echo "  rm -rf ~/.aria2 ~/.config/atuin ~/.config/glow ~/.config/ngrok"
+    echo "  rm -rf ~/.config/yt-dlp ~/.config/gh-dash ~/.config/stern"
+    echo "  rm -rf ~/.config/btop ~/.config/lazydocker ~/.config/mise"
+    echo "  rm -rf ~/.config/topgrade.toml ~/.config/fastfetch ~/.config/pgcli"
+    echo "  rm -rf ~/.config/direnv ~/.config/caddy ~/.config/yazi ~/.config/ghostty"
+    echo "  rm -f ~/.justfile"
+    echo ""
+    echo "# Remove Rust (installed via rustup):"
+    echo "  rustup self uninstall"
+    echo ""
+    echo "# Remove Claude Code config (CAREFUL — contains your custom rules):"
+    echo "  rm -rf ~/.claude/settings.json ~/.claude/CLAUDE.md ~/.claude/rules ~/.claude/hooks ~/.claude/commands"
+    echo ""
+    echo "# Remove VS Code settings:"
+    echo "  rm -f ~/Library/Application\\ Support/Code/User/settings.json"
+    echo "  rm -f ~/Library/Application\\ Support/Code/User/keybindings.json"
+    echo ""
+    echo "# Remove helper scripts:"
+    echo "  rm -rf ~/Scripts/bin"
+    echo ""
+    echo "# Remove the managed block from ~/.zshrc (edit manually)"
+    echo "# Remove git global config overrides:"
+    echo "  git config --global --unset core.pager"
+    echo "  git config --global --unset core.hooksPath"
+    echo "  git config --global --unset core.excludesfile"
+    echo "  git config --global --unset commit.template"
+    echo ""
+    echo "# Remove state files:"
+    echo "  rm -rf ~/.local/share/dev-setup"
+    echo ""
+    echo -e "${YELLOW}Review each command before running. This does NOT auto-execute.${NC}"
+    exit 0
+fi
+
 preflight
+acquire_lock
 
 # =============================================================================
 # PREREQUISITES (always runs — required for everything else)
@@ -443,6 +571,9 @@ else
     brew update
 fi
 
+# Prevent brew from auto-updating on every install (we already updated above)
+export HOMEBREW_NO_AUTO_UPDATE=1
+
 # mas (Mac App Store CLI — install App Store apps from terminal)
 brew_install "mas" "mas (Mac App Store CLI)"
 
@@ -475,8 +606,10 @@ if installed nvm; then
     fi
 fi
 
+brew_install "go" "Go (lang)"
 brew_install "pyenv" "pyenv (Python Version Manager)"
 brew_install "python@3.12" "Python 3.12"
+brew_install "uv" "uv (fast Python package manager — 10-100x faster than pip)"
 brew_install "jq" "jq (JSON processor)"
 brew_install "httpie" "HTTPie (API client)"
 brew_install "direnv" "direnv (per-project env vars)"
@@ -484,9 +617,26 @@ brew_install "watchman" "Watchman (file watcher)"
 brew_install "cmake" "CMake"
 brew_install "pkg-config" "pkg-config"
 
+# Rust (rustup manages the toolchain — installs rustc, cargo, etc.)
+if ! installed rustup; then
+    info "Installing Rust via rustup..."
+    if [[ "$DRY_RUN" == "true" ]]; then
+        info "[DRY RUN] Would install: Rust via rustup"
+    else
+        curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --no-modify-path >> "$LOG_FILE" 2>&1
+        source "$HOME/.cargo/env" 2>/dev/null || true
+        success "Rust installed via rustup"
+    fi
+else
+    warn "Rust (rustup) already installed"
+fi
+
 # Docker (OrbStack is faster alternative — both installed, pick your preference)
 brew_cask_install "docker" "Docker Desktop"
 brew_cask_install "orbstack" "OrbStack (faster Docker Desktop alternative — 2-5x less memory)"
+
+# bun (fast JS runtime, bundler, test runner — alternative to Node for scripts)
+brew_install "oven-sh/bun/bun" "bun (fast JS runtime/bundler/test runner)"
 
 # pnpm
 if ! installed pnpm; then
@@ -558,6 +708,16 @@ fi
 fi  # aws
 
 # =============================================================================
+if should_run "iac"; then
+banner "Infrastructure as Code"
+
+brew_install "opentofu" "OpenTofu (open-source Terraform — multi-cloud IaC)"
+brew_install "tflint" "tflint (Terraform linter)"
+brew_install "infracost" "infracost (cost estimation for Terraform changes before apply)"
+
+fi  # iac
+
+# =============================================================================
 if should_run "security"; then
 banner "Security & Secrets"
 
@@ -574,18 +734,11 @@ if installed git-secrets; then
     success "git-secrets AWS patterns registered"
 fi
 
-# detect-secrets (Yelp's pre-commit secret detection)
-# detect-secrets (Yelp) — pip package, not brew
-if installed pip3; then
-    if pip3 show detect-secrets &>/dev/null 2>&1; then
-        warn "detect-secrets already installed"
-    else
-        info "Installing detect-secrets..."
-        pip3 install detect-secrets >> "$LOG_FILE" 2>&1 || error "Failed to install detect-secrets"
-    fi
-fi
+# detect-secrets (Yelp's pre-commit secret detection) — available as brew formula
+brew_install "detect-secrets" "detect-secrets (Yelp pre-commit secret detection)"
 
 # Code & dependency security
+brew_install "gitleaks" "gitleaks (fast git secret scanning — great for CI/pre-commit)"
 brew_install "trivy" "trivy (container & IaC vulnerability scanning)"
 brew_install "semgrep" "semgrep (static analysis — bugs & security issues)"
 brew_install "cosign" "cosign (sign & verify container images)"
@@ -691,8 +844,8 @@ brew_install "gping" "gping (replaces ping — real-time latency graph)"
 # curl -> xh: colorized output, JSON shortcuts, HTTPie-like
 brew_install "xh" "xh (replaces curl — colorized, JSON-friendly)"
 
-# dig -> dog: colorized DNS, supports DoH/DoT
-brew_install "dog" "dog (replaces dig — colorized DNS, DoH support)"
+# dig -> doggo: colorized DNS, supports DoH/DoT (dog is abandoned, doggo is the maintained successor)
+brew_install "doggo" "doggo (replaces dig — colorized DNS, DoH support)"
 
 # wc -> tokei: count lines of code by language with stats
 brew_install "tokei" "tokei (replaces wc for code — lines of code by language)"
@@ -717,6 +870,15 @@ brew_install "trash" "trash (replaces rm — moves to macOS Trash, recoverable)"
 
 # diff (code-aware) -> difftastic: structural diff that understands syntax
 brew_install "difftastic" "difftastic (replaces diff for code — syntax-aware structural diffs)"
+
+# make -> just: modern command runner, simpler syntax, no tab weirdness
+brew_install "just" "just (replaces make — simpler task runner, no tab issues)"
+
+# file manager -> yazi: terminal file manager with image preview, vim keys, bulk rename
+brew_install "yazi" "yazi (terminal file manager — image preview, vim keys, bulk ops)"
+
+# jq (interactive) -> fx: interactive JSON viewer/processor
+brew_install "fx" "fx (interactive JSON viewer — better than jq for exploring)"
 
 fi  # replacements
 
@@ -754,6 +916,18 @@ banner "Code Quality"
 brew_install "shellcheck" "shellcheck (shell script linter)"
 brew_install "shfmt" "shfmt (shell script formatter)"
 brew_install "act" "act (run GitHub Actions locally)"
+brew_install "hadolint" "hadolint (Dockerfile linter — catches bad practices)"
+
+# Python linting (ruff — extremely fast, replaces flake8+black+isort)
+brew_install "ruff" "ruff (fast Python linter+formatter — replaces flake8+black+isort)"
+
+# JS/TS workflow
+if installed npm; then
+    npm_global_install "npkill" "npkill (find and nuke node_modules folders — reclaim disk)"
+    npm_global_install "commitizen" "commitizen (interactive conventional commits)"
+    npm_global_install "@commitlint/cli" "commitlint (enforce conventional commit format)"
+    npm_global_install "@antfu/ni" "ni (universal package runner — auto-detects npm/yarn/pnpm/bun)"
+fi
 
 fi  # code-quality
 
@@ -788,6 +962,7 @@ brew_install "asciinema" "asciinema (record & share terminal sessions)"
 brew_install "topgrade" "topgrade (update everything — brew, npm, pip, macOS, all at once)"
 brew_install "fastfetch" "fastfetch (quick system info display — faster neofetch)"
 brew_install "nano" "nano (latest — better than macOS built-in)"
+brew_install "lnav" "lnav (advanced log file viewer — auto-format, SQL queries on logs)"
 
 fi  # terminal-productivity
 
@@ -816,7 +991,18 @@ banner "Database & Data"
 
 brew_install "pgcli" "pgcli (auto-completing Postgres CLI)"
 brew_install "mycli" "mycli (auto-completing MySQL CLI)"
-brew_install "usql" "usql (universal SQL CLI)"
+# usql — not in Homebrew, install via Go
+if installed go; then
+    if command -v usql &>/dev/null; then
+        warn "usql (universal SQL CLI) already installed"
+    else
+        info "Installing usql (universal SQL CLI)..."
+        go install github.com/xo/usql@latest >> "$LOG_FILE" 2>&1 || error "Failed to install usql (requires Go)"
+    fi
+else
+    warn "Skipping usql — Go not installed (run: brew install go)"
+fi
+brew_install "neilotoole/sq/sq" "sq (jq for databases — query SQLite, Postgres, CSV from one tool)"
 brew_install "dbmate" "dbmate (lightweight DB migrations)"
 brew_cask_install "tableplus" "TablePlus (native DB GUI — daily driver)"
 brew_cask_install "dbeaver-community" "DBeaver Community (advanced SQL, 100+ DB support)"
@@ -829,6 +1015,7 @@ banner "Containers & Orchestration"
 
 brew_install "lazydocker" "lazydocker (terminal UI for Docker)"
 brew_install "dive" "dive (explore Docker image layers)"
+brew_install "colima" "colima (lightweight Docker runtime — free OrbStack alternative)"
 brew_install "kubectl" "kubectl (Kubernetes CLI)"
 brew_install "k9s" "k9s (terminal UI for Kubernetes)"
 
@@ -872,8 +1059,10 @@ brew_install "mise" "mise (universal version manager — nvm + pyenv + rbenv in 
 # Editors & terminals
 brew_cask_install "visual-studio-code" "VS Code"
 brew_cask_install "cursor" "Cursor (AI-native code editor — VS Code fork with built-in AI)"
+brew_cask_install "zed" "Zed (fast native editor from ex-Atom team — GPU-rendered)"
 brew_cask_install "warp" "Warp terminal"
 brew_cask_install "iterm2" "iTerm2 (classic terminal, tmux integration)"
+brew_cask_install "ghostty" "Ghostty (fast GPU-accelerated terminal)"
 brew_install "tmux" "tmux (terminal multiplexer)"
 
 # AI tools
@@ -964,7 +1153,7 @@ banner "Mac Apps — System & Utilities"
 brew_cask_install "appcleaner" "AppCleaner (full app uninstaller)"
 brew_cask_install "the-unarchiver" "The Unarchiver (any archive format)"
 brew_cask_install "stats" "Stats (menubar system monitor)"
-brew_cask_install "bartender" "Bartender (menubar icon manager)"
+brew_cask_install "jordanbaird-ice" "Ice (menubar icon manager — open-source Bartender replacement)"
 # Amphetamine is Mac App Store only — install via mas
 if installed mas; then
     if mas list 2>/dev/null | grep -q "937984704"; then
@@ -975,7 +1164,15 @@ if installed mas; then
     fi
 fi
 brew_cask_install "alt-tab" "AltTab (Windows-style window switcher)"
-brew_cask_install "dato" "Dato (menubar clock with calendar/timezones)"
+# Dato is Mac App Store only — install via mas
+if installed mas; then
+    if mas list 2>/dev/null | grep -q "1470584107"; then
+        warn "Dato already installed"
+    else
+        info "Installing Dato from Mac App Store..."
+        mas install 1470584107 >> "$LOG_FILE" 2>&1 || error "Failed to install Dato (sign into App Store first)"
+    fi
+fi
 brew_cask_install "maccy" "Maccy (clipboard manager)"
 brew_cask_install "lulu" "LuLu (outbound firewall)"
 brew_cask_install "protonvpn" "Proton VPN"
@@ -983,11 +1180,16 @@ brew_cask_install "proton-mail" "Proton Mail"
 brew_cask_install "proton-pass" "Proton Pass (password manager)"
 brew_cask_install "proton-drive" "Proton Drive (encrypted cloud storage)"
 
+# Utilities
+brew_cask_install "pearcleaner" "Pearcleaner (open-source deep app uninstaller)"
+brew_cask_install "keyboardcleantool" "KeyboardCleanTool (lock keyboard for cleaning)"
+brew_cask_install "topnotch" "TopNotch (hides MacBook notch with black menu bar)"
+
 # Quick Look plugins (preview files in Finder with spacebar)
 brew_cask_install "qlmarkdown" "QLMarkdown (preview Markdown in Finder)"
 brew_cask_install "syntax-highlight" "Syntax Highlight (preview code files in Finder)"
 brew_cask_install "qlstephen" "QLStephen (preview plain text files without extension)"
-brew_cask_install "quicklook-json" "QuickLookJSON (preview JSON in Finder)"
+# QuickLookJSON — removed from Homebrew (disabled 2025-12); macOS handles JSON preview natively now
 
 fi  # mac-system
 
@@ -998,7 +1200,7 @@ banner "Mac Apps — Productivity"
 brew_cask_install "notion" "Notion (docs, wikis, project tracking)"
 brew_cask_install "notion-calendar" "Notion Calendar"
 brew_cask_install "notion-mail" "Notion Mail"
-brew_cask_install "cleanshot-x" "CleanShot X (screenshots & recording)"
+brew_cask_install "cleanshot" "CleanShot X (screenshots & recording)"
 brew_cask_install "shottr" "Shottr (free screenshot tool, pixel measuring, OCR)"
 brew_cask_install "numi" "Numi (natural language calculator notepad)"
 brew_cask_install "soulver" "Soulver 3 (smart calculator/spreadsheet hybrid)"
@@ -1007,6 +1209,31 @@ brew_cask_install "hazel" "Hazel (automated file organization rules)"
 brew_cask_install "popclip" "PopClip (text actions on select — copy, search, format)"
 brew_cask_install "yoink" "Yoink (drag and drop shelf — stage files between apps)"
 brew_cask_install "raindropio" "Raindrop.io (bookmark manager — collections, tags, search)"
+
+# PDF & documents
+brew_cask_install "skim" "Skim (lightweight PDF reader with annotations — faster than Preview)"
+
+# Browser link routing
+# Velja is Mac App Store only — install via mas
+if installed mas; then
+    if mas list 2>/dev/null | grep -q "1607635845"; then
+        warn "Velja already installed"
+    else
+        info "Installing Velja from Mac App Store..."
+        mas install 1607635845 >> "$LOG_FILE" 2>&1 || error "Failed to install Velja (sign into App Store first)"
+    fi
+fi
+
+# Image editing
+# Pixelmator Pro is Mac App Store only — install via mas
+if installed mas; then
+    if mas list 2>/dev/null | grep -q "1289583905"; then
+        warn "Pixelmator Pro already installed"
+    else
+        info "Installing Pixelmator Pro from Mac App Store..."
+        mas install 1289583905 >> "$LOG_FILE" 2>&1 || error "Failed to install Pixelmator Pro (sign into App Store first)"
+    fi
+fi
 
 # File transfer
 brew_cask_install "transmit" "Transmit (fast SFTP/S3 client, dual-pane)"
@@ -1041,11 +1268,20 @@ banner "Mac Apps — Media"
 
 brew_cask_install "iina" "IINA (modern video player)"
 brew_cask_install "imageoptim" "ImageOptim (lossless image compression)"
-brew_cask_install "gifski" "Gifski (video to high-quality GIF)"
+# gifski is a CLI formula, not a cask
+brew_install "gifski" "gifski (video to high-quality GIF)"
 brew_cask_install "keka" "Keka (file archiver/compressor)"
 brew_cask_install "libreoffice" "LibreOffice (free office suite)"
 brew_cask_install "pocket-casts" "Pocket Casts (podcast player)"
-brew_cask_install "hand-mirror" "Hand Mirror (quick webcam check from menubar)"
+# Hand Mirror is Mac App Store only — install via mas
+if installed mas; then
+    if mas list 2>/dev/null | grep -q "1502839586"; then
+        warn "Hand Mirror already installed"
+    else
+        info "Installing Hand Mirror from Mac App Store..."
+        mas install 1502839586 >> "$LOG_FILE" 2>&1 || error "Failed to install Hand Mirror (sign into App Store first)"
+    fi
+fi
 
 fi  # mac-media
 
@@ -1054,6 +1290,13 @@ if should_run "mac-cloud"; then
 banner "Mac Apps — Cloud Storage"
 
 brew_cask_install "google-drive" "Google Drive (cloud storage with Docs/Sheets)"
+brew_cask_install "tailscale" "Tailscale (zero-config mesh VPN between your devices)"
+
+# Backup & sync
+brew_install "rclone" "rclone (sync files to any cloud — Google Drive, S3, Dropbox, etc.)"
+brew_cask_install "syncthing" "Syncthing (real-time file sync between devices — no cloud middleman)"
+brew_install "borgbackup" "borg (deduplicated encrypted backups — better than Time Machine for offsite)"
+brew_install "borgmatic" "borgmatic (automated borg backup scheduling and config)"
 
 fi  # mac-cloud
 
@@ -1061,9 +1304,25 @@ fi  # mac-cloud
 if should_run "mac-focus"; then
 banner "Mac Apps — Focus & Learning"
 
-brew_cask_install "flow" "Flow (Pomodoro timer in menubar)"
+# Flow is Mac App Store only (brew cask disabled 2025-11) — install via mas
+if installed mas; then
+    if mas list 2>/dev/null | grep -q "1423210932"; then
+        warn "Flow already installed"
+    else
+        info "Installing Flow from Mac App Store..."
+        mas install 1423210932 >> "$LOG_FILE" 2>&1 || error "Failed to install Flow (sign into App Store first)"
+    fi
+fi
 brew_cask_install "anki" "Anki (spaced repetition flashcards)"
-brew_cask_install "reeder" "Reeder (RSS reader — blogs, releases, changelogs)"
+# Reeder is Mac App Store only — install via mas (6475002485 = Reeder, 1529448980 = Reeder Classic)
+if installed mas; then
+    if mas list 2>/dev/null | grep -q "6475002485"; then
+        warn "Reeder already installed"
+    else
+        info "Installing Reeder from Mac App Store..."
+        mas install 6475002485 >> "$LOG_FILE" 2>&1 || error "Failed to install Reeder (sign into App Store first)"
+    fi
+fi
 
 fi  # mac-focus
 
@@ -1074,6 +1333,71 @@ banner "Mac Apps — Disk & File Utilities"
 brew_cask_install "daisydisk" "DaisyDisk (visual disk space analyzer)"
 
 fi  # mac-disk
+
+# =============================================================================
+if should_run "mac-bloat"; then
+banner "Remove Pre-installed Apple Apps"
+
+# These apps live in /Applications or /System/Applications and require sudo to remove.
+# macOS may re-install some System apps after a major OS update — re-run this section if needed.
+#
+# NOTE: Removing /System/Applications apps requires SIP (System Integrity Protection) to be
+# disabled on macOS Sonoma+. If removal fails, the script logs the error and continues.
+# To disable SIP: boot into Recovery Mode (Cmd+R) > Terminal > csrutil disable > reboot.
+# Re-enable after: csrutil enable.
+
+BLOAT_APPS=(
+    # app-path                                  display-name
+    "/Applications/GarageBand.app|GarageBand"
+    "/System/Applications/News.app|News"
+    "/System/Applications/Journal.app|Journal"
+    "/System/Applications/Chess.app|Chess"
+    "/System/Applications/Games.app|Games"
+    "/System/Applications/Stocks.app|Stocks"
+    "/System/Applications/Tips.app|Tips"
+    "/System/Applications/VoiceMemos.app|Voice Memos"
+)
+
+BLOAT_REMOVED=0
+BLOAT_SKIPPED=0
+BLOAT_FAILED=0
+
+for entry in "${BLOAT_APPS[@]}"; do
+    app_path="${entry%%|*}"
+    app_name="${entry##*|}"
+
+    if [[ ! -d "$app_path" ]]; then
+        warn "$app_name — not found (already removed or not installed)"
+        ((BLOAT_SKIPPED++))
+        continue
+    fi
+
+    if [[ "$DRY_RUN" == "true" ]]; then
+        info "[DRY RUN] Would remove: $app_name ($app_path)"
+        continue
+    fi
+
+    info "Removing $app_name..."
+    if sudo rm -rf "$app_path" 2>> "$LOG_FILE"; then
+        success "$app_name removed"
+        ((BLOAT_REMOVED++))
+    else
+        error "Failed to remove $app_name (SIP may be enabled — see banner note above)"
+        ((BLOAT_FAILED++))
+    fi
+done
+
+echo ""
+if [[ "$DRY_RUN" != "true" ]]; then
+    info "Bloat removal: $BLOAT_REMOVED removed, $BLOAT_SKIPPED skipped, $BLOAT_FAILED failed"
+    if [[ "$BLOAT_FAILED" -gt 0 ]]; then
+        echo -e "  ${DIM}Tip: System apps require SIP disabled to remove.${NC}"
+        echo -e "  ${DIM}Boot into Recovery (Cmd+R) > Terminal > csrutil disable > reboot.${NC}"
+        echo -e "  ${DIM}Re-enable after removal: csrutil enable${NC}"
+    fi
+fi
+
+fi  # mac-bloat
 
 # =============================================================================
 if should_run "dracula"; then
@@ -1257,8 +1581,33 @@ set -g message-style "bg=#44475a,fg=#f8f8f2"
 
 # Clock
 setw -g clock-mode-colour "#bd93f9"
+
+# -- Plugins (via TPM) -------------------------------------------------------
+# Install TPM: git clone https://github.com/tmux-plugins/tpm ~/.tmux/plugins/tpm
+# Then press prefix + I (capital i) to install plugins
+set -g @plugin 'tmux-plugins/tpm'
+set -g @plugin 'tmux-plugins/tmux-resurrect'    # Save/restore sessions (prefix + Ctrl-s / Ctrl-r)
+set -g @plugin 'tmux-plugins/tmux-continuum'     # Auto-save sessions every 15 min
+set -g @continuum-restore 'on'                   # Auto-restore on tmux start
+
+# Initialize TPM (must be last line)
+run '~/.tmux/plugins/tpm/tpm'
 TMUX_CONFIG
     success "tmux configured at $TMUX_CONF"
+fi
+
+# ---- tmux plugin manager (TPM) ----
+TPM_DIR="$HOME/.tmux/plugins/tpm"
+if [[ -d "$TPM_DIR" ]]; then
+    warn "tmux plugin manager (TPM) already installed"
+else
+    info "Installing tmux plugin manager (TPM)..."
+    if [[ "$DRY_RUN" != "true" ]]; then
+        git clone https://github.com/tmux-plugins/tpm "$TPM_DIR" 2>/dev/null || true
+        success "TPM installed (press prefix + I in tmux to install plugins)"
+    else
+        info "[DRY RUN] Would install TPM"
+    fi
 fi
 
 # ---- git global config ----
@@ -1287,6 +1636,9 @@ git config --global column.ui auto
 
 # Sort branches by most recent commit
 git config --global branch.sort -committerdate
+
+# Remember merge conflict resolutions and auto-apply next time
+git config --global rerere.enabled true
 
 # Useful aliases
 git config --global alias.st "status -sb"
@@ -2252,6 +2604,15 @@ DOCKER_CONF
     success "Docker configured (BuildKit, log rotation 10m x 3, garbage collection)"
 fi
 
+# ---- Docker buildx as default builder ----
+if installed docker; then
+    if docker buildx version &>/dev/null 2>&1; then
+        info "Setting Docker buildx as default builder..."
+        docker buildx install 2>/dev/null || true
+        success "Docker buildx set as default builder (multi-platform builds enabled)"
+    fi
+fi
+
 # ---- macOS System Defaults ----
 info "Configuring macOS system defaults..."
 
@@ -2359,6 +2720,24 @@ defaults write com.apple.universalaccess reduceMotion -bool true
 defaults write NSGlobalDomain NSWindowResizeTime -float 0.001
 success "Animations configured (reduced motion, fast resize)"
 
+# -- Stage Manager --
+# Disable Stage Manager (prevent accidental activation)
+defaults write com.apple.WindowManager GloballyEnabled -bool false 2>/dev/null || true
+defaults write com.apple.WindowManager AutoHide -bool true 2>/dev/null || true
+success "Stage Manager disabled"
+
+# -- Dock spacers (visual separators to group icons) --
+# Add a thin invisible spacer to group Dock icons — run multiple times for more spacers
+# Note: only adds if Dock has fewer than 2 spacers already
+SPACER_COUNT=$(defaults read com.apple.dock persistent-apps 2>/dev/null | grep -c "spacer-tile" || echo 0)
+if [[ "$SPACER_COUNT" -lt 2 ]]; then
+    defaults write com.apple.dock persistent-apps -array-add '{"tile-type"="spacer-tile";}'
+    defaults write com.apple.dock persistent-apps -array-add '{"tile-type"="spacer-tile";}'
+    success "Dock spacers added (drag to reposition in Dock)"
+else
+    warn "Dock already has spacers"
+fi
+
 # -- Misc --
 # Disable the "Are you sure you want to open this application?" dialog
 defaults write com.apple.LaunchServices LSQuarantine -bool false
@@ -2371,6 +2750,65 @@ defaults write com.apple.menuextra.battery ShowPercent -string "YES" 2>/dev/null
 # Set highlight color to Dracula purple
 defaults write NSGlobalDomain AppleHighlightColor -string "0.741176 0.576471 0.976471 Purple"
 success "Misc macOS defaults configured"
+
+# -- Wallpaper --
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+WALLPAPER_SRC="$SCRIPT_DIR/assets/wolf-wallpaper.jpg"
+WALLPAPER_DEST="$HOME/Media/wallpapers/wolf-wallpaper.jpg"
+if [[ -f "$WALLPAPER_SRC" ]]; then
+    mkdir -p "$HOME/Media/wallpapers"
+    cp -f "$WALLPAPER_SRC" "$WALLPAPER_DEST"
+    if [[ "$DRY_RUN" != "true" ]]; then
+        # Set wallpaper on all desktops (macOS Sonoma+ uses desktoppr or osascript)
+        if command -v osascript &>/dev/null; then
+            osascript -e "tell application \"System Events\" to tell every desktop to set picture to POSIX file \"$WALLPAPER_DEST\"" 2>/dev/null || true
+        fi
+        # Also set via desktoppr if available (more reliable on Sonoma+)
+        if command -v desktoppr &>/dev/null; then
+            desktoppr "$WALLPAPER_DEST" 2>/dev/null || true
+        fi
+        success "Wallpaper set to wolf-wallpaper.jpg"
+    else
+        info "[DRY RUN] Would set wallpaper to wolf-wallpaper.jpg"
+    fi
+else
+    warn "Wallpaper not found at $WALLPAPER_SRC — skipping"
+fi
+
+# -- Screensaver (Evangelion Clock) --
+SCREENSAVER_SRC_DIR="$SCRIPT_DIR/assets/evangelion-clock-screensaver-master"
+SCREENSAVER_DEST="$HOME/Library/Screen Savers/Evangelion Clock.saver"
+if [[ -d "$SCREENSAVER_SRC_DIR" ]] && [[ ! -d "$SCREENSAVER_DEST" ]]; then
+    if [[ "$DRY_RUN" != "true" ]]; then
+        info "Installing Evangelion Clock screensaver..."
+        # Download the pre-built .saver from GitHub releases
+        SCREENSAVER_URL="https://github.com/Wandmalfarbe/evangelion-clock-screensaver/releases/latest/download/Evangelion.Clock.saver.zip"
+        SCREENSAVER_TMP="/tmp/evangelion-clock-screensaver.zip"
+        if curl -fsSL "$SCREENSAVER_URL" -o "$SCREENSAVER_TMP" 2>/dev/null; then
+            unzip -o "$SCREENSAVER_TMP" -d "$HOME/Library/Screen Savers/" >> "$LOG_FILE" 2>&1 || true
+            rm -f "$SCREENSAVER_TMP"
+            # Set as active screensaver
+            defaults -currentHost write com.apple.screensaver moduleDict -dict \
+                moduleName -string "Evangelion Clock" \
+                path -string "$HOME/Library/Screen Savers/Evangelion Clock.saver" \
+                type -int 0 2>/dev/null || true
+            # Set screensaver idle timeout: 1 hour on power, 20 min on battery
+            # idleTime sets the default; pmset displaysleep handles per-power-source
+            defaults -currentHost write com.apple.screensaver idleTime -int 1200 2>/dev/null || true
+            sudo pmset -c displaysleep 60 2>/dev/null || true   # charger: 60 min
+            sudo pmset -b displaysleep 20 2>/dev/null || true   # battery: 20 min
+            success "Evangelion Clock screensaver installed and set as default (1hr on power, 20min on battery)"
+        else
+            error "Failed to download Evangelion Clock screensaver from GitHub"
+        fi
+    else
+        info "[DRY RUN] Would install Evangelion Clock screensaver"
+    fi
+elif [[ -d "$SCREENSAVER_DEST" ]]; then
+    warn "Evangelion Clock screensaver already installed"
+else
+    warn "Evangelion Clock screensaver source not found — skipping"
+fi
 
 # Restart Dock to apply all Dock/Hot Corner/Mission Control changes
 killall Dock 2>/dev/null || true
@@ -2423,13 +2861,21 @@ export XDG_DATA_HOME="$HOME/.local/share"
 export XDG_CACHE_HOME="$HOME/.cache"
 export XDG_STATE_HOME="$HOME/.local/state"
 
-# Go
-export GOPATH="$HOME/.local/share/go"
-export PATH="$GOPATH/bin:$PATH"
+# Go (only if installed)
+if command -v go &>/dev/null; then
+    export GOPATH="$HOME/.local/share/go"
+    export PATH="$GOPATH/bin:$PATH"
+fi
 
-# Rust
+# Rust (only if installed via rustup)
 if [[ -f "$HOME/.cargo/env" ]]; then
     source "$HOME/.cargo/env"
+fi
+
+# bun
+if [[ -d "$HOME/.bun" ]]; then
+    export BUN_INSTALL="$HOME/.bun"
+    export PATH="$BUN_INSTALL/bin:$PATH"
 fi
 ZPROFILE_CONF
     success "~/.zprofile created (editor, pager, LESS, XDG, language)"
@@ -2698,10 +3144,9 @@ cleanup = true
 [brew]
 greedy_cask = true
 
-# Disabled steps (uncomment to skip)
-#[disable]
-#system = ["mas"]
-#system = ["firmware"]
+[linux]
+# Also update Mac App Store apps via mas
+mas_open_app_store = false
 TOPGRADE_CONF
     success "topgrade configured (cleanup, greedy cask updates)"
 fi
@@ -3098,6 +3543,9 @@ aliases:
     rl: repo list
     runs: run list
     watch: run watch
+    rerun: run rerun --failed
+    pm: pr merge --squash --delete-branch
+    rel: release create --generate-notes
 GH_CONF
     success "GitHub CLI configured (SSH protocol, VS Code editor, delta pager, aliases)"
 fi
@@ -3228,6 +3676,201 @@ history_file = ~/.mycli-history
 wider_completion_menu = True
 MYCLI_CONF
     success "~/.myclirc configured (multi-line, auto-expand, destructive warnings)"
+fi
+
+# ---- yazi config ----
+YAZI_CONFIG_DIR="$HOME/.config/yazi"
+YAZI_CONFIG="$YAZI_CONFIG_DIR/yazi.toml"
+if [[ -f "$YAZI_CONFIG" ]]; then
+    warn "yazi config already exists"
+else
+    info "Creating yazi configuration..."
+    mkdir -p "$YAZI_CONFIG_DIR"
+    cat > "$YAZI_CONFIG" <<'YAZI_CONF'
+# yazi configuration
+# Docs: https://yazi-rs.github.io/docs/configuration/yazi
+
+[manager]
+# Show hidden files by default
+show_hidden = true
+# Sort directories first
+sort_dir_first = true
+# Line mode: show size and modification time
+linemode = "size"
+
+[preview]
+# Max file size for previews (5MB)
+max_width = 1000
+max_height = 1000
+
+[opener]
+edit = [
+    { run = 'code "$@"', desc = "Open in VS Code", block = true, for = "unix" },
+]
+YAZI_CONF
+
+    # Dracula theme for yazi
+    cat > "$YAZI_CONFIG_DIR/theme.toml" <<'YAZI_THEME'
+# Dracula color palette for yazi
+[manager]
+cwd = { fg = "#bd93f9" }
+
+[status]
+separator_open = ""
+separator_close = ""
+separator_style = { fg = "#44475a", bg = "#44475a" }
+
+[filetype]
+rules = [
+    { mime = "image/*", fg = "#ff79c6" },
+    { mime = "video/*", fg = "#ffb86c" },
+    { mime = "audio/*", fg = "#8be9fd" },
+    { name = "*.md", fg = "#50fa7b" },
+    { name = "*.json", fg = "#f1fa8c" },
+    { name = "*.toml", fg = "#f1fa8c" },
+    { name = "*.yaml", fg = "#f1fa8c" },
+    { name = "*.yml", fg = "#f1fa8c" },
+    { name = "*.ts", fg = "#8be9fd" },
+    { name = "*.tsx", fg = "#8be9fd" },
+    { name = "*.js", fg = "#f1fa8c" },
+    { name = "*.jsx", fg = "#f1fa8c" },
+    { name = "*.py", fg = "#50fa7b" },
+    { name = "*.rs", fg = "#ffb86c" },
+    { name = "*.go", fg = "#8be9fd" },
+]
+YAZI_THEME
+    success "yazi configured (hidden files, VS Code opener, Dracula theme)"
+fi
+
+# ---- just config (global justfile with common recipes) ----
+JUSTFILE_GLOBAL="$HOME/.justfile"
+if [[ -f "$JUSTFILE_GLOBAL" ]]; then
+    warn "Global justfile already exists"
+else
+    info "Creating global justfile with common recipes..."
+    cat > "$JUSTFILE_GLOBAL" <<'JUSTFILE_CONF'
+# =============================================================================
+# Global Justfile — available from any directory via: just --justfile ~/.justfile
+# =============================================================================
+# Tip: alias gj="just --justfile ~/.justfile --working-directory ."
+
+# List all recipes
+default:
+    @just --justfile {{justfile()}} --list
+
+# ── System ───────────────────────────────────────────────────────────────────
+
+# Update everything (brew, npm, pip, macOS)
+update:
+    topgrade
+
+# Show system info
+info:
+    fastfetch
+
+# Flush DNS cache
+flush-dns:
+    sudo dscacheutil -flushcache && sudo killall -HUP mDNSResponder
+    @echo "DNS cache flushed"
+
+# Show listening ports
+ports:
+    lsof -iTCP -sTCP:LISTEN -n -P | tail -n +2 | sort -t: -k2 -n
+
+# ── Git ──────────────────────────────────────────────────────────────────────
+
+# Interactive rebase last N commits
+rebase n="5":
+    git rebase -i HEAD~{{n}}
+
+# Undo last commit (keep changes staged)
+undo:
+    git reset --soft HEAD~1
+
+# Show recent branches sorted by last commit
+branches:
+    git for-each-ref --sort=-committerdate refs/heads/ --format='%(committerdate:relative)\t%(refname:short)' | head -20
+
+# ── Docker ───────────────────────────────────────────────────────────────────
+
+# Clean Docker: unused images, containers, volumes
+docker-clean:
+    docker system prune -af --volumes
+
+# Show Docker disk usage
+docker-usage:
+    docker system df
+
+# ── Dev ──────────────────────────────────────────────────────────────────────
+
+# Serve current directory on port 8080
+serve port="8080":
+    miniserve --color-scheme-dark dracula -qr . -p {{port}}
+
+# Generate a UUID
+uuid:
+    @uuidgen | tr '[:upper:]' '[:lower:]'
+
+# Encode/decode base64
+b64-encode text:
+    @echo -n "{{text}}" | base64
+
+b64-decode text:
+    @echo -n "{{text}}" | base64 -d && echo
+JUSTFILE_CONF
+    success "Global justfile created (~/.justfile — common system/git/docker/dev recipes)"
+fi
+
+# ---- Ghostty config ----
+GHOSTTY_CONFIG_DIR="$HOME/.config/ghostty"
+GHOSTTY_CONFIG="$GHOSTTY_CONFIG_DIR/config"
+if [[ -f "$GHOSTTY_CONFIG" ]]; then
+    warn "Ghostty config already exists"
+else
+    info "Creating Ghostty configuration..."
+    mkdir -p "$GHOSTTY_CONFIG_DIR"
+    cat > "$GHOSTTY_CONFIG" <<'GHOSTTY_CONF'
+# Ghostty configuration
+# Docs: https://ghostty.org/docs/config
+
+# Font
+font-family = "JetBrains Mono"
+font-size = 14
+
+# Dracula theme
+background = 282a36
+foreground = f8f8f2
+selection-background = 44475a
+selection-foreground = f8f8f2
+palette = 0=#21222c
+palette = 1=#ff5555
+palette = 2=#50fa7b
+palette = 3=#f1fa8c
+palette = 4=#bd93f9
+palette = 5=#ff79c6
+palette = 6=#8be9fd
+palette = 7=#f8f8f2
+palette = 8=#6272a4
+palette = 9=#ff6e6e
+palette = 10=#69ff94
+palette = 11=#ffffa5
+palette = 12=#d6acff
+palette = 13=#ff92df
+palette = 14=#a4ffff
+palette = 15=#ffffff
+
+# Window
+window-padding-x = 8
+window-padding-y = 4
+window-decoration = true
+macos-titlebar-style = transparent
+
+# Behavior
+copy-on-select = clipboard
+confirm-close-surface = false
+mouse-hide-while-typing = true
+GHOSTTY_CONF
+    success "Ghostty configured (JetBrains Mono, Dracula theme, transparent titlebar)"
 fi
 
 # ---- direnv config ----
@@ -3515,8 +4158,8 @@ fi
 # ---- Filesystem Structure ----
 info "Setting up filesystem structure..."
 
-# Code directories
 DIRS=(
+    # -- Development ----------------------------------------------------------
     "$HOME/Code/work"
     "$HOME/Code/work/scratch"
     "$HOME/Code/personal"
@@ -3524,17 +4167,58 @@ DIRS=(
     "$HOME/Code/oss"
     "$HOME/Code/learning/courses"
     "$HOME/Code/learning/playground"
-    "$HOME/Documents/design"
-    "$HOME/Documents/contracts"
-    "$HOME/Documents/receipts"
-    "$HOME/Screenshots"
+
+    # -- Scripts & Automation -------------------------------------------------
     "$HOME/Scripts/bin"
     "$HOME/Scripts/cron"
+
+    # -- Screenshots ----------------------------------------------------------
+    "$HOME/Screenshots"
+
+    # -- Documents (organized by life area) -----------------------------------
+    "$HOME/Documents/finance/taxes"
+    "$HOME/Documents/finance/invoices"
+    "$HOME/Documents/finance/statements"
+    "$HOME/Documents/health"
+    "$HOME/Documents/legal"
+    "$HOME/Documents/travel"
+    "$HOME/Documents/insurance"
+    "$HOME/Documents/contracts"
+    "$HOME/Documents/receipts"
+    "$HOME/Documents/design"
+
+    # -- Reference (quick-access knowledge) -----------------------------------
+    "$HOME/Reference/manuals"
+    "$HOME/Reference/cheatsheets"
+    "$HOME/Reference/bookmarks-export"
+
+    # -- Creative -------------------------------------------------------------
+    "$HOME/Creative/design"
+    "$HOME/Creative/writing"
+    "$HOME/Creative/video-editing"
+    "$HOME/Creative/assets/icons"
+    "$HOME/Creative/assets/fonts"
+    "$HOME/Creative/assets/stock-photos"
+    "$HOME/Creative/assets/templates"
+
+    # -- Media ----------------------------------------------------------------
+    "$HOME/Media/photos"
+    "$HOME/Media/videos"
+    "$HOME/Media/music"
+    "$HOME/Media/wallpapers"
+
+    # -- Projects (non-code personal projects) --------------------------------
+    "$HOME/Projects/side-hustles"
+    "$HOME/Projects/home"
+
+    # -- Archive (cold storage for old stuff) ---------------------------------
+    "$HOME/Archive/old-projects"
+    "$HOME/Archive/old-docs"
 )
 for dir in "${DIRS[@]}"; do
     mkdir -p "$dir"
 done
-success "Directory structure created (~/Code, ~/Scripts, ~/Screenshots, ~/Documents)"
+success "Directory structure created (~/Code, ~/Scripts, ~/Documents, ~/Reference, ~/Creative, ~/Media, ~/Projects, ~/Archive)"
 
 # ---- Helper Scripts ----
 info "Creating helper scripts in ~/Scripts/bin..."
@@ -3716,6 +4400,9 @@ fi
 
 gh repo clone "$ORG/$REPO" "$TARGET/$REPO"
 
+# Enable background maintenance (prefetch, commit-graph, gc)
+git -C "$TARGET/$REPO" maintenance start 2>/dev/null || true
+
 echo ""
 echo "Cloned to: $TARGET/$REPO"
 echo "  cd $TARGET/$REPO"
@@ -3761,6 +4448,9 @@ else
     gh repo clone "$REPO" "$TARGET"
 fi
 
+# Enable background maintenance (prefetch, commit-graph, gc)
+git -C "$TARGET" maintenance start 2>/dev/null || true
+
 echo ""
 echo "Cloned to: $TARGET"
 echo "  cd $TARGET"
@@ -3777,6 +4467,14 @@ if ! command -v chezmoi &>/dev/null; then
     echo "chezmoi not installed. Run: brew install chezmoi"
     exit 1
 fi
+
+# Backup crontab
+echo "Backing up crontab..."
+crontab -l > "$(chezmoi source-path)/crontab.backup" 2>/dev/null || echo "  (no crontab)"
+
+# Export Brewfile
+echo "Exporting Brewfile..."
+brew bundle dump --file="$(chezmoi source-path)/Brewfile" --force --describe 2>/dev/null || true
 
 # Re-add tracked files to pick up changes
 echo "Updating tracked dotfiles..."
@@ -3837,9 +4535,134 @@ find "$CODE_DIR" -maxdepth 3 -name ".git" -type d -mtime -7 2>/dev/null | while 
 done
 SCRIPT
 
+# -- health-check: quick system overview --
+cat > "$HOME/Scripts/bin/health-check" <<'SCRIPT'
+#!/usr/bin/env bash
+# Quick system health overview
+# Usage: health-check
+set -euo pipefail
+
+echo "=== System Health Check ==="
+echo ""
+
+# Disk space
+echo "-- Disk Space --"
+df -h / | tail -1 | awk '{printf "  Root: %s used of %s (%s free)\n", $3, $2, $4}'
+
+# Memory
+echo ""
+echo "-- Memory --"
+vm_stat 2>/dev/null | awk '/Pages (free|active|inactive|speculative|wired)/ {
+    gsub(/\./, "", $NF); pages[$2] = $NF
+} END {
+    free = (pages["free:"] + pages["inactive:"] + pages["speculative:"]) * 4096 / 1073741824
+    used = (pages["active:"] + pages["wired"]) * 4096 / 1073741824
+    printf "  Used: %.1fGB  Free: %.1fGB\n", used, free
+}'
+
+# Battery (macOS)
+if command -v pmset &>/dev/null; then
+    echo ""
+    echo "-- Battery --"
+    pmset -g batt 2>/dev/null | grep -o "[0-9]*%" | head -1 | xargs -I{} echo "  Charge: {}"
+    BATTERY_HEALTH=$(system_profiler SPPowerDataType 2>/dev/null | grep "Maximum Capacity" | awk '{print $NF}')
+    [[ -n "$BATTERY_HEALTH" ]] && echo "  Health: $BATTERY_HEALTH"
+fi
+
+# Brew outdated
+if command -v brew &>/dev/null; then
+    echo ""
+    echo "-- Brew --"
+    OUTDATED=$(brew outdated 2>/dev/null | wc -l | tr -d ' ')
+    echo "  Outdated packages: $OUTDATED"
+fi
+
+# Docker disk
+if command -v docker &>/dev/null && docker info &>/dev/null 2>&1; then
+    echo ""
+    echo "-- Docker --"
+    docker system df 2>/dev/null | head -4 | sed 's/^/  /'
+fi
+
+# Largest node_modules
+echo ""
+echo "-- Largest node_modules (top 5) --"
+find "$HOME/Code" -maxdepth 4 -name "node_modules" -type d -prune 2>/dev/null | while read -r nm; do
+    du -sh "$nm" 2>/dev/null
+done | sort -rh | head -5 | sed 's/^/  /'
+
+# Uptime
+echo ""
+echo "-- Uptime --"
+uptime | sed 's/^/  /'
+SCRIPT
+
+# -- setup-ssh: generate SSH key and add to GitHub --
+cat > "$HOME/Scripts/bin/setup-ssh" <<'SCRIPT'
+#!/usr/bin/env bash
+# Generate SSH key and optionally add to GitHub
+# Usage: setup-ssh [email]
+set -euo pipefail
+
+EMAIL="${1:-}"
+
+if [[ -z "$EMAIL" ]]; then
+    echo "Usage: setup-ssh <email>"
+    echo "  Generates an Ed25519 SSH key and optionally adds it to GitHub."
+    exit 1
+fi
+
+KEY_FILE="$HOME/.ssh/id_ed25519"
+
+if [[ -f "$KEY_FILE" ]]; then
+    echo "SSH key already exists at $KEY_FILE"
+    echo "Public key:"
+    cat "${KEY_FILE}.pub"
+else
+    echo "Generating SSH key for $EMAIL..."
+    ssh-keygen -t ed25519 -C "$EMAIL" -f "$KEY_FILE"
+    echo ""
+    echo "SSH key generated."
+    echo "Public key:"
+    cat "${KEY_FILE}.pub"
+fi
+
+echo ""
+read -p "Add this key to GitHub? [y/N] " confirm
+if [[ "$confirm" =~ ^[Yy]$ ]]; then
+    if command -v gh &>/dev/null; then
+        TITLE="$(hostname) $(date +%Y-%m-%d)"
+        gh ssh-key add "${KEY_FILE}.pub" --title "$TITLE"
+        echo "SSH key added to GitHub as '$TITLE'"
+    else
+        echo "GitHub CLI (gh) not installed. Add manually:"
+        echo "  https://github.com/settings/ssh/new"
+    fi
+fi
+SCRIPT
+
+# -- export-brewfile: export Brewfile snapshot --
+cat > "$HOME/Scripts/bin/export-brewfile" <<'SCRIPT'
+#!/usr/bin/env bash
+# Export a Brewfile snapshot with descriptions
+# Usage: export-brewfile
+set -euo pipefail
+
+BREWFILE_DIR="$HOME/.config/brewfile"
+mkdir -p "$BREWFILE_DIR"
+BREWFILE="$BREWFILE_DIR/Brewfile"
+
+echo "Exporting Brewfile to $BREWFILE..."
+brew bundle dump --file="$BREWFILE" --force --describe 2>/dev/null
+echo "Done. $(wc -l < "$BREWFILE" | tr -d ' ') packages recorded."
+echo ""
+echo "Restore on a new machine:"
+echo "  brew bundle install --file=$BREWFILE"
+SCRIPT
+
 # Make all scripts executable
 chmod +x "$HOME/Scripts/bin/"*
-success "Helper scripts created (clean-downloads, new-project, clone-work, clone-personal, backup-dotfiles, project-stats)"
+success "Helper scripts created (clean-downloads, new-project, clone-work, clone-personal, backup-dotfiles, project-stats, health-check, setup-ssh, export-brewfile)"
 
 # ---- Per-directory Git Config (work vs personal identity) ----
 info "Setting up per-directory git config..."
@@ -4354,6 +5177,77 @@ HOOK_FORMAT
     success "Claude Code hooks created (auto-format on edit)"
 fi
 
+# ---- Claude Code custom slash commands ----
+CLAUDE_COMMANDS_DIR="$HOME/.claude/commands"
+if [[ -d "$CLAUDE_COMMANDS_DIR" ]] && [[ "$(ls -A "$CLAUDE_COMMANDS_DIR" 2>/dev/null)" ]]; then
+    warn "Claude Code commands directory already has commands"
+else
+    info "Creating Claude Code custom slash commands..."
+    mkdir -p "$CLAUDE_COMMANDS_DIR"
+
+    # /pr-review — review the current branch's changes
+    cat > "$CLAUDE_COMMANDS_DIR/pr-review.md" <<'CMD_PR_REVIEW'
+Review the changes on the current branch compared to main. For each file changed:
+1. Summarize what changed and why
+2. Flag any security issues, bugs, or performance concerns
+3. Check for missing error handling or edge cases
+4. Note any style inconsistencies
+
+Use `git diff main...HEAD` to see all changes. Be concise — focus on issues, not praise.
+CMD_PR_REVIEW
+
+    # /test-plan — generate a test plan for recent changes
+    cat > "$CLAUDE_COMMANDS_DIR/test-plan.md" <<'CMD_TEST_PLAN'
+Look at the recent changes in this repo (use git diff or git log) and generate a test plan:
+1. List what should be tested (unit, integration, e2e)
+2. Identify edge cases and error scenarios
+3. Suggest specific test cases with expected inputs/outputs
+4. Note any areas that are hard to test and why
+
+Output as a Markdown checklist.
+CMD_TEST_PLAN
+
+    # /dep-audit — audit dependencies
+    cat > "$CLAUDE_COMMANDS_DIR/dep-audit.md" <<'CMD_DEP_AUDIT'
+Audit the project dependencies:
+1. Check for known vulnerabilities (run npm audit or pip audit)
+2. Identify outdated packages (run npm outdated or pip list --outdated)
+3. Flag any packages with no recent maintenance (>2 years)
+4. Check for duplicate/redundant dependencies
+5. Estimate total bundle size impact of each dependency if this is a frontend project
+
+Summarize findings with severity (critical/high/medium/low) and recommended actions.
+CMD_DEP_AUDIT
+
+    # /quick-doc — generate docs for a file or function
+    cat > "$CLAUDE_COMMANDS_DIR/quick-doc.md" <<'CMD_QUICK_DOC'
+Generate documentation for the file or function I specify: $ARGUMENTS
+
+Include:
+1. A brief description of what it does
+2. Parameters/props with types and descriptions
+3. Return value
+4. Usage example
+5. Any gotchas or important notes
+
+Format as JSDoc/docstring appropriate for the language.
+CMD_QUICK_DOC
+
+    # /cleanup — find dead code, unused imports, etc.
+    cat > "$CLAUDE_COMMANDS_DIR/cleanup.md" <<'CMD_CLEANUP'
+Scan the project for cleanup opportunities:
+1. Unused imports and variables
+2. Dead code (unreachable functions, unused exports)
+3. Console.log / debug statements left in
+4. TODO/FIXME comments that should be addressed
+5. Empty catch blocks or swallowed errors
+
+List each finding with file path and line number. Don't fix anything — just report.
+CMD_CLEANUP
+
+    success "Claude Code commands created (/pr-review, /test-plan, /dep-audit, /quick-doc, /cleanup)"
+fi
+
 # =============================================================================
 if should_run "shell"; then
 banner "Shell Configuration"
@@ -4424,6 +5318,20 @@ export FZF_DEFAULT_OPTS="--color=fg:#f8f8f2,bg:#282a36,hl:#bd93f9 --color=fg+:#f
 source $(brew --prefix)/share/zsh-autosuggestions/zsh-autosuggestions.zsh
 source $(brew --prefix)/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
 
+# -- Completions (docker, kubectl, aws, gh) -----------------------------------
+# Load brew-installed completions
+if type brew &>/dev/null; then
+    FPATH="$(brew --prefix)/share/zsh/site-functions:${FPATH}"
+fi
+autoload -Uz compinit && compinit -C
+# kubectl completion
+[[ -x "$(command -v kubectl)" ]] && source <(kubectl completion zsh)
+# docker completion (loaded from brew site-functions if installed)
+# gh completion
+[[ -x "$(command -v gh)" ]] && source <(gh completion -s zsh)
+# aws completion
+[[ -x "$(command -v aws_completer)" ]] && complete -C "$(which aws_completer)" aws
+
 # -- Modern Tool Aliases (replacements for built-in commands) -----------------
 # Note: we avoid aliasing cd, sed, find, grep, diff globally since they have
 # different syntax from their replacements and would break scripts/muscle memory.
@@ -4438,16 +5346,19 @@ alias du="dust"
 alias df="duf"
 alias ps="procs"
 alias ping="gping"
-alias dig="dog"
+alias dig="doggo"
 alias watch="viddy"
 alias hexdump="hexyl"
 alias rm="trash"
+alias make="just"
 
 # Short aliases for modern tools (don't override builtins)
 alias rg="rg"          # ripgrep (already the command name)
 alias f="fd"           # fd (fast find)
 alias sd="sd"          # sd (fast sed)
 alias dft="difft"      # difftastic
+alias y="yazi"         # yazi file manager
+alias jx="fx"          # fx interactive JSON viewer
 
 # -- Download & Transfer ------------------------------------------------------
 alias dl="aria2c"
@@ -4478,6 +5389,14 @@ alias md2pdf="pandoc -f markdown -t pdf"
 alias md2html="pandoc -f markdown -t html -s"
 alias md2docx="pandoc -f markdown -t docx"
 
+# -- Python (uv) -------------------------------------------------------------
+alias pip="uv pip"
+alias venv="uv venv"
+alias pyrun="uv run"
+
+# -- Global Justfile ----------------------------------------------------------
+alias gj="just --justfile ~/.justfile --working-directory ."
+
 # -- Dev & Testing ------------------------------------------------------------
 alias watchrun="find . -name '*.ts' -o -name '*.tsx' | entr -r"
 alias bench="hyperfine"
@@ -4501,6 +5420,9 @@ alias cpers="clone-personal"
 alias dotback="backup-dotfiles"
 alias pstats="project-stats"
 alias cleandl="clean-downloads"
+alias hc="health-check"
+alias sshsetup="setup-ssh"
+alias brewsnap="export-brewfile"
 
 # -- System -------------------------------------------------------------------
 alias update="topgrade"
@@ -4554,8 +5476,8 @@ BREWFILE_DIR="$HOME/.config/brewfile"
 mkdir -p "$BREWFILE_DIR"
 BREWFILE="$BREWFILE_DIR/Brewfile"
 
-info "Exporting Brewfile snapshot..."
-brew bundle dump --file="$BREWFILE" --force 2>/dev/null || true
+info "Exporting Brewfile snapshot (with descriptions)..."
+brew bundle dump --file="$BREWFILE" --force --describe 2>/dev/null || true
 success "Brewfile exported to $BREWFILE"
 echo "  -> Restore on a new machine: brew bundle install --file=$BREWFILE"
 
@@ -4586,12 +5508,16 @@ echo "  [~/.config/glow]        Dracula Markdown renderer"
 echo "  [~/.config/yt-dlp]      Best quality, aria2c downloader"
 echo "  [~/.config/gh-dash]     GitHub dashboard, Dracula theme"
 echo "  [~/.config/stern]       K8s log tailing"
+echo "  [~/.config/yazi]        File manager with Dracula theme"
+echo "  [~/.config/ghostty]     GPU-accelerated terminal with Dracula theme"
+echo "  [~/.justfile]           Global task runner recipes"
 echo "  [~/.config/brewfile]    Brewfile snapshot for reproducibility"
 echo "  [VS Code]               Dracula theme, extensions, JetBrains Mono"
 echo "  [lazygit]               Dracula theme, delta pager"
 echo "  [k9s]                   Dracula skin"
 echo "  [Finder]                Hidden files, path bar, list view"
-echo "  [macOS]                 Dock, keyboard, screenshots, hot corners"
+echo "  [macOS]                 Dock, keyboard, screenshots, hot corners, Stage Manager"
+echo "  [Claude Code]           Custom commands (/pr-review, /test-plan, /dep-audit, /quick-doc, /cleanup)"
 echo ""
 info "Optional Chrome extensions to install manually:"
 echo "  - axe DevTools (accessibility testing)"
@@ -4639,6 +5565,10 @@ if [[ "$DRY_RUN" == "false" ]]; then
         "node:node --version"
         "npm:npm --version"
         "python3:python3 --version"
+        "go:go version"
+        "rustc:rustc --version"
+        "bun:bun --version"
+        "uv:uv --version"
         "brew:brew --version"
         "code:code --version"
     )
