@@ -234,7 +234,7 @@ function Show-Categories {
         @("ux",                    "Lighthouse")
         @("docs",                  "d2, Mermaid CLI")
         @("win-system",            "BCUninstaller, 7zip, simplewall, QuickLook, PowerToys, Proton apps")
-        @("win-productivity",      "Notion, ShareX, Espanso, SumatraPDF, Raindrop")
+        @("win-productivity",      "Notion, ShareX, Espanso, SumatraPDF")
         @("win-communication",     "Slack, Telegram, Signal")
         @("win-browsers",          "Firefox, Arc, Brave")
         @("win-media",             "mpv, LibreOffice, gifski")
@@ -1201,7 +1201,6 @@ Install-WingetPackage "Notion.NotionCalendar" "Notion Calendar"
 Install-ScoopPackage "sharex" "ShareX (replaces Shottr -- screenshots & recording)"
 Install-ScoopPackage "espanso" "Espanso (open-source text expander -- snippets, templates)"
 Install-ScoopPackage "sumatrapdf" "SumatraPDF (lightweight PDF reader -- replaces Skim)"
-Install-WingetPackage "Raindrop.Raindrop" "Raindrop.io (bookmark manager -- collections, tags, search)"
 
 # File transfer
 Install-WingetPackage "WinSCP.WinSCP" "WinSCP (SFTP/SCP client -- replaces Transmit)"

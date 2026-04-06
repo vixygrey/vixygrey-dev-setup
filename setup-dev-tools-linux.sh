@@ -2611,9 +2611,6 @@ pkg_install "evince" "evince" "evince" "Evince (PDF reader)"
 # Notion
 snap_install "notion-snap-reborn" "Notion" ""
 
-# Raindrop.io
-snap_install "raindrop" "Raindrop.io (bookmark manager)" ""
-
 # Filezilla (replaces Transmit)
 pkg_install "filezilla" "filezilla" "filezilla" "FileZilla (SFTP client — Transmit equivalent)"
 
