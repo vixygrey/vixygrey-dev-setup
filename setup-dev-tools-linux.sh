@@ -1849,6 +1849,17 @@ else
     progress
 fi
 
+# vivid (LS_COLORS generator — colorize file listings by type)
+if ! installed vivid; then
+    case "$PKG_MANAGER" in
+        pacman) pkg_install "-" "-" "vivid" "vivid (LS_COLORS generator)" ;;
+        *) cargo_install "vivid" "vivid (LS_COLORS generator — colorize file listings by type)" ;;
+    esac
+else
+    warn "vivid already installed"
+    progress
+fi
+
 # just
 if ! installed just; then
     case "$PKG_MANAGER" in
@@ -2885,18 +2896,221 @@ fi
 # fzf Dracula colors
 FZF_DRACULA='export FZF_DEFAULT_OPTS="--color=fg:#f8f8f2,bg:#282a36,hl:#bd93f9 --color=fg+:#f8f8f2,bg+:#44475a,hl+:#bd93f9 --color=info:#ffb86c,prompt:#50fa7b,pointer:#ff79c6 --color=marker:#ff79c6,spinner:#ffb86c,header:#6272a4"'
 
-# Starship Dracula palette
+# Starship prompt (rich config with Dracula palette)
 STARSHIP_CONFIG="$HOME/.config/starship.toml"
 if [[ -f "$STARSHIP_CONFIG" ]] && grep -q "dracula" "$STARSHIP_CONFIG" 2>/dev/null; then
-    warn "Starship Dracula palette already configured"
+    warn "Starship config already configured"
 else
-    info "Adding Dracula palette to Starship config..."
+    info "Creating rich Starship prompt config..."
     mkdir -p "$(dirname "$STARSHIP_CONFIG")"
-    cat >> "$STARSHIP_CONFIG" <<'STARSHIP_DRACULA'
+    cat > "$STARSHIP_CONFIG" <<'STARSHIP_CONF'
+# =============================================================================
+# Starship Prompt — Dracula themed, info-rich
+# =============================================================================
 
-# Dracula color palette
+# Use Dracula colors everywhere
 palette = "dracula"
 
+# Prompt format: directory, git, languages, duration, newline, character
+format = """
+[┌──](comment)\
+$os\
+$username\
+$hostname\
+$directory\
+$git_branch\
+$git_status\
+$git_state\
+$nodejs\
+$python\
+$rust\
+$go\
+$docker_context\
+$aws\
+$terraform\
+$cmd_duration\
+$jobs\
+$fill\
+$battery\
+$time
+[└─](comment)$character"""
+
+# Right prompt disabled (everything is on the left two-line prompt)
+right_format = ""
+
+# Wait 10ms for starship to check files (snappy)
+scan_timeout = 10
+command_timeout = 500
+
+# Don't add blank line between prompts
+add_newline = false
+
+# -- Prompt character ---------------------------------------------------------
+[character]
+success_symbol = "[❯](bold purple)"
+error_symbol = "[❯](bold red)"
+vimcmd_symbol = "[❮](bold green)"
+
+# -- Fill (pushes battery/time to the right) ----------------------------------
+[fill]
+symbol = " "
+
+# -- OS icon ------------------------------------------------------------------
+[os]
+disabled = false
+style = "fg:comment"
+format = "[$symbol ]($style)"
+
+[os.symbols]
+Macos = ""
+Linux = ""
+Windows = ""
+Arch = ""
+Ubuntu = ""
+Fedora = ""
+Debian = ""
+
+# -- Username (only show if SSH or root) --------------------------------------
+[username]
+show_always = false
+style_user = "fg:purple"
+style_root = "bold fg:red"
+format = "[$user]($style) "
+
+# -- Hostname (only show if SSH) ----------------------------------------------
+[hostname]
+ssh_only = true
+style = "fg:pink"
+format = "[@$hostname]($style) "
+
+# -- Directory ----------------------------------------------------------------
+[directory]
+style = "bold cyan"
+format = "[$path]($style)[$read_only]($read_only_style) "
+truncation_length = 4
+truncation_symbol = "…/"
+read_only = " 󰌾"
+read_only_style = "fg:red"
+
+[directory.substitutions]
+"Documents" = "󰈙 "
+"Downloads" = " "
+"Code" = " "
+"Creative" = "🎨"
+"Media" = "🎵"
+
+# -- Git branch ---------------------------------------------------------------
+[git_branch]
+symbol = " "
+style = "fg:purple"
+format = "[$symbol$branch(:$remote_branch)]($style) "
+truncation_length = 24
+
+# -- Git status ---------------------------------------------------------------
+[git_status]
+style = "fg:red"
+format = '([$all_status$ahead_behind]($style) )'
+conflicted = "⚡${count} "
+ahead = "⇡${count} "
+behind = "⇣${count} "
+diverged = "⇕⇡${ahead_count}⇣${behind_count} "
+untracked = "?${count} "
+stashed = "📦${count} "
+modified = "!${count} "
+staged = "+${count} "
+renamed = "»${count} "
+deleted = "✘${count} "
+
+# -- Git state (rebase, merge, etc.) ------------------------------------------
+[git_state]
+style = "bold fg:orange"
+format = "[$state( $progress_current/$progress_total)]($style) "
+rebase = "REBASING"
+merge = "MERGING"
+revert = "REVERTING"
+cherry_pick = "CHERRY-PICKING"
+bisect = "BISECTING"
+
+# -- Node.js ------------------------------------------------------------------
+[nodejs]
+symbol = " "
+style = "fg:green"
+format = "[$symbol$version]($style) "
+detect_files = ["package.json", ".nvmrc"]
+detect_extensions = []
+
+# -- Python -------------------------------------------------------------------
+[python]
+symbol = " "
+style = "fg:yellow"
+format = '[$symbol$version( \($virtualenv\))]($style) '
+detect_extensions = ["py"]
+
+# -- Rust ---------------------------------------------------------------------
+[rust]
+symbol = "🦀 "
+style = "fg:orange"
+format = "[$symbol$version]($style) "
+
+# -- Go ----------------------------------------------------------------------
+[golang]
+symbol = " "
+style = "fg:cyan"
+format = "[$symbol$version]($style) "
+
+# -- Docker context -----------------------------------------------------------
+[docker_context]
+symbol = " "
+style = "fg:cyan"
+format = "[$symbol$context]($style) "
+only_with_files = true
+
+# -- AWS profile --------------------------------------------------------------
+[aws]
+symbol = "☁️ "
+style = "bold fg:orange"
+format = "[$symbol$profile(\\($region\\))]($style) "
+
+# -- Terraform ----------------------------------------------------------------
+[terraform]
+symbol = "💠 "
+style = "fg:purple"
+format = "[$symbol$workspace]($style) "
+
+# -- Command duration (show if > 3 seconds) -----------------------------------
+[cmd_duration]
+min_time = 3_000
+style = "fg:yellow"
+format = "[⏱ $duration]($style) "
+show_milliseconds = false
+
+# -- Background jobs ----------------------------------------------------------
+[jobs]
+symbol = "✦"
+style = "bold fg:cyan"
+number_threshold = 1
+format = "[$symbol$number]($style) "
+
+# -- Battery (show if < 30%) --------------------------------------------------
+[battery]
+format = "[$symbol$percentage]($style) "
+
+[[battery.display]]
+threshold = 15
+style = "bold fg:red"
+
+[[battery.display]]
+threshold = 30
+style = "fg:orange"
+
+# -- Time (always show) -------------------------------------------------------
+[time]
+disabled = false
+style = "fg:comment"
+format = "[$time]($style)"
+time_format = "%H:%M"
+
+# -- Dracula color palette ----------------------------------------------------
 [palettes.dracula]
 background = "#282a36"
 current_line = "#44475a"
@@ -2909,12 +3123,8 @@ pink = "#ff79c6"
 purple = "#bd93f9"
 red = "#ff5555"
 yellow = "#f1fa8c"
-
-[character]
-success_symbol = "[❯](purple)"
-error_symbol = "[❯](red)"
-STARSHIP_DRACULA
-    success "Starship Dracula palette configured"
+STARSHIP_CONF
+    success "Starship prompt configured (rich two-line prompt, Dracula theme)"
 fi
 
 # GTK dark theme
@@ -3059,16 +3269,51 @@ git config --global column.ui auto
 git config --global branch.sort -committerdate
 git config --global rerere.enabled true
 
-# Aliases
+# Useful aliases
+# Basic shortcuts
 git config --global alias.st "status -sb"
 git config --global alias.co "checkout"
 git config --global alias.br "branch"
 git config --global alias.ci "commit"
+git config --global alias.sw "switch"
+
+# Undo & reset
 git config --global alias.unstage "reset HEAD --"
-git config --global alias.last "log -1 HEAD"
-git config --global alias.lg "log --oneline --graph --decorate --all"
+git config --global alias.undo "reset --soft HEAD~1"
+git config --global alias.discard "checkout -- ."
 git config --global alias.amend "commit --amend --no-edit"
+
+# Quick commits
 git config --global alias.wip "!git add -A && git commit -m 'WIP'"
+git config --global alias.save "!git add -A && git commit -m 'chore: savepoint'"
+
+# Stash
+git config --global alias.stash-all "stash push --include-untracked"
+git config --global alias.stash-peek "stash show -p"
+
+# Log & history
+git config --global alias.last "log -1 HEAD --stat"
+git config --global alias.lg "log --oneline --graph --decorate --all"
+git config --global alias.log-stats "log --oneline --stat"
+git config --global alias.log-since "log --oneline --since='1 week ago'"
+git config --global alias.contributors "shortlog -sne --no-merges"
+git config --global alias.standup "!git log --oneline --since='yesterday' --author=\"\$(git config user.name)\""
+
+# Branch management
+git config --global alias.recent "branch --sort=-committerdate --format='%(committerdate:relative)%09%(refname:short)' -n 15"
+git config --global alias.cleanup "!git branch --merged main | grep -v '\\*\\|main\\|master' | xargs -n 1 git branch -d"
+git config --global alias.gone "!git fetch -p && git branch -vv | grep ': gone]' | awk '{print \$1}' | xargs -r git branch -d"
+
+# Diff
+git config --global alias.dft "!git -c diff.external=difft diff"
+git config --global alias.dfl "!git -c diff.external=difft log -p --ext-diff"
+git config --global alias.diff-names "diff --name-only"
+git config --global alias.diff-stat "diff --stat"
+
+# Worktree shortcuts
+git config --global alias.wt "worktree"
+git config --global alias.wta "worktree add"
+git config --global alias.wtl "worktree list"
 
 success "git global settings configured"
 
@@ -3167,15 +3412,63 @@ else
     cat > "$ATUIN_CONFIG" <<'ATUIN_CONF'
 ## atuin configuration
 
+# -- Search -------------------------------------------------------------------
+# Search mode: prefix, fulltext, fuzzy, skim
 search_mode = "fuzzy"
+
+# Filter mode when pressing up arrow (host = only this machine's history)
 filter_mode = "host"
+
+# Filter mode for ctrl-r search (global = all history)
+filter_mode_shell_up_key_binding = "host"
+
+# -- Display ------------------------------------------------------------------
+# Inline search height (number of results)
 inline_height = 20
+
+# Show preview of full command
 show_preview = true
+
+# Timestamp format
 style = "compact"
+
+# Show help banner at top of search
+show_help = false
+
+# -- Behavior -----------------------------------------------------------------
+# Accept command on Enter (true = execute immediately, false = paste to prompt)
+enter_accept = false
+
+# Don't sync to atuin server (local only)
 auto_sync = false
+
+# Store in plaintext locally (faster)
 daemon.enabled = false
+
+# -- History Filter (ignore noise) --------------------------------------------
+# Commands that shouldn't pollute history
+history_filter = [
+    "^ls$",
+    "^ll$",
+    "^la$",
+    "^cd ",
+    "^clear$",
+    "^exit$",
+    "^pwd$",
+    "^\\.$",
+    "^cat ",
+    "^echo ",
+    "^export ",
+]
+
+# Secrets: don't record commands containing these patterns
+secrets_filter = true
+
+# -- Stats --------------------------------------------------------------------
+# Show stats in search footer (e.g., "3,402 commands")
+stats.show_in_footer = true
 ATUIN_CONF
-    success "atuin configured (fuzzy search, local-only)"
+    success "atuin configured (fuzzy search, local-only, history filter, enter=paste)"
 fi
 
 # ---- lazygit Dracula theme ----
@@ -3190,30 +3483,45 @@ else
 gui:
   nerdFontsVersion: "3"
   showBottomLine: false
+  showPanelJumps: true
+  showRandomTip: false
+  showCommandLog: false
+  border: rounded
   theme:
     activeBorderColor:
-      - "#bd93f9"
+      - "#bd93f9"  # purple
       - bold
     inactiveBorderColor:
-      - "#6272a4"
+      - "#6272a4"  # comment
     selectedLineBgColor:
-      - "#44475a"
+      - "#44475a"  # current_line
     cherryPickedCommitFgColor:
-      - "#50fa7b"
+      - "#50fa7b"  # green
     cherryPickedCommitBgColor:
-      - "#44475a"
+      - "#44475a"  # current_line
     unstagedChangesColor:
-      - "#ff5555"
+      - "#ff5555"  # red
     defaultFgColor:
-      - "#f8f8f2"
+      - "#f8f8f2"  # foreground
     searchingActiveBorderColor:
-      - "#ffb86c"
+      - "#ffb86c"  # orange
 git:
   paging:
     colorArg: always
     pager: delta --dark --paging=never
+  commit:
+    signOff: false
+  autoFetch: true
+  autoRefresh: true
+  branchLogCmd: "git log --graph --color=always --abbrev-commit --decorate --date=relative --pretty=medium {{branchName}} --"
+os:
+  editPreset: "vscode"
+  open: "xdg-open {{filename}}"
+  openLink: "xdg-open {{link}}"
+notARepository: skip
+promptToReturnFromSubprocess: false
 LAZYGIT_CONF
-    success "lazygit Dracula theme configured"
+    success "lazygit configured (Dracula theme, delta pager, auto-fetch, VS Code editor)"
 fi
 
 # ---- k9s Dracula skin ----
@@ -3336,12 +3644,14 @@ else
     cat > "$VSCODE_SETTINGS" <<'VSCODE_CONF'
 {
     "workbench.colorTheme": "Dracula",
+    "workbench.iconTheme": "vs-seti",
+    "workbench.startupEditor": "none",
+    "workbench.tree.indent": 16,
+
     "editor.fontFamily": "'JetBrains Mono', 'Fira Code', 'Droid Sans Mono', monospace",
     "editor.fontSize": 14,
     "editor.lineHeight": 1.6,
     "editor.fontLigatures": true,
-    "editor.bracketPairColorization.enabled": true,
-    "editor.guides.bracketPairs": "active",
     "editor.minimap.enabled": false,
     "editor.renderWhitespace": "boundary",
     "editor.smoothScrolling": true,
@@ -3353,15 +3663,82 @@ else
     "editor.wordWrap": "on",
     "editor.linkedEditing": true,
     "editor.stickyScroll.enabled": true,
+    "editor.stickyScroll.maxLineCount": 3,
+    "editor.inlayHints.enabled": "onUnlessPressed",
+    "editor.suggest.preview": true,
+    "editor.suggest.showStatusBar": true,
+
+    "editor.bracketPairColorization.enabled": true,
+    "editor.guides.bracketPairs": "active",
+    "workbench.colorCustomizations": {
+        "editorBracketHighlight.foreground1": "#bd93f9",
+        "editorBracketHighlight.foreground2": "#50fa7b",
+        "editorBracketHighlight.foreground3": "#ffb86c",
+        "editorBracketHighlight.foreground4": "#ff79c6",
+        "editorBracketHighlight.foreground5": "#8be9fd",
+        "editorBracketHighlight.foreground6": "#f1fa8c"
+    },
+
     "files.autoSave": "onFocusChange",
     "files.trimTrailingWhitespace": true,
     "files.insertFinalNewline": true,
-    "terminal.integrated.fontFamily": "'JetBrains Mono', 'MesloLGS NF', monospace",
-    "terminal.integrated.fontSize": 13,
+
+    "explorer.fileNesting.enabled": true,
+    "explorer.fileNesting.expand": false,
+    "explorer.fileNesting.patterns": {
+        "*.ts": "${capture}.js, ${capture}.d.ts, ${capture}.js.map, ${capture}.test.ts, ${capture}.spec.ts",
+        "*.tsx": "${capture}.test.tsx, ${capture}.spec.tsx, ${capture}.stories.tsx",
+        "*.js": "${capture}.js.map, ${capture}.test.js, ${capture}.spec.js",
+        "package.json": "package-lock.json, pnpm-lock.yaml, yarn.lock, .npmrc, .nvmrc, .node-version, .eslintrc*, .prettierrc*, tsconfig*.json, vite.config.*, vitest.config.*, jest.config.*, tailwind.config.*, postcss.config.*",
+        "README.md": "LICENSE, CHANGELOG.md, CONTRIBUTING.md, CODE_OF_CONDUCT.md",
+        ".env": ".env.*, .env.local, .env.development, .env.production, .env.test",
+        "Dockerfile": "docker-compose*.yml, .dockerignore",
+        "Cargo.toml": "Cargo.lock, rust-toolchain.toml",
+        "go.mod": "go.sum"
+    },
     "explorer.confirmDragAndDrop": false,
     "explorer.confirmDelete": false,
+
+    "terminal.integrated.fontFamily": "'JetBrains Mono NF', 'MesloLGS NF', monospace",
+    "terminal.integrated.fontSize": 13,
+    "terminal.integrated.cursorStyle": "line",
+    "terminal.integrated.cursorBlinking": true,
+    "terminal.integrated.defaultProfile.linux": "zsh",
+
     "breadcrumbs.enabled": true,
-    "telemetry.telemetryLevel": "off"
+    "telemetry.telemetryLevel": "off",
+
+    "todo-tree.general.tags": ["TODO", "FIXME", "HACK", "BUG", "XXX"],
+    "todo-tree.highlights.defaultHighlight": {
+        "foreground": "#282a36",
+        "background": "#ffb86c",
+        "iconColour": "#ffb86c"
+    },
+
+    "errorLens.gutterIconsEnabled": true,
+    "errorLens.messageMaxChars": 80,
+
+    "[python]": {
+        "editor.defaultFormatter": "charliermarsh.ruff",
+        "editor.tabSize": 4
+    },
+    "[go]": {
+        "editor.defaultFormatter": "golang.go",
+        "editor.tabSize": 4,
+        "editor.insertSpaces": false
+    },
+    "[rust]": {
+        "editor.defaultFormatter": "rust-lang.rust-analyzer",
+        "editor.tabSize": 4
+    },
+    "[markdown]": {
+        "editor.wordWrap": "on",
+        "editor.quickSuggestions": {
+            "comments": "off",
+            "strings": "off",
+            "other": "off"
+        }
+    }
 }
 VSCODE_CONF
     success "VS Code settings configured with Dracula theme"
@@ -3371,14 +3748,38 @@ fi
 if installed code; then
     info "Installing VS Code extensions..."
     VSCODE_EXTENSIONS=(
+        # Theme
+        "dracula-theme.theme-dracula"
+        # Formatting & linting
         "esbenp.prettier-vscode"
         "dbaeumer.vscode-eslint"
+        # Language support
         "bradlc.vscode-tailwindcss"
+        "ms-python.python"
+        "golang.go"
+        "rust-lang.rust-analyzer"
+        # Editor enhancements
         "formulahendry.auto-rename-tag"
         "christian-kohler.path-intellisense"
         "usernamehw.errorlens"
+        "aaron-bond.better-comments"
+        "streetsidesoftware.code-spell-checker"
+        "christian-kohler.npm-intellisense"
+        "naumovs.color-highlight"
+        "mechatroner.rainbow-csv"
+        # Git
         "eamodio.gitlens"
+        "mhutchie.git-graph"
+        # AI
         "github.copilot"
+        # Productivity
+        "gruntfuggly.todo-tree"
+        "wix.vscode-import-cost"
+        "ms-azuretools.vscode-docker"
+        "mikestead.dotenv"
+        "yzhang.markdown-all-in-one"
+        "redhat.vscode-yaml"
+        "tamasfe.even-better-toml"
     )
     for ext in "${VSCODE_EXTENSIONS[@]}"; do
         if code --list-extensions 2>/dev/null | grep -qi "$ext"; then
@@ -3522,10 +3923,7 @@ YTDLP_CONF
 fi
 
 # ---- difftastic config ----
-info "Configuring difftastic git aliases..."
-git config --global alias.dft "!git -c diff.external=difft diff"
-git config --global alias.dfl "!git -c diff.external=difft log -p --ext-diff"
-success "difftastic aliases configured"
+# (difftastic git aliases are now set in the main git config section above)
 
 # ---- caddy config ----
 CADDY_CONFIG_DIR="$HOME/.config/caddy"
@@ -4493,14 +4891,17 @@ else
     info "Creating global justfile..."
     cat > "$JUSTFILE_GLOBAL" <<'JUSTFILE_CONF'
 # =============================================================================
-# Global Justfile — available via: just --justfile ~/.justfile
+# Global Justfile — available from any directory via: just --justfile ~/.justfile
 # =============================================================================
 # Tip: alias gj="just --justfile ~/.justfile --working-directory ."
 
+# List all recipes
 default:
     @just --justfile {{justfile()}} --list
 
-# Update everything
+# ── System ───────────────────────────────────────────────────────────────────
+
+# Update everything (apt/dnf, npm, pip, etc.)
 update:
     topgrade
 
@@ -4517,41 +4918,107 @@ flush-dns:
 ports:
     ss -tlnp | tail -n +2 | sort -t: -k2 -n
 
-# Interactive rebase
+# ── Git ──────────────────────────────────────────────────────────────────────
+
+# Interactive rebase last N commits
 rebase n="5":
     git rebase -i HEAD~{{n}}
 
-# Undo last commit
+# Undo last commit (keep changes staged)
 undo:
     git reset --soft HEAD~1
 
-# Recent branches
+# Show recent branches sorted by last commit
 branches:
     git for-each-ref --sort=-committerdate refs/heads/ --format='%(committerdate:relative)\t%(refname:short)' | head -20
 
-# Docker cleanup
+# ── Docker ───────────────────────────────────────────────────────────────────
+
+# Clean Docker: unused images, containers, volumes
 docker-clean:
     docker system prune -af --volumes
 
+# Show Docker disk usage
 docker-usage:
     docker system df
 
-# Serve current directory
+# ── Dev ──────────────────────────────────────────────────────────────────────
+
+# Serve current directory on port 8080
 serve port="8080":
     miniserve --color-scheme-dark dracula -qr . -p {{port}}
 
-# Generate UUID
+# Generate a UUID
 uuid:
     @cat /proc/sys/kernel/random/uuid
 
-# Base64
+# Encode/decode base64
 b64-encode text:
     @echo -n "{{text}}" | base64
 
 b64-decode text:
     @echo -n "{{text}}" | base64 -d && echo
+
+# ── Network ──────────────────────────────────────────────────────────────────
+
+# Show public IP address
+ip:
+    @curl -s https://ifconfig.me && echo
+
+# Show local IP address
+local-ip:
+    @hostname -I 2>/dev/null | awk '{print $1}' || echo "unknown"
+
+# Kill process on a specific port
+kill-port port:
+    @lsof -ti:{{port}} | xargs kill -9 2>/dev/null && echo "Killed process on port {{port}}" || echo "No process on port {{port}}"
+
+# Quick HTTP status check
+status url:
+    @curl -o /dev/null -s -w "HTTP %{http_code} — %{time_total}s\n" "{{url}}"
+
+# ── Cleanup ──────────────────────────────────────────────────────────────────
+
+# Remove all node_modules directories under ~/Code
+node-clean:
+    @echo "Finding node_modules under ~/Code..."
+    @du -sh $(find ~/Code -maxdepth 4 -name node_modules -type d -prune 2>/dev/null) 2>/dev/null | sort -rh
+    @echo ""
+    @echo "Run: find ~/Code -name node_modules -type d -prune -exec rm -rf {} + to delete all"
+
+# Nuclear Docker cleanup (everything)
+docker-nuke:
+    docker system prune -af --volumes
+    @echo "Docker wiped clean."
+
+# Remove .DS_Store files recursively
+ds-clean:
+    @find . -name '.DS_Store' -type f -delete 2>/dev/null
+    @echo ".DS_Store files removed"
+
+# ── Quick Info ───────────────────────────────────────────────────────────────
+
+# Show a cheatsheet for a command (via tldr)
+cheat cmd:
+    @tldr {{cmd}}
+
+# Generate a timestamp
+timestamp:
+    @date '+%Y-%m-%dT%H:%M:%S%z'
+
+# Show weather (via wttr.in)
+weather city="":
+    @curl -s "wttr.in/{{city}}?format=3"
+
+# Git standup — what did I do yesterday?
+standup:
+    @git log --oneline --since='yesterday' --author="$(git config user.name)" 2>/dev/null || echo "Not in a git repo"
+
+# Count lines of code in current directory
+loc:
+    @tokei . 2>/dev/null || find . -name '*.ts' -o -name '*.tsx' -o -name '*.js' -o -name '*.py' -o -name '*.go' -o -name '*.rs' | xargs wc -l | tail -1
 JUSTFILE_CONF
-    success "Global justfile created"
+    success "Global justfile created (~/.justfile — system, git, docker, network, cleanup, info recipes)"
 fi
 
 # ---- mise config ----
@@ -4601,20 +5068,110 @@ else
     cat > "$FASTFETCH_CONFIG" <<'FASTFETCH_CONF'
 {
     "$schema": "https://github.com/fastfetch-cli/fastfetch/raw/dev/doc/json_schema.json",
-    "logo": { "type": "builtin", "color": { "1": "magenta", "2": "cyan" } },
-    "display": { "separator": "  ", "color": { "keys": "magenta" } },
+    "logo": {
+        "type": "small",
+        "color": {
+            "1": "magenta",
+            "2": "cyan"
+        },
+        "padding": { "top": 1, "left": 2, "right": 2 }
+    },
+    "display": {
+        "separator": "  ",
+        "color": {
+            "keys": "magenta",
+            "title": "cyan"
+        },
+        "bar": {
+            "charElapsed": "█",
+            "charTotal": "░",
+            "width": 20
+        }
+    },
     "modules": [
-        "title", "separator", "os", "host", "kernel", "uptime",
-        "shell", "terminal", "cpu", "gpu", "memory", "disk",
-        "battery", "separator",
-        { "type": "command", "key": "Node", "text": "node --version 2>/dev/null || echo 'not installed'" },
-        { "type": "command", "key": "Python", "text": "python3 --version 2>/dev/null | cut -d' ' -f2 || echo 'not installed'" },
-        { "type": "command", "key": "Docker", "text": "docker --version 2>/dev/null | cut -d' ' -f3 | tr -d ',' || echo 'not running'" },
-        "separator", "colors"
+        { "type": "title", "format": "{user-name}@{host-name}" },
+        { "type": "separator", "string": "─" },
+        { "type": "os", "key": "  OS" },
+        { "type": "host", "key": " 󰒋 Host" },
+        { "type": "kernel", "key": "  Kernel" },
+        { "type": "uptime", "key": " 󰅐 Uptime" },
+        { "type": "packages", "key": " 󰏗 Packages" },
+        { "type": "shell", "key": "  Shell" },
+        { "type": "terminal", "key": "  Terminal" },
+        { "type": "separator", "string": "─" },
+        { "type": "cpu", "key": " 󰍛 CPU", "showPeCoreCount": false },
+        { "type": "gpu", "key": " 󰢮 GPU" },
+        { "type": "memory", "key": "  Memory" },
+        { "type": "disk", "key": " 󰋊 Disk", "folders": "/" },
+        { "type": "battery", "key": " 󰁹 Battery" },
+        { "type": "separator", "string": "─" },
+        {
+            "type": "command",
+            "key": "  Node",
+            "text": "node --version 2>/dev/null | tr -d 'v' || echo '—'"
+        },
+        {
+            "type": "command",
+            "key": "  Python",
+            "text": "python3 --version 2>/dev/null | cut -d' ' -f2 || echo '—'"
+        },
+        {
+            "type": "command",
+            "key": "  Go",
+            "text": "go version 2>/dev/null | awk '{print $3}' | tr -d 'go' || echo '—'"
+        },
+        {
+            "type": "command",
+            "key": " 🦀 Rust",
+            "text": "rustc --version 2>/dev/null | awk '{print $2}' || echo '—'"
+        },
+        {
+            "type": "command",
+            "key": " 󰜫 Docker",
+            "text": "docker --version 2>/dev/null | cut -d' ' -f3 | tr -d ',' || echo '—'"
+        },
+        { "type": "separator", "string": "─" },
+        { "type": "colors", "symbol": "circle" }
     ]
 }
 FASTFETCH_CONF
-    success "fastfetch configured"
+    success "fastfetch configured (themed layout, Nerd Font icons, dev tool versions)"
+fi
+
+# ---- Zed editor config ----
+ZED_CONFIG_DIR="$HOME/.config/zed"
+ZED_CONFIG="$ZED_CONFIG_DIR/settings.json"
+if [[ -f "$ZED_CONFIG" ]]; then
+    warn "Zed config already exists"
+else
+    info "Creating Zed configuration..."
+    mkdir -p "$ZED_CONFIG_DIR"
+    cat > "$ZED_CONFIG" <<'ZED_CONF'
+{
+    "theme": "Dracula",
+    "ui_font_family": "Inter",
+    "ui_font_size": 15,
+    "buffer_font_family": "JetBrains Mono",
+    "buffer_font_size": 14,
+    "buffer_line_height": { "custom": 1.6 },
+    "buffer_font_features": { "calt": true, "liga": true },
+    "tab_size": 2,
+    "format_on_save": "on",
+    "autosave": "on_focus_change",
+    "relative_line_numbers": true,
+    "scrollbar": { "show": "auto" },
+    "indent_guides": { "enabled": true, "coloring": "indent_aware" },
+    "inlay_hints": { "enabled": true },
+    "git": { "inline_blame": { "enabled": true } },
+    "terminal": {
+        "font_family": "JetBrains Mono NF",
+        "font_size": 13,
+        "blinking": "on"
+    },
+    "telemetry": { "diagnostics": false, "metrics": false }
+}
+ZED_CONF
+    success "Zed configured (Dracula theme, JetBrains Mono, format on save)"
 fi
 
 # ---- direnv config ----
@@ -4684,7 +5241,11 @@ else
     info "Creating Espanso configuration..."
     mkdir -p "$ESPANSO_CONFIG_DIR"
     cat > "$ESPANSO_CONFIG" <<'ESPANSO_CONF'
+# Espanso text expansion config
+# Docs: https://espanso.org/docs/
+
 matches:
+  # -- Date & Time -------------------------------------------------------
   - trigger: ";date"
     replace: "{{today}}"
     vars:
@@ -4692,6 +5253,7 @@ matches:
         type: date
         params:
           format: "%Y-%m-%d"
+
   - trigger: ";time"
     replace: "{{now}}"
     vars:
@@ -4699,6 +5261,7 @@ matches:
         type: date
         params:
           format: "%H:%M"
+
   - trigger: ";datetime"
     replace: "{{dt}}"
     vars:
@@ -4706,6 +5269,7 @@ matches:
         type: date
         params:
           format: "%Y-%m-%d %H:%M"
+
   - trigger: ";iso"
     replace: "{{iso}}"
     vars:
@@ -4713,38 +5277,159 @@ matches:
         type: date
         params:
           format: "%Y-%m-%dT%H:%M:%S%z"
+
+  # -- Dev Shortcuts -----------------------------------------------------
   - trigger: ";shrug"
     replace: "¯\\_(ツ)_/¯"
+
   - trigger: ";arrow"
     replace: "→"
+
   - trigger: ";check"
     replace: "✓"
+
   - trigger: ";cross"
     replace: "✗"
+
   - trigger: ";bullet"
     replace: "•"
+
+  # -- Code Snippets -----------------------------------------------------
   - trigger: ";clog"
     replace: "console.log('$|$');"
+
   - trigger: ";todo"
     replace: "// TODO: "
+
   - trigger: ";fixme"
     replace: "// FIXME: "
+
+  # -- Markdown ----------------------------------------------------------
   - trigger: ";cb"
     replace: "```\n$|$\n```"
+
   - trigger: ";cbt"
     replace: "```typescript\n$|$\n```"
+
   - trigger: ";cbp"
     replace: "```python\n$|$\n```"
+
   - trigger: ";cbb"
     replace: "```bash\n$|$\n```"
+
   - trigger: ";table"
     replace: "| Column 1 | Column 2 | Column 3 |\n|----------|----------|----------|\n| | | |"
+
+  # -- Git ---------------------------------------------------------------
   - trigger: ";gcm"
     replace: "git commit -m \""
+
+  - trigger: ";gca"
+    replace: "git add -A && git commit -m \""
+
   - trigger: ";gpush"
     replace: "git push origin $(git branch --show-current)"
+
+  # -- UUID & Random ----------------------------------------------------------
+  - trigger: ";uuid"
+    replace: "{{uuid}}"
+    vars:
+      - name: uuid
+        type: shell
+        params:
+          cmd: "uuidgen | tr '[:upper:]' '[:lower:]'"
+
+  - trigger: ";lorem"
+    replace: "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris."
+
+  - trigger: ";loremshort"
+    replace: "Lorem ipsum dolor sit amet, consectetur adipiscing elit."
+
+  # -- Common Regex Patterns --------------------------------------------------
+  - trigger: ";rxemail"
+    replace: "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$"
+
+  - trigger: ";rxurl"
+    replace: "https?://[\\w\\-]+(\\.[\\w\\-]+)+[\\w\\-.,@?^=%&:/~+#]*"
+
+  - trigger: ";rxip"
+    replace: "\\b\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\b"
+
+  - trigger: ";rxphone"
+    replace: "^\\+?[1-9]\\d{1,14}$"
+
+  # -- Templates --------------------------------------------------------------
+  - trigger: ";prdesc"
+    replace: |
+      ## Summary
+      <!-- What does this PR do? -->
+
+      ## Changes
+      -
+
+      ## Test plan
+      - [ ] Unit tests pass
+      - [ ] Manual testing done
+      - [ ] No regressions
+
+      ## Screenshots
+      <!-- If applicable -->
+
+  - trigger: ";meeting"
+    replace: |
+      ## Meeting Notes — {{today}}
+      **Attendees:**
+      **Agenda:**
+      1.
+
+      **Action Items:**
+      - [ ]
+
+      **Decisions:**
+      -
+    vars:
+      - name: today
+        type: date
+        params:
+          format: "%Y-%m-%d"
+
+  - trigger: ";bug"
+    replace: |
+      ## Bug Report
+      **Environment:**
+      **Steps to Reproduce:**
+      1.
+
+      **Expected:**
+      **Actual:**
+      **Screenshots:**
+
+  # -- Arrows & Symbols -------------------------------------------------------
+  - trigger: ";rarr"
+    replace: "→"
+
+  - trigger: ";larr"
+    replace: "←"
+
+  - trigger: ";uarr"
+    replace: "↑"
+
+  - trigger: ";darr"
+    replace: "↓"
+
+  - trigger: ";mdash"
+    replace: "—"
+
+  - trigger: ";deg"
+    replace: "°"
+
+  - trigger: ";tm"
+    replace: "™"
+
+  - trigger: ";copy"
+    replace: "©"
 ESPANSO_CONF
-    success "Espanso configured"
+    success "Espanso configured (dates, dev shortcuts, Markdown, git, templates, regex, symbols)"
 fi
 
 fi  # configs
@@ -4764,37 +5449,176 @@ else
 {
   "permissions": {
     "allow": [
-      "Bash(npm run *)", "Bash(npm install *)", "Bash(npm test *)", "Bash(npm *)",
-      "Bash(npx *)", "Bash(pnpm *)", "Bash(bun *)", "Bash(node *)",
-      "Bash(tsx *)", "Bash(ts-node *)", "Bash(git *)", "Bash(git-*)",
-      "Bash(gh *)", "Bash(aws *)", "Bash(cdk *)", "Bash(sam *)",
-      "Bash(docker *)", "Bash(docker-compose *)", "Bash(docker compose *)",
-      "Bash(kubectl *)", "Bash(python3 *)", "Bash(pip *)", "Bash(cargo *)",
-      "Bash(go *)", "Bash(make *)", "Bash(cat *)", "Bash(ls *)",
-      "Bash(find *)", "Bash(grep *)", "Bash(rg *)", "Bash(fd *)",
-      "Bash(tree *)", "Bash(head *)", "Bash(tail *)", "Bash(wc *)",
-      "Bash(sort *)", "Bash(uniq *)", "Bash(cut *)", "Bash(awk *)",
-      "Bash(sed *)", "Bash(jq *)", "Bash(yq *)", "Bash(curl *)",
-      "Bash(wget *)", "Bash(which *)", "Bash(type *)", "Bash(echo *)",
-      "Bash(printf *)", "Bash(env *)", "Bash(export *)", "Bash(cd *)",
-      "Bash(mkdir -p *)", "Bash(touch *)", "Bash(cp *)", "Bash(mv *)",
-      "Bash(diff *)", "Bash(wc -l *)", "Bash(du -sh *)", "Bash(date *)",
-      "Bash(pwd)", "Bash(shellcheck *)", "Bash(shfmt *)",
-      "Bash(prettier *)", "Bash(eslint *)", "Bash(tsc *)",
-      "Bash(jest *)", "Bash(vitest *)", "Bash(playwright *)", "Bash(act *)",
-      "Read", "Edit", "Write", "WebFetch"
+      "Bash(npm run *)",
+      "Bash(npm install *)",
+      "Bash(npm test *)",
+      "Bash(npm *)",
+      "Bash(npx *)",
+      "Bash(pnpm *)",
+      "Bash(bun *)",
+      "Bash(node *)",
+      "Bash(tsx *)",
+      "Bash(ts-node *)",
+      "Bash(git *)",
+      "Bash(git-*)",
+      "Bash(gh *)",
+      "Bash(aws *)",
+      "Bash(cdk *)",
+      "Bash(sam *)",
+      "Bash(docker *)",
+      "Bash(docker-compose *)",
+      "Bash(docker compose *)",
+      "Bash(kubectl *)",
+      "Bash(k9s *)",
+      "Bash(stern *)",
+      "Bash(python3 *)",
+      "Bash(pip *)",
+      "Bash(uv *)",
+      "Bash(cargo *)",
+      "Bash(go *)",
+      "Bash(just *)",
+      "Bash(make *)",
+      "Bash(cat *)",
+      "Bash(bat *)",
+      "Bash(ls *)",
+      "Bash(eza *)",
+      "Bash(find *)",
+      "Bash(grep *)",
+      "Bash(rg *)",
+      "Bash(fd *)",
+      "Bash(fzf *)",
+      "Bash(tree *)",
+      "Bash(head *)",
+      "Bash(tail *)",
+      "Bash(wc *)",
+      "Bash(sort *)",
+      "Bash(uniq *)",
+      "Bash(cut *)",
+      "Bash(awk *)",
+      "Bash(sed *)",
+      "Bash(sd *)",
+      "Bash(jq *)",
+      "Bash(yq *)",
+      "Bash(fx *)",
+      "Bash(mlr *)",
+      "Bash(csvlook *)",
+      "Bash(curl *)",
+      "Bash(xh *)",
+      "Bash(wget *)",
+      "Bash(which *)",
+      "Bash(type *)",
+      "Bash(echo *)",
+      "Bash(printf *)",
+      "Bash(env *)",
+      "Bash(export *)",
+      "Bash(cd *)",
+      "Bash(mkdir -p *)",
+      "Bash(touch *)",
+      "Bash(cp *)",
+      "Bash(mv *)",
+      "Bash(diff *)",
+      "Bash(difft *)",
+      "Bash(delta *)",
+      "Bash(tokei *)",
+      "Bash(dust *)",
+      "Bash(wc -l *)",
+      "Bash(du -sh *)",
+      "Bash(date *)",
+      "Bash(pwd)",
+      "Bash(shellcheck *)",
+      "Bash(shfmt *)",
+      "Bash(prettier *)",
+      "Bash(eslint *)",
+      "Bash(ruff *)",
+      "Bash(hadolint *)",
+      "Bash(tsc *)",
+      "Bash(jest *)",
+      "Bash(vitest *)",
+      "Bash(playwright *)",
+      "Bash(act *)",
+      "Bash(tofu *)",
+      "Bash(tflint *)",
+      "Bash(infracost *)",
+      "Bash(trivy *)",
+      "Bash(semgrep *)",
+      "Bash(gitleaks *)",
+      "Bash(snyk *)",
+      "Bash(cosign *)",
+      "Bash(hyperfine *)",
+      "Bash(oha *)",
+      "Bash(pandoc *)",
+      "Bash(d2 *)",
+      "Bash(mmdc *)",
+      "Bash(ffmpeg *)",
+      "Bash(magick *)",
+      "Bash(lazygit *)",
+      "Bash(lazydocker *)",
+      "Bash(dive *)",
+      "Bash(pgcli *)",
+      "Bash(mycli *)",
+      "Bash(sq *)",
+      "Bash(dbmate *)",
+      "Bash(commitizen *)",
+      "Bash(commitlint *)",
+      "Read",
+      "Edit",
+      "Write",
+      "WebFetch"
     ],
     "deny": [
-      "Bash(rm -rf /)", "Bash(rm -rf ~)", "Bash(rm -rf /*)",
-      "Bash(sudo rm *)", "Bash(chmod 777 *)", "Bash(> /dev/sda*)", "Bash(mkfs *)"
+      "Bash(rm -rf /)",
+      "Bash(rm -rf ~)",
+      "Bash(rm -rf /*)",
+      "Bash(sudo rm *)",
+      "Bash(chmod 777 *)",
+      "Bash(> /dev/sda*)",
+      "Bash(mkfs *)"
     ]
   },
-  "env": { "DISABLE_PROMPT_CACHING": "0" },
+
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "command": "~/.claude/hooks/format-on-edit.sh"
+      },
+      {
+        "matcher": "Edit|Write",
+        "command": "~/.claude/hooks/lint-python.sh"
+      },
+      {
+        "matcher": "Edit|Write",
+        "command": "~/.claude/hooks/lint-dockerfile.sh"
+      }
+    ]
+  },
+
+  "env": {
+    "DISABLE_PROMPT_CACHING": "0"
+  },
+
   "fileSuggestionSettings": {
     "ignoredPatterns": [
-      "node_modules/**", ".git/**", ".next/**", "dist/**", "build/**",
-      ".turbo/**", "coverage/**", "__pycache__/**", ".venv/**",
-      "*.min.js", "*.min.css", "package-lock.json", "pnpm-lock.yaml", "yarn.lock"
+      "node_modules/**",
+      ".git/**",
+      ".next/**",
+      "dist/**",
+      "build/**",
+      ".turbo/**",
+      "coverage/**",
+      ".nyc_output/**",
+      "__pycache__/**",
+      ".venv/**",
+      ".terraform/**",
+      "cdk.out/**",
+      "target/**",
+      "*.min.js",
+      "*.min.css",
+      "package-lock.json",
+      "pnpm-lock.yaml",
+      "yarn.lock",
+      "Cargo.lock",
+      "go.sum"
     ]
   }
 }
@@ -4811,46 +5635,171 @@ else
     cat > "$CLAUDE_MD" <<'CLAUDE_MD_CONF'
 # Global Development Standards
 
+## Workflow Philosophy
+- **Trunk-based development** — short-lived feature branches off main, merge back fast
+- **PRs over direct commits** — every change goes through a pull request, no direct pushes to main
+- **Issues for everything** — create GitHub issues before starting work, reference in PRs
+- **README-driven development** — every project and significant module gets a README
+- **Industry best practices** — follow established patterns, OWASP, 12-factor, SOLID, DRY
+
 ## Environment
-- Linux with apt/dnf/pacman + Linuxbrew
-- Shell: zsh with starship prompt
-- Editor: VS Code / Cursor / Zed
-- Terminal: Alacritty / kitty
-- Package managers: pnpm (preferred), npm
+- Shell: zsh with starship prompt, atuin history, fzf fuzzy finder
+- Editor: VS Code / Cursor / Zed (Dracula theme, JetBrains Mono)
+- Terminal: Alacritty / kitty / Ghostty (Dracula theme)
+- Package managers: pnpm (preferred), npm, bun
+- Python: uv for packages (not pip), ruff for linting (not flake8/black)
 - Version managers: nvm (Node), pyenv (Python), mise (universal)
 - Container runtime: Docker Engine
+- Task runner: just (prefer over make for project-level tasks)
+
+## Available CLI Tools (use these instead of manual approaches)
+- **Search**: `rg` (ripgrep) for content, `fd` for files, `fzf` for interactive
+- **Data**: `jq` for JSON, `yq` for YAML, `mlr` for CSV, `fx` for interactive JSON
+- **Git**: `lazygit` for interactive UI, `delta` for diffs, `difft` for syntax-aware diffs
+- **Docker**: `lazydocker` for UI, `dive` to inspect layers, `hadolint` for Dockerfile linting
+- **Testing**: `hyperfine` to benchmark, `oha` for load testing, `act` for local GitHub Actions
+- **Security**: `trivy` to scan containers/IaC, `gitleaks` for secrets, `semgrep` for static analysis
+- **IaC**: `tofu` (Terraform), `tflint` for linting, `infracost` for cost estimation
+- **Docs**: `d2` for diagrams, `pandoc` for conversion, `glow` for Markdown preview
+- **Database**: `pgcli`/`mycli` for auto-completing SQL, `sq` for cross-database queries
 
 ## Code Standards
 - Use TypeScript strict mode for all TS projects
 - Use ESLint + Prettier for formatting (2-space indent, single quotes, trailing commas)
-- Write tests alongside code (colocated)
+- Use ruff for Python linting and formatting (not flake8/black/isort)
+- Write tests alongside code (colocated, not in separate test dirs)
 - Use conventional commit messages: type(scope): description
 - Prefer named exports over default exports
+- Use path aliases (@/ for src/) in TypeScript projects
+- Lint Dockerfiles with hadolint before building
 
 ## React / Next.js
-- Functional components only
-- Next.js App Router for new projects
-- Server components by default
+- Functional components only — no class components
+- React hooks for state and effects
+- Next.js App Router (not Pages Router) for new projects
+- Use server components by default, 'use client' only when needed
 - Tailwind CSS + shadcn/ui for styling
 
-## AWS / CDK
+## Python
+- Use uv for package management (not pip directly)
+- Use ruff for linting and formatting
+- Type hints on all public functions
+- Use pydantic or dataclasses for data structures
+
+## AWS / CDK / IaC
 - CDK stacks in infrastructure/ directory
 - Use L2/L3 constructs when available
-- Always tag resources
-- Follow least-privilege IAM
+- Always tag resources with project, environment, owner
+- Use environment-specific config (dev/staging/prod)
+- Follow least-privilege IAM principles
+- Run `trivy config .` to scan IaC before deploying
+- Use `infracost` to estimate costs before applying changes
 
-## Git Workflow
-- Branch naming: feature/, fix/, chore/, docs/
-- Squash merge to main
-- Keep PRs small (< 400 lines)
+## Git Workflow (Trunk-Based)
+- **Never commit directly to main** — always use a feature branch + PR
+- Branch naming: feature/, fix/, chore/, docs/ (e.g., feature/add-auth)
+- Branches should be short-lived (< 2 days ideally)
+- Squash merge to main (use `gh pm` alias) — keeps history clean
+- Delete branch after merge (automatic with `gh pm`)
+- Keep PRs small and focused (< 400 lines)
+- Include tests with feature PRs
+- Reference GitHub issues in PR descriptions (Closes #123)
+- Use `git standup` to see yesterday's work
+- Use `git cleanup` to prune merged branches
+- Use `git recent` to see branches by last commit date
+
+## PR Workflow
+When asked to implement a feature or fix:
+1. Create a GitHub issue first: `gh issue create --title "..." --body "..."`
+2. Create a branch: `git switch -c feature/short-description`
+3. Implement with small, atomic commits (conventional commit format)
+4. Push and create PR: `gh pr create --title "..." --body "Closes #<issue>"`
+5. PR body should include: Summary, Changes (bullet list), Test plan
+6. After approval, merge with: `gh pm` (squash + delete branch)
+
+## Issue Tracking
+- Create issues for bugs, features, chores, and tech debt
+- Use labels: bug, feature, chore, docs, tech-debt, security
+- Reference issues in commits and PRs (Closes #N, Fixes #N)
+- Use `gh il` to list issues, `gh ic` to create via browser
+
+## README Standards
+Every project should have a README.md with:
+- Project name and one-line description
+- Getting started (prerequisites, install, run)
+- Architecture overview (for non-trivial projects)
+- Environment variables (with descriptions, not values)
+- Scripts/commands available (npm scripts, Justfile recipes)
+- Testing instructions
+- Deployment process
+- Contributing guidelines (for shared projects)
+
+## File Organization
+- Components: src/components/[Feature]/
+- Utilities: src/lib/ or src/utils/
+- Types: src/types/
+- API routes: src/app/api/ (Next.js) or src/api/
+- Tests: colocated with source (*.test.ts)
+- CDK: infrastructure/lib/
+- Justfile in project root for common tasks
 
 ## When Writing Code
 - Prefer early returns over nested conditions
-- Use descriptive variable names
-- Add JSDoc for public APIs
-- Handle errors explicitly
+- Use descriptive variable names (no single letters except loop counters)
+- Add JSDoc comments for public APIs and complex functions
+- Handle errors explicitly — no silent catches
 - Use async/await over .then() chains
-- Use zod for runtime validation
+- Use zod for runtime validation at API boundaries
+
+## Error Handling Patterns
+- **TypeScript**: Use Result types or discriminated unions for expected errors, throw for unexpected
+- **Python**: Use specific exception types, never bare `except:`, always log context
+- **API routes**: Return structured error responses `{ error: { code, message, details } }`
+- **Async**: Always handle promise rejections, use try/catch with async/await
+- **Never**: Swallow errors silently, use `console.log` for error handling, expose stack traces to users
+
+## API Design Standards
+- RESTful naming: plural nouns for collections (`/users`, `/posts`)
+- HTTP methods: GET (read), POST (create), PUT (replace), PATCH (update), DELETE (remove)
+- Response format: `{ data: T }` for success, `{ error: { code, message } }` for errors
+- Always paginate list endpoints: `?page=1&limit=20` or cursor-based
+- Use proper HTTP status codes: 200, 201, 204, 400, 401, 403, 404, 409, 422, 500
+- Version APIs: `/api/v1/...` or via headers
+- Validate all inputs at the boundary (zod for TS, pydantic for Python)
+
+## Database Conventions
+- Table names: plural, snake_case (`user_accounts`, `order_items`)
+- Column names: snake_case (`created_at`, `is_active`, `user_id`)
+- Always include: `id` (primary key), `created_at`, `updated_at`
+- Use migrations (dbmate) — never modify schema manually
+- Foreign keys: `<table_singular>_id` (e.g., `user_id`)
+- Index foreign keys and columns used in WHERE/ORDER BY
+
+## Testing Standards
+- Write tests alongside code (colocated: `foo.ts` + `foo.test.ts`)
+- Test behavior, not implementation (test what it does, not how)
+- Follow Arrange-Act-Assert (AAA) pattern
+- Unit tests: fast, isolated, no external dependencies
+- Integration tests: test real interactions (DB, API, services)
+- E2E tests: critical user flows only (login, checkout, etc.)
+- Minimum coverage: aim for 80% on business logic, don't test trivial code
+- Name tests clearly: "should return 404 when user not found"
+
+## Pre-Push Checklist (follow before every PR)
+1. All tests pass (`npm test` / `pytest` / `cargo test`)
+2. Linting passes (`eslint .` / `ruff check .`)
+3. Formatting applied (`prettier --write .` / `ruff format .`)
+4. No secrets committed (`gitleaks detect`)
+5. Dependencies audited (`npm audit` / `uv pip audit`)
+6. README updated (if behavior changed)
+7. Types check (`tsc --noEmit` for TypeScript)
+8. Build succeeds (`npm run build`)
+
+## Security Checks (run before PRs)
+- `gitleaks detect` — check for leaked secrets
+- `trivy fs .` — scan for vulnerabilities
+- `npm audit` / `uv pip audit` — dependency audit
+- `semgrep --config auto .` — static analysis
 CLAUDE_MD_CONF
     success "Claude Code global CLAUDE.md created"
 fi
@@ -4862,36 +5811,118 @@ else
     info "Creating Claude Code rules..."
     mkdir -p "$CLAUDE_RULES_DIR"
 
+    # Workflow rules (trunk-based, PR-first)
+    cat > "$CLAUDE_RULES_DIR/workflow.md" <<'WORKFLOW_RULES'
+# Workflow Rules (Trunk-Based Development)
+
+## PR-First Approach
+- NEVER commit directly to main — always create a feature branch and PR
+- When implementing a feature or fix, follow this order:
+  1. Create a GitHub issue (`gh issue create`) to track the work
+  2. Create a short-lived branch (`git switch -c feature/description`)
+  3. Implement with small, atomic conventional commits
+  4. Create a PR referencing the issue (`gh pr create`, body includes "Closes #N")
+  5. Merge via squash (`gh pm`)
+
+## Issues
+- Create an issue BEFORE starting implementation work
+- Use clear titles: "Add user authentication" not "auth stuff"
+- Label appropriately: bug, feature, chore, docs, tech-debt, security
+- Reference issues in all commits and PRs
+
+## PRs
+- PR title: concise, imperative mood (< 70 chars)
+- PR body: Summary (what/why), Changes (bullet list), Test Plan (checklist)
+- Keep PRs small (< 400 lines changed)
+- Include tests with feature PRs
+- One concern per PR — don't mix features with refactoring
+
+## READMEs
+- Every new project MUST have a README.md
+- Update README when adding significant features or changing setup steps
+- README should cover: purpose, setup, usage, architecture, environment variables
+WORKFLOW_RULES
+
+    # Git rules
     cat > "$CLAUDE_RULES_DIR/git.md" <<'GIT_RULES'
 # Git Rules
+
 - Never force-push to main or master
+- Never commit directly to main — use feature branches + PRs
 - Never commit .env files, secrets, or credentials
-- Always create a new branch for changes
-- Use conventional commit format
-- Keep commits atomic
+- Use conventional commit format: type(scope): description
+  - Types: feat, fix, docs, style, refactor, perf, test, build, ci, chore
+- Keep commits atomic — one logical change per commit
 - Run tests before committing
+- Reference GitHub issues in commits: "feat(auth): add login page (closes #42)"
+- Branch names: feature/, fix/, chore/, docs/ (e.g., feature/add-oauth)
+- Delete branches after merging (automatic with `gh pm`)
 GIT_RULES
 
+    # Security rules
     cat > "$CLAUDE_RULES_DIR/security.md" <<'SEC_RULES'
 # Security Rules
+
 - Never hardcode API keys, tokens, passwords, or secrets
-- Use environment variables or secrets manager
-- Never log sensitive information
+- Use environment variables or AWS Secrets Manager for sensitive values
+- Never log sensitive information (passwords, tokens, PII)
 - Always validate and sanitize user input
-- Use parameterized queries
-- Check npm audit before adding dependencies
+- Use parameterized queries — never string-concatenate SQL
+- Check npm audit before adding new dependencies
 SEC_RULES
 
     cat > "$CLAUDE_RULES_DIR/typescript.md" <<'TS_RULES'
 # TypeScript Rules
+
 - Enable strict mode in tsconfig.json
-- No `any` types - use `unknown`
+- No `any` types — use `unknown` if type is truly unknown
 - Use discriminated unions for complex state
-- Prefer interfaces for object shapes, types for unions
+- Prefer interfaces for object shapes, types for unions/intersections
 - Use `as const` for literal types
-- Use zod schemas that infer TypeScript types
+- Export types alongside their implementations
+- Use zod schemas that infer TypeScript types (z.infer<typeof schema>)
 TS_RULES
-    success "Claude Code rules created"
+
+    # Python rules
+    cat > "$CLAUDE_RULES_DIR/python.md" <<'PY_RULES'
+# Python Rules
+
+- Use uv for package management (not pip directly)
+- Use ruff for linting and formatting (not flake8, black, isort)
+- Type hints on all public functions and method signatures
+- Use pydantic for data validation, dataclasses for simple data structures
+- Virtual environments via `uv venv` — never install globally
+- Use `async def` for I/O-bound operations
+- Prefer pathlib over os.path
+PY_RULES
+
+    # Docker rules
+    cat > "$CLAUDE_RULES_DIR/docker.md" <<'DOCKER_RULES'
+# Docker Rules
+
+- Multi-stage builds for production images (builder + runtime)
+- Run as non-root user (add USER directive)
+- Use specific base image tags (not :latest)
+- Lint Dockerfiles with `hadolint` before building
+- Use .dockerignore to exclude node_modules, .git, etc.
+- Scan images with `trivy image <name>` before pushing
+- Use `dive <image>` to inspect and minimize layer sizes
+DOCKER_RULES
+
+    # IaC rules
+    cat > "$CLAUDE_RULES_DIR/iac.md" <<'IAC_RULES'
+# Infrastructure as Code Rules
+
+- Use OpenTofu/Terraform with state stored remotely (S3 + DynamoDB)
+- Lint with `tflint` before applying
+- Estimate costs with `infracost` before applying changes
+- Use modules for reusable infrastructure patterns
+- Tag all resources: project, environment, owner, managed-by
+- Use workspaces or separate state files per environment
+- Scan with `trivy config .` for misconfigurations
+IAC_RULES
+
+    success "Claude Code rules created (workflow, git, security, typescript, python, docker, iac)"
 fi
 
 CLAUDE_HOOKS_DIR="$HOME/.claude/hooks"
@@ -4919,7 +5950,48 @@ fi
 exit 0
 HOOK_FORMAT
     chmod +x "$CLAUDE_HOOKS_DIR/format-on-edit.sh"
-    success "Claude Code hooks created"
+
+    # Post-edit hook: auto-lint Python files with ruff
+    cat > "$CLAUDE_HOOKS_DIR/lint-python.sh" <<'HOOK_RUFF'
+#!/usr/bin/env bash
+# Auto-lint and fix Python files after Claude edits them
+
+INPUT=$(cat)
+FILE=$(echo "$INPUT" | jq -r '.tool_input.file_path // empty' 2>/dev/null)
+
+if [[ -n "$FILE" ]] && [[ "$FILE" =~ \.py$ ]]; then
+    if [[ -f "$FILE" ]] && command -v ruff &>/dev/null; then
+        ruff check --fix "$FILE" 2>/dev/null || true
+        ruff format "$FILE" 2>/dev/null || true
+    fi
+fi
+
+exit 0
+HOOK_RUFF
+    chmod +x "$CLAUDE_HOOKS_DIR/lint-python.sh"
+
+    # Post-edit hook: lint Dockerfiles with hadolint
+    cat > "$CLAUDE_HOOKS_DIR/lint-dockerfile.sh" <<'HOOK_HADOLINT'
+#!/usr/bin/env bash
+# Lint Dockerfiles after Claude edits them
+
+INPUT=$(cat)
+FILE=$(echo "$INPUT" | jq -r '.tool_input.file_path // empty' 2>/dev/null)
+
+if [[ -n "$FILE" ]] && [[ "$(basename "$FILE")" =~ ^Dockerfile ]]; then
+    if [[ -f "$FILE" ]] && command -v hadolint &>/dev/null; then
+        ISSUES=$(hadolint "$FILE" 2>/dev/null)
+        if [[ -n "$ISSUES" ]]; then
+            echo "$ISSUES" >&2
+        fi
+    fi
+fi
+
+exit 0
+HOOK_HADOLINT
+    chmod +x "$CLAUDE_HOOKS_DIR/lint-dockerfile.sh"
+
+    success "Claude Code hooks created (auto-format JS/TS, auto-lint Python, lint Dockerfiles)"
 fi
 
 CLAUDE_COMMANDS_DIR="$HOME/.claude/commands"
@@ -4929,50 +6001,443 @@ else
     info "Creating Claude Code custom slash commands..."
     mkdir -p "$CLAUDE_COMMANDS_DIR"
 
-    cat > "$CLAUDE_COMMANDS_DIR/pr-review.md" <<'CMD'
+    # /pr-review — review the current branch's changes
+    cat > "$CLAUDE_COMMANDS_DIR/pr-review.md" <<'CMD_PR_REVIEW'
 Review the changes on the current branch compared to main. For each file changed:
 1. Summarize what changed and why
 2. Flag any security issues, bugs, or performance concerns
-3. Check for missing error handling
-4. Note style inconsistencies
-Use `git diff main...HEAD`. Be concise.
-CMD
+3. Check for missing error handling or edge cases
+4. Note any style inconsistencies
 
-    cat > "$CLAUDE_COMMANDS_DIR/test-plan.md" <<'CMD'
-Look at recent changes and generate a test plan:
+Use `git diff main...HEAD` to see all changes. Be concise — focus on issues, not praise.
+CMD_PR_REVIEW
+
+    # /test-plan — generate a test plan for recent changes
+    cat > "$CLAUDE_COMMANDS_DIR/test-plan.md" <<'CMD_TEST_PLAN'
+Look at the recent changes in this repo (use git diff or git log) and generate a test plan:
 1. List what should be tested (unit, integration, e2e)
-2. Identify edge cases
-3. Suggest specific test cases
-4. Note hard-to-test areas
-Output as Markdown checklist.
-CMD
+2. Identify edge cases and error scenarios
+3. Suggest specific test cases with expected inputs/outputs
+4. Note any areas that are hard to test and why
 
-    cat > "$CLAUDE_COMMANDS_DIR/dep-audit.md" <<'CMD'
-Audit project dependencies:
-1. Check for vulnerabilities (npm audit or pip audit)
-2. Identify outdated packages
-3. Flag unmaintained packages (>2 years)
-4. Check for duplicates
-5. Estimate bundle size impact
-Summarize with severity and recommendations.
-CMD
+Output as a Markdown checklist.
+CMD_TEST_PLAN
 
-    cat > "$CLAUDE_COMMANDS_DIR/quick-doc.md" <<'CMD'
-Generate documentation for: $ARGUMENTS
-Include: description, parameters, return value, usage example, gotchas.
-Format as JSDoc/docstring.
-CMD
+    # /dep-audit — audit dependencies
+    cat > "$CLAUDE_COMMANDS_DIR/dep-audit.md" <<'CMD_DEP_AUDIT'
+Audit the project dependencies:
+1. Check for known vulnerabilities (run npm audit or pip audit)
+2. Identify outdated packages (run npm outdated or pip list --outdated)
+3. Flag any packages with no recent maintenance (>2 years)
+4. Check for duplicate/redundant dependencies
+5. Estimate total bundle size impact of each dependency if this is a frontend project
 
-    cat > "$CLAUDE_COMMANDS_DIR/cleanup.md" <<'CMD'
+Summarize findings with severity (critical/high/medium/low) and recommended actions.
+CMD_DEP_AUDIT
+
+    # /quick-doc — generate docs for a file or function
+    cat > "$CLAUDE_COMMANDS_DIR/quick-doc.md" <<'CMD_QUICK_DOC'
+Generate documentation for the file or function I specify: $ARGUMENTS
+
+Include:
+1. A brief description of what it does
+2. Parameters/props with types and descriptions
+3. Return value
+4. Usage example
+5. Any gotchas or important notes
+
+Format as JSDoc/docstring appropriate for the language.
+CMD_QUICK_DOC
+
+    # /cleanup — find dead code, unused imports, etc.
+    cat > "$CLAUDE_COMMANDS_DIR/cleanup.md" <<'CMD_CLEANUP'
 Scan the project for cleanup opportunities:
 1. Unused imports and variables
-2. Dead code
-3. Console.log / debug statements
-4. TODO/FIXME comments
-5. Empty catch blocks
-List each finding with file path and line number.
-CMD
-    success "Claude Code commands created"
+2. Dead code (unreachable functions, unused exports)
+3. Console.log / debug statements left in
+4. TODO/FIXME comments that should be addressed
+5. Empty catch blocks or swallowed errors
+
+List each finding with file path and line number. Don't fix anything — just report.
+CMD_CLEANUP
+
+    # /security-scan — run all security tools
+    cat > "$CLAUDE_COMMANDS_DIR/security-scan.md" <<'CMD_SECURITY'
+Run a comprehensive security scan of this project using the available tools:
+
+1. **Secrets**: Run `gitleaks detect --source .` to check for leaked credentials
+2. **Dependencies**: Run `npm audit` (Node) or `uv pip audit` (Python) for known vulnerabilities
+3. **Static analysis**: Run `semgrep --config auto .` for security anti-patterns
+4. **Container scan**: If there's a Dockerfile, run `trivy fs .` to scan for vulnerabilities
+5. **IaC scan**: If there are Terraform/CDK files, run `trivy config .` for misconfigurations
+
+For each finding, report: severity, file, line, description, and recommended fix.
+Prioritize: critical > high > medium > low. Skip informational findings.
+CMD_SECURITY
+
+    # /perf-check — benchmark and profile
+    cat > "$CLAUDE_COMMANDS_DIR/perf-check.md" <<'CMD_PERF'
+Analyze the performance of this project: $ARGUMENTS
+
+1. If a command/script is given, benchmark it with `hyperfine`
+2. If a URL is given, load test with `oha -n 500 -c 10 <url>`
+3. If no argument, look at package.json scripts and suggest which to benchmark
+4. Check for common performance anti-patterns in the code (N+1 queries, missing indexes, unbounded loops, sync I/O in async code)
+5. Check bundle size if this is a frontend project (`npx @next/bundle-analyzer` or similar)
+
+Report findings with concrete numbers and suggested optimizations.
+CMD_PERF
+
+    # /docker-lint — lint and optimize Docker setup
+    cat > "$CLAUDE_COMMANDS_DIR/docker-lint.md" <<'CMD_DOCKER'
+Analyze the Docker setup in this project:
+
+1. Lint all Dockerfiles with `hadolint`
+2. If images are built, analyze with `dive` for layer optimization opportunities
+3. Check docker-compose.yml for best practices (health checks, resource limits, named volumes)
+4. Verify .dockerignore exists and excludes node_modules, .git, etc.
+5. Check for security issues: running as root, secrets in build args, latest tags
+
+Fix any issues found and explain the changes.
+CMD_DOCKER
+
+    # /iac-review — review infrastructure code
+    cat > "$CLAUDE_COMMANDS_DIR/iac-review.md" <<'CMD_IAC'
+Review the infrastructure-as-code in this project:
+
+1. Run `tflint` on any Terraform/OpenTofu files
+2. Run `trivy config .` to scan for misconfigurations
+3. Run `infracost breakdown --path .` to estimate costs (if infracost is configured)
+4. Check for: missing tags, overly permissive IAM, unencrypted resources, missing backups
+5. Check CDK code for L1 constructs that should be L2/L3
+
+Report findings with severity and recommended fixes.
+CMD_IAC
+
+    # /convert — convert between formats using pandoc
+    cat > "$CLAUDE_COMMANDS_DIR/convert.md" <<'CMD_CONVERT'
+Convert files between formats: $ARGUMENTS
+
+Use the available tools:
+- `pandoc` for document conversion (md, html, pdf, docx, rst)
+- `d2` for diagram generation from text
+- `mmdc` (mermaid) for flowcharts, sequence diagrams, ERDs
+- `ffmpeg` for audio/video conversion
+- `magick` for image conversion and manipulation
+
+Parse the user's intent from the arguments and run the appropriate conversion command.
+Examples: "convert README.md to pdf", "resize logo.png to 200x200", "diagram from architecture.d2"
+CMD_CONVERT
+
+    # /new-feature — full trunk-based feature workflow
+    cat > "$CLAUDE_COMMANDS_DIR/new-feature.md" <<'CMD_NEW_FEATURE'
+Implement a new feature following trunk-based development: $ARGUMENTS
+
+Follow this workflow in order:
+1. **Create issue**: Run `gh issue create --title "<feature title>" --body "<description>" --label "feature"` and note the issue number
+2. **Create branch**: Run `git switch -c feature/<short-kebab-name>`
+3. **Implement**: Write the code with tests. Use conventional commits (feat, test, docs).
+4. **Create/update README**: If this adds a new capability, update the project README
+5. **Push and PR**: Run `git push -u origin HEAD` then `gh pr create --title "feat: <title>" --body "## Summary\n<what and why>\n\n## Changes\n- <bullet list>\n\n## Test Plan\n- [ ] <test items>\n\nCloses #<issue-number>"`
+
+Make each commit small and atomic. Write tests alongside the implementation, not after.
+CMD_NEW_FEATURE
+
+    # /fix-bug — full trunk-based bug fix workflow
+    cat > "$CLAUDE_COMMANDS_DIR/fix-bug.md" <<'CMD_FIX_BUG'
+Fix a bug following trunk-based development: $ARGUMENTS
+
+Follow this workflow in order:
+1. **Create issue**: Run `gh issue create --title "fix: <bug title>" --body "<description of bug, steps to reproduce, expected vs actual>" --label "bug"` and note the issue number
+2. **Create branch**: Run `git switch -c fix/<short-kebab-name>`
+3. **Write failing test first**: Write a test that reproduces the bug (should fail)
+4. **Fix**: Implement the fix so the test passes
+5. **Verify**: Run the full test suite to confirm no regressions
+6. **Push and PR**: Run `git push -u origin HEAD` then `gh pr create --title "fix: <title>" --body "## Bug\n<what was broken>\n\n## Root Cause\n<why it happened>\n\n## Fix\n<what changed>\n\n## Test Plan\n- [ ] Repro test passes\n- [ ] No regressions\n\nFixes #<issue-number>"`
+CMD_FIX_BUG
+
+    # /create-readme — generate a comprehensive README
+    cat > "$CLAUDE_COMMANDS_DIR/create-readme.md" <<'CMD_README'
+Generate a comprehensive README.md for this project.
+
+Analyze the codebase to determine:
+1. **Project name and description** — from package.json, Cargo.toml, go.mod, or directory name
+2. **Tech stack** — languages, frameworks, key dependencies
+3. **Prerequisites** — runtime versions, required tools, env vars
+4. **Getting started** — install deps, run dev server, build, test
+5. **Project structure** — key directories and what they contain
+6. **Available scripts/commands** — from package.json scripts, Justfile, Makefile
+7. **Environment variables** — list all referenced env vars with descriptions (NOT values)
+8. **Architecture** — high-level overview if the project has multiple services/modules
+9. **API documentation** — if there are API routes, list endpoints with methods
+10. **Deployment** — if there are Docker/CI/CD files, document the process
+11. **Contributing** — branch naming, commit format, PR process
+
+Use clean Markdown formatting. Be concise but complete. If information isn't available, leave a placeholder with a TODO comment.
+CMD_README
+
+    # /init-project — set up a new project with all best practices
+    cat > "$CLAUDE_COMMANDS_DIR/init-project.md" <<'CMD_INIT'
+Initialize a new project with industry best practices: $ARGUMENTS
+
+Set up the following in order:
+
+## 1. Git
+- Initialize repo with `git init -b main`
+- Create comprehensive .gitignore (language-appropriate)
+
+## 2. README.md
+- Project name, one-line description, tech stack
+- Getting started (prerequisites, install, run, test)
+- Available scripts/commands
+- Project structure overview
+- Environment variables (with descriptions, not values)
+
+## 3. Project-Level CLAUDE.md
+Create a `.claude/CLAUDE.md` with project-specific context:
+```markdown
+# <Project Name>
+
+## Overview
+<One-paragraph description of what this project does>
+
+## Tech Stack
+<Languages, frameworks, key libraries>
+
+## Architecture
+<How the project is structured, key directories>
+
+## Development
+- Run dev: `just dev` or `npm run dev`
+- Run tests: `just test` or `npm test`
+- Build: `just build` or `npm run build`
+
+## Conventions
+<Any project-specific conventions not in the global CLAUDE.md>
+```
+
+## 4. Code Quality
+- **EditorConfig**: Copy global defaults or create project-specific
+- **Prettier**: Create .prettierrc if JS/TS project
+- **Linting**: ESLint (TS/JS), ruff.toml (Python), clippy (Rust)
+
+## 5. Testing
+- Set up framework: vitest (preferred for TS), pytest (Python), cargo test (Rust)
+- Create example test file
+
+## 6. CI/CD
+Create `.github/workflows/ci.yml`:
+```yaml
+on: [push, pull_request]
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    steps: [checkout, setup-node/python/rust, install deps, lint, test, build]
+```
+
+## 7. Justfile
+Create with recipes: dev, test, build, lint, format, clean
+
+## 8. Docker (if appropriate)
+- Multi-stage Dockerfile (builder + runtime, non-root user)
+- .dockerignore (node_modules, .git, .env, dist)
+- docker-compose.yml for local development
+
+## 9. Environment
+- .env.example with all variables documented
+- .env in .gitignore
+
+## 10. GitHub Templates
+Create `.github/PULL_REQUEST_TEMPLATE.md`:
+```markdown
+## Summary
+<!-- What does this PR do and why? -->
+
+## Changes
+-
+
+## Test Plan
+- [ ]
+
+Closes #
+```
+
+Create `.github/ISSUE_TEMPLATE/feature.md`:
+```markdown
+---
+name: Feature Request
+about: Suggest a new feature
+labels: feature
+---
+## Problem
+<!-- What problem does this solve? -->
+
+## Proposed Solution
+<!-- How should it work? -->
+
+## Acceptance Criteria
+- [ ]
+```
+
+Create `.github/ISSUE_TEMPLATE/bug.md`:
+```markdown
+---
+name: Bug Report
+about: Report a bug
+labels: bug
+---
+## Bug Description
+<!-- What happened? -->
+
+## Steps to Reproduce
+1.
+
+## Expected Behavior
+## Actual Behavior
+## Environment
+```
+
+## 11. License
+- Add MIT license (or ask which)
+
+## 12. Initial commit and push
+- `git add -A && git commit -m "feat: initial project scaffold"`
+- Create GitHub repo if not exists: `gh repo create <name> --private --source=.`
+- Push: `git push -u origin main`
+CMD_INIT
+
+    # /refactor — refactor code with tests preserved
+    cat > "$CLAUDE_COMMANDS_DIR/refactor.md" <<'CMD_REFACTOR'
+Refactor the specified code: $ARGUMENTS
+
+Follow this process:
+1. **Understand**: Read the code and its tests. Identify what the code does and its public API.
+2. **Plan**: Describe the refactoring approach before changing anything.
+3. **Preserve tests**: Ensure all existing tests still pass after refactoring. Do NOT modify test assertions.
+4. **Refactor**: Apply the changes. Focus on:
+   - Reducing complexity (extract functions, simplify conditions)
+   - Improving naming (descriptive, consistent)
+   - Removing duplication (DRY, extract shared logic)
+   - Applying SOLID principles
+   - Improving type safety
+5. **Verify**: Run tests to confirm nothing broke.
+6. **Commit**: Use `refactor(scope): description` commit format.
+
+If tests don't exist, write them FIRST before refactoring.
+CMD_REFACTOR
+
+    # /add-endpoint — add an API endpoint with full stack
+    cat > "$CLAUDE_COMMANDS_DIR/add-endpoint.md" <<'CMD_ENDPOINT'
+Add a new API endpoint: $ARGUMENTS
+
+Implement the full vertical slice:
+1. **Types**: Define request/response types (zod schema for TS, pydantic for Python)
+2. **Route handler**: Implement the endpoint with proper HTTP method and status codes
+3. **Validation**: Validate all inputs at the boundary
+4. **Error handling**: Return structured errors with appropriate status codes
+5. **Tests**: Write unit tests for the handler and integration tests for the route
+6. **Documentation**: Add JSDoc/docstring, update API docs or README if they exist
+
+Follow REST conventions:
+- GET for retrieval (200), POST for creation (201), PUT/PATCH for updates (200), DELETE for removal (204)
+- Response format: `{ data: T }` for success, `{ error: { code, message } }` for errors
+- Always paginate list endpoints
+
+Commit with: `feat(api): add <METHOD> <path> endpoint`
+CMD_ENDPOINT
+
+    # /add-component — add a React component with tests and stories
+    cat > "$CLAUDE_COMMANDS_DIR/add-component.md" <<'CMD_COMPONENT'
+Add a new React component: $ARGUMENTS
+
+Create the full component package:
+1. **Component file**: `ComponentName.tsx` — functional component with TypeScript props interface
+2. **Tests**: `ComponentName.test.tsx` — test rendering, user interactions, edge cases
+3. **Stories** (if Storybook exists): `ComponentName.stories.tsx` — default + variant stories
+4. **Types**: Export the props interface for consumers
+5. **Index**: Add to barrel export (`index.ts`) if the directory uses one
+
+Follow these patterns:
+- Functional components only, use hooks for state/effects
+- Props interface named `ComponentNameProps`, exported
+- Use `forwardRef` if the component wraps a native element
+- Tailwind CSS for styling (or whatever the project uses)
+- Handle loading, error, and empty states
+- Accessibility: proper ARIA attributes, keyboard navigation, semantic HTML
+
+Place in: `src/components/ComponentName/` (colocated structure)
+Commit with: `feat(ui): add <ComponentName> component`
+CMD_COMPONENT
+
+    # /ci-fix — diagnose and fix CI failures
+    cat > "$CLAUDE_COMMANDS_DIR/ci-fix.md" <<'CMD_CIFIX'
+Diagnose and fix the CI/CD pipeline failure.
+
+Steps:
+1. **Check CI status**: Run `gh run list --limit 5` to see recent runs
+2. **Get failure details**: Run `gh run view <run-id> --log-failed` to see the error
+3. **Diagnose**: Identify the root cause (test failure, lint error, build error, dependency issue, flaky test)
+4. **Fix**: Apply the fix
+5. **Verify locally**: Run the same checks locally (`act` for GitHub Actions, or the individual commands)
+6. **Push**: Commit with `ci: fix <description of what broke>`
+
+Common CI issues to check:
+- Node/Python version mismatch between local and CI
+- Missing environment variables in CI
+- Dependency resolution differences (lockfile out of date)
+- Flaky tests (timing-dependent, order-dependent)
+- ESLint/Prettier formatting differences
+CMD_CIFIX
+
+    # /changelog — generate changelog from git history
+    cat > "$CLAUDE_COMMANDS_DIR/changelog.md" <<'CMD_CHANGELOG'
+Generate a changelog from git history: $ARGUMENTS
+
+If no version range specified, generate from the last tag to HEAD.
+
+1. Get commits: `git log <range> --oneline --format="%h %s"`
+2. Parse conventional commits and group by type:
+   - **Features** (feat:) — new functionality
+   - **Bug Fixes** (fix:) — bug fixes
+   - **Performance** (perf:) — performance improvements
+   - **Documentation** (docs:) — documentation changes
+   - **Other** (chore:, refactor:, style:, test:, build:, ci:)
+3. Format as Markdown with:
+   - Version header with date
+   - Grouped sections (only include sections that have entries)
+   - Each entry: short description with commit hash link
+   - Breaking changes highlighted at the top
+4. If a CHANGELOG.md exists, prepend the new entry. Otherwise create it.
+
+Format: Keep it concise — one line per change, no fluff.
+CMD_CHANGELOG
+
+    # /commit-msg — generate commit message from staged changes
+    cat > "$CLAUDE_COMMANDS_DIR/commit-msg.md" <<'CMD_COMMIT'
+Generate a conventional commit message for the currently staged changes.
+
+1. Run `git diff --cached --stat` to see what files changed
+2. Run `git diff --cached` to see the actual changes
+3. Analyze the changes and determine:
+   - **Type**: feat, fix, docs, style, refactor, perf, test, build, ci, chore
+   - **Scope**: the module or area affected (optional but preferred)
+   - **Description**: concise summary in imperative mood
+   - **Body**: explain WHAT changed and WHY (not HOW) — only if non-obvious
+   - **Footer**: reference issues if applicable (Closes #N)
+4. Output the commit message in this format:
+   ```
+   type(scope): short description
+
+   Optional body explaining what and why.
+
+   Closes #N
+   ```
+5. Run the commit: `git commit -m "<message>"`
+
+Keep the first line under 72 characters. Use imperative mood ("add" not "added").
+CMD_COMMIT
+
+    success "Claude Code commands created (20 commands: /pr-review, /test-plan, /dep-audit, /quick-doc, /cleanup, /security-scan, /perf-check, /docker-lint, /iac-review, /convert, /new-feature, /fix-bug, /create-readme, /init-project, /refactor, /add-endpoint, /add-component, /ci-fix, /changelog, /commit-msg)"
 fi
 
 # =============================================================================
@@ -5043,6 +6508,16 @@ for dir in "${DIRS[@]}"; do
 done
 success "Directory structure created (~/Code, ~/Scripts, ~/Documents, ~/Reference, ~/Creative, ~/Media, ~/Projects, ~/Archive)"
 
+# ---- GNOME Tracker / search-indexing exclusions ----
+# Prevent Tracker (GNOME desktop search) from indexing dev directories
+for exclude_dir in "$HOME/Code" "$HOME/.config"; do
+    trackerignore="$exclude_dir/.trackerignore"
+    if [[ ! -f "$trackerignore" ]]; then
+        touch "$trackerignore"
+        info "Created $trackerignore (excludes directory from GNOME Tracker indexing)"
+    fi
+done
+
 # ---- Helper Scripts (adapted for Linux: open->xdg-open, pbcopy->xclip) ----
 info "Creating helper scripts in ~/Scripts/bin..."
 
@@ -5065,43 +6540,141 @@ SCRIPT
 
 cat > "$HOME/Scripts/bin/new-project" <<'SCRIPT'
 #!/usr/bin/env bash
+# Scaffold a new project with git, .editorconfig, .gitignore
+# Usage: new-project <name> [work|personal|oss|learning]
 set -euo pipefail
+
 NAME="${1:-}"
 CONTEXT="${2:-personal}"
-if [[ -z "$NAME" ]]; then echo "Usage: new-project <name> [work|personal|oss|learning]"; exit 1; fi
+
+if [[ -z "$NAME" ]]; then
+    echo "Usage: new-project <name> [work|personal|oss|learning]"
+    echo "  Contexts: work, personal, oss, learning"
+    exit 1
+fi
+
 case "$CONTEXT" in
-    work) BASE="$HOME/Code/work" ;; personal) BASE="$HOME/Code/personal" ;;
-    oss) BASE="$HOME/Code/oss" ;; learning) BASE="$HOME/Code/learning/playground" ;;
-    *) echo "Unknown context: $CONTEXT"; exit 1 ;;
+    work)     BASE="$HOME/Code/work" ;;
+    personal) BASE="$HOME/Code/personal" ;;
+    oss)      BASE="$HOME/Code/oss" ;;
+    learning) BASE="$HOME/Code/learning/playground" ;;
+    *)
+        echo "Unknown context: $CONTEXT (use work, personal, oss, or learning)"
+        exit 1
+        ;;
 esac
+
 PROJECT_DIR="$BASE/$NAME"
-if [[ -d "$PROJECT_DIR" ]]; then echo "Already exists: $PROJECT_DIR"; exit 1; fi
+
+if [[ -d "$PROJECT_DIR" ]]; then
+    echo "Project already exists: $PROJECT_DIR"
+    exit 1
+fi
+
 echo "Creating project: $PROJECT_DIR"
-mkdir -p "$PROJECT_DIR" && cd "$PROJECT_DIR"
+mkdir -p "$PROJECT_DIR"
+cd "$PROJECT_DIR"
+
+# Initialize git
 git init -b main
-[[ -f "$HOME/.editorconfig" ]] && cp "$HOME/.editorconfig" .editorconfig
-cat > .gitignore <<'GI'
+
+# Copy global .editorconfig if it exists
+if [[ -f "$HOME/.editorconfig" ]]; then
+    cp "$HOME/.editorconfig" .editorconfig
+fi
+
+# Create .gitignore
+cat > .gitignore <<'GITIGNORE'
+# Dependencies
 node_modules/
+.pnpm-store/
+
+# Build
 dist/
 build/
 .next/
+out/
+
+# Environment
 .env
 .env.local
+.env.*.local
+
+# IDE
 .vscode/settings.json
 .idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Test & Coverage
 coverage/
+.nyc_output/
+
+# Logs
 *.log
-GI
+npm-debug.log*
+GITIGNORE
+
+# Create README
 cat > README.md <<README
 # $NAME
+
 ## Getting Started
+
 \`\`\`bash
+# Install dependencies
 pnpm install
+
+# Start development
 pnpm dev
 \`\`\`
 README
-git add -A && git commit -m "Initial project scaffold"
+
+# Create project-level CLAUDE.md for AI context
+mkdir -p .claude
+cat > CLAUDE.md <<CLAUDEMD
+# $NAME
+
+## Overview
+<!-- Describe what this project does -->
+
+## Tech Stack
+<!-- Languages, frameworks, key libraries -->
+
+## Development
+- Install: \`pnpm install\`
+- Dev: \`pnpm dev\`
+- Test: \`pnpm test\`
+- Build: \`pnpm build\`
+
+## Conventions
+<!-- Project-specific conventions not in the global CLAUDE.md -->
+CLAUDEMD
+
+# Create GitHub PR template
+mkdir -p .github
+cat > .github/PULL_REQUEST_TEMPLATE.md <<'PRTEMPLATE'
+## Summary
+<!-- What does this PR do and why? -->
+
+## Changes
+-
+
+## Test Plan
+- [ ]
+
+Closes #
+PRTEMPLATE
+
+# Initial commit
+git add -A
+git commit -m "Initial project scaffold"
+
+echo ""
 echo "Project created at: $PROJECT_DIR"
+echo "  cd $PROJECT_DIR"
 SCRIPT
 
 cat > "$HOME/Scripts/bin/clone-work" <<'SCRIPT'
@@ -5433,6 +7006,67 @@ if [[ "$XDG_CURRENT_DESKTOP" == *"KDE"* ]] && [[ "$DRY_RUN" != "true" ]]; then
     fi
 fi
 
+# ---- File Manager Sidebar Bookmarks ----
+# GTK file managers (Nautilus, Thunar, Nemo, Caja) read ~/.config/gtk-3.0/bookmarks
+# KDE Dolphin reads ~/.local/share/user-places.xbel (but also respects gtk bookmarks for portability)
+info "Configuring file manager sidebar bookmarks..."
+if [[ "$DRY_RUN" != "true" ]]; then
+    BOOKMARKS_FILE="$HOME/.config/gtk-3.0/bookmarks"
+    mkdir -p "$HOME/.config/gtk-3.0"
+
+    # Build the bookmarks list
+    BOOKMARK_DIRS=(
+        "$HOME/Code|Code"
+        "$HOME/Screenshots|Screenshots"
+        "$HOME/Scripts|Scripts"
+        "$HOME/Documents|Documents"
+        "$HOME/Reference|Reference"
+        "$HOME/Creative|Creative"
+        "$HOME/Media|Media"
+        "$HOME/Projects|Projects"
+        "$HOME/Archive|Archive"
+        "$HOME/Downloads|Downloads"
+    )
+
+    # Preserve any existing bookmarks not in our list, then append ours
+    EXISTING_BOOKMARKS=""
+    if [[ -f "$BOOKMARKS_FILE" ]]; then
+        EXISTING_BOOKMARKS=$(cat "$BOOKMARKS_FILE")
+    fi
+
+    # Start fresh with our curated list
+    > "$BOOKMARKS_FILE"
+    for entry in "${BOOKMARK_DIRS[@]}"; do
+        dir="${entry%%|*}"
+        name="${entry##*|}"
+        if [[ -d "$dir" ]]; then
+            echo "file://$dir $name" >> "$BOOKMARKS_FILE"
+        fi
+    done
+
+    # Re-add any user bookmarks that aren't in our list (e.g., network shares, custom dirs)
+    if [[ -n "$EXISTING_BOOKMARKS" ]]; then
+        while IFS= read -r line; do
+            # Skip if it's one of our managed dirs
+            is_managed=false
+            for entry in "${BOOKMARK_DIRS[@]}"; do
+                dir="${entry%%|*}"
+                if echo "$line" | grep -q "file://$dir"; then
+                    is_managed=true
+                    break
+                fi
+            done
+            if [[ "$is_managed" == "false" ]] && [[ -n "$line" ]]; then
+                echo "$line" >> "$BOOKMARKS_FILE"
+            fi
+        done <<< "$EXISTING_BOOKMARKS"
+    fi
+
+    success "File manager bookmarks updated (Code, Screenshots, Scripts, Documents, Reference, Creative, Media, Projects, Archive, Downloads)"
+else
+    info "[DRY RUN] Would update file manager sidebar bookmarks"
+fi
+
 # DNS (systemd-resolved)
 if systemctl is-active systemd-resolved &>/dev/null 2>&1; then
     info "Configuring DNS via systemd-resolved..."
@@ -5537,6 +7171,15 @@ export PATH=\"\$HOME/Scripts/bin:\$HOME/.local/bin:\$PATH\"
 
 # -- Environment Variables ----------------------------------------------------
 export RIPGREP_CONFIG_PATH=\"\$HOME/.ripgreprc\"
+export GPG_TTY=\$(tty)
+
+# Raise file descriptor limit for Node.js / bundlers
+ulimit -n 65536 2>/dev/null || true
+
+# LS_COLORS via vivid (Dracula theme — colorize file listings by type)
+if command -v vivid &>/dev/null; then
+    export LS_COLORS=\"\$(vivid generate dracula)\"
+fi
 
 # -- Tool Initialization ------------------------------------------------------
 
@@ -5587,8 +7230,31 @@ fi
 
 MANAGED_BLOCK="$MANAGED_BLOCK
 
-# fzf Dracula colors
-export FZF_DEFAULT_OPTS=\"--color=fg:#f8f8f2,bg:#282a36,hl:#bd93f9 --color=fg+:#f8f8f2,bg+:#44475a,hl+:#bd93f9 --color=info:#ffb86c,prompt:#50fa7b,pointer:#ff79c6 --color=marker:#ff79c6,spinner:#ffb86c,header:#6272a4\"
+# fzf — Dracula colors + fd for file finding + bat for preview
+export FZF_DEFAULT_OPTS=\" \\
+  --color=fg:#f8f8f2,bg:#282a36,hl:#bd93f9 \\
+  --color=fg+:#f8f8f2,bg+:#44475a,hl+:#bd93f9 \\
+  --color=info:#ffb86c,prompt:#50fa7b,pointer:#ff79c6 \\
+  --color=marker:#ff79c6,spinner:#ffb86c,header:#6272a4 \\
+  --color=border:#6272a4 \\
+  --height=60% --layout=reverse --border=rounded \\
+  --prompt='❯ ' --pointer='▶' --marker='✓' \\
+  --bind='ctrl-/:toggle-preview' \\
+  --bind='ctrl-d:half-page-down,ctrl-u:half-page-up' \\
+  --bind='ctrl-y:execute-silent(echo -n {+} | xclip -selection clipboard)+abort' \\
+  --preview-window='right:50%:wrap:hidden' \\
+  --info=inline\"
+
+# Use fd instead of find (respects .gitignore, faster)
+export FZF_DEFAULT_COMMAND='fd --type f --hidden --follow --exclude .git'
+
+# CTRL-T: paste file path (with bat preview)
+export FZF_CTRL_T_COMMAND='fd --type f --hidden --follow --exclude .git'
+export FZF_CTRL_T_OPTS=\"--preview 'bat --color=always --style=numbers --line-range=:300 {}' --preview-window='right:50%:wrap'\"
+
+# ALT-C: cd into directory (with eza tree preview)
+export FZF_ALT_C_COMMAND='fd --type d --hidden --follow --exclude .git'
+export FZF_ALT_C_OPTS=\"--preview 'eza --tree --icons --level=2 --color=always {}' --preview-window='right:50%:wrap'\"
 
 # zsh plugins"
 
@@ -5704,6 +7370,35 @@ alias open=\"xdg-open\"
 alias pbcopy=\"xclip -selection clipboard\"
 alias pbpaste=\"xclip -selection clipboard -o\"
 
+# -- Terminal Welcome Screen --------------------------------------------------
+# Colorful greeting on new terminal sessions (not in VS Code integrated terminal)
+if [[ \"\$TERM_PROGRAM\" != \"vscode\" ]] && [[ -z \"\$INSIDE_EMACS\" ]]; then
+    if command -v fastfetch &>/dev/null; then
+        fastfetch --logo small 2>/dev/null
+    fi
+    echo \"\"
+    printf \"\\033[0;35m  %s\\033[0m  \" \"\$(date '+%A, %B %d %Y  •  %H:%M')\"
+    TIPS=(
+        \"💡 git stash -u  — stash untracked files too\"
+        \"💡 fd -e ts -x wc -l  — count lines in every .ts file\"
+        \"💡 rg TODO --glob '!node_modules'  — search TODOs\"
+        \"💡 just --list  — see all task runner recipes\"
+        \"💡 gh pr create --web  — open PR in browser\"
+        \"💡 btop  — beautiful system monitor\"
+        \"💡 yazi  — terminal file manager with preview\"
+        \"💡 oha -n 500 http://localhost:3000  — quick load test\"
+        \"💡 sd 'old' 'new' file.ts  — fast find & replace\"
+        \"💡 dust ~/Code  — visual disk usage of your projects\"
+        \"💡 dog example.com AAAA  — colorized DNS lookup\"
+        \"💡 hyperfine 'cmd1' 'cmd2'  — benchmark two commands\"
+        \"💡 fx data.json  — interactive JSON explorer\"
+        \"💡 gj ports  — list all listening ports\"
+        \"💡 hc  — quick system health check\"
+    )
+    echo \"\${TIPS[\$((RANDOM % \${#TIPS[@]}))]}\"\
+    echo \"\"
+fi
+
 # <<< dev-setup managed block <<<"
 
 if [[ -f "$ZSHRC" ]]; then
@@ -5758,6 +7453,17 @@ if [[ "$DRY_RUN" == "false" ]]; then
         "uv:uv --version"
         "code:code --version"
         "docker:docker --version"
+        "starship:starship --version"
+        "fzf:fzf --version"
+        "eza:eza --version"
+        "bat:bat --version"
+        "rg:rg --version"
+        "fd:fd --version"
+        "zoxide:zoxide --version"
+        "atuin:atuin --version"
+        "lazygit:lazygit --version"
+        "just:just --version"
+        "delta:delta --version"
     )
 
     VERIFY_PASS=0

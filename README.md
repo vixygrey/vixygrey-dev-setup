@@ -1,6 +1,6 @@
 # Development Environment Setup
 
-Three platform-specific scripts that install and configure **200+ tools** for development, GitHub, AWS/CDK, DX, UI/UX, security, and daily productivity. Safe to re-run — each skips anything already installed.
+Three platform-specific scripts that install and configure **220+ tools** with **60+ config files** for development, GitHub, AWS/CDK, IaC, DX, UI/UX, security, backup, and daily productivity. Safe to re-run -- each skips anything already installed.
 
 | Platform | Script | Package Managers |
 |----------|--------|-----------------|
@@ -47,30 +47,32 @@ All scripts share the same flags:
 
 ## What It Does
 
-1. **Pre-flight checks** — verifies macOS version, disk space, internet, admin privileges
+1. **Pre-flight checks** -- verifies macOS version, disk space, internet, admin privileges
 2. Installs all tools via Homebrew, Cask, npm, and Mac App Store with **progress tracking**
 3. Configures every tool with sensible defaults
 4. Applies the **Dracula** theme everywhere
-5. Sets macOS system defaults (Dock, keyboard, Finder, screenshots, etc.)
-6. Optionally **removes pre-installed Apple bloat** (GarageBand, News, Stocks, etc.)
-7. Auto-writes `~/.zshrc` with a managed block (preserves your customizations)
-8. Exports a `Brewfile` snapshot (with descriptions) for reproducibility
-9. **Post-install verification** — verifies critical tools work
-10. Runs `brew cleanup` and `brew doctor`
-11. **Logs everything** to `~/.local/share/dev-setup/` for debugging
-12. Reports final summary with install/skip/fail counts and duration
+5. Sets macOS system defaults (Dock, keyboard, Finder, screenshots, wallpaper, screensaver, etc.)
+6. Configures Finder sidebar with custom favorites via **mysides**
+7. Clears Dock of default pins (start fresh, drag your own)
+8. Optionally **removes pre-installed Apple bloat** (GarageBand, News, Stocks, etc.)
+9. Auto-writes `~/.zshrc` with a managed block (preserves your customizations)
+10. Exports a `Brewfile` snapshot (with descriptions) for reproducibility
+11. **Post-install verification** -- verifies critical tools work
+12. Runs `brew cleanup` and `brew doctor`
+13. **Logs everything** to `~/.local/share/dev-setup/` for debugging
+14. Reports final summary with install/skip/fail counts and duration
 
 ## Features
 
 | Feature | Description |
 |---------|-------------|
-| **Idempotent** | Safe to re-run — skips anything already installed |
+| **Idempotent** | Safe to re-run -- skips anything already installed |
 | **Dry run** | Preview all changes with `--dry-run` |
-| **Resume** | Continue after a failure with `--resume` — skips previously completed items |
+| **Resume** | Continue after a failure with `--resume` -- skips previously completed items |
 | **Uninstall guide** | Show removal commands with `--uninstall` (no destructive actions taken) |
 | **Lockfile** | Prevents concurrent runs via PID-based lock |
 | **Category filtering** | Install only what you need with `--only` / `--skip` |
-| **Progress bar** | Visual progress counter with dynamic total |
+| **Progress bar** | Visual progress counter with dynamic total (includes mas installs) |
 | **Fast installs** | `HOMEBREW_NO_AUTO_UPDATE` set after initial update for faster installs |
 | **Error resilient** | Continues on failure, reports all failures at the end |
 | **Logging** | Full log file for debugging failed installs |
@@ -83,15 +85,15 @@ All scripts share the same flags:
 
 | Tool | Description |
 |------|-------------|
-| **Xcode CLI Tools** | Compilers, git, headers — required before everything else |
+| **Xcode CLI Tools** | Compilers, git, headers -- required before everything else |
 | **Rosetta 2** | Apple Silicon compatibility layer for x86 binaries |
 | **Homebrew** | macOS package manager |
-| **mas** | Mac App Store CLI — install App Store apps from the terminal |
-| **coreutils** | GNU core utilities — Linux-compatible versions of standard tools |
-| **gnu-sed** | GNU sed — consistent behavior with Linux scripts |
-| **gnu-tar** | GNU tar — consistent behavior with Linux scripts |
-| **gawk** | GNU awk — full-featured awk replacement |
-| **findutils** | GNU find and xargs — Linux-compatible |
+| **mas** | Mac App Store CLI -- install App Store apps from the terminal |
+| **coreutils** | GNU core utilities -- Linux-compatible versions of standard tools |
+| **gnu-sed** | GNU sed -- consistent behavior with Linux scripts |
+| **gnu-tar** | GNU tar -- consistent behavior with Linux scripts |
+| **gawk** | GNU awk -- full-featured awk replacement |
+| **findutils** | GNU find and xargs -- Linux-compatible |
 
 ---
 
@@ -99,12 +101,12 @@ All scripts share the same flags:
 
 | Tool | Description |
 |------|-------------|
-| **nvm** | Node.js version manager — run multiple Node versions side by side |
+| **nvm** | Node.js version manager -- run multiple Node versions side by side |
 | **Node.js LTS** | JavaScript runtime (latest Long Term Support version) |
 | **Go** | Go programming language |
 | **pyenv** | Python version manager |
 | **Python 3.12** | Python runtime |
-| **uv** | Fast Python package manager — 10-100x faster than pip |
+| **uv** | Fast Python package manager -- 10-100x faster than pip |
 | **Rust** | Rust toolchain via rustup (rustc, cargo, etc.) |
 | **bun** | Fast JS runtime, bundler, and test runner |
 | **pnpm** | Fast, disk-efficient npm alternative |
@@ -115,7 +117,7 @@ All scripts share the same flags:
 | **cmake** | Cross-platform build system generator |
 | **pkg-config** | Helper tool for compiling libraries |
 | **Docker Desktop** | Container runtime with GUI for managing images and containers |
-| **OrbStack** | Faster Docker Desktop alternative — 2-5x less memory, native macOS feel |
+| **OrbStack** | Faster Docker Desktop alternative -- 2-5x less memory, native macOS feel |
 
 ---
 
@@ -124,14 +126,14 @@ All scripts share the same flags:
 | Tool | Description |
 |------|-------------|
 | **git** | Distributed version control |
-| **gh** | GitHub CLI — PRs, issues, Actions from the terminal |
+| **gh** | GitHub CLI -- PRs, issues, Actions from the terminal |
 | **delta** | Beautiful git diffs with syntax highlighting and side-by-side view |
 | **git-lfs** | Git Large File Storage for binary assets |
 | **gpg** | GNU Privacy Guard for commit signing and encryption |
 | **pinentry-mac** | macOS keychain integration for GPG passphrases |
-| **lazygit** | Terminal UI for git — visualize branches, stage hunks interactively |
-| **git-absorb** | Auto-fixup commits — automatically amends the right commit |
-| **pre-commit** | Git hook framework — run linters/formatters before each commit |
+| **lazygit** | Terminal UI for git -- visualize branches, stage hunks interactively |
+| **git-absorb** | Auto-fixup commits -- automatically amends the right commit |
+| **pre-commit** | Git hook framework -- run linters/formatters before each commit |
 
 ---
 
@@ -140,12 +142,22 @@ All scripts share the same flags:
 | Tool | Description |
 |------|-------------|
 | **aws-cli v2** | Official AWS command-line interface |
-| **aws-cdk** | AWS Cloud Development Kit — infrastructure as TypeScript/Python code |
+| **aws-cdk** | AWS Cloud Development Kit -- infrastructure as TypeScript/Python code |
 | **cdk-nag** | CDK rule packs for security and best-practice compliance |
-| **aws-sam-cli** | AWS Serverless Application Model — local Lambda testing |
+| **aws-sam-cli** | AWS Serverless Application Model -- local Lambda testing |
 | **cfn-lint** | CloudFormation template linter |
 | **session-manager-plugin** | SSH-less access to EC2 instances via AWS SSM |
 | **granted** | Fast multi-account AWS SSO credential switching |
+
+---
+
+## Infrastructure as Code (IaC)
+
+| Tool | Description |
+|------|-------------|
+| **OpenTofu** | Open-source Terraform alternative -- multi-cloud infrastructure as code |
+| **tflint** | Terraform/OpenTofu linter -- catches errors before apply |
+| **infracost** | Cost estimation for Terraform changes before apply |
 
 ---
 
@@ -156,21 +168,21 @@ All scripts share the same flags:
 | **git-secrets** | Prevents committing AWS keys and secrets to git |
 | **trufflehog** | Scans git repos for leaked credentials and API keys |
 | **detect-secrets** | Yelp's pre-commit hook for catching secrets before they're committed |
-| **gitleaks** | Fast git secret scanning — great for CI and pre-commit hooks |
+| **gitleaks** | Fast git secret scanning -- great for CI and pre-commit hooks |
 | **age** | Modern, simple file encryption (replaces GPG for file encryption) |
-| **sops** | Encrypt secrets in YAML/JSON files — integrates with AWS KMS |
+| **sops** | Encrypt secrets in YAML/JSON files -- integrates with AWS KMS |
 | **trivy** | Vulnerability scanner for containers, filesystems, and IaC |
-| **semgrep** | Static analysis tool — finds bugs and security issues in code |
+| **semgrep** | Static analysis tool -- finds bugs and security issues in code |
 | **cosign** | Sign and verify container images and artifacts |
 | **snyk** | Dependency vulnerability scanning for npm, pip, Go, etc. |
 | **mkcert** | Create locally-trusted HTTPS certificates for development |
-| **wireshark** | Network protocol analyzer — deep packet inspection GUI |
+| **wireshark** | Network protocol analyzer -- deep packet inspection GUI |
 | **ssh-audit** | Audit SSH server and client configuration for security |
-| **clamav** | Open-source antivirus engine — on-demand malware scanning |
+| **clamav** | Open-source antivirus engine -- on-demand malware scanning |
 | **BlockBlock** | Alerts when software installs persistent components (launch daemons) |
 | **OverSight** | Alerts when microphone or camera is activated |
-| **KnockKnock** | Shows all persistently installed software — spot malware |
-| **ReiKey** | Detects keyboard event taps — catches keyloggers |
+| **KnockKnock** | Shows all persistently installed software -- spot malware |
+| **ReiKey** | Detects keyboard event taps -- catches keyloggers |
 
 ---
 
@@ -204,9 +216,10 @@ Faster, prettier, smarter replacements for standard Unix utilities.
 | `rm` | **trash** | Moves files to macOS Trash instead of permanent delete |
 | `rsync` | **rsync** (latest) | Updated rsync with better progress and Apple metadata |
 | `tree` | **tree** | Directory listing in tree format |
-| `make` | **just** | Modern task runner — simpler syntax, no tab weirdness |
+| `make` | **just** | Modern task runner -- simpler syntax, no tab weirdness |
 | file manager | **yazi** | Terminal file manager with image preview, vim keys, bulk ops |
 | `jq` (interactive) | **fx** | Interactive JSON viewer/processor for exploring large JSON |
+| `LS_COLORS` | **vivid** | LS_COLORS generator -- colorize file listings by type (Dracula themed) |
 
 ---
 
@@ -214,11 +227,11 @@ Faster, prettier, smarter replacements for standard Unix utilities.
 
 | Tool | Description |
 |------|-------------|
-| **yq** | jq for YAML — parse and manipulate YAML files (essential for k8s/CDK) |
+| **yq** | jq for YAML -- parse and manipulate YAML files (essential for k8s/CDK) |
 | **miller (mlr)** | awk/sed/jq for CSV, JSON, and tabular data |
-| **csvkit** | Suite of CSV tools — csvcut, csvgrep, csvstat, csvlook |
-| **pandoc** | Universal document converter — Markdown to PDF, DOCX, HTML, etc. |
-| **imagemagick** | Image manipulation CLI — resize, convert, composite, watermark |
+| **csvkit** | Suite of CSV tools -- csvcut, csvgrep, csvstat, csvlook |
+| **pandoc** | Universal document converter -- Markdown to PDF, DOCX, HTML, etc. |
+| **imagemagick** | Image manipulation CLI -- resize, convert, composite, watermark |
 | **ffmpeg** | Video/audio processing swiss army knife |
 | **yt-dlp** | Video/audio downloader for YouTube and hundreds of other sites |
 
@@ -228,9 +241,15 @@ Faster, prettier, smarter replacements for standard Unix utilities.
 
 | Tool | Description |
 |------|-------------|
-| **shellcheck** | Shell script linter — catches bugs and bad practices |
-| **shfmt** | Shell script formatter — consistent style for bash/zsh scripts |
+| **shellcheck** | Shell script linter -- catches bugs and bad practices |
+| **shfmt** | Shell script formatter -- consistent style for bash/zsh scripts |
 | **act** | Run GitHub Actions locally before pushing |
+| **hadolint** | Dockerfile linter -- catches bad practices and security issues |
+| **ruff** | Extremely fast Python linter and formatter -- replaces flake8+black+isort |
+| **npkill** | Find and delete node_modules folders to reclaim disk space |
+| **commitizen** | Interactive conventional commit message generator |
+| **commitlint** | Enforce conventional commit message format |
+| **ni** | Universal package runner -- auto-detects npm/yarn/pnpm/bun |
 
 ---
 
@@ -238,8 +257,8 @@ Faster, prettier, smarter replacements for standard Unix utilities.
 
 | Tool | Description |
 |------|-------------|
-| **hyperfine** | Command-line benchmarking tool — compare execution times |
-| **oha** | HTTP load testing tool written in Rust — fast and simple |
+| **hyperfine** | Command-line benchmarking tool -- compare execution times |
+| **oha** | HTTP load testing tool written in Rust -- fast and simple |
 
 ---
 
@@ -248,7 +267,7 @@ Faster, prettier, smarter replacements for standard Unix utilities.
 | Tool | Description |
 |------|-------------|
 | **ngrok** | Expose localhost to the internet for webhooks and demos |
-| **miniserve** | Instant file server from any directory — one command |
+| **miniserve** | Instant file server from any directory -- one command |
 | **caddy** | Modern web server with automatic HTTPS |
 
 ---
@@ -258,10 +277,14 @@ Faster, prettier, smarter replacements for standard Unix utilities.
 | Tool | Description |
 |------|-------------|
 | **glow** | Render Markdown beautifully in the terminal |
-| **entr** | Run commands when files change — lightweight file watcher |
-| **pv** | Pipe viewer — add progress bars to any piped command |
-| **parallel** | GNU parallel — run commands in parallel across multiple cores |
+| **entr** | Run commands when files change -- lightweight file watcher |
+| **pv** | Pipe viewer -- add progress bars to any piped command |
+| **parallel** | GNU parallel -- run commands in parallel across multiple cores |
 | **asciinema** | Record and share terminal sessions as text (not video) |
+| **topgrade** | Update everything at once -- brew, npm, pip, macOS, all in one command |
+| **fastfetch** | Quick system info display -- faster neofetch replacement |
+| **nano** (latest) | Upgraded nano with syntax highlighting |
+| **lnav** | Advanced log file viewer -- auto-format, SQL queries on logs |
 
 ---
 
@@ -270,7 +293,7 @@ Faster, prettier, smarter replacements for standard Unix utilities.
 | Tool | Description |
 |------|-------------|
 | **stern** | Multi-pod log tailing for Kubernetes |
-| **gh-dash** | GitHub dashboard in the terminal — PRs, issues, notifications |
+| **gh-dash** | GitHub dashboard in the terminal -- PRs, issues, notifications |
 
 ---
 
@@ -280,10 +303,10 @@ Faster, prettier, smarter replacements for standard Unix utilities.
 |------|-------------|
 | **pgcli** | Auto-completing PostgreSQL CLI with syntax highlighting |
 | **mycli** | Auto-completing MySQL CLI with syntax highlighting |
-| **usql** | Universal SQL CLI — connects to Postgres, MySQL, SQLite, and more |
-| **sq** | jq for databases — query SQLite, Postgres, CSV from one tool |
+| **usql** | Universal SQL CLI -- connects to Postgres, MySQL, SQLite, and more |
+| **sq** | jq for databases -- query SQLite, Postgres, CSV from one tool |
 | **dbmate** | Lightweight, framework-agnostic database migration tool |
-| **TablePlus** | Native macOS database GUI — fast, clean, supports 20+ databases |
+| **TablePlus** | Native macOS database GUI -- fast, clean, supports 20+ databases |
 | **DBeaver** | Advanced SQL editor with 100+ database support (community edition) |
 
 ---
@@ -292,11 +315,11 @@ Faster, prettier, smarter replacements for standard Unix utilities.
 
 | Tool | Description |
 |------|-------------|
-| **lazydocker** | Terminal UI for Docker — manage containers, images, volumes |
-| **dive** | Explore Docker image layers — find what's taking up space |
-| **colima** | Lightweight Docker runtime — free OrbStack alternative |
+| **lazydocker** | Terminal UI for Docker -- manage containers, images, volumes |
+| **dive** | Explore Docker image layers -- find what's taking up space |
+| **colima** | Lightweight Docker runtime -- free OrbStack alternative |
 | **kubectl** | Kubernetes CLI for managing clusters |
-| **k9s** | Terminal UI for Kubernetes — navigate clusters with keyboard |
+| **k9s** | Terminal UI for Kubernetes -- navigate clusters with keyboard |
 
 ---
 
@@ -304,7 +327,7 @@ Faster, prettier, smarter replacements for standard Unix utilities.
 
 | Tool | Description |
 |------|-------------|
-| **Bruno** | Open-source API client — Postman alternative, stores in git |
+| **Bruno** | Open-source API client -- Postman alternative, stores in git |
 | **grpcurl** | curl for gRPC services |
 
 ---
@@ -315,7 +338,7 @@ Faster, prettier, smarter replacements for standard Unix utilities.
 |------|-------------|
 | **mtr** | Combines ping and traceroute into a single diagnostic tool |
 | **bandwhich** | Real-time bandwidth usage by process, connection, and host |
-| **nmap** | Network scanner — discover hosts and services |
+| **nmap** | Network scanner -- discover hosts and services |
 
 ---
 
@@ -323,26 +346,26 @@ Faster, prettier, smarter replacements for standard Unix utilities.
 
 | Tool | Description |
 |------|-------------|
-| **fzf** | Fuzzy finder — search files, history, branches interactively |
+| **fzf** | Fuzzy finder -- search files, history, branches interactively |
 | **starship** | Cross-shell prompt with git status, language versions, and more |
 | **zsh-autosuggestions** | Fish-like inline suggestions as you type |
-| **zsh-syntax-highlighting** | Command coloring in the terminal — red for errors |
+| **zsh-syntax-highlighting** | Command coloring in the terminal -- red for errors |
 | **atuin** | Replaces shell history with SQLite-backed, fuzzy-searchable database |
-| **mise** | Universal version manager — replaces nvm + pyenv + rbenv in one tool |
+| **mise** | Universal version manager -- replaces nvm + pyenv + rbenv in one tool |
 | **VS Code** | Primary code editor and IDE |
-| **Cursor** | AI-native code editor — VS Code fork with built-in AI pair programming |
-| **Zed** | Fast native editor from ex-Atom team — GPU-rendered |
+| **Cursor** | AI-native code editor -- VS Code fork with built-in AI pair programming |
+| **Zed** | Fast native editor from ex-Atom team -- GPU-rendered |
 | **Claude Code** | AI-assisted coding in the terminal |
 | **GitHub Copilot CLI** | AI suggestions in the terminal (via `gh copilot suggest`) |
-| **chezmoi** | Dotfile manager — backup and restore configs across machines |
-| **Proxyman** | Native macOS HTTP debugging proxy — inspect API calls from any app |
+| **chezmoi** | Dotfile manager -- backup and restore configs across machines |
+| **Proxyman** | Native macOS HTTP debugging proxy -- inspect API calls from any app |
 | **Warp** | Modern GPU-accelerated terminal with AI and block-based output |
 | **iTerm2** | Classic macOS terminal with deep customization and tmux integration |
 | **Ghostty** | Fast GPU-accelerated terminal with native macOS feel |
-| **tmux** | Terminal multiplexer — persistent sessions, panes, and windows |
+| **tmux** | Terminal multiplexer -- persistent sessions, panes, and windows |
 | **Raycast** | Spotlight replacement with extensions, snippets, and workflows |
 | **Rectangle** | Window management with keyboard shortcuts |
-| **TypeScript** | Typed JavaScript — installed globally for scripts and tooling |
+| **TypeScript** | Typed JavaScript -- installed globally for scripts and tooling |
 | **tsx** | Run TypeScript files directly without a build step |
 | **Turborepo** | High-performance monorepo build system |
 
@@ -352,7 +375,7 @@ Faster, prettier, smarter replacements for standard Unix utilities.
 
 | Tool | Description |
 |------|-------------|
-| **Storybook** | Component development environment — build and test UI in isolation |
+| **Storybook** | Component development environment -- build and test UI in isolation |
 | **Playwright** | End-to-end browser testing framework |
 | **Google Chrome** | Primary Chromium browser for development and DevTools |
 
@@ -371,7 +394,7 @@ Faster, prettier, smarter replacements for standard Unix utilities.
 
 | Tool | Description |
 |------|-------------|
-| **d2** | Code-to-diagram scripting language — declarative diagrams as code |
+| **d2** | Code-to-diagram scripting language -- declarative diagrams as code |
 | **Mermaid CLI** | Render Mermaid diagrams (flowcharts, sequences, ERDs) from CLI |
 
 ---
@@ -383,7 +406,7 @@ Faster, prettier, smarter replacements for standard Unix utilities.
 | **JetBrains Mono** | Primary development font with ligatures |
 | **JetBrains Mono Nerd Font** | JetBrains Mono with patched icons for terminal tools |
 | **MesloLGS Nerd Font** | Classic terminal font with icons for starship/eza |
-| **Fira Code** | Popular ligature font — alternative to JetBrains Mono |
+| **Fira Code** | Popular ligature font -- alternative to JetBrains Mono |
 | **Fira Code Nerd Font** | Fira Code with patched icons |
 | **Inter** | Best UI font for web and design work |
 | **Hack Nerd Font** | Clean monospace font with icons |
@@ -402,20 +425,20 @@ Preview files in Finder by pressing spacebar.
 
 ---
 
-## Mac Apps — System & Utilities
+## Mac Apps -- System & Utilities
 
 | App | Description |
 |-----|-------------|
-| **AppCleaner** | Fully uninstall apps — removes leftover files and preferences |
-| **Pearcleaner** | Open-source deep app uninstaller — finds more leftover files |
-| **The Unarchiver** | Opens any archive format — RAR, 7z, tar, etc. |
-| **Stats** | Free menubar system monitor — CPU, RAM, network, disk, battery |
+| **AppCleaner** | Fully uninstall apps -- removes leftover files and preferences |
+| **Pearcleaner** | Open-source deep app uninstaller -- finds more leftover files |
+| **The Unarchiver** | Opens any archive format -- RAR, 7z, tar, etc. |
+| **Stats** | Free menubar system monitor -- CPU, RAM, network, disk, battery |
 | **Ice** | Open-source menubar icon manager (Bartender replacement) |
 | **Amphetamine** | Prevent Mac from sleeping during presentations or long tasks |
 | **AltTab** | Windows-style alt-tab with window previews |
 | **Dato** | Menubar clock with calendar, timezones, and meeting countdown |
 | **Maccy** | Lightweight clipboard manager with search |
-| **LuLu** | Free open-source outbound firewall — see what phones home |
+| **LuLu** | Free open-source outbound firewall -- see what phones home |
 | **Proton VPN** | Privacy-focused VPN |
 | **Proton Mail** | End-to-end encrypted email client |
 | **Proton Pass** | Password manager with end-to-end encryption |
@@ -425,42 +448,42 @@ Preview files in Finder by pressing spacebar.
 
 ---
 
-## Mac Apps — Productivity
+## Mac Apps -- Productivity
 
 | App | Description |
 |-----|-------------|
-| **Notion** | All-in-one workspace — docs, wikis, databases, project tracking |
+| **Notion** | All-in-one workspace -- docs, wikis, databases, project tracking |
 | **Notion Calendar** | Calendar app with Notion integration |
 | **Notion Mail** | Email client with Notion integration |
 | **CleanShot X** | Screenshot and recording tool with annotation, scrolling capture |
 | **Shottr** | Free screenshot tool with pixel measuring, OCR, and color picker |
 | **Numi** | Natural language calculator in a notepad ("$120 + 15% tax") |
 | **Soulver 3** | Smart calculator/spreadsheet hybrid for back-of-napkin math |
-| **Espanso** | Open-source text expander — snippets, date macros, code templates |
-| **Hazel** | Automated file organization rules — move, rename, tag, archive |
-| **PopClip** | Text actions on select — copy, search, translate, format |
-| **Yoink** | Drag and drop shelf — stage files between apps |
+| **Espanso** | Open-source text expander -- snippets, date macros, code templates |
+| **Hazel** | Automated file organization rules -- move, rename, tag, archive |
+| **PopClip** | Text actions on select -- copy, search, translate, format |
+| **Yoink** | Drag and drop shelf -- stage files between apps |
 | **Raindrop.io** | Bookmark manager with collections, tags, and full-text search |
-| **Skim** | Lightweight PDF reader with annotations — faster than Preview |
-| **Velja** | Browser picker — open links in the right browser based on rules |
-| **Pixelmator Pro** | Native image editor — fast Photoshop alternative |
-| **Transmit** | Premium SFTP/S3 file transfer client — fast, dual-pane |
+| **Skim** | Lightweight PDF reader with annotations -- faster than Preview |
+| **Velja** | Browser picker -- open links in the right browser based on rules |
+| **Pixelmator Pro** | Native image editor -- fast Photoshop alternative |
+| **Transmit** | Premium SFTP/S3 file transfer client -- fast, dual-pane |
 | **Cyberduck** | Free SFTP/S3 client with Cryptomator encryption and `duck` CLI |
 
 ---
 
-## Mac Apps — Communication
+## Mac Apps -- Communication
 
 | App | Description |
 |-----|-------------|
 | **Slack** | Team messaging and collaboration |
-| **Discord** | Community chat — voice, video, and text |
+| **Discord** | Community chat -- voice, video, and text |
 | **Telegram** | Encrypted messaging with channels and bots |
-| **Signal** | End-to-end encrypted messaging — privacy focused |
+| **Signal** | End-to-end encrypted messaging -- privacy focused |
 
 ---
 
-## Mac Apps — Browsers
+## Mac Apps -- Browsers
 
 | App | Description |
 |-----|-------------|
@@ -470,44 +493,48 @@ Preview files in Finder by pressing spacebar.
 
 ---
 
-## Mac Apps — Media
+## Mac Apps -- Media
 
 | App | Description |
 |-----|-------------|
-| **IINA** | Modern native macOS video player — replaces VLC |
-| **ImageOptim** | Lossless image compression — shrink PNGs, JPGs, GIFs |
+| **IINA** | Modern native macOS video player -- replaces VLC |
+| **ImageOptim** | Lossless image compression -- shrink PNGs, JPGs, GIFs |
 | **Gifski** | Convert video clips to high-quality animated GIFs |
 | **Keka** | File archiver and compressor |
-| **LibreOffice** | Free office suite — documents, spreadsheets, presentations |
+| **LibreOffice** | Free office suite -- documents, spreadsheets, presentations |
 | **Pocket Casts** | Podcast player with cross-device sync |
 | **Hand Mirror** | Quick webcam check from menubar before meetings |
 
 ---
 
-## Mac Apps — Cloud Storage
+## Mac Apps -- Cloud Storage & Backup
 
 | App | Description |
 |-----|-------------|
 | **Google Drive** | Cloud storage with Docs, Sheets, and Slides integration |
 | **Tailscale** | Zero-config mesh VPN between your devices |
+| **rclone** | Sync files to any cloud -- Google Drive, S3, Dropbox, etc. |
+| **Syncthing** | Real-time file sync between devices -- no cloud middleman |
+| **borg** | Deduplicated encrypted backups -- better than Time Machine for offsite |
+| **borgmatic** | Automated borg backup scheduling and configuration |
 
 ---
 
-## Mac Apps — Focus & Learning
+## Mac Apps -- Focus & Learning
 
 | App | Description |
 |-----|-------------|
 | **Flow** | Pomodoro timer that lives in the menubar |
-| **Anki** | Spaced repetition flashcards — great for learning new tech |
-| **Reeder** | RSS reader — follow blogs, release notes, changelogs |
+| **Anki** | Spaced repetition flashcards -- great for learning new tech |
+| **Reeder** | RSS reader -- follow blogs, release notes, changelogs |
 
 ---
 
-## Mac Apps — Disk & File Utilities
+## Mac Apps -- Disk & File Utilities
 
 | App | Description |
 |-----|-------------|
-| **DaisyDisk** | Visual disk space analyzer — find what's eating storage |
+| **DaisyDisk** | Visual disk space analyzer -- find what's eating storage |
 
 ---
 
@@ -545,6 +572,7 @@ Applied consistently across all tools:
 | Tool | How |
 |------|-----|
 | **VS Code** | Extension auto-installed, set as default theme |
+| **Zed** | Dracula theme set in settings.json |
 | **bat** | Dracula syntax theme in config |
 | **delta** | Dracula syntax theme for git diffs |
 | **iTerm2** | Theme downloaded to `~/.dracula-iterm` |
@@ -560,50 +588,78 @@ Applied consistently across all tools:
 | **yazi** | Dracula file type colors and borders |
 | **btop** | Full Dracula theme with custom color palette |
 | **lazydocker** | Dracula borders and options colors |
+| **vivid** | Dracula-themed LS_COLORS for file type coloring |
+| **vim** | Dracula-ish color scheme (no plugin needed) |
+| **VS Code brackets** | Dracula-colored bracket pair colorization |
 | **macOS** | System highlight color set to Dracula purple |
 
 ---
 
 ## Claude Code Configuration
 
-The script sets up Claude Code with sensible defaults for full-stack development.
+The script sets up Claude Code with a comprehensive configuration for full-stack development.
 
 ### Files Created
 
 | File | Purpose |
 |------|---------|
-| `~/.claude/settings.json` | Global permissions, file ignore patterns, env vars |
-| `~/.claude/CLAUDE.md` | Global memory — coding standards, React/Next.js/AWS/CDK conventions |
-| `~/.claude/rules/git.md` | Git workflow rules (no force-push, conventional commits) |
+| `~/.claude/settings.json` | Global permissions (110 entries), file ignore patterns, env vars |
+| `~/.claude/CLAUDE.md` | Global memory -- coding standards, available CLI tools reference, React/Next.js/AWS/CDK/Python/IaC conventions, security checks runbook |
+| `~/.claude/rules/workflow.md` | Trunk-based workflow rules (PR-first, issues, README-driven) |
+| `~/.claude/rules/git.md` | Git rules (no force-push, conventional commits, branch naming) |
 | `~/.claude/rules/security.md` | Security rules (no hardcoded secrets, parameterized SQL) |
 | `~/.claude/rules/typescript.md` | TypeScript rules (strict mode, no any, zod schemas) |
-| `~/.claude/hooks/format-on-edit.sh` | Auto-format with Prettier after Claude edits files |
+| `~/.claude/rules/python.md` | Python rules (uv for packages, ruff for linting, type hints, pydantic) |
+| `~/.claude/rules/docker.md` | Docker rules (multi-stage builds, non-root, hadolint, dive) |
+| `~/.claude/rules/iac.md` | IaC rules (remote state, tflint, infracost, trivy config scan) |
+| `~/.claude/hooks/format-on-edit.sh` | Auto-format with Prettier after Claude edits JS/TS/CSS/JSON/MD files |
+| `~/.claude/hooks/lint-python.sh` | Auto-lint and fix Python files with ruff after Claude edits them |
+| `~/.claude/hooks/lint-dockerfile.sh` | Lint Dockerfiles with hadolint after Claude edits them |
 
 ### Custom Slash Commands
 
 | Command | Purpose |
 |---------|---------|
-| `/pr-review` | Review current branch changes vs main — flags security, bugs, edge cases |
+| `/pr-review` | Review current branch changes vs main -- flags security, bugs, edge cases |
 | `/test-plan` | Generate a test plan with unit/integration/e2e cases for recent changes |
 | `/dep-audit` | Audit dependencies for vulnerabilities, outdated packages, bundle size |
 | `/quick-doc` | Generate JSDoc/docstring documentation for a file or function |
 | `/cleanup` | Find dead code, unused imports, debug statements, empty catches |
+| `/security-scan` | Run all security tools (gitleaks, npm audit, semgrep, trivy) and report findings |
+| `/perf-check` | Benchmark with hyperfine, load test with oha, check for performance anti-patterns |
+| `/docker-lint` | Lint Dockerfiles with hadolint, analyze layers with dive, check docker-compose best practices |
+| `/iac-review` | Run tflint, trivy config scan, infracost estimate, check for IaC best practices |
+| `/convert` | Convert between formats using pandoc, d2, mermaid, ffmpeg, or imagemagick |
+| `/new-feature` | Full trunk-based workflow: create issue, branch, implement with tests, PR |
+| `/fix-bug` | Full trunk-based workflow: create issue, branch, test-first fix, PR |
+| `/create-readme` | Analyze codebase and generate comprehensive README.md |
+| `/init-project` | Scaffold new project with git, README, CLAUDE.md, linting, CI, Docker, templates |
+| `/refactor` | Refactor code with tests preserved, SOLID principles, verify tests pass |
+| `/add-endpoint` | Add full API endpoint: types, handler, validation, tests, docs |
+| `/add-component` | Add React component: TSX, tests, stories, props interface, accessibility |
+| `/ci-fix` | Diagnose CI failures with `gh run view`, fix, verify locally with `act` |
+| `/changelog` | Generate changelog from conventional commits grouped by type |
+| `/commit-msg` | Analyze staged changes and generate conventional commit message |
 
 ### Permissions Pre-approved
 
 Common safe commands are pre-approved so Claude doesn't ask every time:
-- **Package managers**: npm, pnpm, bun, npx
+- **Package managers**: npm, pnpm, bun, npx, uv, cargo, pip
 - **Git**: all git and gh commands
-- **AWS**: aws, cdk, sam
-- **Docker**: docker, docker-compose, kubectl
-- **Build tools**: make, tsc, jest, vitest, playwright
-- **File tools**: cat, ls, find, grep, rg, fd, jq, yq, curl
-- **Linters**: eslint, prettier, shellcheck, shfmt
+- **AWS & IaC**: aws, cdk, sam, tofu, tflint, infracost
+- **Docker & K8s**: docker, docker-compose, kubectl, k9s, stern
+- **Build tools**: make, just, tsc, jest, vitest, playwright
+- **File tools**: cat, bat, ls, eza, find, grep, rg, fd, fzf, tree, jq, yq, fx, mlr, csvlook
+- **Linters**: eslint, prettier, shellcheck, shfmt, ruff, hadolint, commitizen, commitlint
+- **Security**: trivy, semgrep, gitleaks, snyk, cosign
+- **Media & docs**: pandoc, d2, mmdc, ffmpeg, magick
+- **Database**: pgcli, mycli, sq, dbmate
+- **Other**: lazygit, lazydocker, dive, hyperfine, oha, tokei, dust, difft, delta
 
 ### Denied Commands
 
 Destructive commands are blocked:
-- `rm -rf /`, `rm -rf ~`, `sudo rm`, `chmod 777`, `mkfs`
+- `rm -rf /`, `rm -rf ~`, `sudo rm`, `chmod 777`, `mkfs`, `> /dev/sda*`
 
 ---
 
@@ -613,64 +669,64 @@ The scripts create an organized directory layout for both development and person
 
 ```
 ~/
-├── Code/                        # ── Development ──
-│   ├── work/                    # Work projects
-│   │   ├── <org-name>/          # Grouped by GitHub org
-│   │   └── scratch/             # Throwaway experiments
-│   ├── personal/                # Personal projects
-│   │   └── scratch/
-│   ├── oss/                     # Open source contributions
-│   └── learning/
-│       ├── courses/
-│       └── playground/
-│
-├── Scripts/                     # ── Automation ──
-│   ├── bin/                     # Custom scripts (added to PATH)
-│   └── cron/                    # Cron job scripts
-│
-├── Screenshots/                 # Screenshots save here
-│
-├── Documents/                   # ── Life Admin ──
-│   ├── finance/
-│   │   ├── taxes/               # Tax returns, W-2s, 1099s
-│   │   ├── invoices/            # Sent/received invoices
-│   │   └── statements/          # Bank/credit card statements
-│   ├── health/                  # Medical records, insurance cards
-│   ├── legal/                   # Contracts, agreements, legal docs
-│   ├── travel/                  # Itineraries, bookings, visa docs
-│   ├── insurance/               # Policies, claims
-│   ├── contracts/               # Work/freelance contracts
-│   ├── receipts/                # Purchase receipts, warranties
-│   └── design/                  # Design files, mockups
-│
-├── Reference/                   # ── Quick-Access Knowledge ──
-│   ├── manuals/                 # Product/software manuals
-│   ├── cheatsheets/             # CLI, language, tool cheatsheets
-│   └── bookmarks-export/        # Exported browser bookmarks
-│
-├── Creative/                    # ── Creative Work ──
-│   ├── design/                  # Graphic design projects
-│   ├── writing/                 # Blog posts, drafts, notes
-│   ├── video-editing/           # Video projects, raw footage
-│   └── assets/
-│       ├── icons/               # Icon collections
-│       ├── fonts/               # Custom/downloaded fonts
-│       ├── stock-photos/        # Stock imagery
-│       └── templates/           # Document/design templates
-│
-├── Media/                       # ── Personal Media ──
-│   ├── photos/                  # Personal photos
-│   ├── videos/                  # Personal videos
-│   ├── music/                   # Music files
-│   └── wallpapers/              # Desktop/phone wallpapers
-│
-├── Projects/                    # ── Non-Code Projects ──
-│   ├── side-hustles/            # Business/freelance projects
-│   └── home/                    # Home improvement, DIY
-│
-└── Archive/                     # ── Cold Storage ──
-    ├── old-projects/            # Completed/abandoned projects
-    └── old-docs/                # Old documents for reference
+|-- Code/                        # -- Development --
+|   |-- work/                    # Work projects
+|   |   |-- <org-name>/          # Grouped by GitHub org
+|   |   +-- scratch/             # Throwaway experiments
+|   |-- personal/                # Personal projects
+|   |   +-- scratch/
+|   |-- oss/                     # Open source contributions
+|   +-- learning/
+|       |-- courses/
+|       +-- playground/
+|
+|-- Scripts/                     # -- Automation --
+|   |-- bin/                     # Custom scripts (added to PATH)
+|   +-- cron/                    # Cron job scripts
+|
+|-- Screenshots/                 # Screenshots save here
+|
+|-- Documents/                   # -- Life Admin --
+|   |-- finance/
+|   |   |-- taxes/               # Tax returns, W-2s, 1099s
+|   |   |-- invoices/            # Sent/received invoices
+|   |   +-- statements/          # Bank/credit card statements
+|   |-- health/                  # Medical records, insurance cards
+|   |-- legal/                   # Contracts, agreements, legal docs
+|   |-- travel/                  # Itineraries, bookings, visa docs
+|   |-- insurance/               # Policies, claims
+|   |-- contracts/               # Work/freelance contracts
+|   |-- receipts/                # Purchase receipts, warranties
+|   +-- design/                  # Design files, mockups
+|
+|-- Reference/                   # -- Quick-Access Knowledge --
+|   |-- manuals/                 # Product/software manuals
+|   |-- cheatsheets/             # CLI, language, tool cheatsheets
+|   +-- bookmarks-export/        # Exported browser bookmarks
+|
+|-- Creative/                    # -- Creative Work --
+|   |-- design/                  # Graphic design projects
+|   |-- writing/                 # Blog posts, drafts, notes
+|   |-- video-editing/           # Video projects, raw footage
+|   +-- assets/
+|       |-- icons/               # Icon collections
+|       |-- fonts/               # Custom/downloaded fonts
+|       |-- stock-photos/        # Stock imagery
+|       +-- templates/           # Document/design templates
+|
+|-- Media/                       # -- Personal Media --
+|   |-- photos/                  # Personal photos
+|   |-- videos/                  # Personal videos
+|   |-- music/                   # Music files
+|   +-- wallpapers/              # Desktop/phone wallpapers
+|
+|-- Projects/                    # -- Non-Code Projects --
+|   |-- side-hustles/            # Business/freelance projects
+|   +-- home/                    # Home improvement, DIY
+|
++-- Archive/                     # -- Cold Storage --
+    |-- old-projects/            # Completed/abandoned projects
+    +-- old-docs/                # Old documents for reference
 ```
 
 ### Helper Scripts (~/Scripts/bin/)
@@ -683,13 +739,17 @@ The scripts create an organized directory layout for both development and person
 | `clean-downloads` | `cleandl` | Delete files in ~/Downloads older than 30 days (interactive) |
 | `backup-dotfiles` | `dotback` | Push dotfile changes via chezmoi |
 | `project-stats` | `pstats` | Show repo counts, disk usage, recently modified projects |
+| `health-check` | `hc` | Quick system health overview (disk, memory, battery, brew, Docker, node_modules) |
+| `setup-ssh` | `sshsetup` | Generate an Ed25519 SSH key and optionally add it to GitHub via gh CLI |
+| `export-brewfile` | `brewsnap` | Export a Brewfile snapshot with descriptions for reproducibility |
 
 ### Global Justfile (~/.justfile)
 
-Common task-runner recipes available from any directory via `gj`:
+27 task-runner recipes available from any directory via `gj`:
 
 | Recipe | Description |
 |--------|-------------|
+| `gj default` | List all available recipes |
 | `gj update` | Update everything via topgrade |
 | `gj info` | Show system info via fastfetch |
 | `gj flush-dns` | Flush DNS cache |
@@ -698,8 +758,23 @@ Common task-runner recipes available from any directory via `gj`:
 | `gj undo` | Undo last commit (keep changes staged) |
 | `gj branches` | Show recent branches by last commit |
 | `gj docker-clean` | Clean unused Docker images, containers, volumes |
+| `gj docker-usage` | Show Docker disk usage |
 | `gj serve` | Serve current directory on a port |
 | `gj uuid` | Generate a UUID |
+| `gj b64-encode` | Encode text to base64 |
+| `gj b64-decode` | Decode base64 text |
+| `gj ip` | Show public IP address |
+| `gj local-ip` | Show local IP address |
+| `gj kill-port` | Kill process on a specific port |
+| `gj status` | Quick HTTP status check for a URL |
+| `gj node-clean` | Find all node_modules under ~/Code with sizes |
+| `gj docker-nuke` | Nuclear Docker cleanup (remove everything) |
+| `gj ds-clean` | Remove .DS_Store files recursively |
+| `gj cheat` | Show a cheatsheet for a command (via tldr) |
+| `gj timestamp` | Generate an ISO timestamp |
+| `gj weather` | Show weather for a city (via wttr.in) |
+| `gj standup` | Git standup -- what did I do yesterday? |
+| `gj loc` | Count lines of code in current directory (via tokei) |
 
 ### Directory Shortcut Aliases
 
@@ -717,8 +792,8 @@ Common task-runner recipes available from any directory via `gj`:
 Automatically uses different git identities for work vs personal:
 
 ```
-~/Code/work/     → uses ~/.gitconfig-work     (work email)
-~/Code/personal/ → uses ~/.gitconfig-personal  (personal email)
+~/Code/work/     -> uses ~/.gitconfig-work     (work email)
+~/Code/personal/ -> uses ~/.gitconfig-personal  (personal email)
 ```
 
 Edit these files after running the script to fill in your details.
@@ -731,22 +806,24 @@ The script generates config files with sensible defaults:
 
 | File | Tool | Highlights |
 |------|------|------------|
-| `~/.zshrc` | Shell | Auto-written managed block with all init scripts and aliases |
-| `~/.tmux.conf` | tmux | Ctrl-a prefix, mouse, vim keys, Dracula status bar |
-| `~/.gitconfig` | git | Rebase pull, histogram diff, aliases (st, co, lg, wip), delta |
+| `~/.zshrc` | Shell | Auto-written managed block with all init scripts, aliases, welcome screen |
+| `~/.zprofile` | Shell | Login shell PATH, editor, pager, LESS, XDG dirs, ulimit increase for Node.js |
+| `~/.tmux.conf` | tmux | Ctrl-a prefix, mouse, vim keys, Dracula status bar, TPM + tmux-resurrect + tmux-continuum (session save/restore) |
+| `~/.gitconfig` | git | Rebase pull, histogram diff, 30 aliases (st, co, lg, wip, cleanup, gone, standup, recent, worktree, stash-all, etc.), delta, rerere, auto-stash |
 | `~/.gitignore_global` | git | .DS_Store, .env, node_modules, editor files, secrets |
+| `~/.gitmessage` | git | Commit template with type/scope format |
 | `~/.gnupg/gpg-agent.conf` | GPG | pinentry-mac, 8-hour passphrase cache |
 | `~/.ssh/config` | SSH | Multiplexing, keychain, keep-alive, strong algorithms |
-| `~/.npmrc` | npm | save-exact, no telemetry, prefer-offline |
-| `~/.editorconfig` | EditorConfig | UTF-8, LF, 2-space indent, per-language overrides |
+| `~/.npmrc` | npm | save-exact, no telemetry, prefer-offline, engine-strict |
+| `~/.editorconfig` | EditorConfig | UTF-8, LF, 2-space indent, per-language overrides (Python 4-space, Go tabs) |
 | `~/.prettierrc` | Prettier | Single quotes, trailing commas, 100 width |
 | `~/.curlrc` | curl | Follow redirects, retry 3x, compression, timeouts |
-| `~/.docker/daemon.json` | Docker | BuildKit enabled, log rotation 10m x 3, DNS |
+| `~/.docker/daemon.json` | Docker | BuildKit enabled, log rotation 10m x 3, DNS, garbage collection |
 | `~/.aria2/aria2.conf` | aria2 | 16 connections, auto-resume, BitTorrent, 64MB cache |
-| `~/.config/atuin/config.toml` | atuin | Fuzzy search, local-only, compact style |
-| `~/.config/starship.toml` | Starship | Dracula palette, purple/red prompt |
+| `~/.config/atuin/config.toml` | atuin | Fuzzy search, local-only, compact style, enter=paste (not execute), history filter (ls/cd/clear/exit), secrets filter |
+| `~/.config/starship.toml` | Starship | Rich two-line prompt with Dracula palette, OS icon, git status with counts, Node/Python/Rust/Go/Docker/AWS/Terraform versions, battery warning, time, Nerd Font icons |
 | `~/.config/glow/glow.yml` | glow | Dracula style, mouse, pager |
-| `~/.config/yt-dlp/config` | yt-dlp | Best quality mp4, aria2c downloader, metadata |
+| `~/.config/yt-dlp/config` | yt-dlp | Best quality mp4, aria2c downloader, metadata, subtitles |
 | `~/.config/gh-dash/config.yml` | gh-dash | PR/issue sections, Dracula theme |
 | `~/.config/stern/config.yaml` | stern | 50 tail lines, 5m lookback, timestamps |
 | `~/.config/ngrok/ngrok.yml` | ngrok | Base config (add authtoken) |
@@ -754,30 +831,35 @@ The script generates config files with sensible defaults:
 | `~/.config/asciinema/config` | asciinema | 2s idle limit, no keystroke recording |
 | `~/.config/yazi/yazi.toml` | yazi | Hidden files, VS Code opener, Dracula theme |
 | `~/.config/ghostty/config` | Ghostty | JetBrains Mono, Dracula palette, transparent titlebar |
-| `~/.justfile` | just | Global task-runner recipes (system, git, Docker, dev) |
+| `~/.config/zed/settings.json` | Zed | Dracula theme, JetBrains Mono, format on save, relative line numbers, inline blame, no telemetry |
+| `~/.config/fastfetch/config.jsonc` | fastfetch | Nerd Font icons, package counts, Node/Python/Go/Rust/Docker versions, battery, disk, colored output |
+| `~/.config/mise/config.toml` | mise | Auto-install, trust ~/Code |
+| `~/.config/topgrade.toml` | topgrade | Cleanup, greedy cask updates |
+| `~/.config/direnv/direnv.toml` | direnv | Hidden env diff, auto-trust ~/Code, load .env |
+| `~/.config/btop/` | btop | Dracula theme with full color palette |
+| `~/.config/lazydocker/` | lazydocker | Dracula theme, timestamps, compose support |
+| `~/.config/pip/pip.conf` | pip | Require virtualenv, no telemetry |
+| `~/.config/pgcli/config` | pgcli | Multi-line, auto-expand, destructive warnings, bat pager |
+| `~/.config/gh/config.yml` | GitHub CLI | SSH protocol, VS Code editor, delta pager, aliases (co, pv, pc, pl, il, pm, rel) |
+| `~/.aws/config` | AWS CLI | Default region, json output, bat pager, auto-prompt, SSO template |
+| `~/.config/git/hooks/` | git | Global pre-commit hooks (debug statements, large files >5MB, conflict markers) |
 | `~/.config/brewfile/Brewfile` | Homebrew | Snapshot of all installed packages with descriptions |
+| `~/.justfile` | just | 27 global task-runner recipes (system, git, Docker, network, cleanup, info) |
 | `~/.shellcheckrc` | shellcheck | External sources, disabled false positives |
 | `~/.actrc` | act | Medium Ubuntu images, container reuse |
 | `~/.mlrrc` | miller | CSV input, pretty table output |
 | `~/.hushlogin` | Terminal | Suppresses "Last login" message |
-| `~/.ripgreprc` | ripgrep | Smart case, hidden files, ignore patterns, custom types |
+| `~/.ripgreprc` | ripgrep | Smart case, hidden files, ignore patterns, custom types (web, config, doc, style) |
 | `~/.fdignore` | fd | Global ignore patterns (node_modules, .git, dist, etc.) |
-| `~/.gitmessage` | git | Commit template with type/scope format |
-| `~/.config/git/hooks/` | git | Global pre-commit hooks (debug, large files, conflicts) |
-| `~/.aws/config` | AWS CLI | Default region, json output, bat pager, auto-prompt, SSO template |
-| `~/.config/gh/config.yml` | GitHub CLI | SSH protocol, VS Code editor, delta pager, aliases |
-| `~/.config/pip/pip.conf` | pip | Require virtualenv, no telemetry |
-| `~/.gemrc` | Ruby | No docs on gem install |
-| `~/.config/pgcli/config` | pgcli | Multi-line, auto-expand, destructive warnings, bat pager |
+| `~/.vimrc` | vim | Line numbers, clipboard, mouse, Dracula colors, space leader, persistent undo |
+| `~/.nanorc` | nano | Line numbers, auto-indent, mouse, syntax highlighting |
 | `~/.myclirc` | mycli | Multi-line, auto-expand, destructive warnings |
-| `~/.config/direnv/direnv.toml` | direnv | Hidden env diff, auto-trust ~/Code |
-| `~/.config/btop/` | btop | Dracula theme with full color palette |
-| `~/.config/lazydocker/` | lazydocker | Dracula theme, timestamps, compose support |
-| `~/Library/.../Code/keybindings` | VS Code | Custom keyboard shortcuts |
-| `~/Library/.../espanso` | Espanso | Date macros, dev shortcuts, Markdown, git snippets |
-| `~/Library/.../lazygit` | lazygit | Dracula theme, delta pager, nerd fonts |
-| `~/Library/.../k9s` | k9s | Full Dracula skin |
-| `~/Library/.../Code/User` | VS Code | Dracula, JetBrains Mono, format on save, extensions |
+| `~/.gemrc` | Ruby | No docs on gem install |
+| `~/Library/.../Code/User/settings.json` | VS Code | Dracula, JetBrains Mono, format on save, 27 extensions, file nesting, bracket pair colorization, per-language formatters (ruff for Python, go for Go, rust-analyzer for Rust) |
+| `~/Library/.../Code/User/keybindings.json` | VS Code | Custom keyboard shortcuts |
+| `~/Library/.../espanso/match/base.yml` | Espanso | Date/time macros, UUID generation, lorem ipsum, regex patterns (email/URL/IP/phone), dev snippets, Markdown blocks, git commands, PR/meeting/bug templates, arrow symbols |
+| `~/Library/.../lazygit/config.yml` | lazygit | Dracula theme, delta pager, nerd fonts, auto-fetch, VS Code editor, rounded borders |
+| `~/Library/.../k9s/skins/dracula.yaml` | k9s | Full Dracula skin |
 
 ---
 
@@ -785,24 +867,30 @@ The script generates config files with sensible defaults:
 
 | Category | Changes |
 |----------|---------|
-| **Dock** | Auto-hide, small icons, no recents, scale minimize, no delay, spacers |
-| **Screenshots** | PNG format, saved to `~/Screenshots`, no shadow |
-| **Keyboard** | Fast key repeat, no press-and-hold, no auto-correct/capitalize/smart quotes |
-| **Trackpad** | Faster tracking speed |
+| **Dock** | Auto-hide, small icons (40px), no recents, scale minimize, no delay, spacers, all default pins cleared |
+| **Wallpaper** | Auto-set from `assets/wolf-wallpaper.jpg` to all desktops |
+| **Screensaver** | Evangelion Clock installed, power-aware idle (1hr on charger, 20min on battery) |
+| **Screenshots** | PNG format, saved to `~/Screenshots`, no shadow, no thumbnail |
+| **Keyboard** | Fast key repeat (2/15), no press-and-hold, no auto-correct/capitalize/smart quotes/dashes/periods |
+| **Trackpad** | Faster tracking speed (2.0) |
 | **Mission Control** | Fixed spaces (no auto-rearrange), fast animations, group by app |
 | **Hot Corners** | Top-left: Mission Control, Top-right: Desktop |
 | **Stage Manager** | Disabled (prevents accidental activation) |
 | **Safari** | Developer menu enabled, full URL in address bar |
 | **TextEdit** | Plain text default, UTF-8 encoding |
-| **Finder** | Hidden files visible, path bar, status bar, list view, folders first, no .DS_Store on network |
+| **Finder** | Hidden files visible, path bar, status bar, list view, folders first, no .DS_Store on network/USB, full POSIX path in title bar |
+| **Finder sidebar** | Configured via mysides (Code, Screenshots, Scripts, Documents, Reference, Creative, Media, Projects, Archive, Downloads) |
 | **Animations** | Reduced motion, fast window resize |
 | **Misc** | No quarantine dialog, battery %, Dracula purple highlight, expanded save/print panels |
-| **Touch ID** | Enabled for sudo — use fingerprint instead of password in terminal |
+| **Touch ID** | Enabled for sudo -- use fingerprint instead of password in terminal |
 | **DNS** | Set to Cloudflare (1.1.1.1) + Quad9 (9.9.9.9) + Google (8.8.8.8) |
-| **Spotlight** | Excluded node_modules, caches, Homebrew directories from indexing |
+| **Spotlight** | Excluded ~/Code, ~/.config, node_modules, caches, Homebrew directories from indexing |
 | **Time Machine** | Excluded node_modules, Docker, caches, Downloads from backups |
 | **Siri** | Disabled and removed from menubar |
-| **Rectangle** | Almost maximize (95%), 8px gaps between windows, snap on drag |
+| **Rectangle** | Almost maximize (95%), 8px gaps between windows, snap on drag, launch at login |
+| **Maccy** | Paste on select, 200 history items, launch at login |
+| **AltTab** | Current space only, show minimized windows |
+| **iTerm2** | Suppress quit prompt |
 
 ---
 
@@ -862,24 +950,89 @@ All aliases are auto-written to `~/.zshrc`:
 | `watchrun` | `find ... \| entr -r` | Watch and rerun on changes |
 | `update` | `topgrade` | Update everything |
 | `sysinfo` | `fastfetch` | Quick system info |
+| `nproj` | `new-project` | Scaffold new project |
+| `cwork` | `clone-work` | Clone work repo |
+| `cpers` | `clone-personal` | Clone personal repo |
+| `dotback` | `backup-dotfiles` | Backup dotfiles via chezmoi |
+| `pstats` | `project-stats` | Show project stats |
+| `cleandl` | `clean-downloads` | Clean old downloads |
+| `hc` | `health-check` | System health overview |
+| `sshsetup` | `setup-ssh` | Generate SSH key + add to GitHub |
+| `brewsnap` | `export-brewfile` | Export Brewfile snapshot |
+
+### Shell Extras
+
+| Feature | Description |
+|---------|-------------|
+| **Zsh completions** | kubectl, gh, aws auto-completions loaded |
+| **GPG_TTY** | Set in zshrc for commit signing to work |
+| **ulimit increase** | `ulimit -n 65536` in zprofile for Node.js/webpack/vite |
+| **vivid LS_COLORS** | Dracula-themed file type coloring via `vivid generate dracula` |
+| **fzf config** | Dracula colors, fd for file finding, bat for preview, eza tree for directory preview, keybindings (ctrl-/ toggle preview, ctrl-y copy) |
+| **Plugin guards** | Zsh plugin sources have defensive `[[ -f ]]` guards |
+| **Terminal welcome** | fastfetch + date + random dev tip on new terminal sessions (not in VS Code) |
 
 ---
 
 ## VS Code Extensions
 
-Auto-installed by the script:
+27 extensions auto-installed by the script:
 
 | Extension | Purpose |
 |-----------|---------|
 | **Dracula Official** | Color theme |
-| **Prettier** | Code formatter |
+| **Prettier** | Code formatter (default for JS/TS/CSS/JSON/MD) |
 | **ESLint** | JavaScript/TypeScript linter |
 | **Tailwind CSS IntelliSense** | Tailwind class autocomplete |
+| **Python** | Python language support |
+| **Go** | Go language support (also used as formatter for Go files) |
+| **rust-analyzer** | Rust language support (also used as formatter for Rust files) |
 | **Auto Rename Tag** | Rename paired HTML/JSX tags |
 | **Path Intellisense** | Autocomplete file paths |
 | **Error Lens** | Inline error/warning highlights |
+| **Better Comments** | Colorized comment annotations (TODO, FIXME, etc.) |
+| **Code Spell Checker** | Spell checking for code and comments |
+| **npm Intellisense** | Autocomplete npm module imports |
+| **Color Highlight** | Highlight color codes in the editor |
+| **Rainbow CSV** | Colorize CSV columns for readability |
 | **GitLens** | Git blame, history, and annotations |
+| **Git Graph** | Visual git history graph |
 | **GitHub Copilot** | AI code completion |
+| **Todo Tree** | Find and highlight TODO/FIXME comments across the project |
+| **Import Cost** | Show size of imported JS/TS packages inline |
+| **Docker** | Dockerfile and docker-compose support |
+| **DotENV** | .env file syntax highlighting |
+| **Markdown All in One** | Markdown shortcuts, preview, table of contents |
+| **YAML** | YAML language support with validation |
+| **Even Better TOML** | TOML language support |
+| **Ruff** | Python linter/formatter (set as default formatter for Python files) |
+
+### VS Code Settings Highlights
+
+- File nesting enabled (test files, lockfiles, config files grouped under parent)
+- Bracket pair colorization with Dracula colors
+- Per-language formatters: Ruff for Python, Go extension for Go, rust-analyzer for Rust
+- Sticky scroll (3 lines max)
+- Inlay hints on unless pressed
+- Terminal uses JetBrains Mono NF
+
+---
+
+## Espanso Text Expansion
+
+Trigger categories configured in Espanso:
+
+| Category | Triggers | Examples |
+|----------|----------|---------|
+| **Date/Time** | `;date`, `;time`, `;datetime`, `;iso` | 2026-04-06, 14:30, ISO 8601 |
+| **UUID** | `;uuid` | Generates a random UUID |
+| **Lorem Ipsum** | `;lorem`, `;loremshort` | Full paragraph or single sentence |
+| **Regex Patterns** | `;rxemail`, `;rxurl`, `;rxip`, `;rxphone` | Common validation patterns |
+| **Dev Snippets** | `;clog`, `;todo`, `;fixme` | `console.log('')`, `// TODO:`, `// FIXME:` |
+| **Markdown** | `;cb`, `;cbt`, `;cbp`, `;cbb`, `;table` | Code blocks (plain, TS, Python, Bash), table |
+| **Git** | `;gcm`, `;gca`, `;gpush` | Commit, add+commit, push current branch |
+| **Templates** | `;prdesc`, `;meeting`, `;bug` | PR description, meeting notes, bug report |
+| **Symbols** | `;arrow`, `;check`, `;cross`, `;bullet`, `;shrug`, `;rarr`, `;larr`, `;uarr`, `;darr`, `;mdash`, `;deg`, `;tm`, `;copy` | Arrows, checkmarks, special characters |
 
 ---
 
@@ -996,6 +1149,8 @@ This prints a full guide for removing all installed tools, configs, and settings
 | entr (file watcher) | **watchexec** |
 | tmux | N/A (use Windows Terminal panes) |
 
+All Claude Code changes apply to Windows: 110 permissions, 7 rules (workflow, git, security, typescript, python, docker, iac), 3 hooks (format-on-edit, lint-python, lint-dockerfile), 20 commands.
+
 ## Windows System Tweaks
 
 Registry edits applied by the `windows-defaults` category:
@@ -1014,7 +1169,7 @@ Clipchamp, Xbox Game Bar, Bing News, Get Help, Tips, Mail, Weather, Maps, People
 
 Managed block in `$PROFILE` with:
 - Starship, Atuin, Zoxide initialization
-- PSReadLine (prediction, ListView, tab completion — replaces zsh-autosuggestions)
+- PSReadLine (prediction, ListView, tab completion -- replaces zsh-autosuggestions)
 - All aliases translated to PowerShell (`Set-Alias` + wrapper functions)
 - Dracula fzf colors, environment variables
 
@@ -1059,6 +1214,10 @@ Also uses **snap**, **flatpak**, **cargo**, and **Linuxbrew** as fallbacks.
 | Docker Desktop / OrbStack | **Docker Engine** (native, no VM overhead) |
 | entr | entr (native on Linux) |
 
+GUI apps installed via snap/flatpak where native packages are unavailable.
+
+All Claude Code changes apply to Linux: 110 permissions, 7 rules, 3 hooks, 20 commands.
+
 ## External Repos Auto-Added
 
 The script adds official repositories for tools not in default repos:
@@ -1073,8 +1232,8 @@ The script adds official repositories for tools not in default repos:
 ## Ubuntu/Debian Notes
 
 Some tools have different binary names on Debian-based systems. The script creates symlinks automatically:
-- `batcat` → `bat`
-- `fdfind` → `fd`
+- `batcat` -> `bat`
+- `fdfind` -> `fd`
 
 Many Rust CLI tools not in apt are installed via `cargo install` as fallback (eza, zoxide, sd, procs, gping, xh, etc.).
 
@@ -1087,6 +1246,7 @@ GNOME settings applied via `gsettings` (skipped if not GNOME):
 - Dock auto-hide and small icons
 - Screenshots to `~/Screenshots`
 - DNS via systemd-resolved (Cloudflare + Quad9 + Google)
+- GTK bookmarks configured for file manager sidebar (Code, Scripts, Documents, etc.)
 
 ## Shell: zsh
 
@@ -1111,21 +1271,23 @@ These 150+ CLI tools and configs are installed on every platform:
 
 **Dev tools:** git, gh, node, python, go, rust, bun, uv, pnpm, jq, httpie, direnv, cmake, docker
 
-**Modern replacements:** eza, bat, fd, ripgrep, zoxide, btop, sd, dust, duf, procs, gping, xh, doggo, tokei, viddy, hexyl, aria2, difftastic, just, yazi, fx, tldr, trash
+**Modern replacements:** eza, bat, fd, ripgrep, zoxide, btop, sd, dust, duf, procs, gping, xh, doggo, tokei, viddy, hexyl, aria2, difftastic, vivid, just, yazi, fx, tldr, trash
 
 **Git:** delta, lazygit, git-absorb, git-lfs, pre-commit, gnupg
 
 **AWS:** aws-cli, sam-cli, cdk, cfn-lint, granted
 
+**IaC:** opentofu, tflint, infracost
+
 **Security:** git-secrets, trufflehog, detect-secrets, gitleaks, trivy, semgrep, cosign, snyk, mkcert, wireshark, ssh-audit, clamav, age, sops
 
 **Data:** yq, miller, csvkit, pandoc, imagemagick, ffmpeg, yt-dlp
 
-**Code quality:** shellcheck, shfmt, act, hyperfine, oha
+**Code quality:** shellcheck, shfmt, act, hadolint, ruff, npkill, commitizen, commitlint, ni, hyperfine, oha
 
 **Servers:** ngrok, miniserve, caddy
 
-**Productivity:** glow, entr, pv, parallel, asciinema, topgrade, fastfetch, starship, atuin, fzf, chezmoi
+**Productivity:** glow, entr, pv, parallel, asciinema, topgrade, fastfetch, lnav, starship, atuin, fzf, chezmoi
 
 **K8s:** stern, kubectl, k9s, lazydocker, dive, colima
 
@@ -1135,10 +1297,12 @@ These 150+ CLI tools and configs are installed on every platform:
 
 **JS tooling:** TypeScript, tsx, Turborepo, Storybook, Playwright, Lighthouse, Mermaid CLI
 
-## 40+ Shared Config Files
+**Backup:** rclone, Syncthing, borg, borgmatic
+
+## 60+ Shared Config Files
 
 Identical content across all platforms (paths adjusted per OS):
-starship, atuin, glow, btop, lazygit, lazydocker, k9s, yazi, gh-dash, stern, mise, fastfetch, direnv, caddy, ngrok, yt-dlp, asciinema, pgcli, .editorconfig, .prettierrc, .shellcheckrc, .curlrc, .npmrc, .ripgreprc, .fdignore, .vimrc, .nanorc, .gitignore_global, .gitmessage, .myclirc, .gemrc, .actrc, .mlrrc, .justfile, VS Code settings/keybindings/extensions, Espanso, Docker, AWS CLI, GitHub CLI, pip, git global config, SSH config, Claude Code config
+starship, atuin, glow, btop, lazygit, lazydocker, k9s, yazi, gh-dash, stern, mise, fastfetch, direnv, caddy, ngrok, yt-dlp, asciinema, pgcli, zed, ghostty, .editorconfig, .prettierrc, .shellcheckrc, .curlrc, .npmrc, .ripgreprc, .fdignore, .vimrc, .nanorc, .gitignore_global, .gitmessage, .myclirc, .gemrc, .actrc, .mlrrc, .justfile, VS Code settings/keybindings/extensions, Espanso, Docker, AWS CLI, GitHub CLI, pip, git global config, SSH config, Claude Code config (settings, CLAUDE.md, 6 rules, 3 hooks, 10 commands)
 
 ---
 
