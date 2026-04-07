@@ -75,8 +75,8 @@ FAILED_ITEMS=()
 
 # Dynamic total — count all install calls in this script so the progress bar stays accurate
 # when tools are added or removed. Counts brew_install, brew_cask_install, npm_global_install,
-# and mas install calls (including those inside conditionals).
-INSTALL_TOTAL=$(grep -cE '^\s*(brew_install|brew_cask_install|npm_global_install|mas install) ' "$0" 2>/dev/null || echo 200)
+# including those inside conditionals.
+INSTALL_TOTAL=$(grep -cE '^\s*(brew_install|brew_cask_install|npm_global_install) ' "$0" 2>/dev/null || echo 200)
 
 progress() {
     ((INSTALL_CURRENT++)) || true
@@ -152,7 +152,6 @@ ALL_CATEGORIES=(
     api
     networking
     dx
-    ui
     ux
     docs
     mac-system
@@ -204,7 +203,7 @@ list_categories() {
     echo ""
     echo -e "${BOLD}Available categories:${NC}"
     echo ""
-    printf "  %-25s %s\n" "prerequisites"       "Xcode CLI Tools, Rosetta 2, Homebrew, GNU coreutils"
+    printf "  %-25s %s\n" "prerequisites"       "Xcode CLI Tools, Homebrew, GNU coreutils"
     printf "  %-25s %s\n" "core"                "mise (Node, Python), Go, Rust, OrbStack, bun, uv, pnpm"
     printf "  %-25s %s\n" "git"                 "Git, GitHub CLI, delta, lazygit, pre-commit"
     printf "  %-25s %s\n" "aws"                 "AWS CLI, CDK, SAM, Granted, cfn-lint"
@@ -215,23 +214,22 @@ list_categories() {
     printf "  %-25s %s\n" "code-quality"        "shellcheck, shfmt, act, hadolint, ruff, commitizen, ni"
     printf "  %-25s %s\n" "perf-testing"        "hyperfine, oha"
     printf "  %-25s %s\n" "dev-servers"         "ngrok, miniserve, caddy"
-    printf "  %-25s %s\n" "terminal-productivity" "glow, entr, pv, parallel, topgrade, fastfetch"
+    printf "  %-25s %s\n" "terminal-productivity" "glow, watchexec, pv, parallel, gum, nushell, topgrade, fastfetch"
     printf "  %-25s %s\n" "k8s-github"          "stern, gh-dash"
-    printf "  %-25s %s\n" "database"            "pgcli, mycli, usql, sq, TablePlus, DBeaver"
+    printf "  %-25s %s\n" "database"            "pgcli, mycli, usql, sq, TablePlus"
     printf "  %-25s %s\n" "containers"          "lazydocker, dive, kubectl, k9s"
     printf "  %-25s %s\n" "api"                 "Bruno, grpcurl"
     printf "  %-25s %s\n" "networking"          "mtr, bandwhich, nmap"
-    printf "  %-25s %s\n" "dx"                  "fzf, starship, atuin, VS Code, Cursor, Zed, Ghostty, tmux, Raycast"
-    printf "  %-25s %s\n" "ui"                  "Storybook, Playwright, Chrome"
+    printf "  %-25s %s\n" "dx"                  "fzf, starship, atuin, VS Code, Zed, Ghostty, tmux, zellij, Raycast"
     printf "  %-25s %s\n" "ux"                  "Lighthouse"
     printf "  %-25s %s\n" "docs"                "d2, Mermaid CLI"
-    printf "  %-25s %s\n" "mac-system"          "Pearcleaner, Stats, Quick Look plugins"
-    printf "  %-25s %s\n" "mac-productivity"    "Notion, Shottr, Skim, Transmit"
-    printf "  %-25s %s\n" "mac-communication"   "Slack, Telegram, Signal"
+    printf "  %-25s %s\n" "mac-system"          "Pearcleaner, Quick Look plugins"
+    printf "  %-25s %s\n" "mac-productivity"    "Notion, Skim, Transmit"
+    printf "  %-25s %s\n" "mac-communication"   "Slack, Telegram"
     printf "  %-25s %s\n" "mac-browsers"        "Firefox, Brave"
-    printf "  %-25s %s\n" "mac-media"           "IINA, ImageOptim, LibreOffice"
+    printf "  %-25s %s\n" "mac-media"           "mpv, oxipng, jpegoptim, 7zip, LibreOffice"
     printf "  %-25s %s\n" "mac-cloud"           "Google Drive, rclone, borg"
-    printf "  %-25s %s\n" "mac-focus"           "Reeder"
+    printf "  %-25s %s\n" "mac-focus"           "newsboat"
     printf "  %-25s %s\n" "mac-disk"            "dust, duf (CLI disk analyzers)"
     printf "  %-25s %s\n" "mac-bloat"           "Remove pre-installed Apple apps (GarageBand)"
     printf "  %-25s %s\n" "dracula"             "Dracula theme for all tools"
@@ -553,7 +551,7 @@ if [[ "$CLEANUP" == "true" ]]; then
         "cask:warp:Warp terminal:Ghostty"
         "cask:iterm2:iTerm2:Ghostty"
         "cask:cursor:Cursor (AI editor):VS Code + Claude Code"
-        "cask:cleanshot:CleanShot X:Shottr"
+        "cask:cleanshot:CleanShot X:removed"
         "cask:soulver:Soulver 3:removed"
         "cask:numi:Numi:removed"
         "cask:hazel:Hazel:macOS Automator/scripts"
@@ -589,9 +587,27 @@ if [[ "$CLEANUP" == "true" ]]; then
         "formula:httpie:HTTPie:xh"
         "formula:git-secrets:git-secrets:gitleaks + detect-secrets"
         "formula:trufflehog:trufflehog:gitleaks + detect-secrets"
-        "cask:the-unarchiver:The Unarchiver:Keka"
+        "cask:the-unarchiver:The Unarchiver:p7zip (CLI)"
         "cask:cyberduck:Cyberduck:Transmit"
         "cask:colima:colima:OrbStack"
+        "cask:blockblock:BlockBlock:removed"
+        "cask:oversight:OverSight:removed"
+        "cask:knockknock:KnockKnock:removed"
+        "cask:reikey:ReiKey:removed"
+        "cask:syntax-highlight:Syntax Highlight:removed"
+        "mas:937984704:Amphetamine:removed"
+        "cask:stats:Stats:removed"
+        "cask:rectangle:Rectangle:removed"
+        "cask:shottr:Shottr:removed"
+        "cask:signal:Signal:removed"
+        "formula:gifski:gifski:removed"
+        "mas:6475002485:Reeder:newsboat"
+        "formula:mas:mas:removed"
+        "cask:dbeaver-community:DBeaver Community:pgcli/mycli/sq (CLI)"
+        "cask:iina:IINA:mpv (CLI)"
+        "cask:imageoptim:ImageOptim:oxipng + jpegoptim (CLI)"
+        "cask:keka:Keka:p7zip (CLI)"
+        "formula:entr:entr:watchexec"
     )
 
     CLEANUP_COUNT=0
@@ -676,19 +692,6 @@ else
     success "Xcode Command Line Tools installed"
 fi
 
-# Rosetta 2 (Apple Silicon compatibility for x86 tools)
-if [[ "$(uname -m)" == "arm64" ]]; then
-    if /usr/bin/pgrep -q oahd; then
-        warn "Rosetta 2 already installed"
-    else
-        info "Installing Rosetta 2 for Apple Silicon..."
-        /usr/sbin/softwareupdate --install-rosetta --agree-to-license
-        success "Rosetta 2 installed"
-    fi
-else
-    info "Intel Mac detected — Rosetta 2 not needed"
-fi
-
 # -----------------------------------------------------------------------------
 # Homebrew
 # -----------------------------------------------------------------------------
@@ -708,9 +711,6 @@ fi
 
 # Prevent brew from auto-updating on every install (we already updated above)
 export HOMEBREW_NO_AUTO_UPDATE=1
-
-# mas (Mac App Store CLI — install App Store apps from terminal)
-brew_install "mas" "mas (Mac App Store CLI)"
 
 # GNU coreutils (Linux-compatible sed, tar, awk, grep for script portability)
 brew_install "coreutils" "coreutils (GNU core utilities)"
@@ -736,9 +736,11 @@ if installed mise; then
     if ! mise ls node 2>/dev/null | grep -q "lts"; then
         info "Installing Node.js LTS via mise..."
         if [[ "$DRY_RUN" != "true" ]]; then
-            mise install node@lts >> "$LOG_FILE" 2>&1
-            mise use --global node@lts >> "$LOG_FILE" 2>&1
-            success "Node.js LTS installed via mise"
+            if mise install node@lts >> "$LOG_FILE" 2>&1 && mise use --global node@lts >> "$LOG_FILE" 2>&1; then
+                success "Node.js LTS installed via mise"
+            else
+                error "Failed to install Node.js LTS via mise (check $LOG_FILE)"
+            fi
         fi
     else
         warn "Node.js LTS already installed via mise"
@@ -747,9 +749,11 @@ if installed mise; then
     if ! mise ls python 2>/dev/null | grep -q "3.12"; then
         info "Installing Python 3.12 via mise..."
         if [[ "$DRY_RUN" != "true" ]]; then
-            mise install python@3.12 >> "$LOG_FILE" 2>&1
-            mise use --global python@3.12 >> "$LOG_FILE" 2>&1
-            success "Python 3.12 installed via mise"
+            if mise install python@3.12 >> "$LOG_FILE" 2>&1 && mise use --global python@3.12 >> "$LOG_FILE" 2>&1; then
+                success "Python 3.12 installed via mise"
+            else
+                error "Failed to install Python 3.12 via mise (check $LOG_FILE)"
+            fi
         fi
     else
         warn "Python 3.12 already installed via mise"
@@ -774,9 +778,12 @@ if ! installed rustup; then
     if [[ "$DRY_RUN" == "true" ]]; then
         info "[DRY RUN] Would install: Rust via rustup"
     else
-        curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --no-modify-path >> "$LOG_FILE" 2>&1
-        source "$HOME/.cargo/env" 2>/dev/null || true
-        success "Rust installed via rustup"
+        if curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --no-modify-path >> "$LOG_FILE" 2>&1; then
+            source "$HOME/.cargo/env" 2>/dev/null || true
+            success "Rust installed via rustup"
+        else
+            error "Failed to install Rust via rustup (check $LOG_FILE)"
+        fi
     fi
 else
     warn "Rust (rustup) already installed"
@@ -792,8 +799,11 @@ brew_install "oven-sh/bun/bun" "bun (fast JS runtime/bundler/test runner)"
 progress
 if ! installed pnpm; then
     info "Installing pnpm..."
-    curl -fsSL https://get.pnpm.io/install.sh | sh -
-    success "pnpm installed"
+    if curl -fsSL https://get.pnpm.io/install.sh | sh - >> "$LOG_FILE" 2>&1; then
+        success "pnpm installed"
+    else
+        error "Failed to install pnpm (check $LOG_FILE)"
+    fi
 else
     warn "pnpm already installed"
 fi
@@ -839,6 +849,7 @@ brew_install "gnupg" "GnuPG (commit signing)"
 brew_install "pinentry-mac" "pinentry-mac (GPG passphrase)"
 brew_install "lazygit" "lazygit (terminal UI for git)"
 brew_install "git-absorb" "git-absorb (auto-fixup commits)"
+brew_install "git-cliff" "git-cliff (generate changelogs from conventional commits)"
 
 # pre-commit
 brew_install "pre-commit" "pre-commit (git hook framework)"
@@ -935,12 +946,6 @@ fi
 brew_install "mkcert" "mkcert (local HTTPS certs for dev)"
 brew_install "ssh-audit" "ssh-audit (audit SSH server/client config)"
 
-# Endpoint & system security (Objective-See tools)
-brew_cask_install "blockblock" "BlockBlock (alerts on persistent installs)"
-brew_cask_install "oversight" "OverSight (mic/camera activation alerts)"
-brew_cask_install "knockknock" "KnockKnock (shows persistently installed software)"
-brew_cask_install "reikey" "ReiKey (detects keyboard event taps / keyloggers)"
-
 # ClamAV (open-source antivirus)
 brew_install "clamav" "ClamAV (open-source antivirus)"
 
@@ -1020,6 +1025,7 @@ brew_install "gping" "gping (replaces ping — real-time latency graph)"
 
 # curl -> xh: colorized output, JSON shortcuts, HTTPie-like
 brew_install "xh" "xh (replaces curl — colorized, JSON-friendly)"
+brew_install "curlie" "curlie (curl with httpie-like output)"
 
 # dig -> doggo: colorized DNS, supports DoH/DoT (dog is abandoned, doggo is the maintained successor)
 brew_install "doggo" "doggo (replaces dig — colorized DNS, DoH support)"
@@ -1059,6 +1065,7 @@ brew_install "yazi" "yazi (terminal file manager — image preview, vim keys, bu
 
 # jq (interactive) -> fx: interactive JSON viewer/processor
 brew_install "fx" "fx (interactive JSON viewer — better than jq for exploring)"
+brew_install "jnv" "jnv (interactive JSON navigator with jq filtering)"
 
 fi  # replacements
 
@@ -1100,6 +1107,8 @@ brew_install "hadolint" "hadolint (Dockerfile linter — catches bad practices)"
 
 # Python linting (ruff — extremely fast, replaces flake8+black+isort)
 brew_install "ruff" "ruff (fast Python linter+formatter — replaces flake8+black+isort)"
+brew_install "typos-cli" "typos (source code spell checker — fast, low false positives)"
+brew_install "ast-grep" "ast-grep (structural code search/replace using AST)"
 
 # JS/TS workflow
 if installed npm; then
@@ -1117,6 +1126,7 @@ banner "Performance & Load Testing"
 
 brew_install "hyperfine" "hyperfine (command benchmarking)"
 brew_install "oha" "oha (HTTP load testing, Rust-based)"
+brew_install "hurl" "hurl (HTTP requests from plain text files — curl + test runner)"
 
 fi  # perf-testing
 
@@ -1135,10 +1145,12 @@ if should_run "terminal-productivity"; then
 banner "Terminal Productivity"
 
 brew_install "glow" "glow (render Markdown in terminal)"
-brew_install "entr" "entr (run commands when files change)"
+brew_install "watchexec" "watchexec (run commands on file changes — better entr)"
 brew_install "pv" "pv (pipe viewer — progress bars for pipes)"
 brew_install "parallel" "parallel (GNU parallel — run commands in parallel)"
 brew_install "asciinema" "asciinema (record & share terminal sessions)"
+brew_install "gum" "gum (shell script UI toolkit — prompts, spinners, confirmations)"
+brew_install "nushell" "nushell (structured data shell — pipelines output tables)"
 brew_install "topgrade" "topgrade (update everything — brew, npm, pip, macOS, all at once)"
 brew_install "fastfetch" "fastfetch (quick system info display — faster neofetch)"
 brew_install "nano" "nano (latest — better than macOS built-in)"
@@ -1159,8 +1171,11 @@ if installed gh; then
         warn "gh-dash already installed"
     else
         info "Installing gh-dash (GitHub dashboard)..."
-        gh extension install dlvhdr/gh-dash 2>/dev/null || true
-        success "gh-dash installed (run: gh dash)"
+        if gh extension install dlvhdr/gh-dash >> "$LOG_FILE" 2>&1; then
+            success "gh-dash installed (run: gh dash)"
+        else
+            error "Failed to install gh-dash extension"
+        fi
     fi
 fi
 
@@ -1172,6 +1187,7 @@ banner "Database & Data"
 
 brew_install "pgcli" "pgcli (auto-completing Postgres CLI)"
 brew_install "mycli" "mycli (auto-completing MySQL CLI)"
+brew_install "lazysql" "lazysql (TUI for databases — interactive SQL in terminal)"
 # usql — not in Homebrew, install via Go
 progress
 if installed go; then
@@ -1187,7 +1203,6 @@ fi
 brew_install "neilotoole/sq/sq" "sq (jq for databases — query SQLite, Postgres, CSV from one tool)"
 brew_install "dbmate" "dbmate (lightweight DB migrations)"
 brew_cask_install "tableplus" "TablePlus (native DB GUI — daily driver)"
-brew_cask_install "dbeaver-community" "DBeaver Community (advanced SQL, 100+ DB support)"
 
 fi  # database
 
@@ -1218,6 +1233,7 @@ banner "Networking & Debugging"
 brew_install "mtr" "mtr (combines ping + traceroute)"
 brew_install "bandwhich" "bandwhich (real-time bandwidth by process)"
 brew_install "nmap" "nmap (network scanning)"
+brew_install "trippy" "trippy (modern traceroute TUI with charts)"
 
 fi  # networking
 
@@ -1249,6 +1265,7 @@ fi
 brew_cask_install "zed" "Zed (fast native editor from ex-Atom team — GPU-rendered)"
 brew_cask_install "ghostty" "Ghostty (fast GPU-accelerated terminal)"
 brew_install "tmux" "tmux (terminal multiplexer)"
+brew_install "zellij" "zellij (modern terminal multiplexer — discoverable UI, layouts)"
 
 # AI tools
 # Claude Code (installed via npm, not brew)
@@ -1262,14 +1279,16 @@ if installed gh; then
         warn "GitHub Copilot CLI already installed"
     else
         info "Installing GitHub Copilot CLI..."
-        gh extension install github/gh-copilot 2>/dev/null || true
-        success "GitHub Copilot CLI installed (run: gh copilot suggest)"
+        if gh extension install github/gh-copilot >> "$LOG_FILE" 2>&1; then
+            success "GitHub Copilot CLI installed (run: gh copilot suggest)"
+        else
+            error "Failed to install GitHub Copilot CLI extension"
+        fi
     fi
 fi
 
 # Productivity apps
 brew_cask_install "raycast" "Raycast (Spotlight replacement with extensions)"
-brew_cask_install "rectangle" "Rectangle (window management keyboard shortcuts)"
 
 # Dotfile management
 brew_install "chezmoi" "chezmoi (dotfile manager — backup/restore configs across machines)"
@@ -1293,20 +1312,6 @@ if [[ ! -f "$HOME/.fzf.zsh" ]] && installed fzf; then
 fi
 
 fi  # dx
-
-# =============================================================================
-if should_run "ui"; then
-banner "UI Development"
-
-if installed npm; then
-    npm_global_install "storybook" "Storybook CLI"
-    npm_global_install "playwright" "Playwright"
-fi
-
-# Chrome
-brew_cask_install "google-chrome" "Google Chrome"
-
-fi  # ui
 
 # =============================================================================
 if should_run "ux"; then
@@ -1333,47 +1338,9 @@ fi
 fi  # docs
 
 # =============================================================================
-# Check if signed into Mac App Store (needed for mas installs in mac-* categories)
-MAS_SIGNED_IN=false
-if installed mas; then
-    # mas list returns installed apps; if it works, we can install too
-    # On modern macOS, mas requires the user to be signed in via System Settings
-    if mas list &>/dev/null 2>&1; then
-        MAS_SIGNED_IN=true
-    else
-        echo ""
-        echo -e "${YELLOW}${BOLD}  Mac App Store: Not signed in${NC}"
-        echo -e "${YELLOW}  Some apps require the App Store. Sign in to install them:${NC}"
-        echo -e "${YELLOW}    1. Open App Store (Cmd+Space → 'App Store')${NC}"
-        echo -e "${YELLOW}    2. Click 'Sign In' and enter your Apple ID${NC}"
-        echo -e "${YELLOW}    3. Re-run this script (or use --only mac-system,mac-focus,mac-media,mac-productivity)${NC}"
-        echo ""
-        read -p "Continue without App Store apps? [Y/n] " mas_confirm
-        if [[ "$mas_confirm" =~ ^[Nn]$ ]]; then
-            info "Opening App Store for sign-in..."
-            open -a "App Store"
-            echo "Sign in, then re-run the script."
-            exit 0
-        fi
-    fi
-fi
-
 if should_run "mac-system"; then
 banner "Mac Apps — System & Utilities"
 
-brew_cask_install "stats" "Stats (menubar system monitor)"
-# Amphetamine is Mac App Store only — install via mas
-progress
-if installed mas && [[ "$MAS_SIGNED_IN" == "true" ]]; then
-    if mas list 2>/dev/null | grep -q "937984704"; then
-        warn "Amphetamine already installed"
-    else
-        info "Installing Amphetamine from Mac App Store..."
-        mas install 937984704 >> "$LOG_FILE" 2>&1 && success "Amphetamine installed" || error "Failed to install Amphetamine (sign into App Store first)"
-    fi
-else
-    warn "Amphetamine skipped (App Store not signed in)"
-fi
 brew_cask_install "lulu" "LuLu (outbound firewall)"
 brew_cask_install "protonvpn" "Proton VPN"
 brew_cask_install "proton-mail" "Proton Mail"
@@ -1385,7 +1352,6 @@ brew_cask_install "pearcleaner" "Pearcleaner (open-source deep app uninstaller)"
 
 # Quick Look plugins (preview files in Finder with spacebar)
 brew_cask_install "qlmarkdown" "QLMarkdown (preview Markdown in Finder)"
-brew_cask_install "syntax-highlight" "Syntax Highlight (preview code files in Finder)"
 brew_cask_install "qlstephen" "QLStephen (preview plain text files without extension)"
 # QuickLookJSON — removed from Homebrew (disabled 2025-12); macOS handles JSON preview natively now
 
@@ -1399,7 +1365,7 @@ brew_cask_install "claude" "Claude (AI assistant)"
 brew_cask_install "notion" "Notion (docs, wikis, project tracking)"
 brew_cask_install "notion-calendar" "Notion Calendar"
 brew_cask_install "notion-mail" "Notion Mail"
-brew_cask_install "shottr" "Shottr (screenshots, pixel measuring, OCR — free)"
+brew_cask_install "snagit" "Snagit (screenshots, scrolling capture, annotations, video)"
 
 # PDF & documents
 brew_cask_install "skim" "Skim (lightweight PDF reader with annotations — faster than Preview)"
@@ -1415,7 +1381,6 @@ banner "Mac Apps — Communication"
 
 brew_cask_install "slack" "Slack"
 brew_cask_install "telegram" "Telegram"
-brew_cask_install "signal" "Signal (end-to-end encrypted messaging)"
 
 fi  # mac-communication
 
@@ -1423,6 +1388,7 @@ fi  # mac-communication
 if should_run "mac-browsers"; then
 banner "Mac Apps — Browsers"
 
+brew_cask_install "google-chrome" "Google Chrome"
 brew_cask_install "firefox" "Firefox"
 brew_cask_install "brave-browser" "Brave Browser (privacy-focused Chromium)"
 
@@ -1432,11 +1398,10 @@ fi  # mac-browsers
 if should_run "mac-media"; then
 banner "Mac Apps — Media"
 
-brew_cask_install "iina" "IINA (modern video player)"
-brew_cask_install "imageoptim" "ImageOptim (lossless image compression)"
-# gifski is a CLI formula, not a cask
-brew_install "gifski" "gifski (video to high-quality GIF)"
-brew_cask_install "keka" "Keka (file archiver/compressor)"
+brew_install "mpv" "mpv (terminal video player)"
+brew_install "oxipng" "oxipng (lossless PNG compression)"
+brew_install "jpegoptim" "jpegoptim (lossless JPEG compression)"
+brew_install "p7zip" "7zip (archive tool — zip, 7z, rar, tar)"
 brew_cask_install "libreoffice" "LibreOffice (free office suite)"
 
 fi  # mac-media
@@ -1458,18 +1423,7 @@ fi  # mac-cloud
 if should_run "mac-focus"; then
 banner "Mac Apps — Focus & Learning"
 
-# Reeder is Mac App Store only — install via mas
-progress
-if installed mas && [[ "$MAS_SIGNED_IN" == "true" ]]; then
-    if mas list 2>/dev/null | grep -q "6475002485"; then
-        warn "Reeder already installed"
-    else
-        info "Installing Reeder from Mac App Store..."
-        mas install 6475002485 >> "$LOG_FILE" 2>&1 && success "Reeder installed" || error "Failed to install Reeder (sign into App Store first)"
-    fi
-else
-    warn "Reeder skipped (App Store not signed in)"
-fi
+brew_install "newsboat" "newsboat (terminal RSS/Atom reader)"
 
 fi  # mac-focus
 
@@ -1916,8 +1870,11 @@ if [[ -d "$TPM_DIR" ]]; then
 else
     info "Installing tmux plugin manager (TPM)..."
     if [[ "$DRY_RUN" != "true" ]]; then
-        git clone https://github.com/tmux-plugins/tpm "$TPM_DIR" 2>/dev/null || true
-        success "TPM installed (press prefix + I in tmux to install plugins)"
+        if git clone https://github.com/tmux-plugins/tpm "$TPM_DIR" >> "$LOG_FILE" 2>&1; then
+            success "TPM installed (press prefix + I in tmux to install plugins)"
+        else
+            error "Failed to clone TPM (check network and $LOG_FILE)"
+        fi
     else
         info "[DRY RUN] Would install TPM"
     fi
@@ -2770,11 +2727,244 @@ info "hyperfine: no config needed (usage: hyperfine 'command1' 'command2')"
 # ---- oha (no config file) ----
 info "oha: no config needed (usage: oha -n 1000 -c 50 http://localhost:3000)"
 
-# ---- entr (no config file) ----
-info "entr: no config needed (usage: find . -name '*.ts' | entr -r npm test)"
+# ---- watchexec (no config file) ----
+info "watchexec: no config needed (usage: watchexec --exts ts,tsx -- npm test)"
 
 # ---- pv (no config file) ----
 info "pv: no config needed (usage: pv largefile.tar.gz | tar xz)"
+
+# ---- zellij config ----
+ZELLIJ_CONFIG_DIR="$HOME/.config/zellij"
+ZELLIJ_CONFIG="$ZELLIJ_CONFIG_DIR/config.kdl"
+if [[ -f "$ZELLIJ_CONFIG" ]]; then
+    warn "zellij config already exists"
+else
+    info "Creating zellij config (Dracula theme, tmux-like keybindings)..."
+    mkdir -p "$ZELLIJ_CONFIG_DIR"
+    cat > "$ZELLIJ_CONFIG" <<'ZELLIJ_CONF'
+// Zellij configuration — Dracula theme, tmux-like prefix
+
+// Use Ctrl-a as prefix (matches tmux config)
+keybinds {
+    unbind "Ctrl b"
+}
+
+// Copy on select
+copy_on_select true
+
+// Dracula color theme
+themes {
+    dracula {
+        fg "#f8f8f2"
+        bg "#282a36"
+        black "#21222c"
+        red "#ff5555"
+        green "#50fa7b"
+        yellow "#f1fa8c"
+        blue "#bd93f9"
+        magenta "#ff79c6"
+        cyan "#8be9fd"
+        white "#f8f8f2"
+        orange "#ffb86c"
+    }
+}
+
+theme "dracula"
+
+// Default layout
+default_layout "compact"
+
+// Pane frames
+pane_frames false
+
+// Mouse mode
+mouse_mode true
+
+// Scroll buffer
+scroll_buffer_size 50000
+ZELLIJ_CONF
+    success "zellij configured (Dracula theme, compact layout, mouse)"
+fi
+
+# ---- newsboat config ----
+NEWSBOAT_DIR="$HOME/.newsboat"
+NEWSBOAT_CONFIG="$NEWSBOAT_DIR/config"
+NEWSBOAT_URLS="$NEWSBOAT_DIR/urls"
+if [[ -f "$NEWSBOAT_CONFIG" ]]; then
+    warn "newsboat config already exists"
+else
+    info "Creating newsboat config (vim keys, Dracula colors)..."
+    mkdir -p "$NEWSBOAT_DIR"
+    cat > "$NEWSBOAT_CONFIG" <<'NEWSBOAT_CONF'
+# Newsboat configuration — vim keys, Dracula colors
+
+# General
+auto-reload yes
+reload-time 30
+reload-threads 4
+show-read-feeds no
+show-read-articles no
+
+# Vim-like navigation
+bind-key j down
+bind-key k up
+bind-key j next articlelist
+bind-key k prev articlelist
+bind-key J next-feed articlelist
+bind-key K prev-feed articlelist
+bind-key G end
+bind-key g home
+bind-key l open
+bind-key h quit
+
+# Dracula colors
+color background          color253  color236
+color listnormal          color253  color236
+color listfocus           color236  color141  bold
+color listnormal_unread   color154  color236
+color listfocus_unread    color236  color154  bold
+color info                color236  color141
+color article             color253  color236
+
+# Browser
+browser "open -a 'Brave Browser' %u"
+
+# Date format
+datetime-format "%Y-%m-%d"
+NEWSBOAT_CONF
+
+    # Starter URLs file
+    cat > "$NEWSBOAT_URLS" <<'NEWSBOAT_URLS_CONF'
+# Dev blogs and release feeds — add your own below
+https://github.com/anthropics/claude-code/releases.atom "~Claude Code Releases"
+https://nodejs.org/en/feed/blog.xml "~Node.js Blog"
+https://blog.rust-lang.org/feed.xml "~Rust Blog"
+https://github.blog/feed/ "~GitHub Blog"
+NEWSBOAT_URLS_CONF
+    success "newsboat configured (vim keys, Dracula colors, starter URLs)"
+fi
+
+# ---- mpv config ----
+MPV_CONFIG_DIR="$HOME/.config/mpv"
+MPV_CONFIG="$MPV_CONFIG_DIR/mpv.conf"
+if [[ -f "$MPV_CONFIG" ]]; then
+    warn "mpv config already exists"
+else
+    info "Creating mpv config (hardware accel, sensible defaults)..."
+    mkdir -p "$MPV_CONFIG_DIR"
+    cat > "$MPV_CONFIG" <<'MPV_CONF'
+# mpv configuration — hardware accel, quality defaults
+
+# Hardware decoding (VideoToolbox on macOS)
+hwdec=auto-safe
+
+# Video output
+vo=gpu-next
+gpu-api=auto
+
+# Audio
+volume=70
+volume-max=150
+
+# Subtitles
+sub-auto=fuzzy
+sub-font-size=36
+
+# OSD
+osd-font-size=24
+osd-duration=2000
+
+# Keep window open at end of file
+keep-open=yes
+
+# Save position on quit
+save-position-on-quit=yes
+
+# Screenshot
+screenshot-directory=~/Screenshots
+screenshot-format=png
+MPV_CONF
+    success "mpv configured (hardware accel, save position, screenshots)"
+fi
+
+# ---- nushell config ----
+NUSHELL_CONFIG_DIR="$HOME/Library/Application Support/nushell"
+NUSHELL_ENV="$NUSHELL_CONFIG_DIR/env.nu"
+if [[ -f "$NUSHELL_ENV" ]]; then
+    warn "nushell config already exists"
+else
+    info "Creating nushell env config..."
+    mkdir -p "$NUSHELL_CONFIG_DIR"
+    cat > "$NUSHELL_ENV" <<'NUSHELL_ENV_CONF'
+# Nushell environment config
+
+# Use starship prompt if available
+if (which starship | is-not-empty) {
+    $env.STARSHIP_SHELL = "nu"
+    $env.PROMPT_COMMAND = { || starship prompt }
+    $env.PROMPT_INDICATOR = ""
+}
+
+# Homebrew paths
+$env.PATH = ($env.PATH | prepend "/opt/homebrew/bin" | prepend ($env.HOME + "/.local/bin"))
+NUSHELL_ENV_CONF
+    success "nushell env configured (starship prompt, Homebrew paths)"
+fi
+
+# ---- git-cliff config ----
+GIT_CLIFF_CONFIG_DIR="$HOME/.config/git-cliff"
+GIT_CLIFF_CONFIG="$GIT_CLIFF_CONFIG_DIR/cliff.toml"
+if [[ -f "$GIT_CLIFF_CONFIG" ]]; then
+    warn "git-cliff config already exists"
+else
+    info "Creating git-cliff config (conventional commits template)..."
+    mkdir -p "$GIT_CLIFF_CONFIG_DIR"
+    cat > "$GIT_CLIFF_CONFIG" <<'GIT_CLIFF_CONF'
+# git-cliff configuration — conventional commits changelog
+
+[changelog]
+header = """
+# Changelog\n
+"""
+body = """
+{% if version %}\
+    ## [{{ version | trim_start_matches(pat="v") }}] - {{ timestamp | date(format="%Y-%m-%d") }}
+{% else %}\
+    ## [Unreleased]
+{% endif %}\
+{% for group, commits in commits | group_by(attribute="group") %}
+    ### {{ group | striptags | trim | upper_first }}
+    {% for commit in commits %}
+        - {% if commit.scope %}**{{ commit.scope }}**: {% endif %}\
+            {{ commit.message | upper_first }}\
+            {% if commit.breaking %} (**BREAKING**){% endif %}\
+    {% endfor %}
+{% endfor %}\n
+"""
+trim = true
+
+[git]
+conventional_commits = true
+filter_unconventional = true
+split_commits = false
+commit_parsers = [
+    { message = "^feat", group = "Features" },
+    { message = "^fix", group = "Bug Fixes" },
+    { message = "^perf", group = "Performance" },
+    { message = "^doc", group = "Documentation" },
+    { message = "^refactor", group = "Refactoring" },
+    { message = "^style", group = "Styling" },
+    { message = "^test", group = "Testing" },
+    { message = "^build", group = "Build" },
+    { message = "^ci", group = "CI/CD" },
+    { message = "^chore", group = "Miscellaneous" },
+]
+filter_commits = false
+tag_pattern = "v[0-9].*"
+sort_commits = "newest"
+GIT_CLIFF_CONF
+    success "git-cliff configured (conventional commits, grouped changelog)"
+fi
 
 # ---- SSH config ----
 SSH_CONFIG="$HOME/.ssh/config"
@@ -3603,8 +3793,6 @@ cleanup = true
 greedy_cask = true
 
 [linux]
-# Also update Mac App Store apps via mas
-mas_open_app_store = false
 TOPGRADE_CONF
     success "topgrade configured (cleanup, greedy cask updates)"
 fi
@@ -4604,17 +4792,6 @@ VSCODE_KEYS
     success "VS Code keybindings created"
 fi
 
-# ---- Rectangle preferences ----
-info "Configuring Rectangle..."
-# Enable "almost maximize" (leaves small gap)
-defaults write com.knollsoft.Rectangle almostMaximizeHeight -float 0.95 2>/dev/null || true
-defaults write com.knollsoft.Rectangle almostMaximizeWidth -float 0.95 2>/dev/null || true
-# Enable gaps between windows (8px)
-defaults write com.knollsoft.Rectangle gapSize -float 8 2>/dev/null || true
-# Enable snap on drag
-defaults write com.knollsoft.Rectangle windowSnapping -int 2 2>/dev/null || true
-success "Rectangle configured (almost maximize, 8px gaps, snap on drag)"
-
 # Set RIPGREP_CONFIG_PATH in zshrc (needed for ripgrep to read config)
 # This will be in the managed block below
 
@@ -5427,12 +5604,12 @@ else
     warn "Siri already disabled"
 fi
 
-# ---- Trackpad: Three-finger drag (essential for dev work) ----
-defaults write com.apple.AppleMultitouchTrackpad TrackpadThreeFingerDrag -bool true 2>/dev/null || true
-defaults write com.apple.driver.AppleBluetoothMultitouch.trackpad TrackpadThreeFingerDrag -bool true 2>/dev/null || true
-# Also enable via Accessibility (required on newer macOS)
-defaults write com.apple.AppleMultitouchTrackpad Dragging -bool true 2>/dev/null || true
-success "Three-finger drag enabled"
+# ---- Trackpad: Disable three-finger drag ----
+defaults write com.apple.AppleMultitouchTrackpad TrackpadThreeFingerDrag -bool false 2>/dev/null || true
+defaults write com.apple.driver.AppleBluetoothMultitouch.trackpad TrackpadThreeFingerDrag -bool false 2>/dev/null || true
+# Also disable via Accessibility (required on newer macOS)
+defaults write com.apple.AppleMultitouchTrackpad Dragging -bool false 2>/dev/null || true
+success "Three-finger drag disabled"
 
 # ---- Disable startup sound ----
 sudo nvram StartupMute=%01 2>/dev/null || true
@@ -5463,69 +5640,14 @@ success "Software Update configured (auto-check, no auto-install)"
 defaults write com.apple.bird optimize-storage -bool false 2>/dev/null || true
 info "Tip: Disable iCloud Desktop & Documents in System Settings > Apple ID > iCloud > iCloud Drive > Options"
 
-# ---- Login items (auto-start at login) ----
-info "Configuring login items..."
-LOGIN_APPS=(
-    "/Applications/Stats.app"
-    "/Applications/Rectangle.app"
-)
-for app in "${LOGIN_APPS[@]}"; do
-    if [[ -d "$app" ]]; then
-        osascript -e "tell application \"System Events\" to make login item at end with properties {path:\"$app\", hidden:true}" 2>/dev/null || true
-    fi
-done
-success "Login items configured (Stats, Rectangle)"
 
 # ---- macOS defaults for installed apps ----
 info "Setting macOS defaults for apps..."
 
 
 
-# Rectangle: launch at login
-defaults write com.knollsoft.Rectangle launchOnLogin true 2>/dev/null || true
-success "Rectangle configured (launch at login)"
 
-# Shottr: screenshot settings
-defaults write cc.ffitch.shottr saveTo -string "$HOME/Screenshots" 2>/dev/null || true
-defaults write cc.ffitch.shottr launchAtLogin -bool true 2>/dev/null || true
-success "Shottr configured (save to ~/Screenshots, launch at login)"
 
-# Stats: show CPU, memory, disk, network in menu bar
-defaults write eu.exelban.Stats CPU_state -bool true 2>/dev/null || true
-defaults write eu.exelban.Stats RAM_state -bool true 2>/dev/null || true
-defaults write eu.exelban.Stats Disk_state -bool true 2>/dev/null || true
-defaults write eu.exelban.Stats Network_state -bool true 2>/dev/null || true
-defaults write eu.exelban.Stats Battery_state -bool false 2>/dev/null || true
-defaults write eu.exelban.Stats GPU_state -bool false 2>/dev/null || true
-defaults write eu.exelban.Stats Sensors_state -bool false 2>/dev/null || true
-defaults write eu.exelban.Stats Bluetooth_state -bool false 2>/dev/null || true
-success "Stats configured (CPU, memory, disk, network visible)"
-
-# ImageOptim: lossless by default, high compression
-defaults write net.pornel.ImageOptim PngOutEnabled -bool true 2>/dev/null || true
-defaults write net.pornel.ImageOptim OxiPngEnabled -bool true 2>/dev/null || true
-defaults write net.pornel.ImageOptim JpegOptimEnabled -bool true 2>/dev/null || true
-defaults write net.pornel.ImageOptim LossyEnabled -bool false 2>/dev/null || true
-defaults write net.pornel.ImageOptim StripMetadata -bool true 2>/dev/null || true
-success "ImageOptim configured (lossless compression, strip metadata)"
-
-# Keka: default to 7z format, normal compression
-defaults write com.aone.keka DefaultCompression -int 0 2>/dev/null || true
-defaults write com.aone.keka DefaultFormat -string "7z" 2>/dev/null || true
-# Set Keka as default archive handler
-# Set Keka as default archive handler (requires duti)
-if [[ -d "/Applications/Keka.app" ]]; then
-    if ! installed duti; then
-        brew install duti >> "$LOG_FILE" 2>&1 || true
-    fi
-    if installed duti; then
-        duti -s com.aone.keka .zip all 2>/dev/null || true
-        duti -s com.aone.keka .7z all 2>/dev/null || true
-        duti -s com.aone.keka .rar all 2>/dev/null || true
-        duti -s com.aone.keka .tar.gz all 2>/dev/null || true
-    fi
-fi
-success "Keka configured (7z default, set as archive handler)"
 
 fi  # macos-defaults (Finder, Touch ID, DNS, Spotlight, TM, Siri, app defaults)
 
@@ -5631,7 +5753,6 @@ else
       "Bash(tsc *)",
       "Bash(jest *)",
       "Bash(vitest *)",
-      "Bash(playwright *)",
       "Bash(act *)",
       "Bash(tofu *)",
       "Bash(tflint *)",
@@ -5657,6 +5778,24 @@ else
       "Bash(dbmate *)",
       "Bash(commitizen *)",
       "Bash(commitlint *)",
+      "Bash(typos *)",
+      "Bash(ast-grep *)",
+      "Bash(git-cliff *)",
+      "Bash(hurl *)",
+      "Bash(jnv *)",
+      "Bash(watchexec *)",
+      "Bash(curlie *)",
+      "Bash(lazysql *)",
+      "Bash(trippy *)",
+      "Bash(nushell *)",
+      "Bash(nu *)",
+      "Bash(oxipng *)",
+      "Bash(jpegoptim *)",
+      "Bash(7z *)",
+      "Bash(mpv *)",
+      "Bash(newsboat *)",
+      "Bash(zellij *)",
+      "Bash(gum *)",
       "Read",
       "Edit",
       "Write",
@@ -5751,14 +5890,20 @@ else
 
 ## Available CLI Tools (use these instead of manual approaches)
 - **Search**: `rg` (ripgrep) for content, `fd` for files, `fzf` for interactive
-- **Data**: `jq` for JSON, `yq` for YAML, `mlr` for CSV, `fx` for interactive JSON
-- **Git**: `lazygit` for interactive UI, `delta` for diffs, `difft` for syntax-aware diffs
+- **Data**: `jq` for JSON, `yq` for YAML, `mlr` for CSV, `fx`/`jnv` for interactive JSON
+- **Git**: `lazygit` for interactive UI, `delta` for diffs, `difft` for syntax-aware diffs, `git-cliff` for changelogs
 - **Docker**: `lazydocker` for UI, `dive` to inspect layers, `hadolint` for Dockerfile linting
-- **Testing**: `hyperfine` to benchmark, `oha` for load testing, `act` for local GitHub Actions
+- **Testing**: `hyperfine` to benchmark, `oha` for load testing, `hurl` for HTTP test files, `act` for local GitHub Actions
+- **Code quality**: `typos` for spell checking, `ast-grep` for structural search/replace, `shellcheck`/`shfmt` for shell
 - **Security**: `trivy` to scan containers/IaC, `gitleaks` for secrets, `semgrep` for static analysis
 - **IaC**: `tofu` (Terraform), `tflint` for linting, `infracost` for cost estimation
+- **HTTP**: `xh` for colorized requests, `curlie` for curl with httpie output
+- **Network**: `trippy` for traceroute TUI, `mtr`, `bandwhich` for bandwidth
 - **Docs**: `d2` for diagrams, `pandoc` for conversion, `glow` for Markdown preview
-- **Database**: `pgcli`/`mycli` for auto-completing SQL, `sq` for cross-database queries
+- **Database**: `pgcli`/`mycli` for auto-completing SQL, `lazysql` for TUI, `sq` for cross-database queries
+- **File watching**: `watchexec` for running commands on file changes
+- **Shell scripting**: `gum` for interactive prompts/spinners, `nushell` for structured data pipelines
+- **Terminal**: `tmux` or `zellij` for multiplexing, `mpv` for video playback
 
 ## Code Standards
 - Use TypeScript strict mode for all TS projects
@@ -5886,11 +6031,12 @@ Every project should have a README.md with:
 1. All tests pass (`npm test` / `pytest` / `cargo test`)
 2. Linting passes (`eslint .` / `ruff check .`)
 3. Formatting applied (`prettier --write .` / `ruff format .`)
-4. No secrets committed (`gitleaks detect`)
-5. Dependencies audited (`npm audit` / `uv pip audit`)
-6. README updated (if behavior changed)
-7. Types check (`tsc --noEmit` for TypeScript)
-8. Build succeeds (`npm run build`)
+4. Spell check passes (`typos .`)
+5. No secrets committed (`gitleaks detect`)
+6. Dependencies audited (`npm audit` / `uv pip audit`)
+7. README updated (if behavior changed)
+8. Types check (`tsc --noEmit` for TypeScript)
+9. Build succeeds (`npm run build`)
 
 ## Security Checks (run before PRs)
 - `gitleaks detect` — check for leaked secrets
@@ -6462,8 +6608,7 @@ Add a new React component: $ARGUMENTS
 Create the full component package:
 1. **Component file**: `ComponentName.tsx` — functional component with TypeScript props interface
 2. **Tests**: `ComponentName.test.tsx` — test rendering, user interactions, edge cases
-3. **Stories** (if Storybook exists): `ComponentName.stories.tsx` — default + variant stories
-4. **Types**: Export the props interface for consumers
+3. **Types**: Export the props interface for consumers
 5. **Index**: Add to barrel export (`index.ts`) if the directory uses one
 
 Follow these patterns:
@@ -6502,8 +6647,15 @@ CMD_CIFIX
     cat > "$CLAUDE_COMMANDS_DIR/changelog.md" <<'CMD_CHANGELOG'
 Generate a changelog from git history: $ARGUMENTS
 
-If no version range specified, generate from the last tag to HEAD.
+Use `git-cliff` if available (preferred — uses ~/.config/git-cliff/cliff.toml config).
+Fall back to manual parsing if git-cliff is not installed.
 
+**With git-cliff:**
+1. If no range specified: `git-cliff --unreleased`
+2. For a full changelog: `git-cliff -o CHANGELOG.md`
+3. For a specific range: `git-cliff v1.0.0..HEAD`
+
+**Without git-cliff (manual fallback):**
 1. Get commits: `git log <range> --oneline --format="%h %s"`
 2. Parse conventional commits and group by type:
    - **Features** (feat:) — new functionality
@@ -6726,7 +6878,7 @@ alias pyrun="uv run"
 alias gj="just --justfile ~/.justfile --working-directory ."
 
 # -- Dev & Testing ------------------------------------------------------------
-alias watchrun="find . -name '*.ts' -o -name '*.tsx' | entr -r"
+alias watchrun="watchexec --exts ts,tsx --restart"
 alias bench="hyperfine"
 alias loadtest="oha"
 alias par="parallel"
@@ -6848,6 +7000,10 @@ echo "  [~/.config/yt-dlp]      Best quality, aria2c downloader"
 echo "  [~/.config/gh-dash]     GitHub dashboard, Dracula theme"
 echo "  [~/.config/stern]       K8s log tailing"
 echo "  [~/.config/yazi]        File manager with Dracula theme"
+echo "  [~/.config/zellij]      Modern terminal multiplexer with Dracula theme"
+echo "  [~/.config/mpv]         Video player (hardware accel, save position)"
+echo "  [~/.config/git-cliff]   Changelog generator (conventional commits)"
+echo "  [~/.newsboat]           RSS reader (vim keys, Dracula colors, starter URLs)"
 echo "  [~/.config/ghostty]     GPU-accelerated terminal with Dracula theme"
 echo "  [~/.justfile]           Global task runner recipes"
 echo "  [~/.config/brewfile]    Brewfile snapshot for reproducibility"

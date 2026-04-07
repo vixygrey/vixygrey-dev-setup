@@ -1,6 +1,6 @@
 # Keyboard Shortcuts & Aliases Reference
 
-Quick reference for all **219+ shortcuts** configured by the setup scripts.
+Quick reference for all **209+ shortcuts** configured by the setup scripts.
 
 ---
 
@@ -82,7 +82,7 @@ Quick reference for all **219+ shortcuts** configured by the setup scripts.
 | Alias | Runs | What it does |
 |-------|------|-------------|
 | `gj` | `just --justfile ~/.justfile --working-directory .` | Global justfile recipes |
-| `watchrun` | `find . -name '*.ts' -o -name '*.tsx' \| entr -r` | Watch & rerun on changes |
+| `watchrun` | `watchexec --exts ts,tsx --restart` | Watch & rerun on changes |
 | `bench` | `hyperfine` | Benchmark commands |
 | `loadtest` | `oha` | HTTP load testing |
 | `par` | `parallel` | GNU parallel |
@@ -397,27 +397,6 @@ Run from anywhere with `gj <recipe>` (or `just --justfile ~/.justfile <recipe>`)
 
 ---
 
-## macOS Rectangle (Window Management)
-
-Default Rectangle shortcuts (installed by the script):
-
-| Key | Action |
-|-----|--------|
-| `Ctrl+Alt+Left` | Left half |
-| `Ctrl+Alt+Right` | Right half |
-| `Ctrl+Alt+Up` | Top half |
-| `Ctrl+Alt+Down` | Bottom half |
-| `Ctrl+Alt+Enter` | Maximize |
-| `Ctrl+Alt+Backspace` | Restore |
-| `Ctrl+Alt+U` | Top-left quarter |
-| `Ctrl+Alt+I` | Top-right quarter |
-| `Ctrl+Alt+J` | Bottom-left quarter |
-| `Ctrl+Alt+K` | Bottom-right quarter |
-
-Script sets: Almost maximize (95%), 8px gaps, snap on drag.
-
----
-
 ## Claude Code Custom Commands
 
 | Command | What it does |
@@ -438,7 +417,7 @@ Script sets: Almost maximize (95%), 8px gaps, snap on drag.
 | `/init-project` | Scaffold project with git, README, CLAUDE.md, CI, Docker, templates |
 | `/refactor` | Refactor with tests preserved, SOLID principles |
 | `/add-endpoint` | Add API endpoint: types, handler, validation, tests, docs |
-| `/add-component` | Add React component: TSX, tests, stories, accessibility |
+| `/add-component` | Add React component: TSX, tests, accessibility |
 | `/ci-fix` | Diagnose and fix CI failures via `gh run view` + `act` |
 | `/changelog` | Generate changelog from conventional commits |
 | `/commit-msg` | Generate conventional commit message from staged changes |
@@ -458,6 +437,5 @@ Script sets: Almost maximize (95%), 8px gaps, snap on drag.
 | GitHub CLI aliases | 15 |
 | Global justfile recipes | 27 |
 | macOS hot corners | 4 |
-| Rectangle window shortcuts | 10 |
 | Claude Code commands | 20 |
-| **Total** | **219** |
+| **Total** | **209** |

@@ -4,7 +4,7 @@ Three platform-specific scripts that install and configure **220+ tools** with *
 
 | Platform | Script | Package Managers |
 |----------|--------|-----------------|
-| **macOS** | `setup-dev-tools.sh` | Homebrew + mas (App Store) |
+| **macOS** | `setup-dev-tools.sh` | Homebrew |
 | **Windows** | `setup-dev-tools-windows.ps1` | winget + Scoop |
 | **Linux** | `setup-dev-tools-linux.sh` | apt / dnf / pacman + snap + flatpak |
 
@@ -74,7 +74,7 @@ All scripts share the same flags:
 | **Cleanup** | Remove tools from previous versions with `--cleanup` (auto-detects deprecated tools) |
 | **Lockfile** | Prevents concurrent runs via PID-based lock |
 | **Category filtering** | Install only what you need with `--only` / `--skip` |
-| **Progress bar** | Visual progress counter with dynamic total (includes mas installs) |
+| **Progress bar** | Visual progress counter with dynamic total |
 | **Fast installs** | `HOMEBREW_NO_AUTO_UPDATE` set after initial update for faster installs |
 | **Error resilient** | Continues on failure, reports all failures at the end |
 | **Logging** | Full log file for debugging failed installs |
@@ -88,9 +88,7 @@ All scripts share the same flags:
 | Tool | Description |
 |------|-------------|
 | **Xcode CLI Tools** | Compilers, git, headers -- required before everything else |
-| **Rosetta 2** | Apple Silicon compatibility layer for x86 binaries |
 | **Homebrew** | macOS package manager |
-| **mas** | Mac App Store CLI -- install App Store apps from the terminal |
 | **coreutils** | GNU core utilities -- Linux-compatible versions of standard tools |
 | **gnu-sed** | GNU sed -- consistent behavior with Linux scripts |
 | **gnu-tar** | GNU tar -- consistent behavior with Linux scripts |
@@ -132,6 +130,7 @@ All scripts share the same flags:
 | **pinentry-mac** | macOS keychain integration for GPG passphrases |
 | **lazygit** | Terminal UI for git -- visualize branches, stage hunks interactively |
 | **git-absorb** | Auto-fixup commits -- automatically amends the right commit |
+| **git-cliff** | Generate changelogs from conventional commits |
 | **pre-commit** | Git hook framework -- run linters/formatters before each commit |
 
 ---
@@ -175,10 +174,6 @@ All scripts share the same flags:
 | **mkcert** | Create locally-trusted HTTPS certificates for development |
 | **ssh-audit** | Audit SSH server and client configuration for security |
 | **clamav** | Open-source antivirus engine -- on-demand malware scanning |
-| **BlockBlock** | Alerts when software installs persistent components (launch daemons) |
-| **OverSight** | Alerts when microphone or camera is activated |
-| **KnockKnock** | Shows all persistently installed software -- spot malware |
-| **ReiKey** | Detects keyboard event taps -- catches keyloggers |
 
 ---
 
@@ -204,6 +199,7 @@ Faster, prettier, smarter replacements for standard Unix utilities.
 | `ps` | **procs** | Sortable process list with tree view, Docker-aware |
 | `ping` | **gping** | Real-time latency graph for multiple hosts |
 | `curl` | **xh** | Colorized HTTP client with JSON shortcuts |
+| `curl` | **curlie** | curl with httpie-like output formatting |
 | `dig` | **doggo** | Colorized DNS lookup with DoH/DoT support |
 | `wc` (code) | **tokei** | Count lines of code by language with statistics |
 | `watch` | **viddy** | Modern watch with diff highlighting and history |
@@ -215,6 +211,7 @@ Faster, prettier, smarter replacements for standard Unix utilities.
 | `make` | **just** | Modern task runner -- simpler syntax, no tab weirdness |
 | file manager | **yazi** | Terminal file manager with image preview, vim keys, bulk ops |
 | `jq` (interactive) | **fx** | Interactive JSON viewer/processor for exploring large JSON |
+| `jq` (interactive) | **jnv** | Interactive JSON navigator with jq filtering |
 | `LS_COLORS` | **vivid** | LS_COLORS generator -- colorize file listings by type (Dracula themed) |
 
 ---
@@ -241,6 +238,8 @@ Faster, prettier, smarter replacements for standard Unix utilities.
 | **shfmt** | Shell script formatter -- consistent style for bash/zsh scripts |
 | **act** | Run GitHub Actions locally before pushing |
 | **hadolint** | Dockerfile linter -- catches bad practices and security issues |
+| **typos** | Source code spell checker -- fast, low false positives |
+| **ast-grep** | Structural code search/replace using AST -- like semgrep but interactive |
 | **ruff** | Extremely fast Python linter and formatter -- replaces flake8+black+isort |
 | **npkill** | Find and delete node_modules folders to reclaim disk space |
 | **commitizen** | Interactive conventional commit message generator |
@@ -255,6 +254,7 @@ Faster, prettier, smarter replacements for standard Unix utilities.
 |------|-------------|
 | **hyperfine** | Command-line benchmarking tool -- compare execution times |
 | **oha** | HTTP load testing tool written in Rust -- fast and simple |
+| **hurl** | Run HTTP requests from plain text files -- curl meets test runner |
 
 ---
 
@@ -273,10 +273,12 @@ Faster, prettier, smarter replacements for standard Unix utilities.
 | Tool | Description |
 |------|-------------|
 | **glow** | Render Markdown beautifully in the terminal |
-| **entr** | Run commands when files change -- lightweight file watcher |
+| **watchexec** | Run commands on file changes -- supports globs, debouncing, process groups |
 | **pv** | Pipe viewer -- add progress bars to any piped command |
 | **parallel** | GNU parallel -- run commands in parallel across multiple cores |
 | **asciinema** | Record and share terminal sessions as text (not video) |
+| **gum** | Shell script UI toolkit -- pretty prompts, spinners, confirmations |
+| **nushell** | Structured data shell -- pipelines output tables, not strings |
 | **topgrade** | Update everything at once -- brew, npm, pip, macOS, all in one command |
 | **fastfetch** | Quick system info display -- faster neofetch replacement |
 | **nano** (latest) | Upgraded nano with syntax highlighting |
@@ -299,11 +301,11 @@ Faster, prettier, smarter replacements for standard Unix utilities.
 |------|-------------|
 | **pgcli** | Auto-completing PostgreSQL CLI with syntax highlighting |
 | **mycli** | Auto-completing MySQL CLI with syntax highlighting |
+| **lazysql** | TUI for databases -- interactive SQL queries in terminal |
 | **usql** | Universal SQL CLI -- connects to Postgres, MySQL, SQLite, and more |
 | **sq** | jq for databases -- query SQLite, Postgres, CSV from one tool |
 | **dbmate** | Lightweight, framework-agnostic database migration tool |
 | **TablePlus** | Native macOS database GUI -- fast, clean, supports 20+ databases |
-| **DBeaver** | Advanced SQL editor with 100+ database support (community edition) |
 
 ---
 
@@ -334,6 +336,7 @@ Faster, prettier, smarter replacements for standard Unix utilities.
 | **mtr** | Combines ping and traceroute into a single diagnostic tool |
 | **bandwhich** | Real-time bandwidth usage by process, connection, and host |
 | **nmap** | Network scanner -- discover hosts and services |
+| **trippy** | Modern traceroute TUI with real-time charts and hop statistics |
 
 ---
 
@@ -355,21 +358,11 @@ Faster, prettier, smarter replacements for standard Unix utilities.
 | **mitmproxy** | Free HTTP debugging proxy -- inspect and modify API calls from any app |
 | **Ghostty** | Fast GPU-accelerated terminal -- daily driver, native macOS feel |
 | **tmux** | Terminal multiplexer -- persistent sessions, panes, and windows |
+| **zellij** | Modern terminal multiplexer -- discoverable UI, layouts, Rust-based |
 | **Raycast** | Spotlight replacement with extensions, snippets, and workflows |
-| **Rectangle** | Window management with keyboard shortcuts |
 | **TypeScript** | Typed JavaScript -- installed globally for scripts and tooling |
 | **tsx** | Run TypeScript files directly without a build step |
 | **Turborepo** | High-performance monorepo build system |
-
----
-
-## UI Development
-
-| Tool | Description |
-|------|-------------|
-| **Storybook** | Component development environment -- build and test UI in isolation |
-| **Playwright** | End-to-end browser testing framework |
-| **Google Chrome** | Primary Chromium browser for development and DevTools |
 
 ---
 
@@ -411,7 +404,6 @@ Preview files in Finder by pressing spacebar.
 | Plugin | Description |
 |--------|-------------|
 | **QLMarkdown** | Preview Markdown files with rendered formatting |
-| **Syntax Highlight** | Preview source code files with syntax coloring |
 | **QLStephen** | Preview plain text files that have no file extension |
 
 ---
@@ -421,8 +413,6 @@ Preview files in Finder by pressing spacebar.
 | App | Description |
 |-----|-------------|
 | **Pearcleaner** | Open-source deep app uninstaller -- finds leftover files and preferences |
-| **Stats** | Free menubar system monitor -- CPU, RAM, network, disk, battery |
-| **Amphetamine** | Prevent Mac from sleeping during presentations or long tasks |
 | **LuLu** | Free open-source outbound firewall -- see what phones home |
 | **Proton VPN** | Privacy-focused VPN |
 | **Proton Mail** | End-to-end encrypted email client |
@@ -438,7 +428,7 @@ Preview files in Finder by pressing spacebar.
 | **Notion** | All-in-one workspace -- docs, wikis, databases, project tracking |
 | **Notion Calendar** | Calendar app with Notion integration |
 | **Notion Mail** | Email client with Notion integration |
-| **Shottr** | Free screenshot tool with pixel measuring, OCR, and color picker |
+| **Snagit** | Screenshots, scrolling capture, annotations, and video recording |
 | **Claude** | AI assistant |
 | **Skim** | Lightweight PDF reader with annotations -- faster than Preview |
 | **Transmit** | Premium SFTP/S3 file transfer client -- fast, dual-pane |
@@ -451,7 +441,6 @@ Preview files in Finder by pressing spacebar.
 |-----|-------------|
 | **Slack** | Team messaging and collaboration |
 | **Telegram** | Encrypted messaging with channels and bots |
-| **Signal** | End-to-end encrypted messaging -- privacy focused |
 
 ---
 
@@ -459,6 +448,7 @@ Preview files in Finder by pressing spacebar.
 
 | App | Description |
 |-----|-------------|
+| **Google Chrome** | Primary Chromium browser for development and DevTools |
 | **Firefox** | Privacy-focused browser for cross-browser testing |
 | **Brave** | Privacy-focused Chromium browser with built-in ad blocking |
 
@@ -468,10 +458,10 @@ Preview files in Finder by pressing spacebar.
 
 | App | Description |
 |-----|-------------|
-| **IINA** | Modern native macOS video player -- replaces VLC |
-| **ImageOptim** | Lossless image compression -- shrink PNGs, JPGs, GIFs |
-| **Gifski** | Convert video clips to high-quality animated GIFs |
-| **Keka** | File archiver and compressor |
+| **mpv** | Terminal video player -- keyboard-driven, scriptable |
+| **oxipng** | Lossless PNG compression -- CLI, scriptable, CI-friendly |
+| **jpegoptim** | Lossless JPEG compression -- strip metadata, optimize |
+| **p7zip** | Archive tool -- zip, 7z, rar, tar from the command line |
 | **LibreOffice** | Free office suite -- documents, spreadsheets, presentations |
 
 ---
@@ -491,7 +481,7 @@ Preview files in Finder by pressing spacebar.
 
 | App | Description |
 |-----|-------------|
-| **Reeder** | RSS reader -- follow blogs, release notes, changelogs |
+| **newsboat** | Terminal RSS/Atom reader -- vim-like keybindings, highly configurable |
 
 ---
 
@@ -593,7 +583,7 @@ The script sets up Claude Code with a comprehensive configuration for full-stack
 | `/init-project` | Scaffold new project with git, README, CLAUDE.md, linting, CI, Docker, templates |
 | `/refactor` | Refactor code with tests preserved, SOLID principles, verify tests pass |
 | `/add-endpoint` | Add full API endpoint: types, handler, validation, tests, docs |
-| `/add-component` | Add React component: TSX, tests, stories, props interface, accessibility |
+| `/add-component` | Add React component: TSX, tests, props interface, accessibility |
 | `/ci-fix` | Diagnose CI failures with `gh run view`, fix, verify locally with `act` |
 | `/changelog` | Generate changelog from conventional commits grouped by type |
 | `/commit-msg` | Analyze staged changes and generate conventional commit message |
@@ -605,12 +595,12 @@ Common safe commands are pre-approved so Claude doesn't ask every time:
 - **Git**: all git and gh commands
 - **AWS & IaC**: aws, cdk, sam, tofu, tflint, infracost
 - **Docker & K8s**: docker, docker-compose, kubectl, k9s, stern
-- **Build tools**: make, just, tsc, jest, vitest, playwright
+- **Build tools**: make, just, tsc, jest, vitest
 - **File tools**: cat, bat, ls, eza, find, grep, rg, fd, fzf, tree, jq, yq, fx, mlr, csvlook
-- **Linters**: eslint, prettier, shellcheck, shfmt, ruff, hadolint, commitizen, commitlint
+- **Linters**: eslint, prettier, shellcheck, shfmt, ruff, hadolint, typos, ast-grep, commitizen, commitlint
 - **Security**: trivy, semgrep, gitleaks, snyk, cosign
 - **Media & docs**: pandoc, d2, mmdc, ffmpeg, magick
-- **Database**: pgcli, mycli, sq, dbmate
+- **Database**: pgcli, mycli, lazysql, sq, dbmate
 - **Other**: lazygit, lazydocker, dive, hyperfine, oha, tokei, dust, difft, delta
 
 ### Denied Commands
@@ -787,6 +777,12 @@ The script generates config files with sensible defaults:
 | `~/.config/caddy/Caddyfile` | Caddy | Development server template |
 | `~/.config/asciinema/config` | asciinema | 2s idle limit, no keystroke recording |
 | `~/.config/yazi/yazi.toml` | yazi | Hidden files, VS Code opener, Dracula theme |
+| `~/.config/zellij/config.kdl` | zellij | Dracula theme, compact layout, mouse, Ctrl-a prefix |
+| `~/.config/mpv/mpv.conf` | mpv | Hardware accel, save position, screenshots to ~/Screenshots |
+| `~/.config/git-cliff/cliff.toml` | git-cliff | Conventional commits changelog template |
+| `~/.newsboat/config` | newsboat | Vim keys, Dracula colors, auto-reload |
+| `~/.newsboat/urls` | newsboat | Starter RSS feeds (Claude Code, Node, Rust, GitHub) |
+| `~/Library/Application Support/nushell/env.nu` | nushell | Starship prompt, Homebrew paths |
 | `~/.config/ghostty/config` | Ghostty | JetBrains Mono, Dracula palette, transparent titlebar |
 | `~/.config/zed/settings.json` | Zed | Dracula theme, JetBrains Mono, format on save, relative line numbers, inline blame, no telemetry |
 | `~/.config/fastfetch/config.jsonc` | fastfetch | Nerd Font icons, package counts, Node/Python/Go/Rust/Docker versions, battery, disk, colored output |
@@ -843,7 +839,6 @@ The script generates config files with sensible defaults:
 | **Spotlight** | Excluded ~/Code, ~/.config, node_modules, caches, Homebrew directories from indexing |
 | **Time Machine** | Excluded node_modules, Docker, caches, Downloads from backups |
 | **Siri** | Disabled and removed from menubar |
-| **Rectangle** | Almost maximize (95%), 8px gaps between windows, snap on drag, launch at login |
 
 ---
 
@@ -900,7 +895,7 @@ All aliases are auto-written to `~/.zshrc`:
 | `lint-sh` | `shellcheck` | Lint shell scripts |
 | `fmt-sh` | `shfmt -w -i 4` | Format shell scripts |
 | `csvp` | `csvlook` | Pretty-print CSV |
-| `watchrun` | `find ... \| entr -r` | Watch and rerun on changes |
+| `watchrun` | `watchexec` | Watch and rerun on changes |
 | `update` | `topgrade` | Update everything |
 | `sysinfo` | `fastfetch` | Quick system info |
 | `nproj` | `new-project` | Scaffold new project |
@@ -1063,19 +1058,15 @@ This prints a full guide for removing all installed tools, configs, and settings
 
 | macOS App | Windows Equivalent |
 |-----------|--------------------|
-| Raycast + Rectangle | **PowerToys** (FancyZones, Awake, Run, Color Picker) |
-| Shottr | **ShareX** (screenshots, recording, OCR, annotations) |
+| Raycast | **PowerToys** (Run, Color Picker) |
 | Ghostty | **Windows Terminal** (built-in) + **Alacritty** |
 | mitmproxy | **mitmproxy** (same tool, cross-platform) |
-| IINA | **mpv** |
 | Skim | **SumatraPDF** |
 | Pearcleaner | **BCUninstaller** |
-| Keka | **7-Zip** |
 | Transmit | **WinSCP** |
 | LuLu (firewall) | **simplewall** |
 | Quick Look plugins | **QuickLook** (winget) |
-| Amphetamine | PowerToys Awake (built-in) |
-| entr (file watcher) | **watchexec** |
+| watchexec (file watcher) | **watchexec** (same tool, cross-platform) |
 | tmux | N/A (use Windows Terminal panes) |
 
 All Claude Code changes apply to Windows: 110 permissions, 7 rules (workflow, git, security, typescript, python, docker, iac), 3 hooks (format-on-edit, lint-python, lint-dockerfile), 20 commands.
@@ -1127,18 +1118,15 @@ Also uses **snap**, **flatpak**, **cargo**, and **Linuxbrew** as fallbacks.
 | macOS App | Linux Equivalent |
 |-----------|-----------------|
 | Raycast | **ulauncher** |
-| Shottr | **Flameshot** |
 | Ghostty | **Alacritty** + **kitty** |
 | mitmproxy | **mitmproxy** (same tool, cross-platform) |
-| IINA | **mpv** |
 | dust/duf (disk analysis) | **ncdu** |
 | Skim | **Evince** (usually pre-installed) |
 | Transmit | **FileZilla** |
-| Amphetamine | **caffeine** |
 | Quick Look plugins | **GNOME Sushi** |
-| Reeder (RSS) | **Newsflash** (flatpak) |
+| newsboat (RSS) | **newsboat** (same tool, cross-platform) |
 | OrbStack | **Docker Engine** (native, no VM overhead) |
-| entr | entr (native on Linux) |
+| watchexec | **watchexec** (same tool, cross-platform) |
 
 GUI apps installed via snap/flatpak where native packages are unavailable.
 
@@ -1196,9 +1184,9 @@ These 150+ CLI tools and configs are installed on every platform:
 
 **Dev tools:** git, gh, mise, node, python, go, rust, bun, uv, pnpm, jq, direnv, cmake, docker, mitmproxy
 
-**Modern replacements:** eza, bat, fd, ripgrep, zoxide, btop, sd, dust, duf, procs, gping, xh, doggo, tokei, viddy, hexyl, aria2, difftastic, vivid, just, yazi, fx, tldr, trash
+**Modern replacements:** eza, bat, fd, ripgrep, zoxide, btop, sd, dust, duf, procs, gping, xh, curlie, doggo, tokei, viddy, hexyl, aria2, difftastic, vivid, just, yazi, fx, jnv, tldr, trash
 
-**Git:** delta, lazygit, git-absorb, git-lfs, pre-commit, gnupg
+**Git:** delta, lazygit, git-absorb, git-cliff, git-lfs, pre-commit, gnupg
 
 **AWS:** aws-cli, sam-cli, cdk, cfn-lint, granted
 
@@ -1208,19 +1196,19 @@ These 150+ CLI tools and configs are installed on every platform:
 
 **Data:** yq, miller, csvkit, pandoc, imagemagick, ffmpeg, yt-dlp
 
-**Code quality:** shellcheck, shfmt, act, hadolint, ruff, npkill, commitizen, commitlint, ni, hyperfine, oha
+**Code quality:** shellcheck, shfmt, act, hadolint, ruff, typos, ast-grep, npkill, commitizen, commitlint, ni, hyperfine, oha, hurl
 
 **Servers:** ngrok, miniserve, caddy
 
-**Productivity:** glow, entr, pv, parallel, asciinema, topgrade, fastfetch, lnav, starship, atuin, fzf, chezmoi
+**Productivity:** glow, watchexec, pv, parallel, asciinema, gum, nushell, topgrade, fastfetch, lnav, starship, atuin, fzf, chezmoi
 
 **K8s:** stern, kubectl, k9s, lazydocker, dive
 
-**Database:** pgcli, mycli, usql, sq, dbmate
+**Database:** pgcli, mycli, lazysql, usql, sq, dbmate
 
 **Editors:** VS Code, Zed
 
-**JS tooling:** TypeScript, tsx, Turborepo, Storybook, Playwright, Lighthouse, Mermaid CLI
+**JS tooling:** TypeScript, tsx, Turborepo, Lighthouse, Mermaid CLI
 
 **Backup:** rclone, borg, borgmatic
 
