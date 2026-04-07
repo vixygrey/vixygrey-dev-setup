@@ -3462,39 +3462,12 @@ defaults write NSGlobalDomain AppleHighlightColor -string "0.741176 0.576471 0.9
 success "Misc macOS defaults configured"
 
 
-# -- Screensaver (Evangelion Clock) --
-SCREENSAVER_SRC_DIR="$SCRIPT_DIR/assets/evangelion-clock-screensaver-master"
-SCREENSAVER_DEST="$HOME/Library/Screen Savers/Evangelion Clock.saver"
-if [[ -d "$SCREENSAVER_SRC_DIR" ]] && [[ ! -d "$SCREENSAVER_DEST" ]]; then
-    if [[ "$DRY_RUN" != "true" ]]; then
-        info "Installing Evangelion Clock screensaver..."
-        # Download the pre-built .saver from GitHub releases
-        SCREENSAVER_URL="https://github.com/Wandmalfarbe/evangelion-clock-screensaver/releases/latest/download/Evangelion.Clock.saver.zip"
-        SCREENSAVER_TMP="/tmp/evangelion-clock-screensaver.zip"
-        if curl -fsSL "$SCREENSAVER_URL" -o "$SCREENSAVER_TMP" 2>/dev/null; then
-            unzip -o "$SCREENSAVER_TMP" -d "$HOME/Library/Screen Savers/" >> "$LOG_FILE" 2>&1 || true
-            rm -f "$SCREENSAVER_TMP"
-            # Set as active screensaver
-            defaults -currentHost write com.apple.screensaver moduleDict -dict \
-                moduleName -string "Evangelion Clock" \
-                path -string "$HOME/Library/Screen Savers/Evangelion Clock.saver" \
-                type -int 0 2>/dev/null || true
-            # Screensaver at 45 min, display sleep at 2hr (charger) / 1hr 15min (battery)
-            defaults -currentHost write com.apple.screensaver idleTime -int 2700 2>/dev/null || true
-            sudo pmset -c displaysleep 120 2>/dev/null || true  # charger: 2 hours
-            sudo pmset -b displaysleep 75 2>/dev/null || true   # battery: 1hr 15min
-            success "Evangelion Clock screensaver installed (45min screensaver, 2hr/1h15m sleep)"
-        else
-            error "Failed to download Evangelion Clock screensaver from GitHub"
-        fi
-    else
-        info "[DRY RUN] Would install Evangelion Clock screensaver"
-    fi
-elif [[ -d "$SCREENSAVER_DEST" ]]; then
-    warn "Evangelion Clock screensaver already installed"
-else
-    warn "Evangelion Clock screensaver source not found — skipping"
-fi
+# -- Screensaver & display sleep timing --
+# Screensaver kicks in at 45 min, display sleep at 2hr (charger) / 1hr 15min (battery)
+defaults -currentHost write com.apple.screensaver idleTime -int 2700 2>/dev/null || true
+sudo pmset -c displaysleep 120 2>/dev/null || true  # charger: 2 hours
+sudo pmset -b displaysleep 75 2>/dev/null || true   # battery: 1hr 15min
+success "Screensaver at 45min, display sleep at 2hr (charger) / 1h15m (battery)"
 
 # -- Clear Dock (remove all default pinned apps so user can set their own) --
 if [[ "$DRY_RUN" != "true" ]]; then

@@ -825,7 +825,7 @@ The script generates config files with sensible defaults:
 |----------|---------|
 | **Dock** | Auto-hide, small icons (40px), no recents, scale minimize, no delay, spacers, all default pins cleared |
 | **Wallpaper** | Auto-set from `assets/wolf-wallpaper.jpg` to all desktops |
-| **Screensaver** | Evangelion Clock installed, power-aware idle (1hr on charger, 20min on battery) |
+| **Screensaver** | 45min idle, display sleep at 2hr (charger) / 1h15m (battery) |
 | **Screenshots** | PNG format, saved to `~/Screenshots`, no shadow, no thumbnail |
 | **Keyboard** | Fast key repeat (2/15), no press-and-hold, no auto-correct/capitalize/smart quotes/dashes/periods |
 | **Trackpad** | Faster tracking speed (2.0) |
