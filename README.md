@@ -35,6 +35,7 @@ All scripts share the same flags:
 ```bash
 ./setup-dev-tools.sh --help              # Show all options
 ./setup-dev-tools.sh --dry-run           # Preview changes without installing
+./setup-dev-tools.sh --list              # List all tools that would be installed
 ./setup-dev-tools.sh --resume            # Continue from where a previous run left off
 ./setup-dev-tools.sh --uninstall         # Show commands to remove everything (no changes made)
 ./setup-dev-tools.sh --cleanup           # Remove tools from previous versions no longer in script
@@ -73,10 +74,12 @@ All scripts share the same flags:
 | **Uninstall guide** | Show removal commands with `--uninstall` (no destructive actions taken) |
 | **Cleanup** | Remove tools from previous versions with `--cleanup` (auto-detects deprecated tools) |
 | **Lockfile** | Prevents concurrent runs via PID-based lock |
-| **Category filtering** | Install only what you need with `--only` / `--skip` |
-| **Progress bar** | Visual progress counter with dynamic total |
+| **Category filtering** | Install only what you need with `--only` / `--skip` (validates category names) |
+| **List tools** | See everything that would be installed with `--list` |
+| **Progress bar** | Visual progress counter with dynamic total (capped at 100%) |
 | **Fast installs** | `HOMEBREW_NO_AUTO_UPDATE` set after initial update for faster installs |
-| **Error resilient** | Continues on failure, reports all failures at the end |
+| **Error resilient** | Continues on failure, reports all failures at the end with separate error log |
+| **Pre-flight checks** | Validates internet, disk space, Homebrew health, and admin privileges upfront |
 | **Logging** | Full log file for debugging failed installs |
 | **Verification** | Post-install check that critical tools actually work |
 | **Timing** | Shows total duration at the end |
@@ -413,6 +416,7 @@ Preview files in Finder by pressing spacebar.
 | App | Description |
 |-----|-------------|
 | **Pearcleaner** | Open-source deep app uninstaller -- finds leftover files and preferences |
+| **UniFi Identity Endpoint** | Wi-Fi, VPN, and device management for UniFi NAS |
 | **LuLu** | Free open-source outbound firewall -- see what phones home |
 | **Proton VPN** | Privacy-focused VPN |
 | **Proton Mail** | End-to-end encrypted email client |
