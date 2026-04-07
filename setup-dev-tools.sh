@@ -7,28 +7,29 @@
 # Updated:  2026-04-05
 # Platform: macOS (Apple Silicon + Intel)
 # Run:      chmod +x setup-dev-tools.sh && ./setup-dev-tools.sh
-# Flags:    --dry-run, --skip <categories>, --only <categories>, --help
+# Flags:    --dry-run, --list, --skip <cats>, --only <cats>, --cleanup, --help
 # =============================================================================
 
 SCRIPT_VERSION="2.0.0"
 SCRIPT_START=$(date +%s)
 
 # -- Colors & Formatting ------------------------------------------------------
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-BLUE='\033[0;34m'
-MAGENTA='\033[0;35m'
-CYAN='\033[0;36m'
-WHITE='\033[1;37m'
-DIM='\033[2m'
-BOLD='\033[1m'
-NC='\033[0m'
+RED=$'\033[0;31m'
+GREEN=$'\033[0;32m'
+YELLOW=$'\033[1;33m'
+BLUE=$'\033[0;34m'
+MAGENTA=$'\033[0;35m'
+CYAN=$'\033[0;36m'
+WHITE=$'\033[1;37m'
+DIM=$'\033[2m'
+BOLD=$'\033[1m'
+NC=$'\033[0m'
 
 # -- Logging ------------------------------------------------------------------
 LOG_DIR="$HOME/.local/share/dev-setup"
 mkdir -p "$LOG_DIR"
 LOG_FILE="$LOG_DIR/setup-$(date +%Y%m%d-%H%M%S).log"
+ERROR_LOG="$LOG_DIR/setup-errors-$(date +%Y%m%d-%H%M%S).log"
 
 log() { echo "[$(date +%H:%M:%S)] $*" >> "$LOG_FILE"; }
 
@@ -52,6 +53,7 @@ warn() {
 error() {
     echo -e "${RED}[ ERR]${NC} $1"
     log "ERROR: $1"
+    echo "[$(date +%H:%M:%S)] $1" >> "$ERROR_LOG"
     ((INSTALL_FAILED++)) || true
     FAILED_ITEMS+=("$1")
 }
@@ -76,16 +78,21 @@ FAILED_ITEMS=()
 # Dynamic total — count all install calls in this script so the progress bar stays accurate
 # when tools are added or removed. Counts brew_install, brew_cask_install, npm_global_install,
 # including those inside conditionals.
-INSTALL_TOTAL=$(grep -cE '^\s*(brew_install|brew_cask_install|npm_global_install) ' "$0" 2>/dev/null || echo 200)
+# Count all install calls + standalone progress calls for accurate progress bar
+_INSTALL_CALLS=$(grep -cE '^\s*(brew_install|brew_cask_install|npm_global_install) ' "$0" 2>/dev/null || echo 0)
+_PROGRESS_CALLS=$(grep -cE '^\s*progress\s*$' "$0" 2>/dev/null || echo 0)
+INSTALL_TOTAL=$((_INSTALL_CALLS + _PROGRESS_CALLS))
+[[ "$INSTALL_TOTAL" -eq 0 ]] && INSTALL_TOTAL=200
 
 progress() {
     ((INSTALL_CURRENT++)) || true
     local pct=$((INSTALL_CURRENT * 100 / INSTALL_TOTAL))
+    [[ "$pct" -gt 100 ]] && pct=100
     local bar_len=$((pct / 2))
     local bar=$(printf '█%.0s' $(seq 1 $bar_len 2>/dev/null) 2>/dev/null || echo "")
     local spaces=$(printf ' %.0s' $(seq 1 $((50 - bar_len)) 2>/dev/null) 2>/dev/null || echo "")
     # \033[2K clears the entire line, \r returns to start
-    printf "\033[2K\r${DIM}[${CYAN}${bar}${DIM}${spaces}] ${pct}% (${INSTALL_CURRENT}/${INSTALL_TOTAL})${NC}\n"
+    printf '\033[2K\r%s[%s%s%s%s] %d%% (%d/%d)%s\n' "$DIM" "$CYAN" "$bar" "$DIM" "$spaces" "$pct" "$INSTALL_CURRENT" "$INSTALL_TOTAL" "$NC"
 }
 
 # -- State flags --------------------------------------------------------------
@@ -186,11 +193,13 @@ show_help() {
     echo "  --skip <cats>       Skip categories (comma-separated)"
     echo "  --only <cats>       Only run these categories (comma-separated)"
     echo "  --list-categories   List all available categories"
+    echo "  --list              List all tools that would be installed"
     echo "  --version           Show script version"
     echo ""
     echo "Examples:"
     echo "  ./setup-dev-tools.sh                          # Install everything"
     echo "  ./setup-dev-tools.sh --dry-run                # Preview only"
+    echo "  ./setup-dev-tools.sh --list                   # List all tools"
     echo "  ./setup-dev-tools.sh --resume                 # Continue after a failure"
     echo "  ./setup-dev-tools.sh --uninstall              # Show removal commands"
     echo "  ./setup-dev-tools.sh --cleanup                # Remove dropped tools from previous versions"
@@ -267,15 +276,46 @@ while [[ $# -gt 0 ]]; do
             shift
             ;;
         --skip)
+            if [[ -z "${2:-}" ]] || [[ "$2" == --* ]]; then
+                echo -e "${RED}ERROR: --skip requires a comma-separated list of categories${NC}"
+                echo "  Example: --skip mac-media,mac-cloud"
+                echo "  Run --list-categories to see options."
+                exit 1
+            fi
             IFS=',' read -ra SKIP_CATEGORIES <<< "$2"
             shift 2
             ;;
         --only)
+            if [[ -z "${2:-}" ]] || [[ "$2" == --* ]]; then
+                echo -e "${RED}ERROR: --only requires a comma-separated list of categories${NC}"
+                echo "  Example: --only core,git,aws,dx"
+                echo "  Run --list-categories to see options."
+                exit 1
+            fi
             IFS=',' read -ra ONLY_CATEGORIES <<< "$2"
             shift 2
             ;;
         --list-categories)
             list_categories
+            exit 0
+            ;;
+        --list)
+            echo ""
+            echo -e "${BOLD}Tools installed by this script:${NC}"
+            echo ""
+            echo -e "${CYAN}Homebrew formulae:${NC}"
+            grep -E '^\s*brew_install ' "$0" | sed 's/.*brew_install "\([^"]*\)".*/  \1/' | sort
+            echo ""
+            echo -e "${CYAN}Homebrew casks:${NC}"
+            grep -E '^\s*brew_cask_install ' "$0" | sed 's/.*brew_cask_install "\([^"]*\)".*/  \1/' | sort
+            echo ""
+            echo -e "${CYAN}npm global packages:${NC}"
+            grep -E '^\s*npm_global_install ' "$0" | sed 's/.*npm_global_install "\([^"]*\)".*/  \1/' | sort
+            echo ""
+            _f=$(grep -cE '^\s*brew_install ' "$0")
+            _c=$(grep -cE '^\s*brew_cask_install ' "$0")
+            _n=$(grep -cE '^\s*npm_global_install ' "$0")
+            echo -e "${DIM}Total: ${_f} formulae, ${_c} casks, ${_n} npm packages ($((_f + _c + _n)) tools)${NC}"
             exit 0
             ;;
         *)
@@ -451,6 +491,30 @@ preflight() {
         success "Admin privileges granted"
         # Keep sudo alive in background for the duration of the script
         (while true; do sudo -n true; sleep 50; kill -0 "$$" || exit; done 2>/dev/null &)
+    fi
+
+    # Homebrew health check (warn early if there are issues)
+    if command -v brew &>/dev/null; then
+        if ! brew doctor >> "$LOG_FILE" 2>&1; then
+            warn "brew doctor found issues (may cause install failures — see $LOG_FILE)"
+        else
+            success "Homebrew healthy (brew doctor passed)"
+        fi
+    fi
+
+    # Validate --skip and --only categories
+    local invalid_cats=()
+    for c in "${SKIP_CATEGORIES[@]}" "${ONLY_CATEGORIES[@]}"; do
+        local found=false
+        for valid in "${ALL_CATEGORIES[@]}"; do
+            [[ "$c" == "$valid" ]] && found=true && break
+        done
+        [[ "$found" == "false" ]] && invalid_cats+=("$c")
+    done
+    if [[ ${#invalid_cats[@]} -gt 0 ]]; then
+        error "Unknown categories: ${invalid_cats[*]}"
+        echo "  Run with --list-categories to see valid options."
+        exit 1
     fi
 
     # Log file
@@ -1341,6 +1405,7 @@ fi  # docs
 if should_run "mac-system"; then
 banner "Mac Apps — System & Utilities"
 
+brew_cask_install "unifi-identity-endpoint" "UniFi Identity Endpoint (Wi-Fi, VPN, device management for UniFi NAS)"
 brew_cask_install "lulu" "LuLu (outbound firewall)"
 brew_cask_install "protonvpn" "Proton VPN"
 brew_cask_install "proton-mail" "Proton Mail"
@@ -2721,18 +2786,6 @@ STERN_CONF
     success "stern configured (50 tail lines, 5m lookback, timestamps)"
 fi
 
-# ---- hyperfine (no config file, but add shell function) ----
-info "hyperfine: no config needed (usage: hyperfine 'command1' 'command2')"
-
-# ---- oha (no config file) ----
-info "oha: no config needed (usage: oha -n 1000 -c 50 http://localhost:3000)"
-
-# ---- watchexec (no config file) ----
-info "watchexec: no config needed (usage: watchexec --exts ts,tsx -- npm test)"
-
-# ---- pv (no config file) ----
-info "pv: no config needed (usage: pv largefile.tar.gz | tar xz)"
-
 # ---- zellij config ----
 ZELLIJ_CONFIG_DIR="$HOME/.config/zellij"
 ZELLIJ_CONFIG="$ZELLIJ_CONFIG_DIR/config.kdl"
@@ -3426,12 +3479,11 @@ if [[ -d "$SCREENSAVER_SRC_DIR" ]] && [[ ! -d "$SCREENSAVER_DEST" ]]; then
                 moduleName -string "Evangelion Clock" \
                 path -string "$HOME/Library/Screen Savers/Evangelion Clock.saver" \
                 type -int 0 2>/dev/null || true
-            # Set screensaver idle timeout: 1 hour on power, 20 min on battery
-            # idleTime sets the default; pmset displaysleep handles per-power-source
-            defaults -currentHost write com.apple.screensaver idleTime -int 1200 2>/dev/null || true
-            sudo pmset -c displaysleep 60 2>/dev/null || true   # charger: 60 min
-            sudo pmset -b displaysleep 20 2>/dev/null || true   # battery: 20 min
-            success "Evangelion Clock screensaver installed and set as default (1hr on power, 20min on battery)"
+            # Screensaver at 45 min, display sleep at 2hr (charger) / 1hr 15min (battery)
+            defaults -currentHost write com.apple.screensaver idleTime -int 2700 2>/dev/null || true
+            sudo pmset -c displaysleep 120 2>/dev/null || true  # charger: 2 hours
+            sudo pmset -b displaysleep 75 2>/dev/null || true   # battery: 1hr 15min
+            success "Evangelion Clock screensaver installed (45min screensaver, 2hr/1h15m sleep)"
         else
             error "Failed to download Evangelion Clock screensaver from GitHub"
         fi
@@ -5397,9 +5449,6 @@ fi
 
 fi  # filesystem
 
-# ---- Empty Desktop Policy ----
-info "Tip: Keep ~/Desktop empty — use Raycast/Spotlight to find files"
-
 if should_run "macos-defaults"; then
 # ---- Finder configuration ----
 info "Configuring Finder..."
@@ -5567,10 +5616,10 @@ for dir in "${SPOTLIGHT_EXCLUSIONS[@]}"; do
         touch "$dir/.metadata_never_index" 2>/dev/null || true
     fi
 done
-# Also tell mdutil to disable indexing for common dev paths
-sudo mdutil -i off /usr/local 2>/dev/null || true
-sudo mdutil -i off /opt/homebrew 2>/dev/null || true
-success "Spotlight exclusions set (node_modules, caches, Homebrew)"
+# Note: mdutil -i off on /usr/local or /opt/homebrew fails on macOS Ventura+
+# (they live on /System/Volumes/Data which doesn't support per-path indexing control).
+# The .metadata_never_index approach above is the reliable method.
+success "Spotlight exclusions set (node_modules, caches via .metadata_never_index)"
 
 # ---- Time Machine exclusions ----
 info "Configuring Time Machine exclusions..."
@@ -5586,11 +5635,11 @@ TM_EXCLUSIONS=(
 )
 for dir in "${TM_EXCLUSIONS[@]}"; do
     if [[ -d "$dir" ]]; then
-        sudo tmutil addexclusion "$dir" 2>/dev/null || true
+        # Use sticky exclusion (-p) so it persists even if the directory is recreated
+        # tmutil fails with "Invalid argument" on some paths (e.g., non-existent or special volumes)
+        tmutil addexclusion -p "$dir" >> "$LOG_FILE" 2>&1 || tmutil addexclusion "$dir" >> "$LOG_FILE" 2>&1 || true
     fi
 done
-# Also exclude common project-level directories via fixed-path exclusion
-sudo tmutil addexclusion -p "$HOME/.docker" 2>/dev/null || true
 success "Time Machine exclusions set (node_modules, Docker, caches, Downloads)"
 
 # ---- Disable Siri ----
@@ -5610,6 +5659,12 @@ defaults write com.apple.driver.AppleBluetoothMultitouch.trackpad TrackpadThreeF
 # Also disable via Accessibility (required on newer macOS)
 defaults write com.apple.AppleMultitouchTrackpad Dragging -bool false 2>/dev/null || true
 success "Three-finger drag disabled"
+
+# ---- Screen dim when idle: 30 minutes ----
+sudo pmset -a halfdim 1 2>/dev/null || true
+sudo pmset -c dim 30 2>/dev/null || true
+sudo pmset -b dim 30 2>/dev/null || true
+success "Screen dim set to 30 min"
 
 # ---- Disable startup sound ----
 sudo nvram StartupMute=%01 2>/dev/null || true
@@ -5638,7 +5693,6 @@ success "Software Update configured (auto-check, no auto-install)"
 # ---- Disable iCloud Desktop & Documents sync (prevents dev files syncing) ----
 # This prevents projects in ~/Desktop and ~/Documents from being uploaded to iCloud
 defaults write com.apple.bird optimize-storage -bool false 2>/dev/null || true
-info "Tip: Disable iCloud Desktop & Documents in System Settings > Apple ID > iCloud > iCloud Drive > Options"
 
 
 # ---- macOS defaults for installed apps ----
@@ -7036,6 +7090,14 @@ echo "  chezmoi add ~/.zshrc ~/.tmux.conf     # Track dotfiles"
 echo "  chezmoi cd && git remote add origin <repo>  # Link to git repo"
 echo "  chezmoi update                        # Pull on new machine"
 echo ""
+info "Tips:"
+echo "  - Keep ~/Desktop empty — use Raycast/Spotlight to find files"
+echo "  - Disable iCloud Desktop & Documents: System Settings > Apple ID > iCloud > iCloud Drive > Options"
+echo "  - hyperfine: benchmark commands with 'hyperfine \"command1\" \"command2\"'"
+echo "  - oha: load test with 'oha -n 1000 -c 50 http://localhost:3000'"
+echo "  - watchexec: watch files with 'watchexec --exts ts,tsx -- npm test'"
+echo "  - pv: add progress bars with 'pv largefile.tar.gz | tar xz'"
+echo ""
 info "Next steps:"
 echo "  1. Restart your terminal or run: source ~/.zshrc"
 echo "  2. Generate SSH key: ssh-keygen -t ed25519 -C \"your_email@example.com\""
@@ -7220,6 +7282,9 @@ echo -e "  ${YELLOW}${BOLD}Skipped:${NC}   $INSTALL_SKIPPED (already installed)"
 echo -e "  ${RED}${BOLD}Failed:${NC}    $INSTALL_FAILED"
 echo -e "  ${BLUE}${BOLD}Duration:${NC}  ${MINUTES}m ${SECONDS_REMAINING}s"
 echo -e "  ${DIM}Log:       $LOG_FILE${NC}"
+if [[ ${#FAILED_ITEMS[@]} -gt 0 ]]; then
+    echo -e "  ${DIM}Errors:    $ERROR_LOG${NC}"
+fi
 echo ""
 
 if [[ ${#FAILED_ITEMS[@]} -gt 0 ]]; then
@@ -7228,7 +7293,7 @@ if [[ ${#FAILED_ITEMS[@]} -gt 0 ]]; then
         echo -e "  ${RED}•${NC} $item"
     done
     echo ""
-    echo -e "  Check the log for details: ${DIM}cat $LOG_FILE | grep ERROR${NC}"
+    echo -e "  Review errors: ${DIM}cat $ERROR_LOG${NC}"
     echo ""
 fi
 
@@ -7238,5 +7303,17 @@ if [[ "$DRY_RUN" == "true" ]]; then
     echo ""
 fi
 
-echo -e "${GREEN}${BOLD}  Restart your terminal to activate everything.${NC}"
+if [[ "$DRY_RUN" == "false" ]]; then
+    echo ""
+    read -p "Source ~/.zshrc now to activate everything? [Y/n] " source_confirm
+    if [[ ! "$source_confirm" =~ ^[Nn]$ ]]; then
+        # Use exec to replace the current shell so the new zshrc takes effect
+        echo -e "${GREEN}${BOLD}  Reloading shell...${NC}"
+        exec zsh -l
+    else
+        echo -e "${GREEN}${BOLD}  Run 'source ~/.zshrc' or restart your terminal to activate.${NC}"
+    fi
+else
+    echo -e "${GREEN}${BOLD}  Restart your terminal to activate everything.${NC}"
+fi
 echo ""

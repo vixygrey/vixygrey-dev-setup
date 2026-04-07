@@ -237,7 +237,7 @@ function Show-Categories {
         @("win-productivity",      "Notion, ShareX, Espanso, SumatraPDF")
         @("win-communication",     "Slack, Telegram, Signal")
         @("win-browsers",          "Firefox, Arc, Brave")
-        @("win-media",             "mpv, LibreOffice, gifski")
+        @("win-media",             "mpv, oxipng, jpegoptim, LibreOffice")
         @("win-cloud",             "Google Drive, rclone, Syncthing")
         @("win-focus",             "Reeder alternative")
         @("win-disk",              "dust, duf")
@@ -752,6 +752,17 @@ if (Test-Command "cargo") {
     } else {
         Write-Warn "git-absorb already installed"
     }
+
+    # git-cliff
+    if (-not (Test-Command "git-cliff")) {
+        if (-not $DRY_RUN) {
+            Write-Info "Installing git-cliff via cargo..."
+            cargo install git-cliff 2>&1 | Out-File $LOG_FILE -Append
+            Write-Success "git-cliff installed"
+        }
+    } else {
+        Write-Warn "git-cliff already installed"
+    }
 }
 
 # pre-commit via pip
@@ -876,6 +887,7 @@ Install-ScoopPackage "duf" "duf (replaces df -- colorful disk usage table)"
 Install-ScoopPackage "procs" "procs (replaces ps/tasklist -- sortable, tree view)"
 Install-ScoopPackage "gping" "gping (replaces ping -- real-time latency graph)"
 Install-ScoopPackage "xh" "xh (replaces curl -- colorized, JSON-friendly)"
+Install-ScoopPackage "curlie" "curlie (curl with httpie-like output)"
 Install-ScoopPackage "doggo" "doggo (replaces nslookup -- colorized DNS, DoH support)"
 Install-ScoopPackage "tokei" "tokei (replaces wc for code -- lines of code by language)"
 Install-ScoopPackage "tree" "tree (directory listing)"
@@ -887,6 +899,7 @@ Install-ScoopPackage "vivid" "vivid (LS_COLORS generator -- colorize file listin
 Install-ScoopPackage "just" "just (replaces make -- simpler task runner, no tab issues)"
 Install-ScoopPackage "yazi" "yazi (terminal file manager -- image preview, vim keys, bulk ops)"
 Install-ScoopPackage "fx" "fx (interactive JSON viewer -- better than jq for exploring)"
+Install-ScoopPackage "jnv" "jnv (interactive JSON navigator with jq filtering)"
 Install-ScoopPackage "recycle-bin" "recycle-bin (replaces rm -- moves to Recycle Bin, recoverable)"
 Install-ScoopPackage "watchexec" "watchexec (replaces entr -- run commands when files change)"
 
@@ -940,6 +953,8 @@ Install-ScoopPackage "shfmt" "shfmt (shell script formatter)"
 Install-ScoopPackage "act" "act (run GitHub Actions locally)"
 Install-ScoopPackage "hadolint" "hadolint (Dockerfile linter)"
 Install-ScoopPackage "ruff" "ruff (fast Python linter+formatter)"
+Install-ScoopPackage "typos" "typos (source code spell checker -- fast, low false positives)"
+Install-ScoopPackage "ast-grep" "ast-grep (structural code search/replace using AST)"
 
 # npm code-quality globals
 if (Test-Command "npm") {
@@ -957,6 +972,7 @@ Write-Banner "Performance & Load Testing"
 
 Install-ScoopPackage "hyperfine" "hyperfine (command benchmarking)"
 Install-ScoopPackage "oha" "oha (HTTP load testing, Rust-based)"
+Install-ScoopPackage "hurl" "hurl (HTTP requests from plain text files -- curl + test runner)"
 
 } # perf-testing
 
@@ -979,6 +995,9 @@ Install-ScoopPackage "watchexec" "watchexec (run commands when files change -- r
 Install-ScoopPackage "pv" "pv (pipe viewer -- progress bars for pipes)"
 Install-ScoopPackage "parallel" "parallel (GNU parallel -- run commands in parallel)"
 Install-ScoopPackage "asciinema" "asciinema (record & share terminal sessions)"
+Install-ScoopPackage "gum" "gum (shell script UI toolkit -- prompts, spinners, confirmations)"
+Install-ScoopPackage "nushell" "nushell (structured data shell -- pipelines output tables)"
+Install-ScoopPackage "newsboat" "newsboat (terminal RSS/Atom reader)"
 Install-ScoopPackage "topgrade" "topgrade (update everything -- scoop, npm, pip, all at once)"
 Install-ScoopPackage "fastfetch" "fastfetch (quick system info display -- faster neofetch)"
 Install-ScoopPackage "lnav" "lnav (advanced log viewer)"
@@ -1013,6 +1032,7 @@ Write-Banner "Database & Data"
 
 Install-ScoopPackage "pgcli" "pgcli (auto-completing Postgres CLI)"
 Install-ScoopPackage "mycli" "mycli (auto-completing MySQL CLI)"
+Install-ScoopPackage "lazysql" "lazysql (TUI for databases -- interactive SQL in terminal)"
 
 # usql via go install
 if (Test-Command "go") {
@@ -1064,6 +1084,7 @@ Write-Banner "Networking & Debugging"
 Install-ScoopPackage "winmtr" "WinMTR (combines ping + traceroute)"
 Install-ScoopPackage "bandwhich" "bandwhich (real-time bandwidth by process)"
 Install-ScoopPackage "nmap" "nmap (network scanning)"
+Install-ScoopPackage "trippy" "trippy (modern traceroute TUI with charts)"
 
 } # networking
 
@@ -1130,19 +1151,15 @@ if (Test-Command "npm") {
     Install-NpmGlobal "turbo" "Turborepo"
 }
 
-# tmux: not native on Windows
+# tmux: not native on Windows, but zellij works via WSL or natively
 Write-Info "tmux: Not available on Windows. Use Windows Terminal tabs/panes (Ctrl+Shift+T, Alt+Shift+D)"
+Install-ScoopPackage "zellij" "zellij (modern terminal multiplexer -- discoverable UI, layouts)"
 
 } # dx
 
 # =============================================================================
 if (Test-ShouldRun "ui") {
 Write-Banner "UI Development"
-
-if (Test-Command "npm") {
-    Install-NpmGlobal "storybook" "Storybook CLI"
-    Install-NpmGlobal "playwright" "Playwright"
-}
 
 Install-WingetPackage "Google.Chrome" "Google Chrome"
 
@@ -1232,8 +1249,9 @@ if (Test-ShouldRun "win-media") {
 Write-Banner "Windows Apps -- Media"
 
 Install-ScoopPackage "mpv" "mpv (modern video player -- replaces IINA)"
+Install-ScoopPackage "oxipng" "oxipng (lossless PNG compression)"
+Install-ScoopPackage "jpegoptim" "jpegoptim (lossless JPEG compression)"
 Install-WingetPackage "TheDocumentFoundation.LibreOffice" "LibreOffice (free office suite)"
-Install-ScoopPackage "gifski" "gifski (video to high-quality GIF)"
 
 } # win-media
 
@@ -4774,7 +4792,6 @@ if (Test-Path $claudeSettings) {
       "Bash(tsc *)",
       "Bash(jest *)",
       "Bash(vitest *)",
-      "Bash(playwright *)",
       "Bash(act *)",
       "Bash(tofu *)",
       "Bash(tflint *)",
@@ -4800,6 +4817,24 @@ if (Test-Path $claudeSettings) {
       "Bash(dbmate *)",
       "Bash(commitizen *)",
       "Bash(commitlint *)",
+      "Bash(typos *)",
+      "Bash(ast-grep *)",
+      "Bash(git-cliff *)",
+      "Bash(hurl *)",
+      "Bash(jnv *)",
+      "Bash(watchexec *)",
+      "Bash(curlie *)",
+      "Bash(lazysql *)",
+      "Bash(trippy *)",
+      "Bash(nushell *)",
+      "Bash(nu *)",
+      "Bash(oxipng *)",
+      "Bash(jpegoptim *)",
+      "Bash(7z *)",
+      "Bash(mpv *)",
+      "Bash(newsboat *)",
+      "Bash(zellij *)",
+      "Bash(gum *)",
       "Read",
       "Edit",
       "Write",
@@ -4898,14 +4933,20 @@ if (Test-Path $claudeMd) {
 
 ## Available CLI Tools (use these instead of manual approaches)
 - **Search**: ``rg`` (ripgrep) for content, ``fd`` for files, ``fzf`` for interactive
-- **Data**: ``jq`` for JSON, ``yq`` for YAML, ``mlr`` for CSV, ``fx`` for interactive JSON
-- **Git**: ``lazygit`` for interactive UI, ``delta`` for diffs, ``difft`` for syntax-aware diffs
+- **Data**: ``jq`` for JSON, ``yq`` for YAML, ``mlr`` for CSV, ``fx``/``jnv`` for interactive JSON
+- **Git**: ``lazygit`` for interactive UI, ``delta`` for diffs, ``difft`` for syntax-aware diffs, ``git-cliff`` for changelogs
 - **Docker**: ``lazydocker`` for UI, ``dive`` to inspect layers, ``hadolint`` for Dockerfile linting
-- **Testing**: ``hyperfine`` to benchmark, ``oha`` for load testing, ``act`` for local GitHub Actions
+- **Testing**: ``hyperfine`` to benchmark, ``oha`` for load testing, ``hurl`` for HTTP test files, ``act`` for local GitHub Actions
+- **Code quality**: ``typos`` for spell checking, ``ast-grep`` for structural search/replace, ``shellcheck``/``shfmt`` for shell
 - **Security**: ``trivy`` to scan containers/IaC, ``gitleaks`` for secrets, ``semgrep`` for static analysis
 - **IaC**: ``tofu`` (Terraform), ``tflint`` for linting, ``infracost`` for cost estimation
+- **HTTP**: ``xh`` for colorized requests, ``curlie`` for curl with httpie output
+- **Network**: ``trippy`` for traceroute TUI, ``bandwhich`` for bandwidth
 - **Docs**: ``d2`` for diagrams, ``pandoc`` for conversion, ``glow`` for Markdown preview
-- **Database**: ``pgcli``/``mycli`` for auto-completing SQL, ``sq`` for cross-database queries
+- **Database**: ``pgcli``/``mycli`` for auto-completing SQL, ``lazysql`` for TUI, ``sq`` for cross-database queries
+- **File watching**: ``watchexec`` for running commands on file changes
+- **Shell scripting**: ``gum`` for interactive prompts/spinners, ``nushell`` for structured data pipelines
+- **Terminal**: ``zellij`` for multiplexing, ``mpv`` for video playback
 
 ## Code Standards
 - Use TypeScript strict mode for all TS projects
@@ -5614,9 +5655,8 @@ Add a new React component: `$ARGUMENTS
 Create the full component package:
 1. **Component file**: ``ComponentName.tsx`` -- functional component with TypeScript props interface
 2. **Tests**: ``ComponentName.test.tsx`` -- test rendering, user interactions, edge cases
-3. **Stories** (if Storybook exists): ``ComponentName.stories.tsx`` -- default + variant stories
-4. **Types**: Export the props interface for consumers
-5. **Index**: Add to barrel export (``index.ts``) if the directory uses one
+3. **Types**: Export the props interface for consumers
+4. **Index**: Add to barrel export (``index.ts``) if the directory uses one
 
 Follow these patterns:
 - Functional components only, use hooks for state/effects

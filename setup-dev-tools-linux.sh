@@ -14,21 +14,22 @@ SCRIPT_VERSION="2.0.0"
 SCRIPT_START=$(date +%s)
 
 # -- Colors & Formatting ------------------------------------------------------
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-BLUE='\033[0;34m'
-MAGENTA='\033[0;35m'
-CYAN='\033[0;36m'
-WHITE='\033[1;37m'
-DIM='\033[2m'
-BOLD='\033[1m'
-NC='\033[0m'
+RED=$'\033[0;31m'
+GREEN=$'\033[0;32m'
+YELLOW=$'\033[1;33m'
+BLUE=$'\033[0;34m'
+MAGENTA=$'\033[0;35m'
+CYAN=$'\033[0;36m'
+WHITE=$'\033[1;37m'
+DIM=$'\033[2m'
+BOLD=$'\033[1m'
+NC=$'\033[0m'
 
 # -- Logging ------------------------------------------------------------------
 LOG_DIR="$HOME/.local/share/dev-setup"
 mkdir -p "$LOG_DIR"
 LOG_FILE="$LOG_DIR/setup-$(date +%Y%m%d-%H%M%S).log"
+ERROR_LOG="$LOG_DIR/setup-errors-$(date +%Y%m%d-%H%M%S).log"
 
 log() { echo "[$(date +%H:%M:%S)] $*" >> "$LOG_FILE"; }
 
@@ -52,6 +53,7 @@ warn() {
 error() {
     echo -e "${RED}[ ERR]${NC} $1"
     log "ERROR: $1"
+    echo "[$(date +%H:%M:%S)] $1" >> "$ERROR_LOG"
     ((INSTALL_FAILED++)) || true
     FAILED_ITEMS+=("$1")
 }
@@ -74,16 +76,19 @@ INSTALL_CURRENT=0
 FAILED_ITEMS=()
 
 # Dynamic total — count all install calls in this script
-INSTALL_TOTAL=$(grep -cE '^\s*(pkg_install|snap_install|flatpak_install|npm_global_install|pip_install|cargo_install|github_release_install|brew_install) ' "$0" 2>/dev/null || echo 250)
+_INSTALL_CALLS=$(grep -cE '^\s*(pkg_install|snap_install|flatpak_install|npm_global_install|pip_install|cargo_install|github_release_install|brew_install) ' "$0" 2>/dev/null || echo 0)
+_PROGRESS_CALLS=$(grep -cE '^\s*progress\s*$' "$0" 2>/dev/null || echo 0)
+INSTALL_TOTAL=$((_INSTALL_CALLS + _PROGRESS_CALLS))
+[[ "$INSTALL_TOTAL" -eq 0 ]] && INSTALL_TOTAL=250
 
 progress() {
     ((INSTALL_CURRENT++)) || true
     local pct=$((INSTALL_CURRENT * 100 / INSTALL_TOTAL))
+    [[ "$pct" -gt 100 ]] && pct=100
     local bar_len=$((pct / 2))
     local bar=$(printf '█%.0s' $(seq 1 $bar_len 2>/dev/null) 2>/dev/null || echo "")
     local spaces=$(printf ' %.0s' $(seq 1 $((50 - bar_len)) 2>/dev/null) 2>/dev/null || echo "")
-    echo -ne "\r${DIM}[${CYAN}${bar}${DIM}${spaces}] ${pct}% (${INSTALL_CURRENT}/${INSTALL_TOTAL})${NC}  "
-    echo ""
+    printf '\033[2K\r%s[%s%s%s%s] %d%% (%d/%d)%s\n' "$DIM" "$CYAN" "$bar" "$DIM" "$spaces" "$pct" "$INSTALL_CURRENT" "$INSTALL_TOTAL" "$NC"
 }
 
 # -- State flags --------------------------------------------------------------
@@ -212,9 +217,9 @@ list_categories() {
     printf "  %-25s %s\n" "code-quality"        "shellcheck, shfmt, act, hadolint, ruff, commitizen, ni"
     printf "  %-25s %s\n" "perf-testing"        "hyperfine, oha"
     printf "  %-25s %s\n" "dev-servers"         "ngrok, miniserve, caddy"
-    printf "  %-25s %s\n" "terminal-productivity" "glow, entr, pv, parallel, topgrade, fastfetch, lnav"
+    printf "  %-25s %s\n" "terminal-productivity" "glow, watchexec, pv, parallel, gum, nushell, newsboat, topgrade, fastfetch, lnav"
     printf "  %-25s %s\n" "k8s-github"          "stern, gh-dash"
-    printf "  %-25s %s\n" "database"            "pgcli, mycli, usql, sq, DBeaver"
+    printf "  %-25s %s\n" "database"            "pgcli, mycli, lazysql, usql, sq"
     printf "  %-25s %s\n" "containers"          "lazydocker, dive, kubectl, k9s"
     printf "  %-25s %s\n" "api"                 "Bruno, grpcurl"
     printf "  %-25s %s\n" "networking"          "mtr, bandwhich, nmap"
@@ -226,7 +231,7 @@ list_categories() {
     printf "  %-25s %s\n" "linux-productivity"  "Flameshot, Espanso, Notion, Filezilla"
     printf "  %-25s %s\n" "linux-communication" "Slack, Telegram, Signal"
     printf "  %-25s %s\n" "linux-browsers"      "Firefox, Brave, Chrome"
-    printf "  %-25s %s\n" "linux-media"         "mpv, LibreOffice, gifski"
+    printf "  %-25s %s\n" "linux-media"         "mpv, oxipng, jpegoptim, LibreOffice"
     printf "  %-25s %s\n" "linux-cloud"         "rclone, syncthing, borgbackup, borgmatic"
     printf "  %-25s %s\n" "linux-focus"         "NewsFlash (RSS)"
     printf "  %-25s %s\n" "linux-disk"          "ncdu"
@@ -1449,6 +1454,7 @@ fi
 
 # git-absorb
 cargo_install "git-absorb" "git-absorb (auto-fixup commits)"
+cargo_install "git-cliff" "git-cliff (generate changelogs from conventional commits)"
 
 # pre-commit
 pip_install "pre-commit" "pre-commit (git hook framework)"
@@ -1860,6 +1866,9 @@ else
     progress
 fi
 
+# curlie (curl with httpie-like output)
+cargo_install "curlie" "curlie (curl with httpie-like output)"
+
 # doggo (DNS)
 if ! installed doggo; then
     github_release_install "mr-karan/doggo" "doggo" "https://github.com/mr-karan/doggo/releases/download/VERSION/doggo_VVERSION_linux_ARCH.tar.gz" "doggo (replaces dig — colorized DNS)"
@@ -1961,6 +1970,9 @@ else
     warn "fx already installed"
     progress
 fi
+
+# jnv (interactive JSON navigator with jq filtering)
+cargo_install "jnv" "jnv (interactive JSON navigator with jq filtering)"
 
 fi  # replacements
 
@@ -2065,6 +2077,12 @@ else
     progress
 fi
 
+# typos (source code spell checker)
+cargo_install "typos-cli" "typos (source code spell checker — fast, low false positives)"
+
+# ast-grep (structural code search/replace)
+cargo_install "ast-grep" "ast-grep (structural code search/replace using AST)"
+
 # JS/TS workflow npm globals
 if installed npm; then
     npm_global_install "npkill" "npkill (find and nuke node_modules folders)"
@@ -2095,6 +2113,7 @@ else
 fi
 
 cargo_install "oha" "oha (HTTP load testing, Rust-based)"
+cargo_install "hurl" "hurl (HTTP requests from plain text files — curl + test runner)"
 
 fi  # perf-testing
 
@@ -2147,12 +2166,21 @@ else
     progress
 fi
 
-pkg_install "entr" "entr" "entr" "entr (run commands when files change)"
+cargo_install "watchexec-cli" "watchexec (run commands on file changes — better entr)"
 pkg_install "pv" "pv" "pv" "pv (pipe viewer — progress bars)"
 pkg_install "parallel" "parallel" "parallel" "parallel (GNU parallel)"
 
 # asciinema
 pip_install "asciinema" "asciinema (record & share terminal sessions)"
+
+# gum (shell script UI toolkit)
+github_release_install "charmbracelet/gum" "gum" "https://github.com/charmbracelet/gum/releases/download/VERSION/gum_VVERSION_Linux_ARCH.tar.gz" "gum (shell script UI toolkit — prompts, spinners)"
+
+# nushell (structured data shell)
+cargo_install "nu" "nushell (structured data shell — pipelines output tables)"
+
+# newsboat (terminal RSS reader)
+pkg_install "newsboat" "newsboat" "newsboat" "newsboat (terminal RSS/Atom reader)"
 
 # topgrade
 if ! installed topgrade; then
@@ -2233,6 +2261,7 @@ banner "Database & Data"
 
 pip_install "pgcli" "pgcli (auto-completing Postgres CLI)"
 pip_install "mycli" "mycli (auto-completing MySQL CLI)"
+cargo_install "lazysql" "lazysql (TUI for databases — interactive SQL in terminal)"
 
 # usql
 if installed go; then
@@ -2364,6 +2393,7 @@ banner "Networking & Debugging"
 pkg_install "mtr" "mtr" "mtr" "mtr (combines ping + traceroute)"
 cargo_install "bandwhich" "bandwhich (real-time bandwidth by process)"
 pkg_install "nmap" "nmap" "nmap" "nmap (network scanning)"
+cargo_install "trippy" "trippy (modern traceroute TUI with charts)"
 
 fi  # networking
 
@@ -2445,6 +2475,7 @@ pkg_install "kitty" "kitty" "kitty" "kitty (GPU-accelerated terminal)"
 
 # tmux
 pkg_install "tmux" "tmux" "tmux" "tmux (terminal multiplexer)"
+cargo_install "zellij" "zellij (modern terminal multiplexer — discoverable UI, layouts)"
 
 # ulauncher (Raycast alternative)
 if ! installed ulauncher; then
@@ -2526,11 +2557,6 @@ fi  # dx
 # =============================================================================
 if should_run "ui"; then
 banner "UI Development"
-
-if installed npm; then
-    npm_global_install "storybook" "Storybook CLI"
-    npm_global_install "playwright" "Playwright"
-fi
 
 # Chrome
 setup_chrome_repo
@@ -2622,7 +2648,6 @@ banner "Linux Apps — Communication"
 
 snap_install "slack" "Slack" "classic"
 snap_install "telegram-desktop" "Telegram" ""
-snap_install "signal-desktop" "Signal" ""
 
 fi  # linux-communication
 
@@ -2655,11 +2680,12 @@ banner "Linux Apps — Media"
 # mpv (replaces IINA)
 pkg_install "mpv" "mpv" "mpv" "mpv (video player — IINA equivalent)"
 
+# Image compression (CLI)
+cargo_install "oxipng" "oxipng (lossless PNG compression)"
+pkg_install "jpegoptim" "jpegoptim" "jpegoptim" "jpegoptim (lossless JPEG compression)"
+
 # LibreOffice (usually pre-installed)
 pkg_install "libreoffice" "libreoffice" "libreoffice-fresh" "LibreOffice"
-
-# gifski
-cargo_install "gifski" "gifski (video to high-quality GIF)"
 
 fi  # linux-media
 
@@ -5568,7 +5594,6 @@ else
       "Bash(tsc *)",
       "Bash(jest *)",
       "Bash(vitest *)",
-      "Bash(playwright *)",
       "Bash(act *)",
       "Bash(tofu *)",
       "Bash(tflint *)",
@@ -5594,6 +5619,24 @@ else
       "Bash(dbmate *)",
       "Bash(commitizen *)",
       "Bash(commitlint *)",
+      "Bash(typos *)",
+      "Bash(ast-grep *)",
+      "Bash(git-cliff *)",
+      "Bash(hurl *)",
+      "Bash(jnv *)",
+      "Bash(watchexec *)",
+      "Bash(curlie *)",
+      "Bash(lazysql *)",
+      "Bash(trippy *)",
+      "Bash(nushell *)",
+      "Bash(nu *)",
+      "Bash(oxipng *)",
+      "Bash(jpegoptim *)",
+      "Bash(7z *)",
+      "Bash(mpv *)",
+      "Bash(newsboat *)",
+      "Bash(zellij *)",
+      "Bash(gum *)",
       "Read",
       "Edit",
       "Write",
@@ -5688,14 +5731,20 @@ else
 
 ## Available CLI Tools (use these instead of manual approaches)
 - **Search**: `rg` (ripgrep) for content, `fd` for files, `fzf` for interactive
-- **Data**: `jq` for JSON, `yq` for YAML, `mlr` for CSV, `fx` for interactive JSON
-- **Git**: `lazygit` for interactive UI, `delta` for diffs, `difft` for syntax-aware diffs
+- **Data**: `jq` for JSON, `yq` for YAML, `mlr` for CSV, `fx`/`jnv` for interactive JSON
+- **Git**: `lazygit` for interactive UI, `delta` for diffs, `difft` for syntax-aware diffs, `git-cliff` for changelogs
 - **Docker**: `lazydocker` for UI, `dive` to inspect layers, `hadolint` for Dockerfile linting
-- **Testing**: `hyperfine` to benchmark, `oha` for load testing, `act` for local GitHub Actions
+- **Testing**: `hyperfine` to benchmark, `oha` for load testing, `hurl` for HTTP test files, `act` for local GitHub Actions
+- **Code quality**: `typos` for spell checking, `ast-grep` for structural search/replace, `shellcheck`/`shfmt` for shell
 - **Security**: `trivy` to scan containers/IaC, `gitleaks` for secrets, `semgrep` for static analysis
 - **IaC**: `tofu` (Terraform), `tflint` for linting, `infracost` for cost estimation
+- **HTTP**: `xh` for colorized requests, `curlie` for curl with httpie output
+- **Network**: `trippy` for traceroute TUI, `mtr`, `bandwhich` for bandwidth
 - **Docs**: `d2` for diagrams, `pandoc` for conversion, `glow` for Markdown preview
-- **Database**: `pgcli`/`mycli` for auto-completing SQL, `sq` for cross-database queries
+- **Database**: `pgcli`/`mycli` for auto-completing SQL, `lazysql` for TUI, `sq` for cross-database queries
+- **File watching**: `watchexec` for running commands on file changes
+- **Shell scripting**: `gum` for interactive prompts/spinners, `nushell` for structured data pipelines
+- **Terminal**: `tmux` or `zellij` for multiplexing, `mpv` for video playback
 
 ## Code Standards
 - Use TypeScript strict mode for all TS projects
@@ -6387,9 +6436,8 @@ Add a new React component: $ARGUMENTS
 Create the full component package:
 1. **Component file**: `ComponentName.tsx` — functional component with TypeScript props interface
 2. **Tests**: `ComponentName.test.tsx` — test rendering, user interactions, edge cases
-3. **Stories** (if Storybook exists): `ComponentName.stories.tsx` — default + variant stories
-4. **Types**: Export the props interface for consumers
-5. **Index**: Add to barrel export (`index.ts`) if the directory uses one
+3. **Types**: Export the props interface for consumers
+4. **Index**: Add to barrel export (`index.ts`) if the directory uses one
 
 Follow these patterns:
 - Functional components only, use hooks for state/effects
@@ -7403,7 +7451,7 @@ alias pyrun=\"uv run\"
 alias gj=\"just --justfile ~/.justfile --working-directory .\"
 
 # Dev & Testing
-alias watchrun=\"find . -name '*.ts' -o -name '*.tsx' | entr -r\"
+alias watchrun=\"watchexec --exts ts,tsx --restart\"
 alias bench=\"hyperfine\"
 alias loadtest=\"oha\"
 alias par=\"parallel\"
