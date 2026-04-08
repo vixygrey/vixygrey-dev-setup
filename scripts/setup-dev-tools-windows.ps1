@@ -26,6 +26,11 @@ $LOG_DIR = Join-Path $HOME ".local\share\dev-setup"
 if (-not (Test-Path $LOG_DIR)) { New-Item -ItemType Directory -Path $LOG_DIR -Force | Out-Null }
 $LOG_FILE = Join-Path $LOG_DIR "setup-$(Get-Date -Format 'yyyyMMdd-HHmmss').log"
 
+# Log rotation — remove logs older than 30 days
+Get-ChildItem "$HOME\.local\share\dev-setup\setup-*.log" -ErrorAction SilentlyContinue |
+    Where-Object { $_.LastWriteTime -lt (Get-Date).AddDays(-30) } |
+    Remove-Item -Force -ErrorAction SilentlyContinue
+
 function Write-Log { param([string]$Message)
     $ts = Get-Date -Format "HH:mm:ss"
     Add-Content -Path $LOG_FILE -Value "[$ts] $Message"
@@ -75,8 +80,9 @@ $script:INSTALL_FAILED = 0
 $script:INSTALL_CURRENT = 0
 $script:FAILED_ITEMS = @()
 
-# Dynamic total — will be set after parsing the script
-$script:INSTALL_TOTAL = 173
+# Approximate count — dynamically counted from Show-Progress calls in this script
+$script:INSTALL_TOTAL = (Select-String -Path $PSCommandPath -Pattern 'Show-Progress' -SimpleMatch).Count
+if ($script:INSTALL_TOTAL -eq 0) { $script:INSTALL_TOTAL = 175 }
 
 function Show-Progress {
     $script:INSTALL_CURRENT++
@@ -105,6 +111,7 @@ $STATE_DIR = Join-Path $HOME ".local\share\dev-setup"
 $STATE_FILE = Join-Path $STATE_DIR "completed-items.txt"
 
 function Mark-Done { param([string]$Item)
+    if ($DRY_RUN) { return }
     Add-Content -Path $STATE_FILE -Value $Item
 }
 
@@ -121,12 +128,13 @@ function Get-Lock {
     if (-not (Test-Path $STATE_DIR)) { New-Item -ItemType Directory -Path $STATE_DIR -Force | Out-Null }
     if (Test-Path $LOCKFILE) {
         $oldPid = Get-Content $LOCKFILE -ErrorAction SilentlyContinue
-        try {
-            $proc = Get-Process -Id $oldPid -ErrorAction Stop
-            Write-Host "ERROR: Another instance is running (PID $oldPid)." -ForegroundColor Red
-            Write-Host "  Remove $LOCKFILE if this is stale."
-            exit 1
-        } catch {
+        if ($oldPid) {
+            $proc = Get-Process -Id $oldPid -ErrorAction SilentlyContinue
+            if ($proc -and ($proc.ProcessName -eq "pwsh" -or $proc.ProcessName -eq "powershell")) {
+                Write-Err "Another instance is running (PID: $oldPid)"
+                exit 1
+            }
+            Write-Warning "Removing stale lock (PID: $oldPid)"
             Remove-Item $LOCKFILE -Force -ErrorAction SilentlyContinue
         }
     }
@@ -285,6 +293,14 @@ while ($i -lt $argList.Count) {
     $i++
 }
 
+# Validate --skip/--only category names
+foreach ($cat in $SKIP_CATEGORIES + $ONLY_CATEGORIES) {
+    if ($cat -and $cat -notin $ALL_CATEGORIES) {
+        Write-Err "Unknown category: '$cat'. Valid categories: $($ALL_CATEGORIES -join ', ')"
+        exit 1
+    }
+}
+
 # -- Category filtering -------------------------------------------------------
 function Test-ShouldRun { param([string]$Category)
     if ($ONLY_CATEGORIES.Count -gt 0) {
@@ -334,13 +350,13 @@ function Install-WingetPackage {
     Show-Progress
     if (Test-Done "winget:$PackageId") { Write-Warn "$DisplayName already completed (resume)"; return }
     if ($DRY_RUN) {
-        $check = winget list --id $PackageId --accept-source-agreements 2>$null
-        if ($check -match [regex]::Escape($PackageId)) { Write-Warn "[DRY RUN] $DisplayName -- already installed" }
+        $check = winget list --id $PackageId --exact --accept-source-agreements 2>$null
+        if ($LASTEXITCODE -eq 0 -and $check -match [regex]::Escape($PackageId)) { Write-Warn "[DRY RUN] $DisplayName -- already installed" }
         else { Write-Info "[DRY RUN] Would install: $DisplayName" }
         return
     }
-    $check = winget list --id $PackageId --accept-source-agreements 2>$null
-    if ($check -match [regex]::Escape($PackageId)) {
+    $check = winget list --id $PackageId --exact --accept-source-agreements 2>$null
+    if ($LASTEXITCODE -eq 0 -and $check -match [regex]::Escape($PackageId)) {
         Write-Warn "$DisplayName already installed"
         Mark-Done "winget:$PackageId"
     } else {
@@ -559,11 +575,11 @@ if ($CLEANUP) {
                 switch ($tool.Type) {
                     "winget" {
                         winget uninstall --id $tool.Id --silent 2>$null >> $LOG_FILE
-                        if ($?) { Write-Success "$($tool.Name) removed" } else { Write-Error "$($tool.Name) — failed to remove" }
+                        if ($?) { Write-Success "$($tool.Name) removed" } else { Write-Err "$($tool.Name) — failed to remove" }
                     }
                     "scoop" {
                         scoop uninstall $tool.Id 2>$null >> $LOG_FILE
-                        if ($?) { Write-Success "$($tool.Name) removed" } else { Write-Error "$($tool.Name) — failed to remove" }
+                        if ($?) { Write-Success "$($tool.Name) removed" } else { Write-Err "$($tool.Name) — failed to remove" }
                     }
                 }
                 $cleanupCount++
@@ -583,6 +599,8 @@ if ($CLEANUP) {
 Invoke-Preflight
 Get-Lock
 
+try {
+
 # =============================================================================
 # PREREQUISITES (always runs -- required for everything else)
 # =============================================================================
@@ -594,7 +612,14 @@ if (-not (Test-Command "scoop")) {
     if (-not $DRY_RUN) {
         try {
             Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser -Force -ErrorAction SilentlyContinue
-            Invoke-RestMethod -Uri https://get.scoop.sh | Invoke-Expression
+            $scoopInstaller = Join-Path $env:TEMP "scoop-install.ps1"
+            Invoke-WebRequest -Uri "https://get.scoop.sh" -OutFile $scoopInstaller -UseBasicParsing
+            if (-not (Test-Path $scoopInstaller) -or (Get-Item $scoopInstaller).Length -eq 0) {
+                Write-Err "Failed to download Scoop installer"
+                return
+            }
+            & $scoopInstaller
+            Remove-Item $scoopInstaller -Force -ErrorAction SilentlyContinue
             Write-Success "Scoop installed"
         } catch {
             Write-Err "Failed to install Scoop: $_"
@@ -643,7 +668,12 @@ Install-ScoopPackage "mise" "mise (universal version manager -- Node, Python, Go
 # Activate mise for this script session and install Node/Python
 if (Test-Command "mise") {
     if (-not $DRY_RUN) {
-        mise activate powershell 2>$null | Invoke-Expression
+        $miseActivation = mise activate powershell 2>&1
+        if ($LASTEXITCODE -eq 0 -and $miseActivation) {
+            $miseActivation | Invoke-Expression
+        } else {
+            Write-Warn "mise activation failed — Node/Python via mise may be unavailable"
+        }
 
         # Install Node.js LTS via mise
         $miseNode = mise ls node 2>$null
@@ -684,8 +714,16 @@ if (-not (Test-Command "rustup")) {
     Write-Info "Installing Rust via rustup..."
     if (-not $DRY_RUN) {
         try {
+            $arch = if ([Environment]::Is64BitOperatingSystem) {
+                if ($env:PROCESSOR_ARCHITECTURE -eq "ARM64") { "aarch64" } else { "x86_64" }
+            } else { "i686" }
+            $rustupUrl = "https://win.rustup.rs/$arch"
             $rustupInit = Join-Path $env:TEMP "rustup-init.exe"
-            Invoke-WebRequest -Uri "https://win.rustup.rs/x86_64" -OutFile $rustupInit -UseBasicParsing
+            Invoke-WebRequest -Uri $rustupUrl -OutFile $rustupInit -UseBasicParsing
+            if (-not (Test-Path $rustupInit) -or (Get-Item $rustupInit).Length -eq 0) {
+                Write-Err "Failed to download Rust installer"
+                return
+            }
             & $rustupInit -y --no-modify-path 2>&1 | Out-File $LOG_FILE -Append
             $env:Path = "$HOME\.cargo\bin;$env:Path"
             Write-Success "Rust installed via rustup"
@@ -765,12 +803,12 @@ if (Test-Command "cargo") {
     }
 }
 
-# pre-commit via pip
-if (Test-Command "pip") {
+# pre-commit via uv
+if (Test-Command "uv") {
     if (-not (Test-Command "pre-commit")) {
         if (-not $DRY_RUN) {
-            Write-Info "Installing pre-commit via pip..."
-            pip install pre-commit 2>&1 | Out-File $LOG_FILE -Append
+            Write-Info "Installing pre-commit via uv..."
+            uv tool install pre-commit 2>&1 | Out-File $LOG_FILE -Append
             Write-Success "pre-commit installed"
         }
     } else {
@@ -801,12 +839,12 @@ Write-Banner "AWS & CDK"
 Install-WingetPackage "Amazon.AWSCLI2" "AWS CLI v2"
 Install-WingetPackage "Amazon.SAM-CLI" "AWS SAM CLI"
 
-# cfn-lint via pip
-if (Test-Command "pip") {
+# cfn-lint via uv
+if (Test-Command "uv") {
     if (-not $DRY_RUN) {
         if (-not (Test-Command "cfn-lint")) {
-            Write-Info "Installing cfn-lint via pip..."
-            pip install cfn-lint 2>&1 | Out-File $LOG_FILE -Append
+            Write-Info "Installing cfn-lint via uv..."
+            uv tool install cfn-lint 2>&1 | Out-File $LOG_FILE -Append
             Write-Success "cfn-lint installed"
         } else {
             Write-Warn "cfn-lint already installed"
@@ -929,12 +967,12 @@ Install-ScoopPackage "imagemagick" "ImageMagick (image resize, convert, composit
 Install-ScoopPackage "ffmpeg" "ffmpeg (video/audio processing swiss army knife)"
 Install-ScoopPackage "yt-dlp" "yt-dlp (video/audio downloader)"
 
-# csvkit via pip
-if (Test-Command "pip") {
+# csvkit via uv
+if (Test-Command "uv") {
     if (-not $DRY_RUN) {
         if (-not (Test-Command "csvlook")) {
-            Write-Info "Installing csvkit via pip..."
-            pip install csvkit 2>&1 | Out-File $LOG_FILE -Append
+            Write-Info "Installing csvkit via uv..."
+            uv tool install csvkit 2>&1 | Out-File $LOG_FILE -Append
             Write-Success "csvkit installed"
         } else {
             Write-Warn "csvkit already installed"
@@ -991,7 +1029,7 @@ if (Test-ShouldRun "terminal-productivity") {
 Write-Banner "Terminal Productivity"
 
 Install-ScoopPackage "glow" "glow (render Markdown in terminal)"
-Install-ScoopPackage "watchexec" "watchexec (run commands when files change -- replaces entr)"
+# watchexec already installed in replacements section — skipping duplicate
 Install-ScoopPackage "pv" "pv (pipe viewer -- progress bars for pipes)"
 Install-ScoopPackage "parallel" "parallel (GNU parallel -- run commands in parallel)"
 Install-ScoopPackage "asciinema" "asciinema (record & share terminal sessions)"
@@ -1132,11 +1170,11 @@ if (Test-Command "gh") {
 
 # HTTP debugging
 # mitmproxy (replaces Proxyman / Fiddler)
-if (Test-Command "pip") {
+if (Test-Command "uv") {
     if (-not (Test-Command "mitmproxy")) {
         if (-not $DRY_RUN) {
-            Write-Info "Installing mitmproxy via pip..."
-            pip install mitmproxy 2>&1 | Out-File $LOG_FILE -Append
+            Write-Info "Installing mitmproxy via uv..."
+            uv tool install mitmproxy 2>&1 | Out-File $LOG_FILE -Append
             Write-Success "mitmproxy installed"
         }
     } else {
@@ -1798,6 +1836,15 @@ if (-not $DRY_RUN) {
     if (Test-Path $wtSettingsPath) {
         Write-Info "Adding Dracula color scheme to Windows Terminal..."
         try {
+            # Check if Dracula already present before parsing (preserves JSONC comments)
+            $wtRawContent = Get-Content $wtSettingsPath -Raw -ErrorAction SilentlyContinue
+            if ($wtRawContent -and $wtRawContent -match "Dracula") {
+                Write-Warn "Windows Terminal Dracula scheme already exists"
+            } else {
+                # Warning: ConvertFrom-Json strips JSONC comments — backup created
+                Write-Warn "Adding Dracula theme requires modifying settings.json — backup created"
+                Copy-Item $wtSettingsPath "$wtSettingsPath.bak" -Force
+            }
             $wtSettings = Get-Content $wtSettingsPath -Raw | ConvertFrom-Json
             $draculaScheme = @{
                 name        = "Dracula"
@@ -2023,7 +2070,7 @@ retry-wait=10
 continue=true
 
 # -- File Management
-dir=$HOME\Downloads
+dir=$(Join-Path $HOME 'Downloads')
 file-allocation=none
 auto-file-renaming=true
 
@@ -2190,7 +2237,7 @@ if (Test-Path $vscodeSettings) {
         "go.mod": "go.sum"
     },
     "explorer.confirmDragAndDrop": false,
-    "explorer.confirmDelete": false,
+    "explorer.confirmDelete": true,
 
     "terminal.integrated.fontFamily": "'JetBrains Mono NF', 'MesloLGS NF', Consolas",
     "terminal.integrated.fontSize": 13,
@@ -2275,8 +2322,8 @@ if ((Test-Command "code") -and -not $DRY_RUN) {
         "redhat.vscode-yaml"
         "tamasfe.even-better-toml"
     )
+    $installedExts = code --list-extensions 2>$null
     foreach ($ext in $vscodeExtensions) {
-        $installedExts = code --list-extensions 2>$null
         if ($installedExts -match $ext) {
             Write-Warn "VS Code extension $ext already installed"
         } else {
@@ -2598,7 +2645,7 @@ Host *
 
     # Use ssh-agent
     AddKeysToAgent yes
-    IdentityFile ~/.ssh/id_ed25519
+    IdentityFile $($HOME)\.ssh\id_ed25519
 
     # Faster connections
     Compression yes
@@ -2611,14 +2658,14 @@ Host *
 Host github.com
     HostName github.com
     User git
-    IdentityFile ~/.ssh/id_ed25519
+    IdentityFile $($HOME)\.ssh\id_ed25519
 
 # -- Example: shortcut for a server ------------------------------------------
 # Host myserver
 #     HostName 192.168.1.100
 #     User deploy
 #     Port 22
-#     IdentityFile ~/.ssh/id_ed25519
+#     IdentityFile $($HOME)\.ssh\id_ed25519
 "@
         Write-Success "SSH configured (keep-alive, strong algorithms)"
     }
@@ -2878,15 +2925,7 @@ if (-not $DRY_RUN) {
 }
 
 # ---- .hushlogin ----
-$hushlogin = Join-Path $HOME ".hushlogin"
-if (Test-Path $hushlogin) {
-    Write-Warn "~/.hushlogin already exists"
-} else {
-    if (-not $DRY_RUN) {
-        New-Item -ItemType File -Path $hushlogin -Force | Out-Null
-        Write-Success "~/.hushlogin created"
-    }
-}
+# Skipped — .hushlogin has no effect on Windows
 
 # ---- ripgrep config ----
 $ripgreprc = Join-Path $HOME ".ripgreprc"
@@ -4209,13 +4248,13 @@ Write-Host "Project created at: $projectDir"
     # -- clone-work.ps1 --
     Set-Content -Path (Join-Path $HOME "Scripts\bin\clone-work.ps1") -Value @'
 # Clone a work repo into ~/Code/work/<org>/<repo>
-param([Parameter(Mandatory)][string]$Input)
-if ($Input -match 'github\.com[:/]([^/]+)/([^/.]+)') {
+param([Parameter(Mandatory)][string]$RepoUrl)
+if ($RepoUrl -match 'github\.com[:/]([^/]+)/([^/.]+)') {
     $org = $Matches[1]; $repo = $Matches[2]
-} elseif ($Input -match '^([^/]+)/([^/]+)$') {
+} elseif ($RepoUrl -match '^([^/]+)/([^/]+)$') {
     $org = $Matches[1]; $repo = $Matches[2]
 } else {
-    Write-Host "Could not parse org/repo from: $Input"; return
+    Write-Host "Could not parse org/repo from: $RepoUrl"; return
 }
 $target = Join-Path $HOME "Code\work\$org"
 New-Item -ItemType Directory -Path $target -Force | Out-Null
@@ -4368,7 +4407,7 @@ if (Test-Path $keyPath) {
     Write-Host "Generating Ed25519 SSH key for $Email..."
     $sshDir = Join-Path $HOME ".ssh"
     if (-not (Test-Path $sshDir)) { New-Item -ItemType Directory -Path $sshDir -Force | Out-Null }
-    ssh-keygen -t ed25519 -C $Email -f $keyPath -N '""'
+    ssh-keygen -t ed25519 -C $Email -f $keyPath -N ""
     Write-Host "SSH key generated."
 }
 
@@ -4513,7 +4552,16 @@ if (-not $DRY_RUN) {
 
     # Reduce animations
     try {
-        Set-ItemProperty -Path "HKCU:\Control Panel\Desktop" -Name UserPreferencesMask -Value ([byte[]](0x90,0x12,0x03,0x80,0x10,0x00,0x00,0x00))
+        # Read current value and only modify animation-related bits
+        $currentMask = (Get-ItemProperty -Path "HKCU:\Control Panel\Desktop" -Name UserPreferencesMask -ErrorAction SilentlyContinue).UserPreferencesMask
+        if ($currentMask) {
+            # Disable animations (bit 1 of byte 0)
+            $currentMask[0] = $currentMask[0] -band 0xFE  # Clear animation bit
+            Set-ItemProperty -Path "HKCU:\Control Panel\Desktop" -Name UserPreferencesMask -Value $currentMask
+        } else {
+            # Fallback to the full set if no current value exists
+            Set-ItemProperty -Path "HKCU:\Control Panel\Desktop" -Name UserPreferencesMask -Value ([byte[]](0x90,0x12,0x03,0x80,0x10,0x00,0x00,0x00))
+        }
         Write-Success "Animations reduced"
     } catch { Write-Err "Failed to reduce animations: $_" }
 
@@ -4660,21 +4708,24 @@ public class Wallpaper {
 }
 
     # ---- Auto-set timezone ----
-    try {
-        Set-TimeZone -Id "Central Standard Time" -ErrorAction SilentlyContinue
-        Write-Success "Timezone set to Central Standard Time"
-    } catch { Write-Err "Failed to set timezone: $_" }
+    # Timezone — uncomment and set your timezone if desired
+    # try {
+    #     Set-TimeZone -Id "Central Standard Time" -ErrorAction SilentlyContinue
+    #     Write-Success "Timezone set to Central Standard Time"
+    # } catch { Write-Err "Failed to set timezone: $_" }
 
     # ---- Software Update: auto-check but don't auto-restart ----
-    if ($isAdmin) {
-        try {
-            $wuPath = "HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate\AU"
-            New-Item -Path $wuPath -Force -ErrorAction SilentlyContinue | Out-Null
-            Set-ItemProperty -Path $wuPath -Name NoAutoRebootWithLoggedOnUsers -Value 1 -ErrorAction SilentlyContinue
-            Write-Success "Windows Update: disabled auto-reboot with logged-on users"
-        } catch { Write-Err "Failed to set Windows Update policy: $_" }
-    } else {
-        Write-Warn "Skipping Windows Update policy (requires Administrator)"
+    if (-not $DRY_RUN) {
+        if ($isAdmin) {
+            try {
+                $wuPath = "HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate\AU"
+                New-Item -Path $wuPath -Force -ErrorAction SilentlyContinue | Out-Null
+                Set-ItemProperty -Path $wuPath -Name NoAutoRebootWithLoggedOnUsers -Value 1 -ErrorAction SilentlyContinue
+                Write-Success "Windows Update: disabled auto-reboot with logged-on users"
+            } catch { Write-Err "Failed to set Windows Update policy: $_" }
+        } else {
+            Write-Warn "Skipping Windows Update policy (requires Administrator)"
+        }
     }
 
     # ---- Show Bluetooth in system tray (already visible by default on Windows) ----
@@ -4687,6 +4738,7 @@ public class Wallpaper {
 } # windows-defaults
 
 # =============================================================================
+if (Test-ShouldRun "configs") {
 # CLAUDE CODE CONFIGURATION
 # =============================================================================
 Write-Banner "Claude Code Configuration"
@@ -5253,9 +5305,37 @@ fi
 exit 0
 '@
 
+        # format-on-edit.ps1 (PowerShell equivalent of format-on-edit.sh)
+        $formatOnEditPs1 = Join-Path $claudeHooksDir "format-on-edit.ps1"
+        if (-not (Test-Path $formatOnEditPs1)) {
+            @'
+$rawInput = [Console]::In.ReadToEnd()
+$input_data = $rawInput | ConvertFrom-Json
+
+$filePath = $input_data.file_path
+
+if ($filePath -match '\.py$') {
+    if (Get-Command ruff -ErrorAction SilentlyContinue) {
+        ruff format $filePath 2>$null
+    }
+}
+elseif ($filePath -match '\.(js|ts|jsx|tsx|json|css|md|yaml|yml)$') {
+    if (Get-Command prettier -ErrorAction SilentlyContinue) {
+        prettier --write $filePath 2>$null
+    }
+}
+elseif ($filePath -match '\.go$') {
+    if (Get-Command gofmt -ErrorAction SilentlyContinue) {
+        gofmt -w $filePath 2>$null
+    }
+}
+'@ | Out-File -FilePath $formatOnEditPs1 -Encoding utf8 -Force
+        }
+
         Set-Content -Path (Join-Path $claudeHooksDir "lint-python.ps1") -Value @'
 # Auto-lint and fix Python files after Claude edits them (PowerShell version)
-$input_data = $input | ConvertFrom-Json -ErrorAction SilentlyContinue
+$rawInput = [Console]::In.ReadToEnd()
+$input_data = $rawInput | ConvertFrom-Json -ErrorAction SilentlyContinue
 $file = $input_data.tool_input.file_path
 
 if ($file -and $file -match '\.py$' -and (Test-Path $file)) {
@@ -5288,7 +5368,8 @@ exit 0
 
         Set-Content -Path (Join-Path $claudeHooksDir "lint-dockerfile.ps1") -Value @'
 # Lint Dockerfiles after Claude edits them (PowerShell version)
-$input_data = $input | ConvertFrom-Json -ErrorAction SilentlyContinue
+$rawInput = [Console]::In.ReadToEnd()
+$input_data = $rawInput | ConvertFrom-Json -ErrorAction SilentlyContinue
 $file = $input_data.tool_input.file_path
 
 if ($file -and (Split-Path $file -Leaf) -match '^Dockerfile' -and (Test-Path $file)) {
@@ -5741,6 +5822,8 @@ Keep the first line under 72 characters. Use imperative mood ("add" not "added")
         Write-Success "Claude Code commands created (20 commands: /pr-review, /test-plan, /dep-audit, /quick-doc, /cleanup, /security-scan, /perf-check, /docker-lint, /iac-review, /convert, /new-feature, /fix-bug, /create-readme, /init-project, /refactor, /add-endpoint, /add-component, /ci-fix, /changelog, /commit-msg)"
     }
 }
+
+} # configs
 
 # =============================================================================
 if (Test-ShouldRun "shell") {
@@ -6253,5 +6336,7 @@ Write-Host ""
 Write-Host "  Restart your terminal to activate everything." -ForegroundColor Green
 Write-Host ""
 
-# Cleanup
-Release-Lock
+} finally {
+    # Cleanup — always release lock, even on Ctrl+C
+    Release-Lock
+}

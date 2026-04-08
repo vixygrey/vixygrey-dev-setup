@@ -12,6 +12,7 @@
 
 SCRIPT_VERSION="2.0.0"
 SCRIPT_START=$(date +%s)
+PYTHON_VERSION="3.12"
 
 # -- Colors & Formatting ------------------------------------------------------
 RED=$'\033[0;31m'
@@ -116,22 +117,24 @@ LOCKFILE="$STATE_DIR/setup.lock"
 
 acquire_lock() {
     mkdir -p "$STATE_DIR"
-    if [[ -f "$LOCKFILE" ]]; then
-        local old_pid
-        old_pid=$(cat "$LOCKFILE" 2>/dev/null)
-        if kill -0 "$old_pid" 2>/dev/null; then
-            echo -e "${RED}ERROR: Another instance is running (PID $old_pid).${NC}"
-            echo "  Remove $LOCKFILE if this is stale."
-            exit 1
-        else
-            rm -f "$LOCKFILE"
-        fi
+    if mkdir "$LOCKFILE" 2>/dev/null; then
+        echo $$ > "$LOCKFILE/pid"
+        return 0
     fi
-    echo $$ > "$LOCKFILE"
+    local old_pid
+    old_pid=$(cat "$LOCKFILE/pid" 2>/dev/null)
+    if [[ -n "$old_pid" ]] && kill -0 "$old_pid" 2>/dev/null; then
+        error "Another instance is running (PID: $old_pid)"
+        exit 1
+    fi
+    warn "Removing stale lock (PID: ${old_pid:-unknown})"
+    rm -rf "$LOCKFILE"
+    mkdir "$LOCKFILE" 2>/dev/null || { error "Failed to acquire lock"; exit 1; }
+    echo $$ > "$LOCKFILE/pid"
 }
 
 release_lock() {
-    rm -f "$LOCKFILE"
+    rm -rf "$LOCKFILE"
 }
 
 trap release_lock EXIT
@@ -289,6 +292,19 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
+# -- Validate --skip/--only category names ------------------------------------
+for _cat in "${SKIP_CATEGORIES[@]}" "${ONLY_CATEGORIES[@]}"; do
+    _valid=false
+    for _known in "${ALL_CATEGORIES[@]}"; do
+        [[ "$_cat" == "$_known" ]] && _valid=true && break
+    done
+    if [[ "$_valid" != "true" ]]; then
+        error "Unknown category: '$_cat'. Valid categories: ${ALL_CATEGORIES[*]}"
+        exit 1
+    fi
+done
+unset _cat _valid _known
+
 # -- Category filtering -------------------------------------------------------
 should_run() {
     local category="$1"
@@ -393,9 +409,9 @@ pkg_install() {
 
     # Check if already installed
     case "$PKG_MANAGER" in
-        apt) dpkg -s "$pkg" &>/dev/null 2>&1 && { warn "$name already installed"; mark_done "pkg:$name"; return 0; } ;;
-        dnf) rpm -q "$pkg" &>/dev/null 2>&1 && { warn "$name already installed"; mark_done "pkg:$name"; return 0; } ;;
-        pacman) pacman -Qi "$pkg" &>/dev/null 2>&1 && { warn "$name already installed"; mark_done "pkg:$name"; return 0; } ;;
+        apt) dpkg -s "$pkg" &>/dev/null && { warn "$name already installed"; mark_done "pkg:$name"; return 0; } ;;
+        dnf) rpm -q "$pkg" &>/dev/null && { warn "$name already installed"; mark_done "pkg:$name"; return 0; } ;;
+        pacman) pacman -Qi "$pkg" &>/dev/null && { warn "$name already installed"; mark_done "pkg:$name"; return 0; } ;;
     esac
 
     info "Installing $name..."
@@ -444,7 +460,7 @@ snap_install() {
     fi
 
     if [[ "$DRY_RUN" == "true" ]]; then
-        if snap list "$pkg" &>/dev/null 2>&1; then
+        if snap list "$pkg" &>/dev/null; then
             warn "[DRY RUN] $name — already installed"
         else
             info "[DRY RUN] Would install: $name (snap)"
@@ -452,14 +468,14 @@ snap_install() {
         return 0
     fi
 
-    if snap list "$pkg" &>/dev/null 2>&1; then
+    if snap list "$pkg" &>/dev/null; then
         warn "$name already installed (snap)"
         mark_done "snap:$pkg"
     else
         info "Installing $name (snap)..."
-        local snap_args=""
-        [[ "$classic" == "classic" ]] && snap_args="--classic"
-        if sudo snap install "$pkg" $snap_args >> "$LOG_FILE" 2>&1; then
+        local -a snap_opts=()
+        [[ "$classic" == "classic" ]] && snap_opts=(--classic)
+        if sudo snap install "$pkg" "${snap_opts[@]}" >> "$LOG_FILE" 2>&1; then
             success "$name installed (snap)"
             mark_done "snap:$pkg"
         else
@@ -482,7 +498,7 @@ flatpak_install() {
     fi
 
     if [[ "$DRY_RUN" == "true" ]]; then
-        if flatpak info "$app_id" &>/dev/null 2>&1; then
+        if flatpak info "$app_id" &>/dev/null; then
             warn "[DRY RUN] $name — already installed"
         else
             info "[DRY RUN] Would install: $name (flatpak)"
@@ -490,7 +506,7 @@ flatpak_install() {
         return 0
     fi
 
-    if flatpak info "$app_id" &>/dev/null 2>&1; then
+    if flatpak info "$app_id" &>/dev/null; then
         warn "$name already installed (flatpak)"
         mark_done "flatpak:$app_id"
     else
@@ -511,14 +527,14 @@ npm_global_install() {
     progress
     is_done "npm:$pkg" && { warn "$name already completed (resume)"; return 0; }
     if [[ "$DRY_RUN" == "true" ]]; then
-        if npm list -g "$pkg" &>/dev/null 2>&1; then
+        if npm list -g "$pkg" &>/dev/null; then
             warn "[DRY RUN] $name — already installed"
         else
             info "[DRY RUN] Would install: $name"
         fi
         return 0
     fi
-    if npm list -g "$pkg" &>/dev/null 2>&1; then
+    if npm list -g "$pkg" &>/dev/null; then
         warn "$name already installed globally"
         mark_done "npm:$pkg"
     else
@@ -528,6 +544,7 @@ npm_global_install() {
             mark_done "npm:$pkg"
         else
             error "Failed to install $name"
+            return 1
         fi
     fi
 }
@@ -541,20 +558,25 @@ pip_install() {
         info "[DRY RUN] Would install: $name (pip)"
         return 0
     fi
-    if python3 -m pip show "$pkg" &>/dev/null 2>&1; then
-        warn "$name already installed (pip)"
+    if command -v "$pkg" &>/dev/null; then
+        warn "$name already installed"
         mark_done "pip:$pkg"
-    else
-        info "Installing $name (pip)..."
-        if python3 -m pip install --user --break-system-packages "$pkg" >> "$LOG_FILE" 2>&1 || \
-           python3 -m pip install --user "$pkg" >> "$LOG_FILE" 2>&1; then
-            success "$name installed (pip)"
-            mark_done "pip:$pkg"
-        else
-            error "Failed to install $name (pip)"
-            return 1
-        fi
+        return 0
     fi
+    info "Installing $name..."
+    if command -v uv &>/dev/null; then
+        uv tool install "$pkg" >> "$LOG_FILE" 2>&1 && { success "$name installed (uv)"; mark_done "pip:$pkg"; return 0; }
+    fi
+    if command -v pipx &>/dev/null; then
+        pipx install "$pkg" >> "$LOG_FILE" 2>&1 && { success "$name installed (pipx)"; mark_done "pip:$pkg"; return 0; }
+    fi
+    if pip install --user "$pkg" >> "$LOG_FILE" 2>&1; then
+        success "$name installed (pip)"
+        mark_done "pip:$pkg"
+        return 0
+    fi
+    error "Failed to install $name"
+    return 1
 }
 
 cargo_install() {
@@ -593,14 +615,14 @@ brew_install() {
     fi
 
     if [[ "$DRY_RUN" == "true" ]]; then
-        if brew list "$formula" &>/dev/null 2>&1; then
+        if brew list "$formula" &>/dev/null; then
             warn "[DRY RUN] $name — already installed"
         else
             info "[DRY RUN] Would install: $name (brew)"
         fi
         return 0
     fi
-    if brew list "$formula" &>/dev/null 2>&1; then
+    if brew list "$formula" &>/dev/null; then
         warn "$name already installed (brew)"
         mark_done "brew:$formula"
     else
@@ -708,7 +730,10 @@ setup_docker_repo() {
             if [[ ! -f /etc/apt/sources.list.d/docker.list ]]; then
                 info "Adding Docker apt repository..."
                 sudo install -m 0755 -d /etc/apt/keyrings
-                curl -fsSL "https://download.docker.com/linux/$DISTRO_ID/gpg" | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg 2>/dev/null || true
+                if ! curl -fsSL "https://download.docker.com/linux/$DISTRO_ID/gpg" | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg 2>/dev/null; then
+                    warn "Failed to import GPG key for Docker — skipping"
+                    return 1
+                fi
                 sudo chmod a+r /etc/apt/keyrings/docker.gpg
                 echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/$DISTRO_ID $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | \
                     sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
@@ -768,8 +793,8 @@ setup_brave_repo() {
         dnf)
             if [[ ! -f /etc/yum.repos.d/brave-browser.repo ]]; then
                 info "Adding Brave Browser dnf repository..."
-                sudo dnf config-manager --add-repo https://brave-browser-rpm-release.s3.brave.com/brave-browser.repo 2>/dev/null || \
-                sudo rpm --import https://brave-browser-rpm-release.s3.brave.com/brave-core.asc 2>/dev/null || true
+                sudo rpm --import https://brave-browser-rpm-release.s3.brave.com/brave-core.asc 2>/dev/null && \
+                sudo dnf config-manager --add-repo https://brave-browser-rpm-release.s3.brave.com/brave-browser.repo 2>/dev/null || true
             fi
             ;;
         pacman)
@@ -783,7 +808,10 @@ setup_chrome_repo() {
         apt)
             if [[ ! -f /etc/apt/sources.list.d/google-chrome.list ]]; then
                 info "Adding Google Chrome apt repository..."
-                curl -fsSL https://dl.google.com/linux/linux_signing_key.pub | sudo gpg --dearmor -o /usr/share/keyrings/google-chrome.gpg 2>/dev/null || true
+                if ! curl -fsSL https://dl.google.com/linux/linux_signing_key.pub | sudo gpg --dearmor -o /usr/share/keyrings/google-chrome.gpg 2>/dev/null; then
+                    warn "Failed to import GPG key for Google Chrome — skipping"
+                    return 1
+                fi
                 echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/google-chrome.gpg] https://dl.google.com/linux/chrome/deb/ stable main" | \
                     sudo tee /etc/apt/sources.list.d/google-chrome.list > /dev/null
                 sudo apt-get update >> "$LOG_FILE" 2>&1
@@ -792,8 +820,11 @@ setup_chrome_repo() {
         dnf)
             if [[ ! -f /etc/yum.repos.d/google-chrome.repo ]]; then
                 info "Adding Google Chrome dnf repository..."
+                if ! sudo rpm --import https://dl.google.com/linux/linux_signing_key.pub 2>/dev/null; then
+                    warn "Failed to import GPG key for Google Chrome — skipping"
+                    return 1
+                fi
                 sudo dnf config-manager --add-repo https://dl.google.com/linux/chrome/rpm/stable/x86_64 2>/dev/null || true
-                sudo rpm --import https://dl.google.com/linux/linux_signing_key.pub 2>/dev/null || true
             fi
             ;;
         pacman)
@@ -807,7 +838,10 @@ setup_vscode_repo() {
         apt)
             if [[ ! -f /etc/apt/sources.list.d/vscode.list ]]; then
                 info "Adding VS Code apt repository..."
-                curl -fsSL https://packages.microsoft.com/keys/microsoft.asc | sudo gpg --dearmor -o /usr/share/keyrings/packages.microsoft.gpg 2>/dev/null || true
+                if ! curl -fsSL https://packages.microsoft.com/keys/microsoft.asc | sudo gpg --dearmor -o /usr/share/keyrings/packages.microsoft.gpg 2>/dev/null; then
+                    warn "Failed to import GPG key for VS Code — skipping"
+                    return 1
+                fi
                 echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/packages.microsoft.gpg] https://packages.microsoft.com/repos/code stable main" | \
                     sudo tee /etc/apt/sources.list.d/vscode.list > /dev/null
                 sudo apt-get update >> "$LOG_FILE" 2>&1
@@ -816,7 +850,10 @@ setup_vscode_repo() {
         dnf)
             if [[ ! -f /etc/yum.repos.d/vscode.repo ]]; then
                 info "Adding VS Code dnf repository..."
-                sudo rpm --import https://packages.microsoft.com/keys/microsoft.asc 2>/dev/null || true
+                if ! sudo rpm --import https://packages.microsoft.com/keys/microsoft.asc 2>/dev/null; then
+                    warn "Failed to import GPG key for VS Code — skipping"
+                    return 1
+                fi
                 cat <<'VSCODE_REPO' | sudo tee /etc/yum.repos.d/vscode.repo > /dev/null
 [code]
 name=Visual Studio Code
@@ -840,7 +877,10 @@ setup_trivy_repo() {
             if [[ ! -f /etc/apt/sources.list.d/trivy.list ]]; then
                 info "Adding Trivy apt repository..."
                 sudo mkdir -p /etc/apt/keyrings
-                curl -fsSL https://aquasecurity.github.io/trivy-repo/deb/public.key | sudo gpg --dearmor -o /usr/share/keyrings/trivy.gpg 2>/dev/null || true
+                if ! curl -fsSL https://aquasecurity.github.io/trivy-repo/deb/public.key | sudo gpg --dearmor -o /usr/share/keyrings/trivy.gpg 2>/dev/null; then
+                    warn "Failed to import GPG key for Trivy — skipping"
+                    return 1
+                fi
                 echo "deb [signed-by=/usr/share/keyrings/trivy.gpg] https://aquasecurity.github.io/trivy-repo/deb generic main" | \
                     sudo tee /etc/apt/sources.list.d/trivy.list > /dev/null
                 sudo apt-get update >> "$LOG_FILE" 2>&1
@@ -853,7 +893,8 @@ setup_trivy_repo() {
 [trivy]
 name=Trivy repository
 baseurl=https://aquasecurity.github.io/trivy-repo/rpm/releases/$basearch/
-gpgcheck=0
+gpgcheck=1
+gpgkey=https://aquasecurity.github.io/trivy-repo/deb/public.key
 enabled=1
 TRIVY_REPO
             fi
@@ -941,6 +982,7 @@ echo -e "${NC}"
 
 # Don't exit on error — we count failures instead
 set +e
+set -o pipefail
 
 # -- Handle --uninstall early (just prints commands, no changes) --------------
 if [[ "$UNINSTALL" == "true" ]]; then
@@ -1030,9 +1072,9 @@ if [[ "$CLEANUP" == "true" ]]; then
             pkg)
                 local_installed=false
                 case "$PKG_MANAGER" in
-                    apt) dpkg -s "$name" &>/dev/null 2>&1 && local_installed=true ;;
-                    dnf) rpm -q "$name" &>/dev/null 2>&1 && local_installed=true ;;
-                    pacman) pacman -Qi "$name" &>/dev/null 2>&1 && local_installed=true ;;
+                    apt) dpkg -s "$name" &>/dev/null && local_installed=true ;;
+                    dnf) rpm -q "$name" &>/dev/null && local_installed=true ;;
+                    pacman) pacman -Qi "$name" &>/dev/null && local_installed=true ;;
                 esac
                 if [[ "$local_installed" == "true" ]]; then
                     if [[ "$DRY_RUN" == "true" ]]; then
@@ -1051,7 +1093,7 @@ if [[ "$CLEANUP" == "true" ]]; then
                 fi
                 ;;
             snap)
-                if snap list "$name" &>/dev/null 2>&1; then
+                if snap list "$name" &>/dev/null; then
                     if [[ "$DRY_RUN" == "true" ]]; then
                         info "[DRY RUN] Would remove: $display (replaced by $replacement)"
                     else
@@ -1064,7 +1106,7 @@ if [[ "$CLEANUP" == "true" ]]; then
                 fi
                 ;;
             flatpak)
-                if flatpak info "$name" &>/dev/null 2>&1; then
+                if flatpak info "$name" &>/dev/null; then
                     if [[ "$DRY_RUN" == "true" ]]; then
                         info "[DRY RUN] Would remove: $display (replaced by $replacement)"
                     else
@@ -1099,7 +1141,7 @@ info "Updating package manager..."
 case "$PKG_MANAGER" in
     apt) sudo apt-get update >> "$LOG_FILE" 2>&1 && success "apt updated" ;;
     dnf) sudo dnf check-update >> "$LOG_FILE" 2>&1; success "dnf updated" ;;
-    pacman) sudo pacman -Sy >> "$LOG_FILE" 2>&1 && success "pacman synced" ;;
+    pacman) sudo pacman -Syu --noconfirm >> "$LOG_FILE" 2>&1 && success "pacman synced" ;;
 esac
 
 # Build essentials
@@ -1120,7 +1162,7 @@ if [[ "$SHELL" != *"zsh"* ]]; then
     if installed zsh; then
         info "Setting zsh as default shell..."
         if [[ "$DRY_RUN" != "true" ]]; then
-            sudo chsh -s "$(which zsh)" "$USER" 2>/dev/null || chsh -s "$(which zsh)" 2>/dev/null || true
+            sudo chsh -s "$(command -v zsh)" "$USER" 2>/dev/null || chsh -s "$(command -v zsh)" 2>/dev/null || true
             success "zsh set as default shell (takes effect on next login)"
         fi
     fi
@@ -1166,7 +1208,16 @@ fi
 if ! installed brew; then
     info "Installing Homebrew for Linux (Linuxbrew)..."
     if [[ "$DRY_RUN" != "true" ]]; then
-        NONINTERACTIVE=1 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)" >> "$LOG_FILE" 2>&1 || true
+        local installer
+        installer="$(mktemp)"
+        curl -fsSL "https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh" -o "$installer"
+        if [[ ! -s "$installer" ]]; then
+            error "Failed to download Homebrew installer"
+            rm -f "$installer"
+        else
+            NONINTERACTIVE=1 /bin/bash "$installer" >> "$LOG_FILE" 2>&1 || true
+            rm -f "$installer"
+        fi
         # Add to PATH
         if [[ -f /home/linuxbrew/.linuxbrew/bin/brew ]]; then
             eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
@@ -1195,8 +1246,17 @@ banner "Core Development"
 if ! installed mise; then
     info "Installing mise (universal version manager)..."
     if [[ "$DRY_RUN" != "true" ]]; then
-        curl https://mise.run 2>/dev/null | sh >> "$LOG_FILE" 2>&1
-        success "mise installed"
+        local installer
+        installer="$(mktemp)"
+        curl -fsSL "https://mise.run" -o "$installer"
+        if [[ ! -s "$installer" ]]; then
+            error "Failed to download mise installer"
+            rm -f "$installer"
+        else
+            sh "$installer" >> "$LOG_FILE" 2>&1
+            rm -f "$installer"
+            success "mise installed"
+        fi
     else
         info "[DRY RUN] Would install: mise"
     fi
@@ -1222,15 +1282,15 @@ if installed mise; then
         warn "Node.js LTS already installed via mise"
     fi
 
-    if ! mise ls python 2>/dev/null | grep -q "3.12"; then
-        info "Installing Python 3.12 via mise..."
+    if ! mise ls python 2>/dev/null | grep -q "$PYTHON_VERSION"; then
+        info "Installing Python $PYTHON_VERSION via mise..."
         if [[ "$DRY_RUN" != "true" ]]; then
-            mise install python@3.12 >> "$LOG_FILE" 2>&1
-            mise use --global python@3.12 >> "$LOG_FILE" 2>&1
-            success "Python 3.12 installed via mise"
+            mise install "python@$PYTHON_VERSION" >> "$LOG_FILE" 2>&1
+            mise use --global "python@$PYTHON_VERSION" >> "$LOG_FILE" 2>&1
+            success "Python $PYTHON_VERSION installed via mise"
         fi
     else
-        warn "Python 3.12 already installed via mise"
+        warn "Python $PYTHON_VERSION already installed via mise"
     fi
 
     # Ensure mise shims are in PATH for the rest of this script
@@ -1249,7 +1309,16 @@ pkg_install "python3-venv" "python3-virtualenv" "python-virtualenv" "Python venv
 if ! installed uv; then
     info "Installing uv (fast Python package manager)..."
     if [[ "$DRY_RUN" != "true" ]]; then
-        curl -LsSf https://astral.sh/uv/install.sh 2>/dev/null | sh >> "$LOG_FILE" 2>&1
+        local installer
+        installer="$(mktemp)"
+        curl -fLsSf https://astral.sh/uv/install.sh -o "$installer" 2>/dev/null
+        if [[ ! -s "$installer" ]]; then
+            error "Failed to download uv installer"
+            rm -f "$installer"
+            return 1
+        fi
+        sh "$installer" >> "$LOG_FILE" 2>&1
+        rm -f "$installer"
         success "uv installed"
     fi
 else
@@ -1280,7 +1349,16 @@ if ! installed rustup; then
     if [[ "$DRY_RUN" == "true" ]]; then
         info "[DRY RUN] Would install: Rust via rustup"
     else
-        curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --no-modify-path >> "$LOG_FILE" 2>&1
+        local installer
+        installer="$(mktemp)"
+        curl --proto '=https' --tlsv1.2 -fsSL "https://sh.rustup.rs" -o "$installer"
+        if [[ ! -s "$installer" ]]; then
+            error "Failed to download rustup installer"
+            rm -f "$installer"
+        else
+            sh "$installer" -y --no-modify-path >> "$LOG_FILE" 2>&1
+            rm -f "$installer"
+        fi
         source "$HOME/.cargo/env" 2>/dev/null || true
         success "Rust installed via rustup"
     fi
@@ -1334,7 +1412,16 @@ fi
 if ! installed bun; then
     info "Installing bun..."
     if [[ "$DRY_RUN" != "true" ]]; then
-        curl -fsSL https://bun.sh/install 2>/dev/null | bash >> "$LOG_FILE" 2>&1
+        local installer
+        installer="$(mktemp)"
+        curl -fsSL "https://bun.sh/install" -o "$installer"
+        if [[ ! -s "$installer" ]]; then
+            error "Failed to download bun installer"
+            rm -f "$installer"
+        else
+            bash "$installer" >> "$LOG_FILE" 2>&1
+            rm -f "$installer"
+        fi
         export BUN_INSTALL="$HOME/.bun"
         export PATH="$BUN_INSTALL/bin:$PATH"
         success "bun installed"
@@ -1347,7 +1434,16 @@ fi
 if ! installed pnpm; then
     info "Installing pnpm..."
     if [[ "$DRY_RUN" != "true" ]]; then
-        curl -fsSL https://get.pnpm.io/install.sh 2>/dev/null | sh - >> "$LOG_FILE" 2>&1
+        local installer
+        installer="$(mktemp)"
+        curl -fsSL https://get.pnpm.io/install.sh -o "$installer" 2>/dev/null
+        if [[ ! -s "$installer" ]]; then
+            error "Failed to download pnpm installer"
+            rm -f "$installer"
+            return 1
+        fi
+        sh "$installer" >> "$LOG_FILE" 2>&1
+        rm -f "$installer"
         export PNPM_HOME="$HOME/.local/share/pnpm"
         export PATH="$PNPM_HOME:$PATH"
         success "pnpm installed"
@@ -1390,7 +1486,7 @@ fi
 # Report what's available
 for tool in node npm go cargo rustc bun pnpm uv code; do
     if installed "$tool"; then
-        log "RUNTIME: $tool found at $(which "$tool")"
+        log "RUNTIME: $tool found at $(command -v "$tool")"
     else
         log "RUNTIME: $tool NOT found in PATH"
     fi
@@ -1460,14 +1556,16 @@ cargo_install "git-cliff" "git-cliff (generate changelogs from conventional comm
 pip_install "pre-commit" "pre-commit (git hook framework)"
 
 # Configure delta as default git pager
-if ! git config --global core.pager 2>/dev/null | grep -q delta 2>/dev/null; then
-    info "Configuring delta as git pager..."
-    git config --global core.pager delta
-    git config --global interactive.diffFilter "delta --color-only"
-    git config --global delta.navigate true
-    git config --global delta.side-by-side true
-    git config --global merge.conflictstyle diff3
-    success "delta configured as git pager"
+if [[ "$DRY_RUN" != "true" ]]; then
+    if ! git config --global core.pager 2>/dev/null | grep -q delta 2>/dev/null; then
+        info "Configuring delta as git pager..."
+        git config --global core.pager delta
+        git config --global interactive.diffFilter "delta --color-only"
+        git config --global delta.navigate true
+        git config --global delta.side-by-side true
+        git config --global merge.conflictstyle diff3
+        success "delta configured as git pager"
+    fi
 fi
 
 fi  # git
@@ -1615,8 +1713,17 @@ if ! installed tflint; then
     else
         info "Installing tflint from GitHub releases..."
         if [[ "$DRY_RUN" != "true" ]]; then
-            curl -sL https://raw.githubusercontent.com/terraform-linters/tflint/master/install_linux.sh | bash >> "$LOG_FILE" 2>&1 && \
-                success "tflint installed" || error "Failed to install tflint"
+            local installer
+            installer="$(mktemp)"
+            curl -fsSL "https://raw.githubusercontent.com/terraform-linters/tflint/master/install_linux.sh" -o "$installer"
+            if [[ ! -s "$installer" ]]; then
+                error "Failed to download tflint installer"
+                rm -f "$installer"
+            else
+                bash "$installer" >> "$LOG_FILE" 2>&1 && \
+                    success "tflint installed" || error "Failed to install tflint"
+                rm -f "$installer"
+            fi
         fi
     fi
 else
@@ -1631,8 +1738,17 @@ if ! installed infracost; then
     else
         info "Installing infracost from GitHub releases..."
         if [[ "$DRY_RUN" != "true" ]]; then
-            curl -fsSL https://raw.githubusercontent.com/infracost/infracost/master/scripts/install.sh | sh >> "$LOG_FILE" 2>&1 && \
+            local installer
+            installer="$(mktemp)"
+            curl -fsSL https://raw.githubusercontent.com/infracost/infracost/master/scripts/install.sh -o "$installer" 2>/dev/null
+            if [[ ! -s "$installer" ]]; then
+                error "Failed to download infracost installer"
+                rm -f "$installer"
+                return 1
+            fi
+            sh "$installer" >> "$LOG_FILE" 2>&1 && \
                 success "infracost installed" || error "Failed to install infracost"
+            rm -f "$installer"
         fi
     fi
 else
@@ -1780,7 +1896,17 @@ if ! installed zoxide; then
     case "$PKG_MANAGER" in
         apt|dnf)
             # zoxide not always in repos — use installer
-            curl -sS https://raw.githubusercontent.com/ajeetdsouza/zoxide/main/install.sh 2>/dev/null | bash >> "$LOG_FILE" 2>&1 && success "zoxide installed" || cargo_install "zoxide" "zoxide (replaces cd)"
+            local installer
+            installer="$(mktemp)"
+            curl -fsSL https://raw.githubusercontent.com/ajeetdsouza/zoxide/main/install.sh -o "$installer" 2>/dev/null
+            if [[ ! -s "$installer" ]]; then
+                error "Failed to download zoxide installer"
+                rm -f "$installer"
+                cargo_install "zoxide" "zoxide (replaces cd)"
+            else
+                bash "$installer" >> "$LOG_FILE" 2>&1 && success "zoxide installed" || cargo_install "zoxide" "zoxide (replaces cd)"
+                rm -f "$installer"
+            fi
             ;;
         pacman)
             pkg_install "-" "-" "zoxide" "zoxide (replaces cd)"
@@ -2068,8 +2194,17 @@ if ! installed ruff; then
     else
         info "Installing ruff via standalone installer..."
         if [[ "$DRY_RUN" != "true" ]]; then
-            curl -LsSf https://astral.sh/ruff/install.sh | sh >> "$LOG_FILE" 2>&1 && \
+            local installer
+            installer="$(mktemp)"
+            curl -LsSf https://astral.sh/ruff/install.sh -o "$installer"
+            if [[ ! -s "$installer" ]]; then
+                error "Failed to download ruff installer"
+                rm -f "$installer"
+                return 1
+            fi
+            sh "$installer" >> "$LOG_FILE" 2>&1 && \
                 success "ruff installed" || error "Failed to install ruff"
+            rm -f "$installer"
         fi
     fi
 else
@@ -2368,7 +2503,7 @@ banner "API Development"
 
 # Bruno
 snap_install "bruno" "Bruno (open-source API client)" ""
-if ! installed bruno && ! snap list bruno &>/dev/null 2>&1; then
+if ! installed bruno && ! snap list bruno &>/dev/null; then
     flatpak_install "com.usebruno.Bruno" "Bruno (open-source API client)"
 fi
 
@@ -2408,7 +2543,16 @@ pkg_install "fzf" "fzf" "fzf" "fzf (fuzzy finder)"
 if ! installed starship; then
     info "Installing Starship prompt..."
     if [[ "$DRY_RUN" != "true" ]]; then
-        curl -sS https://starship.rs/install.sh 2>/dev/null | sh -s -- -y >> "$LOG_FILE" 2>&1
+        local installer
+        installer="$(mktemp)"
+        curl -fsSL https://starship.rs/install.sh -o "$installer" 2>/dev/null
+        if [[ ! -s "$installer" ]]; then
+            error "Failed to download Starship installer"
+            rm -f "$installer"
+            return 1
+        fi
+        sh "$installer" -y >> "$LOG_FILE" 2>&1
+        rm -f "$installer"
         success "Starship prompt installed"
     fi
 else
@@ -2435,8 +2579,18 @@ esac
 if ! installed atuin; then
     info "Installing atuin (shell history)..."
     if [[ "$DRY_RUN" != "true" ]]; then
-        curl --proto '=https' --tlsv1.2 -LsSf https://setup.atuin.sh 2>/dev/null | sh >> "$LOG_FILE" 2>&1 || \
-        cargo_install "atuin" "atuin (shell history)"
+        local installer
+        installer="$(mktemp)"
+        curl --proto '=https' --tlsv1.2 -fLsSf https://setup.atuin.sh -o "$installer" 2>/dev/null
+        if [[ ! -s "$installer" ]]; then
+            error "Failed to download atuin installer"
+            rm -f "$installer"
+            cargo_install "atuin" "atuin (shell history)"
+        else
+            sh "$installer" >> "$LOG_FILE" 2>&1 || \
+            cargo_install "atuin" "atuin (shell history)"
+            rm -f "$installer"
+        fi
         success "atuin installed"
     fi
 else
@@ -2456,7 +2610,16 @@ fi
 if ! installed zed; then
     info "Installing Zed editor..."
     if [[ "$DRY_RUN" != "true" ]]; then
-        curl -f https://zed.dev/install.sh 2>/dev/null | sh >> "$LOG_FILE" 2>&1 || true
+        local installer
+        installer="$(mktemp)"
+        curl -fsSL https://zed.dev/install.sh -o "$installer" 2>/dev/null
+        if [[ ! -s "$installer" ]]; then
+            error "Failed to download Zed installer"
+            rm -f "$installer"
+        else
+            sh "$installer" >> "$LOG_FILE" 2>&1 || true
+            rm -f "$installer"
+        fi
         if installed zed; then
             success "Zed installed"
         else
@@ -2517,7 +2680,7 @@ fi
 if ! installed chezmoi; then
     info "Installing chezmoi..."
     if [[ "$DRY_RUN" != "true" ]]; then
-        sh -c "$(curl -fsLS get.chezmoi.io)" >> "$LOG_FILE" 2>&1 || true
+        sh -c "$(curl -fsSL get.chezmoi.io)" >> "$LOG_FILE" 2>&1 || true
         if installed chezmoi; then
             success "chezmoi installed"
         elif installed brew; then
@@ -2586,7 +2749,16 @@ if ! installed d2; then
     if installed brew; then
         brew_install "d2" "d2 (code-to-diagram)"
     else
-        curl -fsSL https://d2lang.com/install.sh 2>/dev/null | sh -s -- >> "$LOG_FILE" 2>&1 && success "d2 installed" || error "Failed to install d2"
+        local installer
+        installer="$(mktemp)"
+        curl -fsSL "https://d2lang.com/install.sh" -o "$installer" 2>/dev/null
+        if [[ ! -s "$installer" ]]; then
+            error "Failed to download d2 installer"
+            rm -f "$installer"
+        else
+            sh "$installer" >> "$LOG_FILE" 2>&1 && success "d2 installed" || error "Failed to install d2"
+            rm -f "$installer"
+        fi
     fi
 else
     warn "d2 already installed"
@@ -2697,8 +2869,17 @@ banner "Linux Apps — Cloud"
 if ! installed rclone; then
     info "Installing rclone (Google Drive / cloud storage mount)..."
     if [[ "$DRY_RUN" != "true" ]]; then
-        curl https://rclone.org/install.sh 2>/dev/null | sudo bash >> "$LOG_FILE" 2>&1
-        success "rclone installed (configure: rclone config)"
+        local installer
+        installer="$(mktemp)"
+        curl -fsSL "https://rclone.org/install.sh" -o "$installer"
+        if [[ ! -s "$installer" ]]; then
+            error "Failed to download rclone installer"
+            rm -f "$installer"
+        else
+            sudo bash "$installer" >> "$LOG_FILE" 2>&1
+            rm -f "$installer"
+            success "rclone installed (configure: rclone config)"
+        fi
     fi
 else
     warn "rclone already installed"
@@ -3175,7 +3356,7 @@ STARSHIP_CONF
 fi
 
 # GTK dark theme
-if command -v gsettings &>/dev/null; then
+if [[ "$DRY_RUN" != "true" ]] && command -v gsettings &>/dev/null; then
     gsettings set org.gnome.desktop.interface color-scheme prefer-dark 2>/dev/null || true
     gsettings set org.gnome.desktop.interface gtk-theme 'Adwaita-dark' 2>/dev/null || true
     info "GTK dark theme set (Adwaita-dark)"
@@ -3304,6 +3485,7 @@ else
 fi
 
 # ---- git global config ----
+if [[ "$DRY_RUN" != "true" ]]; then
 info "Configuring git global settings..."
 
 git config --global init.defaultBranch main 2>/dev/null
@@ -3363,6 +3545,7 @@ git config --global alias.wta "worktree add"
 git config --global alias.wtl "worktree list"
 
 success "git global settings configured"
+fi  # DRY_RUN check for git global config
 
 # ---- GPG + pinentry ----
 GPG_AGENT_CONF="$HOME/.gnupg/gpg-agent.conf"
@@ -3373,7 +3556,7 @@ else
     mkdir -p "$HOME/.gnupg"
     chmod 700 "$HOME/.gnupg"
     # Find pinentry
-    PINENTRY_PATH=$(which pinentry-curses 2>/dev/null || which pinentry-gnome3 2>/dev/null || which pinentry 2>/dev/null || echo "/usr/bin/pinentry")
+    PINENTRY_PATH=$(command -v pinentry-curses 2>/dev/null || command -v pinentry-gnome3 2>/dev/null || command -v pinentry 2>/dev/null || echo "/usr/bin/pinentry")
     cat > "$GPG_AGENT_CONF" <<GPG_CONFIG
 # GPG agent config
 pinentry-program $PINENTRY_PATH
@@ -3847,8 +4030,12 @@ install_nerd_font() {
     local font_name="$1"
     local display_name="$2"
 
-    if ls "$FONT_DIR"/*"${font_name}"* &>/dev/null 2>&1; then
+    progress
+    is_done "font:$font_name" && { warn "$display_name already completed (resume)"; return 0; }
+
+    if ls "$FONT_DIR"/*"${font_name}"* &>/dev/null; then
         warn "$display_name already installed"
+        mark_done "font:$font_name"
         return 0
     fi
 
@@ -3856,8 +4043,8 @@ install_nerd_font() {
     if [[ "$DRY_RUN" != "true" ]]; then
         local tmp_dir
         tmp_dir=$(mktemp -d)
-        curl -sL "https://github.com/ryanoasis/nerd-fonts/releases/latest/download/${font_name}.tar.xz" -o "$tmp_dir/${font_name}.tar.xz" >> "$LOG_FILE" 2>&1 || \
-        curl -sL "https://github.com/ryanoasis/nerd-fonts/releases/latest/download/${font_name}.zip" -o "$tmp_dir/${font_name}.zip" >> "$LOG_FILE" 2>&1
+        curl -fsSL "https://github.com/ryanoasis/nerd-fonts/releases/latest/download/${font_name}.tar.xz" -o "$tmp_dir/${font_name}.tar.xz" >> "$LOG_FILE" 2>&1 || \
+        curl -fsSL "https://github.com/ryanoasis/nerd-fonts/releases/latest/download/${font_name}.zip" -o "$tmp_dir/${font_name}.zip" >> "$LOG_FILE" 2>&1
 
         if [[ -f "$tmp_dir/${font_name}.tar.xz" ]]; then
             tar xJf "$tmp_dir/${font_name}.tar.xz" -C "$FONT_DIR" >> "$LOG_FILE" 2>&1
@@ -3865,6 +4052,8 @@ install_nerd_font() {
             unzip -o "$tmp_dir/${font_name}.zip" -d "$FONT_DIR" >> "$LOG_FILE" 2>&1
         fi
         rm -rf "$tmp_dir"
+        success "$display_name installed"
+        mark_done "font:$font_name"
     fi
 }
 
@@ -3874,7 +4063,7 @@ install_nerd_font "FiraCode" "Fira Code Nerd Font"
 install_nerd_font "Hack" "Hack Nerd Font"
 
 # Inter font
-if ! ls "$FONT_DIR"/*Inter* &>/dev/null 2>&1; then
+if ! ls "$FONT_DIR"/*Inter* &>/dev/null; then
     info "Installing Inter font..."
     if [[ "$DRY_RUN" != "true" ]]; then
         tmp_dir=$(mktemp -d)
@@ -4293,6 +4482,8 @@ PRETTIER_CONF
 fi
 
 # ---- .curlrc ----
+# NOTE: This is created late in the script to avoid affecting earlier curl calls.
+# If moving this section, ensure CURL_HOME="" is exported before any script curls.
 CURLRC="$HOME/.curlrc"
 if [[ -f "$CURLRC" ]]; then
     warn ".curlrc already exists"
@@ -4313,14 +4504,14 @@ CURLRC_CONF
 fi
 
 # ---- Docker daemon config ----
-DOCKER_CONFIG_DIR="$HOME/.docker"
+DOCKER_CONFIG_DIR="/etc/docker"
 DOCKER_DAEMON="$DOCKER_CONFIG_DIR/daemon.json"
 if [[ -f "$DOCKER_DAEMON" ]]; then
     warn "Docker daemon.json already exists"
 else
     info "Creating Docker daemon configuration..."
-    mkdir -p "$DOCKER_CONFIG_DIR"
-    cat > "$DOCKER_DAEMON" <<'DOCKER_CONF'
+    sudo mkdir -p "$DOCKER_CONFIG_DIR"
+    sudo tee "$DOCKER_DAEMON" > /dev/null <<'DOCKER_CONF'
 {
   "builder": {
     "gc": {
@@ -4344,7 +4535,7 @@ fi
 
 # ---- Docker buildx as default builder ----
 if installed docker; then
-    if docker buildx version &>/dev/null 2>&1; then
+    if docker buildx version &>/dev/null; then
         info "Setting Docker buildx as default builder..."
         docker buildx install 2>/dev/null || true
         success "Docker buildx set as default builder (multi-platform builds enabled)"
@@ -5497,6 +5688,7 @@ fi  # configs
 # =============================================================================
 # CLAUDE CODE CONFIGURATION
 # =============================================================================
+if should_run "configs"; then
 banner "Claude Code Configuration"
 
 CLAUDE_SETTINGS="$HOME/.claude/settings.json"
@@ -6522,6 +6714,8 @@ CMD_COMMIT
     success "Claude Code commands created (20 commands: /pr-review, /test-plan, /dep-audit, /quick-doc, /cleanup, /security-scan, /perf-check, /docker-lint, /iac-review, /convert, /new-feature, /fix-bug, /create-readme, /init-project, /refactor, /add-endpoint, /add-component, /ci-fix, /changelog, /commit-msg)"
 fi
 
+fi  # configs (Claude Code configuration)
+
 # =============================================================================
 if should_run "filesystem"; then
 banner "Filesystem Structure"
@@ -6891,7 +7085,7 @@ if command -v brew &>/dev/null; then
 fi
 
 # Docker disk
-if command -v docker &>/dev/null && docker info &>/dev/null 2>&1; then
+if command -v docker &>/dev/null && docker info &>/dev/null; then
     echo ""
     echo "-- Docker --"
     docker system df 2>/dev/null | head -4 | sed 's/^/  /'
@@ -7037,42 +7231,41 @@ banner "Linux Desktop Defaults"
 
 # GNOME settings (only if gsettings available)
 if command -v gsettings &>/dev/null; then
-    info "Configuring GNOME desktop settings..."
-
-    # Fast keyboard repeat
-    gsettings set org.gnome.desktop.peripherals.keyboard repeat-interval 30 2>/dev/null || true
-    gsettings set org.gnome.desktop.peripherals.keyboard delay 200 2>/dev/null || true
-
-    # Show hidden files in file manager
-    gsettings set org.gnome.nautilus.preferences show-hidden-files true 2>/dev/null || true
-
-    # Reduce animations
-    gsettings set org.gnome.desktop.interface enable-animations false 2>/dev/null || true
-
-    # Dark theme
-    gsettings set org.gnome.desktop.interface color-scheme prefer-dark 2>/dev/null || true
-    gsettings set org.gnome.desktop.interface gtk-theme 'Adwaita-dark' 2>/dev/null || true
-
-    # Dock settings (if dash-to-dock present)
-    gsettings set org.gnome.shell.extensions.dash-to-dock autohide true 2>/dev/null || true
-    gsettings set org.gnome.shell.extensions.dash-to-dock dash-max-icon-size 40 2>/dev/null || true
-
-    # Clear dock/dash favorites (remove all default pinned apps so user can set their own)
     if [[ "$DRY_RUN" != "true" ]]; then
-        info "Clearing default pinned apps from dock/dash..."
-        gsettings set org.gnome.shell favorite-apps "[]" 2>/dev/null || true
-        # Also clear dash-to-dock favorites if the extension is present
-        gsettings set org.gnome.shell.extensions.dash-to-dock favorite-apps "[]" 2>/dev/null || true
-        success "Dock cleared — right-click apps or drag to dock to pin them"
+        info "Configuring GNOME desktop settings..."
+
+        # Fast keyboard repeat
+        gsettings set org.gnome.desktop.peripherals.keyboard repeat-interval 30 2>/dev/null || true
+        gsettings set org.gnome.desktop.peripherals.keyboard delay 200 2>/dev/null || true
+
+        # Show hidden files in file manager
+        gsettings set org.gnome.nautilus.preferences show-hidden-files true 2>/dev/null || true
+
+        # Reduce animations
+        gsettings set org.gnome.desktop.interface enable-animations false 2>/dev/null || true
+
+        # Dark theme
+        gsettings set org.gnome.desktop.interface color-scheme prefer-dark 2>/dev/null || true
+        gsettings set org.gnome.desktop.interface gtk-theme 'Adwaita-dark' 2>/dev/null || true
+
+        # Dock settings (if dash-to-dock present)
+        gsettings set org.gnome.shell.extensions.dash-to-dock autohide true 2>/dev/null || true
+        gsettings set org.gnome.shell.extensions.dash-to-dock dash-max-icon-size 40 2>/dev/null || true
+
+        # Only clear dock favorites on fresh installs (no existing customization)
+        current_favorites=$(gsettings get org.gnome.shell favorite-apps 2>/dev/null || echo "")
+        if [[ "$current_favorites" == "@as []" ]] || [[ -z "$current_favorites" ]]; then
+            gsettings set org.gnome.shell favorite-apps "['org.gnome.Nautilus.desktop']" 2>/dev/null || true
+        fi
+
+        # Screenshots location
+        mkdir -p "$HOME/Screenshots"
+        gsettings set org.gnome.gnome-screenshot auto-save-directory "file://$HOME/Screenshots" 2>/dev/null || true
+
+        success "GNOME desktop settings configured"
     else
-        info "[DRY RUN] Would clear default pinned apps from dock"
+        info "[DRY RUN] Would configure GNOME desktop settings"
     fi
-
-    # Screenshots location
-    mkdir -p "$HOME/Screenshots"
-    gsettings set org.gnome.gnome-screenshot auto-save-directory "file://$HOME/Screenshots" 2>/dev/null || true
-
-    success "GNOME desktop settings configured"
 else
     info "gsettings not available — skipping GNOME defaults (not running GNOME?)"
 fi
@@ -7150,7 +7343,7 @@ else
 fi
 
 # DNS (systemd-resolved)
-if systemctl is-active systemd-resolved &>/dev/null 2>&1; then
+if systemctl is-active systemd-resolved &>/dev/null; then
     info "Configuring DNS via systemd-resolved..."
     if [[ "$DRY_RUN" != "true" ]]; then
         sudo mkdir -p /etc/systemd/resolved.conf.d
@@ -7204,12 +7397,15 @@ else
 fi
 
 # ---- Auto-set timezone ----
-sudo timedatectl set-timezone "America/Chicago" 2>/dev/null || true
-sudo timedatectl set-ntp true 2>/dev/null || true
-success "Timezone set to America/Chicago with NTP enabled"
+# Timezone — uncomment and set your timezone if desired
+# sudo timedatectl set-timezone "America/Chicago" 2>/dev/null || true
+if [[ "$DRY_RUN" != "true" ]]; then
+    sudo timedatectl set-ntp true 2>/dev/null || true
+    success "NTP enabled"
+fi
 
 # ---- Software update: auto-check (Ubuntu) ----
-if [[ "$PKG_MANAGER" == "apt" ]]; then
+if [[ "$DRY_RUN" != "true" ]] && [[ "$PKG_MANAGER" == "apt" ]]; then
     sudo dpkg-reconfigure -plow unattended-upgrades 2>/dev/null || true
 fi
 
@@ -7292,6 +7488,7 @@ MANAGED_BLOCK="# >>> dev-setup managed block >>>
 # Add personal customizations OUTSIDE this block.
 
 # -- PATH additions -----------------------------------------------------------
+typeset -U PATH path
 export PATH=\"\$HOME/Scripts/bin:\$HOME/.local/bin:\$PATH\"
 
 # -- Environment Variables ----------------------------------------------------
@@ -7387,7 +7584,7 @@ MANAGED_BLOCK="$MANAGED_BLOCK
 autoload -Uz compinit && compinit -C
 [[ -x \"\$(command -v kubectl)\" ]] && source <(kubectl completion zsh)
 [[ -x \"\$(command -v gh)\" ]] && source <(gh completion -s zsh)
-[[ -x \"\$(command -v aws_completer)\" ]] && complete -C \"\$(which aws_completer)\" aws
+[[ -x \"\$(command -v aws_completer)\" ]] && complete -C \"\$(command -v aws_completer)\" aws
 
 # -- Modern Tool Aliases ------------------------------------------------------
 alias ls=\"eza --icons\"
@@ -7503,7 +7700,7 @@ if [[ \"\$TERM_PROGRAM\" != \"vscode\" ]] && [[ -z \"\$INSIDE_EMACS\" ]]; then
         \"💡 oha -n 500 http://localhost:3000  — quick load test\"
         \"💡 sd 'old' 'new' file.ts  — fast find & replace\"
         \"💡 dust ~/Code  — visual disk usage of your projects\"
-        \"💡 dog example.com AAAA  — colorized DNS lookup\"
+        \"💡 doggo example.com AAAA  — colorized DNS lookup\"
         \"💡 hyperfine 'cmd1' 'cmd2'  — benchmark two commands\"
         \"💡 fx data.json  — interactive JSON explorer\"
         \"💡 gj ports  — list all listening ports\"
@@ -7576,7 +7773,7 @@ fi
 
 # ---- GitHub Authentication ----
 if installed gh; then
-    if ! gh auth status &>/dev/null 2>&1; then
+    if ! gh auth status &>/dev/null; then
         echo ""
         read -p "Authenticate with GitHub? [Y/n] " gh_confirm
         if [[ ! "$gh_confirm" =~ ^[Nn]$ ]]; then

@@ -12,6 +12,7 @@
 
 SCRIPT_VERSION="2.0.0"
 SCRIPT_START=$(date +%s)
+PYTHON_VERSION="3.12"
 
 # -- Colors & Formatting ------------------------------------------------------
 RED=$'\033[0;31m'
@@ -120,24 +121,29 @@ LOCKFILE="$STATE_DIR/setup.lock"
 
 acquire_lock() {
     mkdir -p "$STATE_DIR"
-    if [[ -f "$LOCKFILE" ]]; then
-        local old_pid
-        old_pid=$(cat "$LOCKFILE" 2>/dev/null)
-        if kill -0 "$old_pid" 2>/dev/null; then
-            echo -e "${RED}ERROR: Another instance is running (PID $old_pid).${NC}"
-            echo "  Remove $LOCKFILE if this is stale."
-            exit 1
-        else
-            rm -f "$LOCKFILE"
-        fi
+    if mkdir "$LOCKFILE" 2>/dev/null; then
+        echo $$ > "$LOCKFILE/pid"
+        return 0
     fi
-    echo $$ > "$LOCKFILE"
+    # Check for stale lock
+    local old_pid
+    old_pid=$(cat "$LOCKFILE/pid" 2>/dev/null)
+    if [[ -n "$old_pid" ]] && kill -0 "$old_pid" 2>/dev/null; then
+        error "Another instance is running (PID: $old_pid)"
+        exit 1
+    fi
+    warn "Removing stale lock (PID: ${old_pid:-unknown})"
+    rm -rf "$LOCKFILE"
+    mkdir "$LOCKFILE" 2>/dev/null || { error "Failed to acquire lock"; exit 1; }
+    echo $$ > "$LOCKFILE/pid"
 }
 
 release_lock() {
-    rm -f "$LOCKFILE"
+    rm -rf "$LOCKFILE"
+    kill "$SUDO_KEEPALIVE_PID" 2>/dev/null || true
 }
 
+SUDO_KEEPALIVE_PID=""
 trap release_lock EXIT
 
 ALL_CATEGORIES=(
@@ -326,6 +332,18 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
+# -- Validate --skip/--only category names early ------------------------------
+for cat in "${SKIP_CATEGORIES[@]}" "${ONLY_CATEGORIES[@]}"; do
+    _valid=false
+    for known in "${ALL_CATEGORIES[@]}"; do
+        [[ "$cat" == "$known" ]] && _valid=true && break
+    done
+    if [[ "$_valid" != "true" ]]; then
+        echo -e "${RED}[ ERR]${NC} Unknown category: '$cat'. Valid categories: ${ALL_CATEGORIES[*]}"
+        exit 1
+    fi
+done
+
 # -- Category filtering -------------------------------------------------------
 should_run() {
     local category="$1"
@@ -355,14 +373,14 @@ brew_install() {
     progress
     is_done "brew:$formula" && { warn "$name already completed (resume)"; return 0; }
     if [[ "$DRY_RUN" == "true" ]]; then
-        if brew list "$formula" &>/dev/null 2>&1; then
+        if brew list "$formula" &>/dev/null; then
             warn "[DRY RUN] $name — already installed"
         else
             info "[DRY RUN] Would install: $name"
         fi
         return 0
     fi
-    if brew list "$formula" &>/dev/null 2>&1; then
+    if brew list "$formula" &>/dev/null; then
         warn "$name already installed"
         mark_done "brew:$formula"
     else
@@ -382,14 +400,14 @@ brew_cask_install() {
     progress
     is_done "cask:$cask" && { warn "$name already completed (resume)"; return 0; }
     if [[ "$DRY_RUN" == "true" ]]; then
-        if brew list --cask "$cask" &>/dev/null 2>&1; then
+        if brew list --cask "$cask" &>/dev/null; then
             warn "[DRY RUN] $name — already installed"
         else
             info "[DRY RUN] Would install: $name"
         fi
         return 0
     fi
-    if brew list --cask "$cask" &>/dev/null 2>&1; then
+    if brew list --cask "$cask" &>/dev/null; then
         warn "$name already installed"
         mark_done "cask:$cask"
     else
@@ -409,14 +427,14 @@ npm_global_install() {
     progress
     is_done "npm:$pkg" && { warn "$name already completed (resume)"; return 0; }
     if [[ "$DRY_RUN" == "true" ]]; then
-        if npm list -g "$pkg" &>/dev/null 2>&1; then
+        if npm list -g "$pkg" &>/dev/null; then
             warn "[DRY RUN] $name — already installed"
         else
             info "[DRY RUN] Would install: $name"
         fi
         return 0
     fi
-    if npm list -g "$pkg" &>/dev/null 2>&1; then
+    if npm list -g "$pkg" &>/dev/null; then
         warn "$name already installed globally"
         mark_done "npm:$pkg"
     else
@@ -468,9 +486,6 @@ preflight() {
     free_space=$(/bin/df -g "$HOME" 2>/dev/null | tail -1 | awk '{print $4}')
     # Fallback: parse df -h output if -g isn't available
     if [[ -z "$free_space" ]] || [[ "$free_space" == "0" ]]; then
-        free_space=$(df -BG "$HOME" 2>/dev/null | tail -1 | awk '{gsub(/G/,""); print $4}')
-    fi
-    if [[ -z "$free_space" ]] || [[ "$free_space" == "0" ]]; then
         free_space=$(df -h "$HOME" | tail -1 | awk '{print $4}' | sed 's/[^0-9]//g')
     fi
     if [[ -n "$free_space" ]] && [[ "$free_space" -lt 15 ]]; then
@@ -490,7 +505,8 @@ preflight() {
         sudo -v
         success "Admin privileges granted"
         # Keep sudo alive in background for the duration of the script
-        (while true; do sudo -n true; sleep 50; kill -0 "$$" || exit; done 2>/dev/null &)
+        ( while true; do sudo -n true; sleep 50; kill -0 "$$" || exit; done 2>/dev/null ) &
+        SUDO_KEEPALIVE_PID=$!
     fi
 
     # Homebrew health check (warn early if there are issues)
@@ -554,6 +570,7 @@ echo -e "${NC}"
 
 # Don't exit on error — we count failures instead
 set +e
+set -o pipefail
 
 # -- Handle --uninstall early (just prints commands, no changes) --------------
 if [[ "$UNINSTALL" == "true" ]]; then
@@ -682,7 +699,7 @@ if [[ "$CLEANUP" == "true" ]]; then
 
         case "$type" in
             formula)
-                if brew list "$name" &>/dev/null 2>&1; then
+                if brew list "$name" &>/dev/null; then
                     if [[ "$DRY_RUN" == "true" ]]; then
                         info "[DRY RUN] Would remove: $display (replaced by $replacement)"
                     else
@@ -695,7 +712,7 @@ if [[ "$CLEANUP" == "true" ]]; then
                 fi
                 ;;
             cask)
-                if brew list --cask "$name" &>/dev/null 2>&1; then
+                if brew list --cask "$name" &>/dev/null; then
                     if [[ "$DRY_RUN" == "true" ]]; then
                         info "[DRY RUN] Would remove: $display (replaced by $replacement)"
                     else
@@ -761,7 +778,16 @@ fi
 # -----------------------------------------------------------------------------
 if ! installed brew; then
     info "Installing Homebrew..."
-    /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+    local installer
+    installer="$(mktemp)"
+    curl -fsSL "https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh" -o "$installer"
+    if [[ ! -s "$installer" ]]; then
+        error "Failed to download Homebrew installer"
+        rm -f "$installer"
+        return 1
+    fi
+    /bin/bash "$installer"
+    rm -f "$installer"
     # Add to path for Apple Silicon
     if [[ -f /opt/homebrew/bin/brew ]]; then
         eval "$(/opt/homebrew/bin/brew shellenv)"
@@ -810,17 +836,17 @@ if installed mise; then
         warn "Node.js LTS already installed via mise"
     fi
 
-    if ! mise ls python 2>/dev/null | grep -q "3.12"; then
-        info "Installing Python 3.12 via mise..."
+    if ! mise ls python 2>/dev/null | grep -q "$PYTHON_VERSION"; then
+        info "Installing Python $PYTHON_VERSION via mise..."
         if [[ "$DRY_RUN" != "true" ]]; then
-            if mise install python@3.12 >> "$LOG_FILE" 2>&1 && mise use --global python@3.12 >> "$LOG_FILE" 2>&1; then
-                success "Python 3.12 installed via mise"
+            if mise install "python@$PYTHON_VERSION" >> "$LOG_FILE" 2>&1 && mise use --global "python@$PYTHON_VERSION" >> "$LOG_FILE" 2>&1; then
+                success "Python $PYTHON_VERSION installed via mise"
             else
-                error "Failed to install Python 3.12 via mise (check $LOG_FILE)"
+                error "Failed to install Python $PYTHON_VERSION via mise (check $LOG_FILE)"
             fi
         fi
     else
-        warn "Python 3.12 already installed via mise"
+        warn "Python $PYTHON_VERSION already installed via mise"
     fi
 
     # Ensure mise shims are in PATH for the rest of this script
@@ -842,12 +868,21 @@ if ! installed rustup; then
     if [[ "$DRY_RUN" == "true" ]]; then
         info "[DRY RUN] Would install: Rust via rustup"
     else
-        if curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --no-modify-path >> "$LOG_FILE" 2>&1; then
+        local installer
+        installer="$(mktemp)"
+        curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs -o "$installer"
+        if [[ ! -s "$installer" ]]; then
+            error "Failed to download rustup installer"
+            rm -f "$installer"
+            return 1
+        fi
+        if bash "$installer" -s -- -y --no-modify-path >> "$LOG_FILE" 2>&1; then
             source "$HOME/.cargo/env" 2>/dev/null || true
             success "Rust installed via rustup"
         else
             error "Failed to install Rust via rustup (check $LOG_FILE)"
         fi
+        rm -f "$installer"
     fi
 else
     warn "Rust (rustup) already installed"
@@ -863,10 +898,18 @@ brew_install "oven-sh/bun/bun" "bun (fast JS runtime/bundler/test runner)"
 progress
 if ! installed pnpm; then
     info "Installing pnpm..."
-    if curl -fsSL https://get.pnpm.io/install.sh | sh - >> "$LOG_FILE" 2>&1; then
+    local installer
+    installer="$(mktemp)"
+    curl -fsSL "https://get.pnpm.io/install.sh" -o "$installer"
+    if [[ ! -s "$installer" ]]; then
+        error "Failed to download pnpm installer"
+        rm -f "$installer"
+    elif bash "$installer" >> "$LOG_FILE" 2>&1; then
         success "pnpm installed"
+        rm -f "$installer"
     else
         error "Failed to install pnpm (check $LOG_FILE)"
+        rm -f "$installer"
     fi
 else
     warn "pnpm already installed"
@@ -1259,6 +1302,7 @@ if installed go; then
         warn "usql (universal SQL CLI) already installed"
     else
         info "Installing usql (universal SQL CLI)..."
+        # Note: @latest is intentionally unpinned for usql
         go install github.com/xo/usql@latest >> "$LOG_FILE" 2>&1 || error "Failed to install usql (requires Go)"
     fi
 else
@@ -2031,8 +2075,11 @@ else
     info "Configuring GPG to use pinentry-mac..."
     mkdir -p "$HOME/.gnupg"
     chmod 700 "$HOME/.gnupg"
-    PINENTRY_PATH="$(brew --prefix)/bin/pinentry-mac"
-    cat > "$GPG_AGENT_CONF" <<GPG_CONFIG
+    PINENTRY_PATH="$(brew --prefix 2>/dev/null)/bin/pinentry-mac"
+    if [[ ! -x "$PINENTRY_PATH" ]]; then
+        warn "pinentry-mac not found at $PINENTRY_PATH — skipping GPG agent config"
+    else
+        cat > "$GPG_AGENT_CONF" <<GPG_CONFIG
 # Use macOS keychain for passphrase
 pinentry-program $PINENTRY_PATH
 
@@ -2040,9 +2087,10 @@ pinentry-program $PINENTRY_PATH
 default-cache-ttl 28800
 max-cache-ttl 28800
 GPG_CONFIG
-    # Restart gpg-agent to pick up changes
-    gpgconf --kill gpg-agent 2>/dev/null || true
-    success "GPG pinentry-mac configured (passphrases cached 8 hours)"
+        # Restart gpg-agent to pick up changes
+        gpgconf --kill gpg-agent 2>/dev/null || true
+        success "GPG pinentry-mac configured (passphrases cached 8 hours)"
+    fi
 fi
 
 # ---- aria2 ----
@@ -2105,7 +2153,7 @@ content-disposition-default-utf8=true
 http-accept-gzip=true
 
 # User agent
-user-agent=Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36
+user-agent=Mozilla/5.0 (compatible; aria2)
 
 # -- BitTorrent ---------------------------------------------------------------
 # Enable DHT for BitTorrent
@@ -2125,7 +2173,7 @@ max-overall-upload-limit=256K
 disk-cache=64M
 ARIA2_CONF
     # Replace placeholder with actual home directory
-    sed -i '' "s|PLACEHOLDER_HOME|$HOME|g" "$ARIA2_CONFIG"
+    /usr/bin/sed -i '' "s|PLACEHOLDER_HOME|$HOME|g" "$ARIA2_CONFIG"
     success "aria2 configured (16 connections, auto-resume, BitTorrent)"
 fi
 
@@ -2514,7 +2562,9 @@ if installed code; then
         if code --list-extensions 2>/dev/null | grep -qi "$ext"; then
             warn "VS Code extension $ext already installed"
         else
-            code --install-extension "$ext" 2>/dev/null || true
+            if ! code --install-extension "$ext" >> "$LOG_FILE" 2>&1; then
+                warn "Failed to install VS Code extension: $ext"
+            fi
         fi
     done
     success "VS Code extensions installed"
@@ -2880,7 +2930,7 @@ color info                color236  color141
 color article             color253  color236
 
 # Browser
-browser "open -a 'Brave Browser' %u"
+browser "open %u"
 
 # Date format
 datetime-format "%Y-%m-%d"
@@ -3070,6 +3120,7 @@ Host github.com
 SSH_CONF
     # Create sockets directory for multiplexing
     mkdir -p "$HOME/.ssh/sockets"
+    chmod 700 "$HOME/.ssh/sockets"
     chmod 600 "$SSH_CONFIG"
     success "SSH configured (multiplexing, keychain, keep-alive, strong algorithms)"
 fi
@@ -3333,7 +3384,7 @@ fi
 
 # ---- Docker buildx as default builder ----
 if installed docker; then
-    if docker buildx version &>/dev/null 2>&1; then
+    if docker buildx version &>/dev/null; then
         info "Setting Docker buildx as default builder..."
         docker buildx install 2>/dev/null || true
         success "Docker buildx set as default builder (multi-platform builds enabled)"
@@ -3343,6 +3394,8 @@ fi
 # ---- macOS System Defaults ----
 if should_run "macos-defaults"; then
 info "Configuring macOS system defaults..."
+
+if [[ "$DRY_RUN" != "true" ]]; then
 
 # -- Dock --
 # Auto-hide the Dock
@@ -3449,8 +3502,6 @@ success "Stage Manager disabled"
 
 
 # -- Misc --
-# Disable the "Are you sure you want to open this application?" dialog
-defaults write com.apple.LaunchServices LSQuarantine -bool false
 # Disable Notification Center and remove from menu bar (restart required)
 # Expand save panel by default (already set in Finder section but ensuring global)
 defaults write NSGlobalDomain NSNavPanelExpandedStateForSaveMode -bool true
@@ -3481,6 +3532,10 @@ fi
 
 # Restart Dock to apply all Dock/Hot Corner/Mission Control changes
 killall Dock 2>/dev/null || true
+
+else
+    info "[DRY RUN] Would configure macOS system defaults"
+fi  # DRY_RUN
 
 fi  # macos-defaults
 
@@ -3715,7 +3770,7 @@ set suspend
 include "PLACEHOLDER_BREW_PREFIX/share/nano/*.nanorc"
 NANO_CONF
     # Replace placeholder with actual brew prefix
-    sed -i '' "s|PLACEHOLDER_BREW_PREFIX|$(brew --prefix)|g" "$NANORC"
+    /usr/bin/sed -i '' "s|PLACEHOLDER_BREW_PREFIX|$(brew --prefix)|g" "$NANORC"
     success "~/.nanorc created (line numbers, auto-indent, mouse, syntax highlighting)"
 fi
 
@@ -4127,7 +4182,12 @@ else
     cat > "$GIT_HOOKS_DIR/pre-commit" <<'HOOK_PRECOMMIT'
 #!/usr/bin/env bash
 # Global pre-commit hook — runs on ALL repos
-# Per-repo .git/hooks/pre-commit takes precedence if it exists
+# Note: core.hooksPath overrides per-repo .git/hooks — this hook delegates to per-repo hooks if they exist
+
+# Delegate to per-repo hook if it exists
+if [ -x ".git/hooks/pre-commit" ]; then
+    exec .git/hooks/pre-commit "$@"
+fi
 
 # Check for debug statements
 if git diff --cached --name-only | xargs grep -l 'console\.log\|debugger\|binding\.pry\|import pdb' 2>/dev/null; then
@@ -5281,7 +5341,7 @@ if command -v brew &>/dev/null; then
 fi
 
 # Docker disk
-if command -v docker &>/dev/null && docker info &>/dev/null 2>&1; then
+if command -v docker &>/dev/null && docker info &>/dev/null; then
     echo ""
     echo "-- Docker --"
     docker system df 2>/dev/null | head -4 | sed 's/^/  /'
@@ -5423,6 +5483,7 @@ fi
 fi  # filesystem
 
 if should_run "macos-defaults"; then
+if [[ "$DRY_RUN" != "true" ]]; then
 # ---- Finder configuration ----
 info "Configuring Finder..."
 
@@ -5550,6 +5611,9 @@ fi
 
 # ---- DNS configuration (speed + privacy) ----
 info "Configuring DNS..."
+info "Backing up current DNS settings..."
+networksetup -getdnsservers Wi-Fi > "$LOG_DIR/dns-backup-wifi.txt" 2>/dev/null || true
+networksetup -getdnsservers Ethernet > "$LOG_DIR/dns-backup-ethernet.txt" 2>/dev/null || true
 # Get all network services
 NETWORK_SERVICES=$(networksetup -listallnetworkservices 2>/dev/null | tail -n +2)
 DNS_SET=false
@@ -5653,8 +5717,9 @@ success "Bluetooth shown in menu bar"
 
 # ---- Auto-set timezone ----
 sudo systemsetup -setusingnetworktime on 2>/dev/null || true
-sudo systemsetup -settimezone "America/Chicago" 2>/dev/null || true
-success "Timezone set to auto (America/Chicago)"
+# Use current timezone (don't override user's existing setting)
+# sudo systemsetup -settimezone "America/Chicago" 2>/dev/null || true
+success "Network time enabled (timezone auto-detected)"
 
 # ---- Software Update: auto-check but don't auto-install ----
 defaults write com.apple.SoftwareUpdate AutomaticCheckEnabled -bool true 2>/dev/null || true
@@ -5676,11 +5741,16 @@ info "Setting macOS defaults for apps..."
 
 
 
+else
+    info "[DRY RUN] Would configure Finder, Touch ID, DNS, Spotlight, Time Machine, Siri, and app defaults"
+fi  # DRY_RUN
+
 fi  # macos-defaults (Finder, Touch ID, DNS, Spotlight, TM, Siri, app defaults)
 
 fi  # configs
 
 # =============================================================================
+if should_run "configs"; then
 # CLAUDE CODE CONFIGURATION
 # =============================================================================
 banner "Claude Code Configuration"
@@ -6728,6 +6798,8 @@ CMD_COMMIT
     success "Claude Code commands created (20 commands: /pr-review, /test-plan, /dep-audit, /quick-doc, /cleanup, /security-scan, /perf-check, /docker-lint, /iac-review, /convert, /new-feature, /fix-bug, /create-readme, /init-project, /refactor, /add-endpoint, /add-component, /ci-fix, /changelog, /commit-msg)"
 fi
 
+fi  # configs (Claude Code)
+
 # =============================================================================
 if should_run "shell"; then
 banner "Shell Configuration"
@@ -6744,6 +6816,9 @@ MANAGED_BLOCK=$(cat <<'MANAGED_ZSHRC'
 # Add personal customizations OUTSIDE this block (above or below).
 
 # -- PATH additions -----------------------------------------------------------
+
+# Deduplicate PATH
+typeset -U PATH path
 
 # Personal scripts
 export PATH="$HOME/Scripts/bin:$PATH"
@@ -7108,7 +7183,7 @@ fi
 
 # ---- GitHub Authentication ----
 if installed gh; then
-    if ! gh auth status &>/dev/null 2>&1; then
+    if ! gh auth status &>/dev/null; then
         echo ""
         read -p "Authenticate with GitHub? [Y/n] " gh_confirm
         if [[ ! "$gh_confirm" =~ ^[Nn]$ ]]; then
@@ -7282,6 +7357,7 @@ if [[ "$DRY_RUN" == "false" ]]; then
     if [[ ! "$source_confirm" =~ ^[Nn]$ ]]; then
         # Use exec to replace the current shell so the new zshrc takes effect
         echo -e "${GREEN}${BOLD}  Reloading shell...${NC}"
+        release_lock
         exec zsh -l
     else
         echo -e "${GREEN}${BOLD}  Run 'source ~/.zshrc' or restart your terminal to activate.${NC}"
