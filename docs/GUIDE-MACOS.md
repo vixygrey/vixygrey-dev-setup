@@ -1,6 +1,6 @@
-# User Guide
+# macOS User Guide
 
-Practical guide to every tool, app, and utility installed by the setup scripts. Organized by workflow, not install order.
+Everything installed by `scripts/setup-dev-tools-mac.sh` -- tools, apps, workflows, aliases, and system configuration. Read top to bottom or jump to a section.
 
 ---
 
@@ -26,7 +26,7 @@ f "*.ts"            # fd: fast file search
 fzf                 # interactive fuzzy finder (Ctrl+T in shell)
 
 # Update everything at once
-update              # topgrade: brew, npm, pip, macOS, all at once
+update              # topgrade: brew, npm, pip, system updates
 
 # System info
 sysinfo             # fastfetch: quick hardware/software summary
@@ -95,7 +95,7 @@ bat -l json data    # force language detection
 nano file.txt       # enhanced nano (syntax highlighting, line numbers)
 
 # Delete safely (trash replaces rm)
-rm file.txt         # moves to macOS Trash (recoverable!)
+rm file.txt         # moves to macOS Trash (recoverable)
 # To permanently delete: /bin/rm file.txt
 
 # Disk usage
@@ -128,7 +128,7 @@ Every standard Unix tool has a faster, modern alternative:
 | `dig` | `doggo` | Colorized DNS lookup with DoH/DoT |
 | `watch` | `viddy` | Watch commands with diff highlighting |
 | `hexdump` | `hexyl` | Colorized hex viewer |
-| `rm` | `trash` | Moves to Trash (recoverable) |
+| `rm` | `trash` | Moves to macOS Trash (recoverable) |
 | `make` | `just` | Simpler task runner, no tab issues |
 | `f` | `fd` | Fast file finder, simple syntax |
 | `dft` | `difft` | Syntax-aware structural diff |
@@ -329,6 +329,14 @@ pre-commit autoupdate        # update hook versions
 ---
 
 ## Docker & Kubernetes
+
+### OrbStack (Docker runtime)
+
+OrbStack is a faster, lighter alternative to Docker Desktop on macOS (2-5x less memory). Both are installed by the setup script -- pick your preference.
+
+1. **First launch:** Open OrbStack, it will set up Docker automatically
+2. **Resource limits:** OrbStack > Settings > Resources > set memory limit (e.g. 8GB)
+3. **Default builder:** OrbStack > Settings > Docker > Enable BuildKit (already the default)
 
 ### lazydocker (Docker TUI)
 
@@ -547,6 +555,14 @@ mtr --report google.com      # generate a report
 sudo bandwhich               # see bandwidth by process
 # Real-time view of which processes are using network
 ```
+
+### LuLu Firewall
+
+macOS application firewall for monitoring and blocking outbound connections.
+
+1. **First launch:** Grant Full Disk Access when prompted
+2. **Rules:** Allow known apps (browsers, dev tools), block suspicious outbound connections
+3. **Mode:** Block and alert mode (default) is recommended
 
 ### nmap (network scanning)
 
@@ -792,9 +808,7 @@ sops --decrypt secrets.yaml  # decrypt to stdout
 
 ---
 
-## GUI App Recommended Settings
-
-Settings the script cannot configure programmatically. Set these up manually after install.
+## GUI Apps
 
 ### Raycast
 
@@ -836,12 +850,6 @@ Already configured by the script with Dracula theme. Additional:
 1. **Sign in:** Zed > Sign In for collaboration features
 2. **AI integration:** Settings > AI > configure Claude or Copilot
 3. **Vim mode:** Already enabled by default in script config
-
-### OrbStack
-
-1. **First launch:** Open OrbStack, it will set up Docker automatically
-2. **Resource limits:** OrbStack > Settings > Resources > set memory limit (e.g. 8GB)
-3. **Default builder:** OrbStack > Settings > Docker > Enable BuildKit (already the default)
 
 ### TablePlus
 
@@ -886,17 +894,22 @@ Already configured by the script with Dracula theme. Additional:
 3. **Editor:** Configure annotation defaults (font, colors, arrow style)
 4. **Video:** Enable system audio recording if needed
 
-### LuLu (Firewall)
-
-1. **First launch:** Grant Full Disk Access when prompted
-2. **Rules:** Allow known apps (browsers, dev tools), block suspicious outbound connections
-3. **Mode:** Block and alert mode (default) is recommended
-
 ### UniFi Identity Endpoint
 
 1. **First launch:** Sign in with your Ubiquiti account
 2. **Connect to NAS:** Enter your UniFi OS Console address
 3. **Device management:** Enroll your Mac for network management
+
+### Quick Look Plugins
+
+Preview files in Finder by pressing Space:
+
+| Plugin | Description |
+|--------|-------------|
+| QLMarkdown | Preview Markdown files |
+| QLStephen | Preview extensionless plain text files |
+
+Installed automatically by the setup script via Homebrew Cask.
 
 ---
 
@@ -1005,6 +1018,17 @@ Language-specific rules are in `~/.claude/rules/`:
 | `update` | `topgrade` | System |
 | `sysinfo` | `fastfetch` | System |
 
+### macOS-Specific Aliases
+
+| Alias | Command | Notes |
+|-------|---------|-------|
+| `rm` | `trash` | Moves to macOS Trash (recoverable) |
+| `open` | (native) | Opens files/URLs with default app |
+| `pbcopy` | (native) | Copy to clipboard from pipe |
+| `pbpaste` | (native) | Paste clipboard contents |
+
+Use `/bin/rm` for permanent deletion.
+
 ### Directory Shortcuts
 
 | Alias | Jumps to |
@@ -1056,3 +1080,70 @@ Language-specific rules are in `~/.claude/rules/`:
 | `gj serve 8080` | Serve current directory |
 | `gj b64-encode "text"` | Base64 encode |
 | `gj b64-decode "..."` | Base64 decode |
+
+---
+
+## System Configuration
+
+The setup script configures these macOS defaults automatically via `defaults write`.
+
+### Dock
+
+- Small icon size (36px), no recent apps shown
+- Scale minimize effect (faster than genie)
+- Minimize windows into application icon
+- Clears all default pinned apps (add your own by dragging)
+- Mission Control: fixed Spaces order, fast animations, grouped by app
+- Hot corners: all disabled to prevent accidental triggers
+
+### Screenshots
+
+- Save as PNG to `~/Screenshots` (not Desktop)
+- No shadow on window captures
+- No floating thumbnail after capture
+
+### Finder
+
+- Show all file extensions
+- Show path bar and status bar
+- Default to list view
+- Search scoped to current folder
+- Folders sorted first
+- Hidden files visible
+- `~/Library` folder unhidden
+- No `.DS_Store` files on network or USB volumes
+- Expanded save and print panels by default
+
+### Keyboard & Input
+
+- Fast key repeat (rate: 2, delay: 15)
+- Press-and-hold for accents disabled (essential for Vim key repeat)
+- Full keyboard access for all UI controls
+- Disable auto-correct, auto-capitalization, smart quotes, smart dashes, period substitution
+- Faster trackpad tracking speed (2.0)
+
+### Screensaver & Display
+
+- Screensaver at 45 minutes
+- Display sleep at 2 hours (charger) / 1 hour 15 minutes (battery)
+
+### Security
+
+- Firewall: script checks status and prompts you to enable if not active
+- FileVault: script checks status and prompts you to enable full-disk encryption
+- Siri disabled for privacy
+
+### DNS
+
+- Configured to use 1.1.1.1 / 1.0.0.1 (Cloudflare), 9.9.9.9 (Quad9), 8.8.8.8 (Google)
+- Previous DNS settings backed up to `~/.local/share/dev-setup/`
+- DNS cache flushed after changes
+
+### Spotlight
+
+- Dev directories excluded from indexing (`~/Code`, `~/.config`, `node_modules`, caches)
+
+### Software Update
+
+- Automatic check and download enabled
+- Automatic install of macOS updates disabled (manual control)

@@ -4,28 +4,38 @@ Three platform-specific scripts that install and configure **220+ tools** with *
 
 | Platform | Script | Package Managers |
 |----------|--------|-----------------|
-| **macOS** | `setup-dev-tools.sh` | Homebrew |
-| **Windows** | `setup-dev-tools-windows.ps1` | winget + Scoop |
-| **Linux** | `setup-dev-tools-linux.sh` | apt / dnf / pacman + snap + flatpak |
+| **macOS** | `scripts/setup-dev-tools-mac.sh` | Homebrew |
+| **Windows** | `scripts/setup-dev-tools-windows.ps1` | winget + Scoop |
+| **Linux** | `scripts/setup-dev-tools-linux.sh` | apt / dnf / pacman + snap + flatpak |
+
+## Documentation
+
+Each platform has a self-contained guide and shortcuts reference:
+
+| Platform | Guide | Shortcuts |
+|----------|-------|-----------|
+| **macOS** | [Guide](docs/GUIDE-MACOS.md) | [Shortcuts](docs/SHORTCUTS-MACOS.md) |
+| **Linux** | [Guide](docs/GUIDE-LINUX.md) | [Shortcuts](docs/SHORTCUTS-LINUX.md) |
+| **Windows** | [Guide](docs/GUIDE-WINDOWS.md) | [Shortcuts](docs/SHORTCUTS-WINDOWS.md) |
 
 ## Quick Start
 
 ### macOS
 ```bash
-chmod +x setup-dev-tools.sh
-./setup-dev-tools.sh
+chmod +x scripts/setup-dev-tools-mac.sh
+./scripts/setup-dev-tools-mac.sh
 ```
 
 ### Windows (PowerShell as Administrator)
 ```powershell
 Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
-.\setup-dev-tools-windows.ps1
+.\scripts\setup-dev-tools-windows.ps1
 ```
 
 ### Linux (Ubuntu/Debian, Fedora/RHEL, or Arch)
 ```bash
-chmod +x setup-dev-tools-linux.sh
-./setup-dev-tools-linux.sh
+chmod +x scripts/setup-dev-tools-linux.sh
+./scripts/setup-dev-tools-linux.sh
 ```
 
 ## CLI Options (all three scripts)
@@ -33,16 +43,16 @@ chmod +x setup-dev-tools-linux.sh
 All scripts share the same flags:
 
 ```bash
-./setup-dev-tools.sh --help              # Show all options
-./setup-dev-tools.sh --dry-run           # Preview changes without installing
-./setup-dev-tools.sh --list              # List all tools that would be installed
-./setup-dev-tools.sh --resume            # Continue from where a previous run left off
-./setup-dev-tools.sh --uninstall         # Show commands to remove everything (no changes made)
-./setup-dev-tools.sh --cleanup           # Remove tools from previous versions no longer in script
-./setup-dev-tools.sh --list-categories   # List all available categories
-./setup-dev-tools.sh --skip mac-media,mac-cloud  # Skip specific categories
-./setup-dev-tools.sh --only core,git,aws,dx      # Only install specific categories
-./setup-dev-tools.sh --version           # Show script version
+./scripts/setup-dev-tools-mac.sh --help              # Show all options
+./scripts/setup-dev-tools-mac.sh --dry-run           # Preview changes without installing
+./scripts/setup-dev-tools-mac.sh --list              # List all tools that would be installed
+./scripts/setup-dev-tools-mac.sh --resume            # Continue from where a previous run left off
+./scripts/setup-dev-tools-mac.sh --uninstall         # Show commands to remove everything (no changes made)
+./scripts/setup-dev-tools-mac.sh --cleanup           # Remove tools from previous versions no longer in script
+./scripts/setup-dev-tools-mac.sh --list-categories   # List all available categories
+./scripts/setup-dev-tools-mac.sh --skip mac-media,mac-cloud  # Skip specific categories
+./scripts/setup-dev-tools-mac.sh --only core,git,aws,dx      # Only install specific categories
+./scripts/setup-dev-tools-mac.sh --version           # Show script version
 ```
 
 > Platform-specific categories use prefixes: `mac-*`, `win-*`, `linux-*` (e.g., `--skip win-bloat`)
@@ -73,7 +83,7 @@ All scripts share the same flags:
 | **Resume** | Continue after a failure with `--resume` -- skips previously completed items |
 | **Uninstall guide** | Show removal commands with `--uninstall` (no destructive actions taken) |
 | **Cleanup** | Remove tools from previous versions with `--cleanup` (auto-detects deprecated tools) |
-| **Lockfile** | Prevents concurrent runs via PID-based lock |
+| **Lockfile** | Prevents concurrent runs via atomic directory-based lock |
 | **Category filtering** | Install only what you need with `--only` / `--skip` (validates category names) |
 | **List tools** | See everything that would be installed with `--list` |
 | **Progress bar** | Visual progress counter with dynamic total (capped at 100%) |
@@ -508,10 +518,10 @@ The `mac-bloat` category removes unused Apple apps (requires sudo, some need SIP
 
 ```bash
 # Remove bloat only
-./setup-dev-tools.sh --only mac-bloat
+./scripts/setup-dev-tools-mac.sh --only mac-bloat
 
 # Skip bloat removal in a full run
-./setup-dev-tools.sh --skip mac-bloat
+./scripts/setup-dev-tools-mac.sh --skip mac-bloat
 ```
 
 > **Note:** `/System/Applications` apps require SIP disabled on macOS Sonoma+. Boot into Recovery (Cmd+R) > Terminal > `csrutil disable` > reboot. Re-enable after: `csrutil enable`.
@@ -564,6 +574,7 @@ The script sets up Claude Code with a comprehensive configuration for full-stack
 | `~/.claude/rules/docker.md` | Docker rules (multi-stage builds, non-root, hadolint, dive) |
 | `~/.claude/rules/iac.md` | IaC rules (remote state, tflint, infracost, trivy config scan) |
 | `~/.claude/hooks/format-on-edit.sh` | Auto-format with Prettier after Claude edits JS/TS/CSS/JSON/MD files |
+| `~/.claude/hooks/format-on-edit.ps1` | Auto-format hook (PowerShell version for Windows) |
 | `~/.claude/hooks/lint-python.sh` | Auto-lint and fix Python files with ruff after Claude edits them |
 | `~/.claude/hooks/lint-dockerfile.sh` | Lint Dockerfiles with hadolint after Claude edits them |
 
@@ -1000,10 +1011,10 @@ All aliases are auto-written to `~/.zshrc`:
 
 ```bash
 # Option 1: Run the full script
-./setup-dev-tools.sh
+./scripts/setup-dev-tools-mac.sh
 
 # Option 2: Resume after a failure
-./setup-dev-tools.sh --resume
+./scripts/setup-dev-tools-mac.sh --resume
 
 # Option 3: Restore from Brewfile (packages only, no configs)
 brew bundle install --file=~/.config/brewfile/Brewfile
@@ -1012,7 +1023,7 @@ brew bundle install --file=~/.config/brewfile/Brewfile
 chezmoi init <your-github-username> && chezmoi apply
 
 # Option 5: Run only specific categories
-./setup-dev-tools.sh --only core,git,dx,configs
+./scripts/setup-dev-tools-mac.sh --only core,git,dx,configs
 ```
 
 ---
@@ -1027,7 +1038,7 @@ topgrade
 brew update && brew upgrade && brew cleanup
 
 # Re-run this script to pick up new tools/configs
-./setup-dev-tools.sh
+./scripts/setup-dev-tools-mac.sh
 ```
 
 The script will:
@@ -1043,7 +1054,7 @@ The script will:
 
 ```bash
 # Show removal commands (no changes made)
-./setup-dev-tools.sh --uninstall
+./scripts/setup-dev-tools-mac.sh --uninstall
 ```
 
 This prints a full guide for removing all installed tools, configs, and settings. Review each command before running.
@@ -1229,7 +1240,7 @@ starship, atuin, glow, btop, lazygit, lazydocker, k9s, yazi, gh-dash, stern, mis
 ```bash
 cat ~/.local/share/dev-setup/setup-*.log | grep ERROR
 brew doctor
-./setup-dev-tools.sh --resume
+./scripts/setup-dev-tools-mac.sh --resume
 ```
 
 ### Windows (PowerShell)
@@ -1248,11 +1259,17 @@ cat ~/.local/share/dev-setup/setup-*.log | grep ERROR
 ### All Platforms
 ```bash
 # Preview without changes
-./setup-dev-tools.sh --dry-run
+./scripts/setup-dev-tools-mac.sh --dry-run
 
 # Run only specific categories
-./setup-dev-tools.sh --only core,git,dx
+./scripts/setup-dev-tools-mac.sh --only core,git,dx
 
 # Show removal commands
-./setup-dev-tools.sh --uninstall
+./scripts/setup-dev-tools-mac.sh --uninstall
 ```
+
+---
+
+## License
+
+MIT — see [LICENSE](LICENSE)

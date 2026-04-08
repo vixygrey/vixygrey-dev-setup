@@ -1,6 +1,6 @@
-# Keyboard Shortcuts & Aliases Reference
+# Linux Keyboard Shortcuts & Aliases
 
-Quick reference for all **209+ shortcuts** configured by the setup scripts.
+Quick reference for all shortcuts and aliases configured by the setup scripts, adapted for Linux.
 
 ---
 
@@ -23,12 +23,23 @@ Quick reference for all **209+ shortcuts** configured by the setup scripts.
 | `dig` | `doggo` | Colorized DNS lookup (DoH/DoT) |
 | `watch` | `viddy` | Watch with diff highlighting |
 | `hexdump` | `hexyl` | Colorized hex viewer |
-| `rm` | `trash` | Move to Trash (recoverable) |
+| `rm` | `trash-put` | Move to Trash (recoverable) |
 | `make` | `just` | Simpler task runner |
 | `f` | `fd` | Fast file finder |
 | `dft` | `difft` | Syntax-aware structural diff |
 | `y` | `yazi` | Terminal file manager |
 | `jx` | `fx` | Interactive JSON viewer |
+
+### Platform Aliases
+
+Linux-specific alias differences from macOS:
+
+| Alias | Command | macOS equivalent |
+|-------|---------|-----------------|
+| `rm` | `trash-put` | `trash` |
+| `open` | `xdg-open` | `open` |
+| `pbcopy` | `xclip -selection clipboard` | `pbcopy` |
+| `pbpaste` | `xclip -selection clipboard -o` | `pbpaste` |
 
 ### Downloads & Network
 
@@ -112,44 +123,42 @@ Quick reference for all **209+ shortcuts** configured by the setup scripts.
 | `cleandl` | `clean-downloads` | Delete old files from ~/Downloads |
 | `hc` | `health-check` | System health overview |
 | `sshsetup` | `setup-ssh` | Generate SSH key + add to GitHub |
-| `brewsnap` | `export-brewfile` | Export Brewfile snapshot |
 
 ### System
 
 | Alias | Runs | What it does |
 |-------|------|-------------|
-| `update` | `topgrade` | Update everything (brew, npm, pip, OS) |
+| `update` | `topgrade` | Update everything (apt, npm, pip, OS) |
 | `sysinfo` | `fastfetch` | Quick system info display |
 
 ---
 
 ## VS Code Keybindings
 
-| Key | Action |
-|-----|--------|
-| `Cmd+`` ` | Toggle terminal |
-| `Cmd+Shift+`` ` | New terminal |
-| `Cmd+\` | Split editor |
-| `Cmd+1` / `2` / `3` | Focus editor group 1/2/3 |
-| `Cmd+P` | Quick open file |
-| `Cmd+Shift+O` | Go to symbol in file |
-| `Cmd+T` | Go to symbol in workspace |
-| `Cmd+B` | Toggle sidebar |
-| `Cmd+Shift+M` | Toggle minimap |
-| `Cmd+Shift+[` | Fold code block |
-| `Cmd+Shift+]` | Unfold code block |
+| Shortcut | Action |
+|----------|--------|
+| `` Ctrl+` `` | Toggle terminal |
+| `` Ctrl+Shift+` `` | New terminal |
+| `Ctrl+\` | Split editor |
+| `Ctrl+1` / `2` / `3` | Focus editor group 1/2/3 |
+| `Ctrl+P` | Quick Open file |
+| `Ctrl+Shift+P` | Command Palette |
+| `Ctrl+Shift+O` | Go to symbol in file |
+| `Ctrl+T` | Go to symbol in workspace |
+| `Ctrl+B` | Toggle sidebar |
+| `Ctrl+Shift+M` | Toggle minimap |
+| `Ctrl+Shift+[` | Fold code block |
+| `Ctrl+Shift+]` | Unfold code block |
 | `Alt+Up/Down` | Move line up/down |
-| `Cmd+Shift+D` | Duplicate line |
-| `Cmd+Shift+K` | Delete line |
-| `Cmd+D` | Multi-select next match |
-| `Cmd+Shift+L` | Select all occurrences |
-| `Cmd+Shift+F` | Format document |
+| `Ctrl+Shift+D` | Duplicate line |
+| `Ctrl+Shift+K` | Delete line |
+| `Ctrl+D` | Multi-select next match |
+| `Ctrl+Shift+L` | Select all occurrences |
+| `Ctrl+Shift+F` | Format document |
 | `F2` | Rename symbol |
-| `Cmd+.` | Quick fix |
-| `Cmd+W` | Close editor tab |
-| `Cmd+Shift+T` | Reopen closed editor |
-
-> Windows/Linux: Replace `Cmd` with `Ctrl`.
+| `Ctrl+.` | Quick fix |
+| `Ctrl+W` | Close editor tab |
+| `Ctrl+Shift+T` | Reopen closed editor |
 
 ---
 
@@ -386,14 +395,19 @@ Run from anywhere with `gj <recipe>` (or `just --justfile ~/.justfile <recipe>`)
 
 ---
 
-## macOS Hot Corners
+## GNOME Desktop Shortcuts
 
-| Corner | Action |
-|--------|--------|
-| **Top-left** | Mission Control |
-| **Top-right** | Show Desktop |
-| **Bottom-left** | Disabled |
-| **Bottom-right** | Disabled |
+| Shortcut | Action |
+|----------|--------|
+| `Super` | Activities overview |
+| `Super+A` | App grid |
+| `Super+L` | Lock screen |
+| `Ctrl+Alt+T` | Open terminal |
+| `Super+Left/Right` | Tile window left/right |
+| `Super+Up` | Maximize window |
+| `Super+Down` | Restore/minimize window |
+| `Alt+F2` | Run command |
+| `Alt+Tab` | Switch applications |
 
 ---
 
@@ -429,6 +443,7 @@ Run from anywhere with `gj <recipe>` (or `just --justfile ~/.justfile <recipe>`)
 | Category | Count |
 |----------|-------|
 | Shell aliases | 65 |
+| Platform aliases | 4 |
 | VS Code keybindings | 21 |
 | tmux keybindings | 12 |
 | Vim keybindings | 8 |
@@ -436,6 +451,6 @@ Run from anywhere with `gj <recipe>` (or `just --justfile ~/.justfile <recipe>`)
 | Git aliases | 30 |
 | GitHub CLI aliases | 15 |
 | Global justfile recipes | 27 |
-| macOS hot corners | 4 |
+| GNOME desktop shortcuts | 9 |
 | Claude Code commands | 20 |
-| **Total** | **209** |
+| **Total** | **218** |
