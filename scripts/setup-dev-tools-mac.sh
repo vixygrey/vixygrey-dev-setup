@@ -239,7 +239,7 @@ list_categories() {
     printf "  %-25s %s\n" "containers"          "lazydocker, dive, kubectl, k9s"
     printf "  %-25s %s\n" "api"                 "Bruno, grpcurl"
     printf "  %-25s %s\n" "networking"          "mtr, bandwhich, nmap"
-    printf "  %-25s %s\n" "dx"                  "fzf, starship, atuin, VS Code, Zed, Ghostty, tmux, zellij, Raycast"
+    printf "  %-25s %s\n" "dx"                  "fzf, starship, atuin, VS Code, Zed, Ghostty, zellij, Raycast"
     printf "  %-25s %s\n" "ux"                  "Lighthouse"
     printf "  %-25s %s\n" "docs"                "d2, Mermaid CLI"
     printf "  %-25s %s\n" "mac-system"          "Pearcleaner, Quick Look plugins"
@@ -585,7 +585,7 @@ if [[ "$UNINSTALL" == "true" ]]; then
     echo "  brew bundle cleanup --file=~/.config/brewfile/Brewfile --force"
     echo ""
     echo "# Remove config files:"
-    echo "  rm -f ~/.tmux.conf ~/.shellcheckrc ~/.editorconfig ~/.prettierrc"
+    echo "  rm -f ~/.shellcheckrc ~/.editorconfig ~/.prettierrc"
     echo "  rm -f ~/.curlrc ~/.npmrc ~/.ripgreprc ~/.fdignore ~/.nanorc ~/.vimrc"
     echo "  rm -f ~/.hushlogin ~/.gitmessage ~/.myclirc ~/.gemrc ~/.actrc ~/.mlrrc"
     echo "  rm -rf ~/.aria2 ~/.config/atuin ~/.config/glow ~/.config/ngrok"
@@ -631,6 +631,7 @@ if [[ "$CLEANUP" == "true" ]]; then
     # Tools removed in current version (were in previous versions, now replaced or dropped)
     # Format: "type:name:display-name:replacement"
     DEPRECATED_TOOLS=(
+        "brew:tmux:tmux:zellij"
         "cask:docker:Docker Desktop:OrbStack"
         "cask:warp:Warp terminal:Ghostty"
         "cask:iterm2:iTerm2:Ghostty"
@@ -871,15 +872,11 @@ if ! installed rustup; then
     if [[ "$DRY_RUN" == "true" ]]; then
         info "[DRY RUN] Would install: Rust via rustup"
     else
-        local installer
         installer="$(mktemp)"
         curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs -o "$installer"
         if [[ ! -s "$installer" ]]; then
             error "Failed to download rustup installer"
-            rm -f "$installer"
-            return 1
-        fi
-        if sh "$installer" -y --no-modify-path >> "$LOG_FILE" 2>&1; then
+        elif sh "$installer" -y --no-modify-path >> "$LOG_FILE" 2>&1; then
             source "$HOME/.cargo/env" 2>/dev/null || true
             success "Rust installed via rustup"
         else
@@ -901,7 +898,6 @@ brew_install "oven-sh/bun/bun" "bun (fast JS runtime/bundler/test runner)"
 progress
 if ! installed pnpm; then
     info "Installing pnpm..."
-    local installer
     installer="$(mktemp)"
     curl -fsSL "https://get.pnpm.io/install.sh" -o "$installer"
     if [[ ! -s "$installer" ]]; then
@@ -1068,7 +1064,7 @@ else
 fi
 
 # macOS hardening: Firewall
-if defaults read /Library/Preferences/com.apple.alf globalstate 2>/dev/null | grep -q "[12]"; then
+if /usr/libexec/ApplicationFirewall/socketfilterfw --getglobalstate 2>/dev/null | grep -q "enabled"; then
     warn "macOS Firewall is already enabled"
 else
     info "macOS Firewall is NOT enabled"
@@ -1375,7 +1371,6 @@ if [[ -f "$VSCODE_CLI" ]] && ! installed code; then
 fi
 brew_cask_install "zed" "Zed (fast native editor from ex-Atom team — GPU-rendered)"
 brew_cask_install "ghostty" "Ghostty (fast GPU-accelerated terminal)"
-brew_install "tmux" "tmux (terminal multiplexer)"
 brew_install "zellij" "zellij (modern terminal multiplexer — discoverable UI, layouts)"
 
 # AI tools
@@ -1869,125 +1864,6 @@ fi  # dracula
 # =============================================================================
 if should_run "configs"; then
 banner "Tool Configurations"
-
-# ---- tmux ----
-TMUX_CONF="$HOME/.tmux.conf"
-if [[ -f "$TMUX_CONF" ]]; then
-    warn "tmux config already exists at $TMUX_CONF"
-else
-    info "Creating tmux configuration..."
-    cat > "$TMUX_CONF" <<'TMUX_CONFIG'
-# =============================================================================
-# tmux configuration
-# =============================================================================
-
-# -- Prefix: Ctrl-a instead of Ctrl-b (easier to reach) ----------------------
-unbind C-b
-set -g prefix C-a
-bind C-a send-prefix
-
-# -- General ------------------------------------------------------------------
-set -g default-terminal "tmux-256color"
-set -ag terminal-overrides ",xterm-256color:RGB"
-set -g history-limit 50000
-set -g mouse on
-set -g base-index 1
-setw -g pane-base-index 1
-set -g renumber-windows on
-set -g set-clipboard on
-set -sg escape-time 0
-set -g focus-events on
-set -g display-time 3000
-set -g status-interval 5
-
-# -- Keybindings --------------------------------------------------------------
-# Reload config
-bind r source-file ~/.tmux.conf \; display "Config reloaded!"
-
-# Split panes with | and -
-bind | split-window -h -c "#{pane_current_path}"
-bind - split-window -v -c "#{pane_current_path}"
-unbind '"'
-unbind %
-
-# New window in current path
-bind c new-window -c "#{pane_current_path}"
-
-# Navigate panes with vim keys
-bind h select-pane -L
-bind j select-pane -D
-bind k select-pane -U
-bind l select-pane -R
-
-# Resize panes with vim keys
-bind -r H resize-pane -L 5
-bind -r J resize-pane -D 5
-bind -r K resize-pane -U 5
-bind -r L resize-pane -R 5
-
-# Vi mode for copy
-setw -g mode-keys vi
-bind -T copy-mode-vi v send -X begin-selection
-bind -T copy-mode-vi y send -X copy-pipe-and-cancel "pbcopy"
-
-# Quick pane switching with Alt+arrow (no prefix)
-bind -n M-Left select-pane -L
-bind -n M-Right select-pane -R
-bind -n M-Up select-pane -U
-bind -n M-Down select-pane -D
-
-# -- Dracula Colors -----------------------------------------------------------
-# Status bar
-set -g status-style "bg=#44475a,fg=#f8f8f2"
-set -g status-left "#[bg=#bd93f9,fg=#282a36,bold] #S #[bg=#44475a] "
-set -g status-right "#[fg=#6272a4]%Y-%m-%d #[fg=#f8f8f2]%H:%M #[bg=#bd93f9,fg=#282a36,bold] #h "
-set -g status-left-length 30
-set -g status-right-length 50
-
-# Window tabs
-setw -g window-status-format "#[fg=#6272a4] #I:#W "
-setw -g window-status-current-format "#[bg=#282a36,fg=#50fa7b,bold] #I:#W "
-
-# Pane borders
-set -g pane-border-style "fg=#6272a4"
-set -g pane-active-border-style "fg=#bd93f9"
-
-# Message style
-set -g message-style "bg=#44475a,fg=#f8f8f2"
-
-# Clock
-setw -g clock-mode-colour "#bd93f9"
-
-# -- Plugins (via TPM) -------------------------------------------------------
-# Install TPM: git clone https://github.com/tmux-plugins/tpm ~/.tmux/plugins/tpm
-# Then press prefix + I (capital i) to install plugins
-set -g @plugin 'tmux-plugins/tpm'
-set -g @plugin 'tmux-plugins/tmux-resurrect'    # Save/restore sessions (prefix + Ctrl-s / Ctrl-r)
-set -g @plugin 'tmux-plugins/tmux-continuum'     # Auto-save sessions every 15 min
-set -g @continuum-restore 'on'                   # Auto-restore on tmux start
-
-# Initialize TPM (must be last line)
-run '~/.tmux/plugins/tpm/tpm'
-TMUX_CONFIG
-    success "tmux configured at $TMUX_CONF"
-fi
-
-# ---- tmux plugin manager (TPM) ----
-TPM_DIR="$HOME/.tmux/plugins/tpm"
-if [[ -d "$TPM_DIR" ]]; then
-    warn "tmux plugin manager (TPM) already installed"
-else
-    info "Installing tmux plugin manager (TPM)..."
-    if [[ "$DRY_RUN" != "true" ]]; then
-        if git clone https://github.com/tmux-plugins/tpm "$TPM_DIR" >> "$LOG_FILE" 2>&1; then
-            success "TPM installed (press prefix + I in tmux to install plugins)"
-        else
-            error "Failed to clone TPM (check network and $LOG_FILE)"
-        fi
-    else
-        info "[DRY RUN] Would install TPM"
-    fi
-fi
 
 # ---- git global config ----
 info "Configuring git global settings..."
@@ -6071,7 +5947,7 @@ else
 - **Database**: `pgcli`/`mycli` for auto-completing SQL, `lazysql` for TUI, `sq` for cross-database queries
 - **File watching**: `watchexec` for running commands on file changes
 - **Shell scripting**: `gum` for interactive prompts/spinners, `nushell` for structured data pipelines
-- **Terminal**: `tmux` or `zellij` for multiplexing, `mpv` for video playback
+- **Terminal**: `zellij` for multiplexing, `mpv` for video playback
 
 ## Code Standards
 - Use TypeScript strict mode for all TS projects
@@ -7159,7 +7035,6 @@ echo "  [~/.ssh/config]         SSH multiplexing, keychain, keep-alive"
 echo "  [~/.gitignore_global]   Global gitignore (.DS_Store, .env, node_modules)"
 echo "  [~/.gitconfig]          Git aliases, rebase, delta, difftastic"
 echo "  [~/.gnupg/]             GPG with pinentry-mac"
-echo "  [~/.tmux.conf]          tmux with Dracula theme"
 echo "  [~/.npmrc]              save-exact, no telemetry"
 echo "  [~/.editorconfig]       Cross-editor consistency"
 echo "  [~/.prettierrc]         Global Prettier defaults"
@@ -7205,7 +7080,7 @@ echo "  - Color Picker (system-wide color picker)"
 echo ""
 info "Chezmoi quickstart (dotfile backup):"
 echo "  chezmoi init                          # Initialize"
-echo "  chezmoi add ~/.zshrc ~/.tmux.conf     # Track dotfiles"
+echo "  chezmoi add ~/.zshrc                  # Track dotfiles"
 echo "  chezmoi cd && git remote add origin <repo>  # Link to git repo"
 echo "  chezmoi update                        # Pull on new machine"
 echo ""
