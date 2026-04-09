@@ -64,7 +64,7 @@ All scripts share the same flags:
 3. Configures every tool with sensible defaults
 4. Applies the **Dracula** theme everywhere
 5. Sets macOS system defaults (Dock, keyboard, Finder, screenshots, wallpaper, screensaver, etc.)
-6. Configures Finder sidebar with custom favorites via **mysides**
+6. Configures Finder sidebar with custom favorites via **LSSharedFileList** API
 7. Clears Dock of default pins (start fresh, drag your own)
 8. Optionally **removes pre-installed Apple bloat** (GarageBand, News, Stocks, etc.)
 9. Auto-writes `~/.zshrc` with a managed block (preserves your customizations)
@@ -846,7 +846,7 @@ The script generates config files with sensible defaults:
 | **Safari** | Developer menu enabled, full URL in address bar |
 | **TextEdit** | Plain text default, UTF-8 encoding |
 | **Finder** | Hidden files visible, path bar, status bar, list view, folders first, no .DS_Store on network/USB, full POSIX path in title bar |
-| **Finder sidebar** | Configured via mysides (Code, Screenshots, Scripts, Documents, Reference, Creative, Media, Projects, Archive, Downloads) |
+| **Finder sidebar** | Configured via LSSharedFileList API (Code, Screenshots, Scripts, Documents, Reference, Creative, Media, Projects, Archive, Downloads) |
 | **Animations** | Reduced motion, fast window resize |
 | **Misc** | No quarantine dialog, battery %, Dracula purple highlight, expanded save/print panels |
 | **Touch ID** | Enabled for sudo -- use fingerprint instead of password in terminal |
