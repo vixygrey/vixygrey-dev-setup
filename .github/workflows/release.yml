@@ -1,0 +1,57 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Build and Release
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Extract version from tag
+        id: version
+        run: echo "version=${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
+
+      - name: Build platform zip files
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+
+          # macOS
+          mkdir -p build/macos
+          cp scripts/setup-dev-tools-mac.sh build/macos/
+          cp docs/GUIDE-MACOS.md build/macos/
+          cp docs/SHORTCUTS-MACOS.md build/macos/
+          cp README.md LICENSE build/macos/
+          cd build/macos && zip -r "../../vixygrey-dev-setup-macos-${VERSION}.zip" . && cd ../..
+
+          # Linux
+          mkdir -p build/linux
+          cp scripts/setup-dev-tools-linux.sh build/linux/
+          cp docs/GUIDE-LINUX.md build/linux/
+          cp docs/SHORTCUTS-LINUX.md build/linux/
+          cp README.md LICENSE build/linux/
+          cd build/linux && zip -r "../../vixygrey-dev-setup-linux-${VERSION}.zip" . && cd ../..
+
+          # Windows
+          mkdir -p build/windows
+          cp scripts/setup-dev-tools-windows.ps1 build/windows/
+          cp docs/GUIDE-WINDOWS.md build/windows/
+          cp docs/SHORTCUTS-WINDOWS.md build/windows/
+          cp README.md LICENSE build/windows/
+          cd build/windows && zip -r "../../vixygrey-dev-setup-windows-${VERSION}.zip" . && cd ../..
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          files: |
+            vixygrey-dev-setup-macos-${{ steps.version.outputs.version }}.zip
+            vixygrey-dev-setup-linux-${{ steps.version.outputs.version }}.zip
+            vixygrey-dev-setup-windows-${{ steps.version.outputs.version }}.zip
