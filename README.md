@@ -1,5 +1,16 @@
 # Development Environment Setup
 
+[![Lint](https://github.com/vixygrey/vixygrey-dev-setup/actions/workflows/lint.yml/badge.svg)](https://github.com/vixygrey/vixygrey-dev-setup/actions/workflows/lint.yml)
+[![Release](https://github.com/vixygrey/vixygrey-dev-setup/actions/workflows/release.yml/badge.svg)](https://github.com/vixygrey/vixygrey-dev-setup/actions/workflows/release.yml)
+[![GitHub release](https://img.shields.io/github/v/release/vixygrey/vixygrey-dev-setup?display_name=tag&sort=semver)](https://github.com/vixygrey/vixygrey-dev-setup/releases/latest)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+![macOS](https://img.shields.io/badge/macOS-supported-brightgreen)
+![Linux](https://img.shields.io/badge/Linux-supported-brightgreen)
+![Windows](https://img.shields.io/badge/Windows-supported-brightgreen)
+![ShellCheck](https://img.shields.io/badge/ShellCheck-passing-brightgreen)
+![Tools](https://img.shields.io/badge/tools-220%2B-purple)
+![Configs](https://img.shields.io/badge/configs-60%2B-purple)
+
 Three platform-specific scripts that install and configure **220+ tools** with **60+ config files** for development, GitHub, AWS/CDK, IaC, DX, UI/UX, security, backup, and daily productivity. Safe to re-run -- each skips anything already installed.
 
 | Platform | Script | Package Managers |
