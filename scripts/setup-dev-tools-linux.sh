@@ -87,8 +87,10 @@ progress() {
     local pct=$((INSTALL_CURRENT * 100 / INSTALL_TOTAL))
     [[ "$pct" -gt 100 ]] && pct=100
     local bar_len=$((pct / 2))
-    local bar=$(printf '█%.0s' $(seq 1 $bar_len 2>/dev/null) 2>/dev/null || echo "")
-    local spaces=$(printf ' %.0s' $(seq 1 $((50 - bar_len)) 2>/dev/null) 2>/dev/null || echo "")
+    local bar
+    bar=$(printf '█%.0s' $(seq 1 $bar_len 2>/dev/null) 2>/dev/null || echo "")
+    local spaces
+    spaces=$(printf ' %.0s' $(seq 1 $((50 - bar_len)) 2>/dev/null) 2>/dev/null || echo "")
     printf '\033[2K\r%s[%s%s%s%s] %d%% (%d/%d)%s\n' "$DIM" "$CYAN" "$bar" "$DIM" "$spaces" "$pct" "$INSTALL_CURRENT" "$INSTALL_TOTAL" "$NC"
 }
 
@@ -242,7 +244,7 @@ list_categories() {
     printf "  %-25s %s\n" "configs"             "All dotfiles and tool configurations"
     printf "  %-25s %s\n" "filesystem"          "Directory structure, helper scripts, git identity"
     printf "  %-25s %s\n" "linux-defaults"      "GNOME settings, DNS, keyboard repeat"
-    printf "  %-25s %s\n" "shell"               "~/.zshrc managed block"
+    printf "  %-25s %s\n" "shell"               "\$HOME/.zshrc managed block"
     echo ""
 }
 
@@ -417,7 +419,7 @@ pkg_install() {
     info "Installing $name..."
     case "$PKG_MANAGER" in
         apt)
-            if sudo apt-get install -y "$pkg" >> "$LOG_FILE" 2>&1; then
+            if sudo apt-get install -y "$pkg" 2>&1 | tee -a "$LOG_FILE" > /dev/null; then
                 success "$name installed"
                 mark_done "pkg:$name"
             else
@@ -426,7 +428,7 @@ pkg_install() {
             fi
             ;;
         dnf)
-            if sudo dnf install -y "$pkg" >> "$LOG_FILE" 2>&1; then
+            if sudo dnf install -y "$pkg" 2>&1 | tee -a "$LOG_FILE" > /dev/null; then
                 success "$name installed"
                 mark_done "pkg:$name"
             else
@@ -435,7 +437,7 @@ pkg_install() {
             fi
             ;;
         pacman)
-            if sudo pacman -S --noconfirm --needed "$pkg" >> "$LOG_FILE" 2>&1; then
+            if sudo pacman -S --noconfirm --needed "$pkg" 2>&1 | tee -a "$LOG_FILE" > /dev/null; then
                 success "$name installed"
                 mark_done "pkg:$name"
             else
@@ -475,7 +477,7 @@ snap_install() {
         info "Installing $name (snap)..."
         local -a snap_opts=()
         [[ "$classic" == "classic" ]] && snap_opts=(--classic)
-        if sudo snap install "$pkg" "${snap_opts[@]}" >> "$LOG_FILE" 2>&1; then
+        if sudo snap install "$pkg" "${snap_opts[@]}" 2>&1 | tee -a "$LOG_FILE" > /dev/null; then
             success "$name installed (snap)"
             mark_done "snap:$pkg"
         else
@@ -698,9 +700,9 @@ github_release_install() {
                 return 1
             fi
         elif [[ "$filename" == *.deb ]]; then
-            sudo dpkg -i "$tmp_dir/$filename" >> "$LOG_FILE" 2>&1 || sudo apt-get install -f -y >> "$LOG_FILE" 2>&1
+            sudo dpkg -i "$tmp_dir/$filename" 2>&1 | tee -a "$LOG_FILE" > /dev/null || sudo apt-get install -f -y 2>&1 | tee -a "$LOG_FILE" > /dev/null
         elif [[ "$filename" == *.rpm ]]; then
-            sudo rpm -i "$tmp_dir/$filename" >> "$LOG_FILE" 2>&1 || sudo dnf install -y "$tmp_dir/$filename" >> "$LOG_FILE" 2>&1
+            sudo rpm -i "$tmp_dir/$filename" 2>&1 | tee -a "$LOG_FILE" > /dev/null || sudo dnf install -y "$tmp_dir/$filename" 2>&1 | tee -a "$LOG_FILE" > /dev/null
         elif [[ "$filename" == *.zip ]]; then
             unzip -o "$tmp_dir/$filename" -d "$tmp_dir" >> "$LOG_FILE" 2>&1
             local found_bin
@@ -737,7 +739,7 @@ setup_docker_repo() {
                 sudo chmod a+r /etc/apt/keyrings/docker.gpg
                 echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/$DISTRO_ID $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | \
                     sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
-                sudo apt-get update >> "$LOG_FILE" 2>&1
+                sudo apt-get update 2>&1 | tee -a "$LOG_FILE" > /dev/null
             fi
             ;;
         dnf)
@@ -763,7 +765,7 @@ setup_github_cli_repo() {
                 sudo chmod go+r /etc/apt/keyrings/githubcli-archive-keyring.gpg
                 echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | \
                     sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null
-                sudo apt-get update >> "$LOG_FILE" 2>&1
+                sudo apt-get update 2>&1 | tee -a "$LOG_FILE" > /dev/null
             fi
             ;;
         dnf)
@@ -787,7 +789,7 @@ setup_brave_repo() {
                 sudo curl -fsSLo /usr/share/keyrings/brave-browser-archive-keyring.gpg https://brave-browser-apt-release.s3.brave.com/brave-browser-archive-keyring.gpg
                 echo "deb [signed-by=/usr/share/keyrings/brave-browser-archive-keyring.gpg] https://brave-browser-apt-release.s3.brave.com/ stable main" | \
                     sudo tee /etc/apt/sources.list.d/brave-browser-release.list > /dev/null
-                sudo apt-get update >> "$LOG_FILE" 2>&1
+                sudo apt-get update 2>&1 | tee -a "$LOG_FILE" > /dev/null
             fi
             ;;
         dnf)
@@ -814,7 +816,7 @@ setup_chrome_repo() {
                 fi
                 echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/google-chrome.gpg] https://dl.google.com/linux/chrome/deb/ stable main" | \
                     sudo tee /etc/apt/sources.list.d/google-chrome.list > /dev/null
-                sudo apt-get update >> "$LOG_FILE" 2>&1
+                sudo apt-get update 2>&1 | tee -a "$LOG_FILE" > /dev/null
             fi
             ;;
         dnf)
@@ -844,7 +846,7 @@ setup_vscode_repo() {
                 fi
                 echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/packages.microsoft.gpg] https://packages.microsoft.com/repos/code stable main" | \
                     sudo tee /etc/apt/sources.list.d/vscode.list > /dev/null
-                sudo apt-get update >> "$LOG_FILE" 2>&1
+                sudo apt-get update 2>&1 | tee -a "$LOG_FILE" > /dev/null
             fi
             ;;
         dnf)
@@ -883,7 +885,7 @@ setup_trivy_repo() {
                 fi
                 echo "deb [signed-by=/usr/share/keyrings/trivy.gpg] https://aquasecurity.github.io/trivy-repo/deb generic main" | \
                     sudo tee /etc/apt/sources.list.d/trivy.list > /dev/null
-                sudo apt-get update >> "$LOG_FILE" 2>&1
+                sudo apt-get update 2>&1 | tee -a "$LOG_FILE" > /dev/null
             fi
             ;;
         dnf)
@@ -932,7 +934,7 @@ preflight() {
     free_space=$(df -BG "$HOME" | tail -1 | awk '{print $4}' | tr -d 'G')
     if [[ "$free_space" -lt 15 ]]; then
         error "Low disk space: ${free_space}GB free (15GB+ recommended)"
-        read -p "Continue anyway? [y/N] " confirm
+        read -rp "Continue anyway? [y/N] " confirm
         [[ "$confirm" =~ ^[Yy]$ ]] || exit 1
     else
         success "Disk space: ${free_space}GB free"
@@ -1082,9 +1084,9 @@ if [[ "$CLEANUP" == "true" ]]; then
                     else
                         info "Removing $display (replaced by $replacement)..."
                         case "$PKG_MANAGER" in
-                            apt) sudo apt-get remove -y "$name" >> "$LOG_FILE" 2>&1 && success "$display removed" || error "Failed to remove $display" ;;
-                            dnf) sudo dnf remove -y "$name" >> "$LOG_FILE" 2>&1 && success "$display removed" || error "Failed to remove $display" ;;
-                            pacman) sudo pacman -R --noconfirm "$name" >> "$LOG_FILE" 2>&1 && success "$display removed" || error "Failed to remove $display" ;;
+                            apt) if sudo apt-get remove -y "$name" 2>&1 | tee -a "$LOG_FILE" > /dev/null; then success "$display removed"; else error "Failed to remove $display"; fi ;;
+                            dnf) if sudo dnf remove -y "$name" 2>&1 | tee -a "$LOG_FILE" > /dev/null; then success "$display removed"; else error "Failed to remove $display"; fi ;;
+                            pacman) if sudo pacman -R --noconfirm "$name" 2>&1 | tee -a "$LOG_FILE" > /dev/null; then success "$display removed"; else error "Failed to remove $display"; fi ;;
                         esac
                         ((CLEANUP_COUNT++))
                     fi
@@ -1098,7 +1100,7 @@ if [[ "$CLEANUP" == "true" ]]; then
                         info "[DRY RUN] Would remove: $display (replaced by $replacement)"
                     else
                         info "Removing $display (replaced by $replacement)..."
-                        sudo snap remove "$name" >> "$LOG_FILE" 2>&1 && success "$display removed" || error "Failed to remove $display"
+                        if sudo snap remove "$name" 2>&1 | tee -a "$LOG_FILE" > /dev/null; then success "$display removed"; else error "Failed to remove $display"; fi
                         ((CLEANUP_COUNT++))
                     fi
                 else
@@ -1111,7 +1113,7 @@ if [[ "$CLEANUP" == "true" ]]; then
                         info "[DRY RUN] Would remove: $display (replaced by $replacement)"
                     else
                         info "Removing $display (replaced by $replacement)..."
-                        flatpak uninstall -y "$name" >> "$LOG_FILE" 2>&1 && success "$display removed" || error "Failed to remove $display"
+                        if flatpak uninstall -y "$name" >> "$LOG_FILE" 2>&1; then success "$display removed"; else error "Failed to remove $display"; fi
                         ((CLEANUP_COUNT++))
                     fi
                 else
@@ -1139,9 +1141,9 @@ banner "Prerequisites"
 # Update package manager
 info "Updating package manager..."
 case "$PKG_MANAGER" in
-    apt) sudo apt-get update >> "$LOG_FILE" 2>&1 && success "apt updated" ;;
-    dnf) sudo dnf check-update >> "$LOG_FILE" 2>&1; success "dnf updated" ;;
-    pacman) sudo pacman -Syu --noconfirm >> "$LOG_FILE" 2>&1 && success "pacman synced" ;;
+    apt) sudo apt-get update 2>&1 | tee -a "$LOG_FILE" > /dev/null && success "apt updated" ;;
+    dnf) sudo dnf check-update 2>&1 | tee -a "$LOG_FILE" > /dev/null; success "dnf updated" ;;
+    pacman) sudo pacman -Syu --noconfirm 2>&1 | tee -a "$LOG_FILE" > /dev/null && success "pacman synced" ;;
 esac
 
 # Build essentials
@@ -1174,8 +1176,8 @@ fi
 if ! installed snap; then
     info "Installing snapd..."
     case "$PKG_MANAGER" in
-        apt) sudo apt-get install -y snapd >> "$LOG_FILE" 2>&1 && success "snapd installed" ;;
-        dnf) sudo dnf install -y snapd >> "$LOG_FILE" 2>&1 && sudo systemctl enable --now snapd.socket >> "$LOG_FILE" 2>&1 && success "snapd installed" ;;
+        apt) sudo apt-get install -y snapd 2>&1 | tee -a "$LOG_FILE" > /dev/null && success "snapd installed" ;;
+        dnf) sudo dnf install -y snapd 2>&1 | tee -a "$LOG_FILE" > /dev/null && sudo systemctl enable --now snapd.socket 2>&1 | tee -a "$LOG_FILE" > /dev/null && success "snapd installed" ;;
         pacman)
             info "snapd on Arch requires AUR — skipping auto-install"
             info "  Install manually: yay -S snapd && sudo systemctl enable --now snapd.socket"
@@ -1208,7 +1210,7 @@ fi
 if ! installed brew; then
     info "Installing Homebrew for Linux (Linuxbrew)..."
     if [[ "$DRY_RUN" != "true" ]]; then
-        local installer
+        installer
         installer="$(mktemp)"
         curl -fsSL "https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh" -o "$installer"
         if [[ ! -s "$installer" ]]; then
@@ -1246,7 +1248,7 @@ banner "Core Development"
 if ! installed mise; then
     info "Installing mise (universal version manager)..."
     if [[ "$DRY_RUN" != "true" ]]; then
-        local installer
+        installer
         installer="$(mktemp)"
         curl -fsSL "https://mise.run" -o "$installer"
         if [[ ! -s "$installer" ]]; then
@@ -1309,7 +1311,7 @@ pkg_install "python3-venv" "python3-virtualenv" "python-virtualenv" "Python venv
 if ! installed uv; then
     info "Installing uv (fast Python package manager)..."
     if [[ "$DRY_RUN" != "true" ]]; then
-        local installer
+        installer
         installer="$(mktemp)"
         curl -fLsSf https://astral.sh/uv/install.sh -o "$installer" 2>/dev/null
         if [[ ! -s "$installer" ]]; then
@@ -1332,7 +1334,7 @@ pkg_install "direnv" "direnv" "direnv" "direnv (per-project env vars)"
 if ! installed watchman; then
     info "Installing watchman..."
     if installed brew; then
-        brew install watchman >> "$LOG_FILE" 2>&1 && success "watchman installed (brew)" || warn "watchman install failed"
+        if brew install watchman >> "$LOG_FILE" 2>&1; then success "watchman installed (brew)"; else warn "watchman install failed"; fi
     else
         warn "watchman — install manually or via Linuxbrew"
     fi
@@ -1349,7 +1351,7 @@ if ! installed rustup; then
     if [[ "$DRY_RUN" == "true" ]]; then
         info "[DRY RUN] Would install: Rust via rustup"
     else
-        local installer
+        installer
         installer="$(mktemp)"
         curl --proto '=https' --tlsv1.2 -fsSL "https://sh.rustup.rs" -o "$installer"
         if [[ ! -s "$installer" ]]; then
@@ -1404,15 +1406,15 @@ fi
 
 # Enable docker service
 if [[ "$DRY_RUN" != "true" ]]; then
-    sudo systemctl enable docker >> "$LOG_FILE" 2>&1 || true
-    sudo systemctl start docker >> "$LOG_FILE" 2>&1 || true
+    sudo systemctl enable docker 2>&1 | tee -a "$LOG_FILE" > /dev/null || true
+    sudo systemctl start docker 2>&1 | tee -a "$LOG_FILE" > /dev/null || true
 fi
 
 # bun
 if ! installed bun; then
     info "Installing bun..."
     if [[ "$DRY_RUN" != "true" ]]; then
-        local installer
+        installer
         installer="$(mktemp)"
         curl -fsSL "https://bun.sh/install" -o "$installer"
         if [[ ! -s "$installer" ]]; then
@@ -1434,7 +1436,7 @@ fi
 if ! installed pnpm; then
     info "Installing pnpm..."
     if [[ "$DRY_RUN" != "true" ]]; then
-        local installer
+        installer
         installer="$(mktemp)"
         curl -fsSL https://get.pnpm.io/install.sh -o "$installer" 2>/dev/null
         if [[ ! -s "$installer" ]]; then
@@ -1478,7 +1480,9 @@ fi
 if ! installed code; then
     for code_path in /snap/bin/code /usr/share/code/bin/code /usr/bin/code; do
         if [[ -f "$code_path" ]]; then
-            export PATH="$(dirname "$code_path"):$PATH"
+            code_dir
+            code_dir="$(dirname "$code_path")"
+            export PATH="$code_dir:$PATH"
             break
         fi
     done
@@ -1580,9 +1584,11 @@ if ! installed aws; then
     if [[ "$DRY_RUN" != "true" ]]; then
         tmp_dir=$(mktemp -d)
         arch=$(uname -m)
-        curl -sL "https://awscli.amazonaws.com/awscli-exe-linux-${arch}.zip" -o "$tmp_dir/awscliv2.zip" >> "$LOG_FILE" 2>&1
-        unzip -o "$tmp_dir/awscliv2.zip" -d "$tmp_dir" >> "$LOG_FILE" 2>&1
-        sudo "$tmp_dir/aws/install" --update >> "$LOG_FILE" 2>&1
+        {
+            curl -sL "https://awscli.amazonaws.com/awscli-exe-linux-${arch}.zip" -o "$tmp_dir/awscliv2.zip"
+            unzip -o "$tmp_dir/awscliv2.zip" -d "$tmp_dir"
+        } >> "$LOG_FILE" 2>&1
+        sudo "$tmp_dir/aws/install" --update 2>&1 | tee -a "$LOG_FILE" > /dev/null
         rm -rf "$tmp_dir"
         success "AWS CLI v2 installed"
     fi
@@ -1609,11 +1615,11 @@ if ! installed session-manager-plugin; then
         case "$PKG_MANAGER" in
             apt)
                 curl -sL "https://s3.amazonaws.com/session-manager-downloads/plugin/latest/ubuntu_${arch}/session-manager-plugin.deb" -o "$tmp_dir/smp.deb" >> "$LOG_FILE" 2>&1
-                sudo dpkg -i "$tmp_dir/smp.deb" >> "$LOG_FILE" 2>&1 || true
+                sudo dpkg -i "$tmp_dir/smp.deb" 2>&1 | tee -a "$LOG_FILE" > /dev/null || true
                 ;;
             dnf)
                 curl -sL "https://s3.amazonaws.com/session-manager-downloads/plugin/latest/linux_${arch}/session-manager-plugin.rpm" -o "$tmp_dir/smp.rpm" >> "$LOG_FILE" 2>&1
-                sudo dnf install -y "$tmp_dir/smp.rpm" >> "$LOG_FILE" 2>&1 || true
+                sudo dnf install -y "$tmp_dir/smp.rpm" 2>&1 | tee -a "$LOG_FILE" > /dev/null || true
                 ;;
             pacman)
                 info "Session Manager Plugin on Arch — install from AUR: yay -S aws-session-manager-plugin"
@@ -1634,7 +1640,7 @@ if ! installed granted && ! installed assume; then
     if [[ "$DRY_RUN" != "true" ]]; then
         if installed brew; then
             brew tap common-fate/granted >> "$LOG_FILE" 2>&1 || true
-            brew install granted >> "$LOG_FILE" 2>&1 && success "Granted installed" || error "Failed to install Granted"
+            if brew install granted >> "$LOG_FILE" 2>&1; then success "Granted installed"; else error "Failed to install Granted"; fi
         else
             # Download from GitHub releases
             arch=$(uname -m)
@@ -1671,7 +1677,7 @@ if ! installed tofu; then
                 curl -fsSL https://get.opentofu.org/opentofu.gpg | sudo tee /etc/apt/keyrings/opentofu.gpg >/dev/null 2>&1
                 curl -fsSL https://packages.opentofu.org/opentofu/tofu/gpgkey | sudo gpg --no-tty --batch --dearmor -o /etc/apt/keyrings/opentofu-repo.gpg >/dev/null 2>&1
                 echo "deb [signed-by=/etc/apt/keyrings/opentofu.gpg,/etc/apt/keyrings/opentofu-repo.gpg] https://packages.opentofu.org/opentofu/tofu/any/ any main" | sudo tee /etc/apt/sources.list.d/opentofu.list > /dev/null 2>&1
-                sudo apt-get update >> "$LOG_FILE" 2>&1 || true
+                sudo apt-get update 2>&1 | tee -a "$LOG_FILE" > /dev/null || true
                 pkg_install "tofu" "-" "-" "OpenTofu (open-source Terraform)"
             fi
             ;;
@@ -1713,15 +1719,18 @@ if ! installed tflint; then
     else
         info "Installing tflint from GitHub releases..."
         if [[ "$DRY_RUN" != "true" ]]; then
-            local installer
+            installer
             installer="$(mktemp)"
             curl -fsSL "https://raw.githubusercontent.com/terraform-linters/tflint/master/install_linux.sh" -o "$installer"
             if [[ ! -s "$installer" ]]; then
                 error "Failed to download tflint installer"
                 rm -f "$installer"
             else
-                bash "$installer" >> "$LOG_FILE" 2>&1 && \
-                    success "tflint installed" || error "Failed to install tflint"
+                if bash "$installer" >> "$LOG_FILE" 2>&1; then
+                    success "tflint installed"
+                else
+                    error "Failed to install tflint"
+                fi
                 rm -f "$installer"
             fi
         fi
@@ -1738,7 +1747,7 @@ if ! installed infracost; then
     else
         info "Installing infracost from GitHub releases..."
         if [[ "$DRY_RUN" != "true" ]]; then
-            local installer
+            installer
             installer="$(mktemp)"
             curl -fsSL https://raw.githubusercontent.com/infracost/infracost/master/scripts/install.sh -o "$installer" 2>/dev/null
             if [[ ! -s "$installer" ]]; then
@@ -1746,8 +1755,11 @@ if ! installed infracost; then
                 rm -f "$installer"
                 return 1
             fi
-            sh "$installer" >> "$LOG_FILE" 2>&1 && \
-                success "infracost installed" || error "Failed to install infracost"
+            if sh "$installer" >> "$LOG_FILE" 2>&1; then
+                success "infracost installed"
+            else
+                error "Failed to install infracost"
+            fi
             rm -f "$installer"
         fi
     fi
@@ -1856,7 +1868,7 @@ if ! installed eza; then
             sudo mkdir -p /etc/apt/keyrings
             curl -fsSL https://raw.githubusercontent.com/eza-community/eza/main/deb.asc | sudo gpg --dearmor -o /etc/apt/keyrings/gierens.gpg 2>/dev/null || true
             echo "deb [signed-by=/etc/apt/keyrings/gierens.gpg] http://deb.gierens.de stable main" | sudo tee /etc/apt/sources.list.d/gierens.list > /dev/null 2>&1
-            sudo apt-get update >> "$LOG_FILE" 2>&1
+            sudo apt-get update 2>&1 | tee -a "$LOG_FILE" > /dev/null
             pkg_install "eza" "-" "-" "eza (replaces ls)"
             ;;
         dnf)
@@ -1896,7 +1908,7 @@ if ! installed zoxide; then
     case "$PKG_MANAGER" in
         apt|dnf)
             # zoxide not always in repos — use installer
-            local installer
+            installer
             installer="$(mktemp)"
             curl -fsSL https://raw.githubusercontent.com/ajeetdsouza/zoxide/main/install.sh -o "$installer" 2>/dev/null
             if [[ ! -s "$installer" ]]; then
@@ -1904,7 +1916,7 @@ if ! installed zoxide; then
                 rm -f "$installer"
                 cargo_install "zoxide" "zoxide (replaces cd)"
             else
-                bash "$installer" >> "$LOG_FILE" 2>&1 && success "zoxide installed" || cargo_install "zoxide" "zoxide (replaces cd)"
+                if bash "$installer" >> "$LOG_FILE" 2>&1; then success "zoxide installed"; else cargo_install "zoxide" "zoxide (replaces cd)"; fi
                 rm -f "$installer"
             fi
             ;;
@@ -2173,8 +2185,11 @@ if ! installed hadolint; then
                 aarch64) arch="arm64" ;;
             esac
             curl -sL "https://github.com/hadolint/hadolint/releases/latest/download/hadolint-Linux-${arch}" -o /tmp/hadolint >> "$LOG_FILE" 2>&1
-            sudo install /tmp/hadolint /usr/local/bin/hadolint >> "$LOG_FILE" 2>&1 && \
-                success "hadolint installed" || error "Failed to install hadolint"
+            if sudo install /tmp/hadolint /usr/local/bin/hadolint 2>&1 | tee -a "$LOG_FILE" > /dev/null; then
+                success "hadolint installed"
+            else
+                error "Failed to install hadolint"
+            fi
             rm -f /tmp/hadolint
         fi
     fi
@@ -2194,7 +2209,7 @@ if ! installed ruff; then
     else
         info "Installing ruff via standalone installer..."
         if [[ "$DRY_RUN" != "true" ]]; then
-            local installer
+            installer
             installer="$(mktemp)"
             curl -LsSf https://astral.sh/ruff/install.sh -o "$installer"
             if [[ ! -s "$installer" ]]; then
@@ -2202,8 +2217,11 @@ if ! installed ruff; then
                 rm -f "$installer"
                 return 1
             fi
-            sh "$installer" >> "$LOG_FILE" 2>&1 && \
-                success "ruff installed" || error "Failed to install ruff"
+            if sh "$installer" >> "$LOG_FILE" 2>&1; then
+                success "ruff installed"
+            else
+                error "Failed to install ruff"
+            fi
             rm -f "$installer"
         fi
     fi
@@ -2264,14 +2282,14 @@ cargo_install "miniserve" "miniserve (instant file server)"
 if ! installed caddy; then
     case "$PKG_MANAGER" in
         apt)
-            sudo apt-get install -y debian-keyring debian-archive-keyring apt-transport-https >> "$LOG_FILE" 2>&1 || true
+            sudo apt-get install -y debian-keyring debian-archive-keyring apt-transport-https 2>&1 | tee -a "$LOG_FILE" > /dev/null || true
             curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/gpg.key' | sudo gpg --dearmor -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg 2>/dev/null || true
             curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt' | sudo tee /etc/apt/sources.list.d/caddy-stable.list > /dev/null 2>&1
-            sudo apt-get update >> "$LOG_FILE" 2>&1
+            sudo apt-get update 2>&1 | tee -a "$LOG_FILE" > /dev/null
             pkg_install "caddy" "-" "-" "caddy (modern web server)"
             ;;
         dnf)
-            sudo dnf copr enable @caddy/caddy -y >> "$LOG_FILE" 2>&1 || true
+            sudo dnf copr enable @caddy/caddy -y 2>&1 | tee -a "$LOG_FILE" > /dev/null || true
             pkg_install "-" "caddy" "-" "caddy (modern web server)"
             ;;
         pacman)
@@ -2330,8 +2348,8 @@ if ! installed fastfetch; then
     case "$PKG_MANAGER" in
         apt)
             # Not always in default repos
-            sudo add-apt-repository ppa:zhangsongcui3371/fastfetch -y >> "$LOG_FILE" 2>&1 || true
-            sudo apt-get update >> "$LOG_FILE" 2>&1 || true
+            sudo add-apt-repository ppa:zhangsongcui3371/fastfetch -y 2>&1 | tee -a "$LOG_FILE" > /dev/null || true
+            sudo apt-get update 2>&1 | tee -a "$LOG_FILE" > /dev/null || true
             pkg_install "fastfetch" "-" "-" "fastfetch (system info display)"
             ;;
         dnf) pkg_install "-" "fastfetch" "-" "fastfetch (system info display)" ;;
@@ -2475,7 +2493,7 @@ if ! installed kubectl; then
             aarch64) arch="arm64" ;;
         esac
         curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/${arch}/kubectl" >> "$LOG_FILE" 2>&1
-        sudo install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl >> "$LOG_FILE" 2>&1
+        sudo install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl 2>&1 | tee -a "$LOG_FILE" > /dev/null
         rm -f kubectl
         success "kubectl installed"
     fi
@@ -2543,7 +2561,7 @@ pkg_install "fzf" "fzf" "fzf" "fzf (fuzzy finder)"
 if ! installed starship; then
     info "Installing Starship prompt..."
     if [[ "$DRY_RUN" != "true" ]]; then
-        local installer
+        installer
         installer="$(mktemp)"
         curl -fsSL https://starship.rs/install.sh -o "$installer" 2>/dev/null
         if [[ ! -s "$installer" ]]; then
@@ -2579,7 +2597,7 @@ esac
 if ! installed atuin; then
     info "Installing atuin (shell history)..."
     if [[ "$DRY_RUN" != "true" ]]; then
-        local installer
+        installer
         installer="$(mktemp)"
         curl --proto '=https' --tlsv1.2 -fLsSf https://setup.atuin.sh -o "$installer" 2>/dev/null
         if [[ ! -s "$installer" ]]; then
@@ -2610,7 +2628,7 @@ fi
 if ! installed zed; then
     info "Installing Zed editor..."
     if [[ "$DRY_RUN" != "true" ]]; then
-        local installer
+        installer
         installer="$(mktemp)"
         curl -fsSL https://zed.dev/install.sh -o "$installer" 2>/dev/null
         if [[ ! -s "$installer" ]]; then
@@ -2644,8 +2662,8 @@ cargo_install "zellij" "zellij (modern terminal multiplexer — discoverable UI,
 if ! installed ulauncher; then
     case "$PKG_MANAGER" in
         apt)
-            sudo add-apt-repository ppa:agornostal/ulauncher -y >> "$LOG_FILE" 2>&1 || true
-            sudo apt-get update >> "$LOG_FILE" 2>&1 || true
+            sudo add-apt-repository ppa:agornostal/ulauncher -y 2>&1 | tee -a "$LOG_FILE" > /dev/null || true
+            sudo apt-get update 2>&1 | tee -a "$LOG_FILE" > /dev/null || true
             pkg_install "ulauncher" "-" "-" "ulauncher (application launcher — Raycast alternative)"
             ;;
         dnf)
@@ -2749,14 +2767,14 @@ if ! installed d2; then
     if installed brew; then
         brew_install "d2" "d2 (code-to-diagram)"
     else
-        local installer
+        installer
         installer="$(mktemp)"
         curl -fsSL "https://d2lang.com/install.sh" -o "$installer" 2>/dev/null
         if [[ ! -s "$installer" ]]; then
             error "Failed to download d2 installer"
             rm -f "$installer"
         else
-            sh "$installer" >> "$LOG_FILE" 2>&1 && success "d2 installed" || error "Failed to install d2"
+            if sh "$installer" >> "$LOG_FILE" 2>&1; then success "d2 installed"; else error "Failed to install d2"; fi
             rm -f "$installer"
         fi
     fi
@@ -2868,14 +2886,14 @@ banner "Linux Apps — Cloud"
 if ! installed rclone; then
     info "Installing rclone (Google Drive / cloud storage mount)..."
     if [[ "$DRY_RUN" != "true" ]]; then
-        local installer
+        installer
         installer="$(mktemp)"
         curl -fsSL "https://rclone.org/install.sh" -o "$installer"
         if [[ ! -s "$installer" ]]; then
             error "Failed to download rclone installer"
             rm -f "$installer"
         else
-            sudo bash "$installer" >> "$LOG_FILE" 2>&1
+            sudo bash "$installer" 2>&1 | tee -a "$LOG_FILE" > /dev/null
             rm -f "$installer"
             success "rclone installed (configure: rclone config)"
         fi
@@ -2893,7 +2911,7 @@ if ! installed syncthing; then
                 sudo mkdir -p /etc/apt/keyrings 2>/dev/null || true
                 curl -fsSL https://syncthing.net/release-key.gpg | sudo gpg --dearmor -o /etc/apt/keyrings/syncthing-archive-keyring.gpg 2>/dev/null || true
                 echo "deb [signed-by=/etc/apt/keyrings/syncthing-archive-keyring.gpg] https://apt.syncthing.net/ syncthing stable" | sudo tee /etc/apt/sources.list.d/syncthing.list > /dev/null 2>&1
-                sudo apt-get update >> "$LOG_FILE" 2>&1 || true
+                sudo apt-get update 2>&1 | tee -a "$LOG_FILE" > /dev/null || true
                 pkg_install "syncthing" "-" "-" "Syncthing (real-time file sync)"
             fi
             ;;
@@ -4069,7 +4087,7 @@ if ! ls "$FONT_DIR"/*Inter* &>/dev/null; then
         curl -sL "https://github.com/rsms/inter/releases/download/v4.0/Inter-4.0.zip" -o "$tmp_dir/inter.zip" >> "$LOG_FILE" 2>&1 || true
         if [[ -f "$tmp_dir/inter.zip" ]]; then
             unzip -o "$tmp_dir/inter.zip" -d "$tmp_dir/inter" >> "$LOG_FILE" 2>&1
-            find "$tmp_dir/inter" -name "*.ttf" -o -name "*.otf" | xargs -I{} cp {} "$FONT_DIR/" 2>/dev/null || true
+            find "$tmp_dir/inter" \( -name "*.ttf" -o -name "*.otf" \) -print0 | xargs -0 -I{} cp {} "$FONT_DIR/" 2>/dev/null || true
         fi
         rm -rf "$tmp_dir"
     fi
@@ -4543,24 +4561,26 @@ fi
 
 # ---- ~/.hushlogin ----
 if [[ -f "$HOME/.hushlogin" ]]; then
-    warn "~/.hushlogin already exists"
+    warn "\$HOME/.hushlogin already exists"
 else
     touch "$HOME/.hushlogin"
-    success "~/.hushlogin created"
+    success "\$HOME/.hushlogin created"
 fi
 
 # ---- ~/.zprofile ----
 ZPROFILE="$HOME/.zprofile"
 if [[ -f "$ZPROFILE" ]]; then
-    warn "~/.zprofile already exists"
+    warn "\$HOME/.zprofile already exists"
 else
-    info "Creating ~/.zprofile..."
+    info "Creating \$HOME/.zprofile..."
     cat > "$ZPROFILE" <<'ZPROFILE_CONF'
 # =============================================================================
-# ~/.zprofile — login shell configuration (Linux)
+# ~/.zprofile — login shell configuration
 # =============================================================================
+# This runs ONCE on login (not on every subshell like .zshrc).
+# Put PATH modifications and env vars here that only need to be set once.
 
-# Linuxbrew
+# Homebrew on Linux (Linuxbrew)
 if [[ -f /home/linuxbrew/.linuxbrew/bin/brew ]]; then
     eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
 elif [[ -f "$HOME/.linuxbrew/bin/brew" ]]; then
@@ -4575,7 +4595,7 @@ export VISUAL="code --wait"
 export PAGER="bat --style=plain --paging=always"
 export MANPAGER="sh -c 'col -bx | bat -l man -p'"
 
-# Less
+# Less config (used by git, man, etc. when bat isn't available)
 export LESS="-R -F -X -i -J -M -W -x4"
 export LESSHISTFILE="$HOME/.local/share/lesshst"
 
@@ -4583,19 +4603,19 @@ export LESSHISTFILE="$HOME/.local/share/lesshst"
 export LANG="en_US.UTF-8"
 export LC_ALL="en_US.UTF-8"
 
-# XDG Base Directories
+# XDG Base Directories (standardize config locations)
 export XDG_CONFIG_HOME="$HOME/.config"
 export XDG_DATA_HOME="$HOME/.local/share"
 export XDG_CACHE_HOME="$HOME/.cache"
 export XDG_STATE_HOME="$HOME/.local/state"
 
-# Go
+# Go (only if installed)
 if command -v go &>/dev/null; then
     export GOPATH="$HOME/.local/share/go"
     export PATH="$GOPATH/bin:$PATH"
 fi
 
-# Rust
+# Rust (only if installed via rustup)
 if [[ -f "$HOME/.cargo/env" ]]; then
     source "$HOME/.cargo/env"
 fi
@@ -4606,24 +4626,60 @@ if [[ -d "$HOME/.bun" ]]; then
     export PATH="$BUN_INSTALL/bin:$PATH"
 fi
 
+# Increase max open files (Node.js/webpack/vite need many file handles)
+ulimit -n 65536 2>/dev/null || true
+
 # pnpm
-if [[ -d "$HOME/.local/share/pnpm" ]]; then
-    export PNPM_HOME="$HOME/.local/share/pnpm"
-    export PATH="$PNPM_HOME:$PATH"
+export PNPM_HOME="$HOME/.local/share/pnpm"
+case ":$PATH:" in
+  *":$PNPM_HOME:"*) ;;
+  *) export PATH="$PNPM_HOME:$PATH" ;;
+esac
+
+# Personal scripts
+export PATH="$HOME/Scripts/bin:$PATH"
+
+# ripgrep config
+export RIPGREP_CONFIG_PATH="$HOME/.ripgreprc"
+
+# GPG tty (required for commit signing)
+export GPG_TTY=$(tty 2>/dev/null || echo /dev/null)
+
+# mise (version manager — Node, Python, Go, etc.)
+# Activated here (not just .zshrc) so non-interactive login shells
+# (e.g. Claude Code, IDE terminals) also get managed tool shims.
+command -v mise &>/dev/null && eval "$(mise activate zsh)"
+
+# direnv
+command -v direnv &>/dev/null && eval "$(direnv hook zsh)"
+
+# Deduplicate PATH
+typeset -U PATH path
+ZPROFILE_CONF
+    success "\$HOME/.zprofile created (editor, pager, XDG, Go, Rust, bun, pnpm, mise, direnv)"
 fi
 
-# Local bin
-export PATH="$HOME/.local/bin:$PATH"
-ZPROFILE_CONF
-    success "~/.zprofile created"
+# ---- ~/.zshenv (every zsh invocation — interactive or not) ----
+ZSHENV="$HOME/.zshenv"
+if [[ -f "$ZSHENV" ]]; then
+    warn "$HOME/.zshenv already exists"
+else
+    info "Creating ~/.zshenv..."
+    cat > "$ZSHENV" <<'ZSHENV_CONF'
+# mise (version manager) — sourced by every zsh invocation (interactive,
+# non-interactive, login or not). This ensures tools like node/npx are
+# available in Claude Code, IDE terminals, and scripted shells.
+command -v mise &>/dev/null && eval "$(mise activate zsh)"
+ZSHENV_CONF
+    success "$HOME/.zshenv created (mise activation for all shell types)"
 fi
 
 # ---- ~/.vimrc ----
 VIMRC="$HOME/.vimrc"
 if [[ -f "$VIMRC" ]]; then
-    warn "~/.vimrc already exists"
+    warn "\$HOME/.vimrc already exists"
 else
-    info "Creating basic ~/.vimrc..."
+    info "Creating basic \$HOME/.vimrc..."
     cat > "$VIMRC" <<'VIM_CONF'
 set nocompatible
 syntax on
@@ -4656,15 +4712,15 @@ if !isdirectory($HOME . "/.vim/undodir")
 endif
 VIM_CONF
     mkdir -p "$HOME/.vim/undodir"
-    success "~/.vimrc created"
+    success "\$HOME/.vimrc created"
 fi
 
 # ---- ~/.nanorc ----
 NANORC="$HOME/.nanorc"
 if [[ -f "$NANORC" ]]; then
-    warn "~/.nanorc already exists"
+    warn "\$HOME/.nanorc already exists"
 else
-    info "Creating ~/.nanorc..."
+    info "Creating \$HOME/.nanorc..."
     cat > "$NANORC" <<'NANO_CONF'
 set linenumbers
 set constantshow
@@ -4680,7 +4736,7 @@ set softwrap
 set suspend
 include "/usr/share/nano/*.nanorc"
 NANO_CONF
-    success "~/.nanorc created"
+    success "\$HOME/.nanorc created"
 fi
 
 # ---- bat extended config ----
@@ -4717,7 +4773,7 @@ fi
 # ---- ripgrep config ----
 RIPGREPRC="$HOME/.ripgreprc"
 if [[ -f "$RIPGREPRC" ]]; then
-    warn "~/.ripgreprc already exists"
+    warn "\$HOME/.ripgreprc already exists"
 else
     info "Creating ripgrep configuration..."
     cat > "$RIPGREPRC" <<'RG_CONF'
@@ -4745,13 +4801,13 @@ else
 --type-add=doc:*.{md,mdx,txt,rst}
 --type-add=style:*.{css,scss,sass,less}
 RG_CONF
-    success "~/.ripgreprc configured"
+    success "\$HOME/.ripgreprc configured"
 fi
 
 # ---- fd ignore ----
 FDIGNORE="$HOME/.fdignore"
 if [[ -f "$FDIGNORE" ]]; then
-    warn "~/.fdignore already exists"
+    warn "\$HOME/.fdignore already exists"
 else
     info "Creating fd ignore patterns..."
     cat > "$FDIGNORE" <<'FD_CONF'
@@ -4770,7 +4826,7 @@ __pycache__/
 *.min.css
 .Trash/
 FD_CONF
-    success "~/.fdignore created"
+    success "\$HOME/.fdignore created"
 fi
 
 # ---- btop Dracula ----
@@ -5017,10 +5073,10 @@ fi
 # ---- gemrc ----
 GEMRC="$HOME/.gemrc"
 if [[ -f "$GEMRC" ]]; then
-    warn "~/.gemrc already exists"
+    warn "\$HOME/.gemrc already exists"
 else
     echo "gem: --no-document" > "$GEMRC"
-    success "~/.gemrc created"
+    success "\$HOME/.gemrc created"
 fi
 
 # ---- pgcli config ----
@@ -5051,7 +5107,7 @@ fi
 # ---- mycli config ----
 MYCLIRC="$HOME/.myclirc"
 if [[ -f "$MYCLIRC" ]]; then
-    warn "~/.myclirc already exists"
+    warn "\$HOME/.myclirc already exists"
 else
     info "Creating mycli configuration..."
     cat > "$MYCLIRC" <<'MYCLI_CONF'
@@ -5066,7 +5122,7 @@ smart_completion = True
 destructive_warning = True
 wider_completion_menu = True
 MYCLI_CONF
-    success "~/.myclirc configured"
+    success "\$HOME/.myclirc configured"
 fi
 
 # ---- yazi config ----
@@ -5911,31 +5967,44 @@ else
 - **Industry best practices** — follow established patterns, OWASP, 12-factor, SOLID, DRY
 
 ## Environment
-- Shell: zsh with starship prompt, atuin history, fzf fuzzy finder
+- Shell: zsh with starship prompt, atuin history, fzf fuzzy finder, zsh-autosuggestions, zsh-syntax-highlighting
 - Editor: VS Code / Zed (Dracula theme, JetBrains Mono)
-- Terminal: Alacritty / kitty / Ghostty (Dracula theme)
+- Terminal: Ghostty (Dracula theme)
 - Package managers: pnpm (preferred), npm, bun
 - Python: uv for packages (not pip), ruff for linting (not flake8/black)
+- JS/TS runtimes: Node (via mise), Bun, Deno
 - Version manager: mise (Node, Python, Go, Ruby — all in one)
-- Container runtime: Docker Engine
+- Container runtime: OrbStack (macOS — provides docker + kubectl), Docker Engine (Linux)
 - Task runner: just (prefer over make for project-level tasks)
+- Shell note: `bat` is aliased to `cat`; use `/bin/cat` only inside heredoc subshells where bat breaks syntax
+- Dotfiles: chezmoi
+- Launcher: Raycast
+- API client: Bruno
+- Database GUI: TablePlus
+- Proxy/debugger: mitmproxy
+- Tunneling: ngrok
 
 ## Available CLI Tools (use these instead of manual approaches)
 - **Search**: `rg` (ripgrep) for content, `fd` for files, `fzf` for interactive
-- **Data**: `jq` for JSON, `yq` for YAML, `mlr` for CSV, `fx`/`jnv` for interactive JSON
-- **Git**: `lazygit` for interactive UI, `delta` for diffs, `difft` for syntax-aware diffs, `git-cliff` for changelogs
+- **Data**: `jq` for JSON, `yq` for YAML, `mlr` for CSV, `fx`/`jnv` for interactive JSON, `csvkit` for CSV
+- **Git**: `lazygit` for interactive UI, `delta` for diffs, `difft` for syntax-aware diffs, `git-cliff` for changelogs, `git-absorb` for auto fixup commits, `git-lfs` for large files
 - **Docker**: `lazydocker` for UI, `dive` to inspect layers, `hadolint` for Dockerfile linting
 - **Testing**: `hyperfine` to benchmark, `oha` for load testing, `hurl` for HTTP test files, `act` for local GitHub Actions
 - **Code quality**: `typos` for spell checking, `ast-grep` for structural search/replace, `shellcheck`/`shfmt` for shell
-- **Security**: `trivy` to scan containers/IaC, `gitleaks` for secrets, `semgrep` for static analysis
-- **IaC**: `tofu` (Terraform), `tflint` for linting, `infracost` for cost estimation
-- **HTTP**: `xh` for colorized requests, `curlie` for curl with httpie output
-- **Network**: `trippy` for traceroute TUI, `mtr`, `bandwhich` for bandwidth
+- **Security**: `trivy` to scan containers/IaC, `gitleaks` for secrets, `semgrep` for static analysis, `snyk` for dependency scanning, `detect-secrets` for pre-commit secret detection, `sops` for secrets encryption
+- **IaC**: `tofu` (Terraform), `tflint` for linting, `infracost` for cost estimation, `cfn-lint` for CloudFormation, `aws-sam-cli` for SAM
+- **HTTP**: `xh` for colorized requests, `curlie` for curl with httpie output, `grpcurl` for gRPC
+- **Network**: `trip` (trippy) for traceroute TUI, `sudo mtr` (requires root, lives in sbin), `bandwhich` for bandwidth, `nmap` for scanning, `mkcert` for local TLS certs
 - **Docs**: `d2` for diagrams, `pandoc` for conversion, `glow` for Markdown preview
-- **Database**: `pgcli`/`mycli` for auto-completing SQL, `lazysql` for TUI, `sq` for cross-database queries
-- **File watching**: `watchexec` for running commands on file changes
-- **Shell scripting**: `gum` for interactive prompts/spinners, `nushell` for structured data pipelines
-- **Terminal**: `tmux` or `zellij` for multiplexing, `mpv` for video playback
+- **Database**: `pgcli`/`mycli` for auto-completing SQL, `lazysql` for TUI, `sq` for cross-database queries, `dbmate` for migrations
+- **File management**: `yazi` for TUI file manager, `watchexec` for running commands on file changes, `rclone` for cloud storage sync
+- **Kubernetes**: `k9s` for TUI, `stern` for log tailing (kubectl via OrbStack)
+- **AWS**: `granted`/`assume` for role switching
+- **Shell scripting**: `gum` for interactive prompts/spinners, `nushell` for structured data pipelines, `parallel` for parallel execution
+- **Terminal**: `tmux` or `zellij` for multiplexing, `mpv` for video playback, `asciinema` for recording
+- **Images/Media**: `imagemagick` for image processing, `oxipng` for PNG optimization, `yt-dlp` for video downloads
+- **Logs**: `lnav` for log file navigation
+- **Modern replacements** (aliased over defaults): `bat`→cat, `eza`→ls, `procs`→ps, `dust`→du, `duf`→df, `btop`→top, `trash`→rm, `gping`→ping, `doggo`→dig, `viddy`→watch, `aria2c`→wget, `sd`→sed
 
 ## Code Standards
 - Use TypeScript strict mode for all TS projects
@@ -5978,6 +6047,9 @@ else
 - Keep PRs small and focused (< 400 lines)
 - Include tests with feature PRs
 - Reference GitHub issues in PR descriptions (Closes #123)
+- **Never auto-push** — always show a commit/diff summary and wait for explicit "push" approval
+- Always `git pull --rebase` on main before creating any new branch
+- Always `git checkout main` after submitting a PR — feature branches are ephemeral
 - Use `git standup` to see yesterday's work
 - Use `git cleanup` to prune merged branches
 - Use `git recent` to see branches by last commit date
@@ -5989,7 +6061,9 @@ When asked to implement a feature or fix:
 3. Implement with small, atomic commits (conventional commit format)
 4. Push and create PR: `gh pr create --title "..." --body "Closes #<issue>"`
 5. PR body should include: Summary, Changes (bullet list), Test plan
-6. After approval, merge with: `gh pm` (squash + delete branch)
+6. Comment on the referenced issue linking to the PR
+7. Use `/bin/cat` (not `cat`) inside heredoc subshells for `gh pr create --body` and `gh issue create --body`
+8. After approval, merge with: `gh pm` (squash + delete branch)
 
 ## Issue Tracking
 - Create issues for bugs, features, chores, and tech debt
@@ -6024,6 +6098,8 @@ Every project should have a README.md with:
 - Handle errors explicitly — no silent catches
 - Use async/await over .then() chains
 - Use zod for runtime validation at API boundaries
+- Always choose the architecturally correct solution — no quick hacks, no type casts to bypass issues, no eslint-disable comments
+- When multiple valid implementation approaches exist, present the options and let the user choose
 
 ## Error Handling Patterns
 - **TypeScript**: Use Result types or discriminated unions for expected errors, throw for unexpected
@@ -6063,17 +6139,20 @@ Every project should have a README.md with:
 1. All tests pass (`npm test` / `pytest` / `cargo test`)
 2. Linting passes (`eslint .` / `ruff check .`)
 3. Formatting applied (`prettier --write .` / `ruff format .`)
-4. No secrets committed (`gitleaks detect`)
-5. Dependencies audited (`npm audit` / `uv pip audit`)
-6. README updated (if behavior changed)
-7. Types check (`tsc --noEmit` for TypeScript)
-8. Build succeeds (`npm run build`)
+4. Spell check passes (`typos .`)
+5. No secrets committed (`gitleaks detect`)
+6. Dependencies audited (`npm audit` / `uv pip audit`)
+7. README updated (if behavior changed)
+8. Types check (`tsc --noEmit` for TypeScript)
+9. Build succeeds (`npm run build`)
 
 ## Security Checks (run before PRs)
 - `gitleaks detect` — check for leaked secrets
 - `trivy fs .` — scan for vulnerabilities
 - `npm audit` / `uv pip audit` — dependency audit
 - `semgrep --config auto .` — static analysis
+- `snyk test` — dependency vulnerability scanning
+- `detect-secrets scan` — pre-commit secret detection
 CLAUDE_MD_CONF
     success "Claude Code global CLAUDE.md created"
 fi
@@ -6806,7 +6885,7 @@ count=$(find "$DIR" -maxdepth 1 -type f -mtime +"$DAYS" | wc -l | tr -d ' ')
 if [[ "$count" -eq 0 ]]; then echo "No files found."; exit 0; fi
 echo "Found $count files to delete:"
 find "$DIR" -maxdepth 1 -type f -mtime +"$DAYS" -exec basename {} \;
-read -p "Delete these $count files? [y/N] " confirm
+read -rp "Delete these $count files? [y/N] " confirm
 if [[ "$confirm" =~ ^[Yy]$ ]]; then
     find "$DIR" -maxdepth 1 -type f -mtime +"$DAYS" -exec trash-put {} \;
     echo "Moved $count files to Trash."
@@ -7008,7 +7087,7 @@ chezmoi re-add 2>/dev/null || true
 cd "$(chezmoi source-path)"
 if git diff --quiet && git diff --cached --quiet; then echo "No changes."; exit 0; fi
 git status --short
-read -p "Commit and push? [y/N] " confirm
+read -rp "Commit and push? [y/N] " confirm
 if [[ "$confirm" =~ ^[Yy]$ ]]; then
     git add -A && git commit -m "Update dotfiles — $(date +%Y-%m-%d)" && git push
     echo "Done."
@@ -7134,7 +7213,7 @@ else
 fi
 
 echo ""
-read -p "Add this key to GitHub? [y/N] " confirm
+read -rp "Add this key to GitHub? [y/N] " confirm
 if [[ "$confirm" =~ ^[Yy]$ ]]; then
     if command -v gh &>/dev/null; then
         TITLE="$(hostname) $(date +%Y-%m-%d)"
@@ -7202,7 +7281,7 @@ if [[ ! -f "$GITCONFIG_WORK" ]]; then
     # name = Your Name
     # email = you@company.com
 GIT_WORK
-    success "~/.gitconfig-work created"
+    success "\$HOME/.gitconfig-work created"
 fi
 
 if [[ ! -f "$GITCONFIG_PERSONAL" ]]; then
@@ -7211,7 +7290,7 @@ if [[ ! -f "$GITCONFIG_PERSONAL" ]]; then
     # name = Your Name
     # email = you@personal.com
 GIT_PERSONAL
-    success "~/.gitconfig-personal created"
+    success "\$HOME/.gitconfig-personal created"
 fi
 
 if ! git config --global --get "includeIf.gitdir:~/Code/work/.path" &>/dev/null; then
@@ -7309,7 +7388,7 @@ if [[ "$DRY_RUN" != "true" ]]; then
     fi
 
     # Start fresh with our curated list
-    > "$BOOKMARKS_FILE"
+    : > "$BOOKMARKS_FILE"
     for entry in "${BOOKMARK_DIRS[@]}"; do
         dir="${entry%%|*}"
         name="${entry##*|}"
@@ -7351,7 +7430,7 @@ if systemctl is-active systemd-resolved &>/dev/null; then
 DNS=1.1.1.1 1.0.0.1 9.9.9.9 8.8.8.8
 FallbackDNS=8.8.4.4
 DNS_CONF
-        sudo systemctl restart systemd-resolved >> "$LOG_FILE" 2>&1 || true
+        sudo systemctl restart systemd-resolved 2>&1 | tee -a "$LOG_FILE" > /dev/null || true
         success "DNS set to Cloudflare + Quad9 + Google"
     fi
 else
@@ -7722,16 +7801,16 @@ if [[ -f "$ZSHRC" ]]; then
         ' "$ZSHRC_BACKUP" > "$ZSHRC"
         echo "" >> "$ZSHRC"
         echo "$MANAGED_BLOCK" >> "$ZSHRC"
-        success "~/.zshrc managed block updated (backup: $ZSHRC_BACKUP)"
+        success "\$HOME/.zshrc managed block updated (backup: $ZSHRC_BACKUP)"
     else
-        info "Appending managed block to existing ~/.zshrc..."
+        info "Appending managed block to existing \$HOME/.zshrc..."
         cp "$ZSHRC" "$ZSHRC_BACKUP"
         echo "" >> "$ZSHRC"
         echo "$MANAGED_BLOCK" >> "$ZSHRC"
-        success "~/.zshrc updated (backup: $ZSHRC_BACKUP)"
+        success "\$HOME/.zshrc updated (backup: $ZSHRC_BACKUP)"
     fi
 else
-    info "Creating ~/.zshrc..."
+    info "Creating \$HOME/.zshrc..."
     cat > "$ZSHRC" <<'ZSHRC_HEADER'
 # =============================================================================
 # ~/.zshrc — generated by setup-dev-tools-linux.sh
@@ -7740,7 +7819,7 @@ else
 
 ZSHRC_HEADER
     echo "$MANAGED_BLOCK" >> "$ZSHRC"
-    success "~/.zshrc created"
+    success "\$HOME/.zshrc created"
 fi
 
 fi  # shell
@@ -7754,9 +7833,9 @@ banner "First-Run Setup"
 # ---- SSH Key Generation ----
 if [[ ! -f "$HOME/.ssh/id_ed25519" ]]; then
     echo ""
-    read -p "Generate an SSH key? [Y/n] " ssh_confirm
+    read -rp "Generate an SSH key? [Y/n] " ssh_confirm
     if [[ ! "$ssh_confirm" =~ ^[Nn]$ ]]; then
-        read -p "Email for SSH key: " ssh_email
+        read -rp "Email for SSH key: " ssh_email
         if [[ -n "$ssh_email" ]]; then
             mkdir -p "$HOME/.ssh"
             chmod 700 "$HOME/.ssh"
@@ -7774,13 +7853,13 @@ fi
 if installed gh; then
     if ! gh auth status &>/dev/null; then
         echo ""
-        read -p "Authenticate with GitHub? [Y/n] " gh_confirm
+        read -rp "Authenticate with GitHub? [Y/n] " gh_confirm
         if [[ ! "$gh_confirm" =~ ^[Nn]$ ]]; then
             info "Opening GitHub authentication..."
             gh auth login
             # Add SSH key to GitHub if it was just generated
             if [[ -f "$HOME/.ssh/id_ed25519.pub" ]]; then
-                read -p "Add SSH key to GitHub? [Y/n] " ssh_gh_confirm
+                read -rp "Add SSH key to GitHub? [Y/n] " ssh_gh_confirm
                 if [[ ! "$ssh_gh_confirm" =~ ^[Nn]$ ]]; then
                     gh ssh-key add "$HOME/.ssh/id_ed25519.pub" --title "$(hostname) $(date +%Y-%m-%d)"
                     success "SSH key added to GitHub"
@@ -7799,10 +7878,10 @@ GITCONFIG_PERSONAL="$HOME/.gitconfig-personal"
 # Work identity
 if [[ -f "$GITCONFIG_WORK" ]] && grep -q "^    # name = " "$GITCONFIG_WORK" 2>/dev/null; then
     echo ""
-    read -p "Set up your work git identity? [Y/n] " work_confirm
+    read -rp "Set up your work git identity? [Y/n] " work_confirm
     if [[ ! "$work_confirm" =~ ^[Nn]$ ]]; then
-        read -p "Work name: " work_name
-        read -p "Work email: " work_email
+        read -rp "Work name: " work_name
+        read -rp "Work email: " work_email
         if [[ -n "$work_name" ]] && [[ -n "$work_email" ]]; then
             cat > "$GITCONFIG_WORK" <<GIT_WORK_ID
 [user]
@@ -7817,10 +7896,10 @@ fi
 # Personal identity
 if [[ -f "$GITCONFIG_PERSONAL" ]] && grep -q "^    # name = " "$GITCONFIG_PERSONAL" 2>/dev/null; then
     echo ""
-    read -p "Set up your personal git identity? [Y/n] " personal_confirm
+    read -rp "Set up your personal git identity? [Y/n] " personal_confirm
     if [[ ! "$personal_confirm" =~ ^[Nn]$ ]]; then
-        read -p "Personal name: " personal_name
-        read -p "Personal email: " personal_email
+        read -rp "Personal name: " personal_name
+        read -rp "Personal email: " personal_email
         if [[ -n "$personal_name" ]] && [[ -n "$personal_email" ]]; then
             cat > "$GITCONFIG_PERSONAL" <<GIT_PERSONAL_ID
 [user]

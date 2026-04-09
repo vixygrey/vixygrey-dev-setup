@@ -95,8 +95,10 @@ progress() {
     local pct=$((INSTALL_CURRENT * 100 / INSTALL_TOTAL))
     [[ "$pct" -gt 100 ]] && pct=100
     local bar_len=$((pct / 2))
-    local bar=$(printf '█%.0s' $(seq 1 $bar_len 2>/dev/null) 2>/dev/null || echo "")
-    local spaces=$(printf ' %.0s' $(seq 1 $((50 - bar_len)) 2>/dev/null) 2>/dev/null || echo "")
+    local bar
+    bar=$(printf '█%.0s' $(seq 1 $bar_len 2>/dev/null) 2>/dev/null || echo "")
+    local spaces
+    spaces=$(printf ' %.0s' $(seq 1 $((50 - bar_len)) 2>/dev/null) 2>/dev/null || echo "")
     # In-place progress bar — stays on current line, overwritten by next status message
     printf '\033[2K\r%s[%s%s%s%s] %d%% (%d/%d)%s' "$DIM" "$CYAN" "$bar" "$DIM" "$spaces" "$pct" "$INSTALL_CURRENT" "$INSTALL_TOTAL" "$NC"
 }
@@ -254,7 +256,7 @@ list_categories() {
     printf "  %-25s %s\n" "configs"             "All dotfiles and tool configurations"
     printf "  %-25s %s\n" "filesystem"          "Directory structure, helper scripts, git identity"
     printf "  %-25s %s\n" "macos-defaults"      "Dock, Finder, keyboard, screenshots, Touch ID, DNS"
-    printf "  %-25s %s\n" "shell"               "~/.zshrc, Brewfile export"
+    printf "  %-25s %s\n" "shell"               "$HOME/.zshrc, Brewfile export"
     echo ""
 }
 
@@ -463,7 +465,7 @@ preflight() {
     if [[ "$macos_major" -lt 13 ]]; then
         error "macOS 13 (Ventura) or later required. You have: $macos_version"
         echo "  Some tools may not work on older versions."
-        read -p "Continue anyway? [y/N] " confirm
+        read -r -p "Continue anyway? [y/N] " confirm
         [[ "$confirm" =~ ^[Yy]$ ]] || exit 1
     else
         success "macOS $macos_version detected"
@@ -493,7 +495,7 @@ preflight() {
     fi
     if [[ -n "$free_space" ]] && [[ "$free_space" -lt 15 ]]; then
         error "Low disk space: ${free_space}GB free (15GB+ recommended)"
-        read -p "Continue anyway? [y/N] " confirm
+        read -r -p "Continue anyway? [y/N] " confirm
         [[ "$confirm" =~ ^[Yy]$ ]] || exit 1
     else
         success "Disk space: ${free_space:-unknown}GB free"
@@ -712,7 +714,7 @@ if [[ "$CLEANUP" == "true" ]]; then
                         info "[DRY RUN] Would remove: $display (replaced by $replacement)"
                     else
                         info "Removing $display (replaced by $replacement)..."
-                        brew uninstall "$name" >> "$LOG_FILE" 2>&1 && success "$display removed" || error "Failed to remove $display"
+                        if brew uninstall "$name" >> "$LOG_FILE" 2>&1; then success "$display removed"; else error "Failed to remove $display"; fi
                         ((CLEANUP_COUNT++))
                     fi
                 else
@@ -725,7 +727,7 @@ if [[ "$CLEANUP" == "true" ]]; then
                         info "[DRY RUN] Would remove: $display (replaced by $replacement)"
                     else
                         info "Removing $display (replaced by $replacement)..."
-                        brew uninstall --cask "$name" >> "$LOG_FILE" 2>&1 && success "$display removed" || error "Failed to remove $display"
+                        if brew uninstall --cask "$name" >> "$LOG_FILE" 2>&1; then success "$display removed"; else error "Failed to remove $display"; fi
                         ((CLEANUP_COUNT++))
                     fi
                 else
@@ -786,7 +788,6 @@ fi
 # -----------------------------------------------------------------------------
 if ! installed brew; then
     info "Installing Homebrew..."
-    local installer
     installer="$(mktemp)"
     curl -fsSL "https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh" -o "$installer"
     if [[ ! -s "$installer" ]]; then
@@ -3423,16 +3424,16 @@ fi  # macos-defaults
 
 # ---- ~/.hushlogin (suppress "Last login" message) ----
 if [[ -f "$HOME/.hushlogin" ]]; then
-    warn "~/.hushlogin already exists"
+    warn "$HOME/.hushlogin already exists"
 else
     touch "$HOME/.hushlogin"
-    success "~/.hushlogin created (suppresses 'Last login' in terminal)"
+    success "$HOME/.hushlogin created (suppresses 'Last login' in terminal)"
 fi
 
 # ---- ~/.zprofile (login shell — PATH set once, not on every subshell) ----
 ZPROFILE="$HOME/.zprofile"
 if [[ -f "$ZPROFILE" ]]; then
-    warn "~/.zprofile already exists"
+    warn "$HOME/.zprofile already exists"
 else
     info "Creating ~/.zprofile..."
     cat > "$ZPROFILE" <<'ZPROFILE_CONF'
@@ -3488,14 +3489,69 @@ fi
 
 # Increase max open files (Node.js/webpack/vite need many file handles)
 ulimit -n 65536 2>/dev/null || true
+
+# pnpm
+export PNPM_HOME="$HOME/Library/pnpm"
+case ":$PATH:" in
+  *":$PNPM_HOME:"*) ;;
+  *) export PATH="$PNPM_HOME:$PATH" ;;
+esac
+
+# Personal scripts
+export PATH="$HOME/Scripts/bin:$PATH"
+
+# ripgrep config
+export RIPGREP_CONFIG_PATH="$HOME/.ripgreprc"
+
+# GPG tty (required for commit signing)
+export GPG_TTY=$(tty 2>/dev/null || echo /dev/null)
+
+# GNU coreutils (Linux-compatible versions)
+if [[ -x /opt/homebrew/bin/brew ]]; then
+    for _pkg in coreutils gnu-sed gnu-tar gawk findutils; do
+        _gnubin="$(/opt/homebrew/bin/brew --prefix "$_pkg" 2>/dev/null)/libexec/gnubin"
+        [[ -d "$_gnubin" ]] && export PATH="$_gnubin:$PATH"
+    done
+    unset _pkg _gnubin
+fi
+
+# mise (version manager — Node, Python, Go, etc.)
+# Activated here (not just .zshrc) so non-interactive login shells
+# (e.g. Claude Code, IDE terminals) also get managed tool shims.
+command -v mise &>/dev/null && eval "$(mise activate zsh)"
+
+# direnv
+command -v direnv &>/dev/null && eval "$(direnv hook zsh)"
+
+# Deduplicate PATH
+typeset -U PATH path
+
+# Added by OrbStack: command-line tools and integration
+# This won't be added again if you remove it.
+source ~/.orbstack/shell/init.zsh 2>/dev/null || :
 ZPROFILE_CONF
-    success "~/.zprofile created (editor, pager, LESS, XDG, language)"
+    success "$HOME/.zprofile created (editor, pager, XDG, Go, Rust, bun, pnpm, mise, direnv, OrbStack)"
+fi
+
+# ---- ~/.zshenv (every zsh invocation — interactive or not) ----
+ZSHENV="$HOME/.zshenv"
+if [[ -f "$ZSHENV" ]]; then
+    warn "$HOME/.zshenv already exists"
+else
+    info "Creating ~/.zshenv..."
+    cat > "$ZSHENV" <<'ZSHENV_CONF'
+# mise (version manager) — sourced by every zsh invocation (interactive,
+# non-interactive, login or not). This ensures tools like node/npx are
+# available in Claude Code, IDE terminals, and scripted shells.
+command -v mise &>/dev/null && eval "$(mise activate zsh)"
+ZSHENV_CONF
+    success "$HOME/.zshenv created (mise activation for all shell types)"
 fi
 
 # ---- ~/.vimrc (basic vim config for server editing) ----
 VIMRC="$HOME/.vimrc"
 if [[ -f "$VIMRC" ]]; then
-    warn "~/.vimrc already exists"
+    warn "$HOME/.vimrc already exists"
 else
     info "Creating basic ~/.vimrc..."
     cat > "$VIMRC" <<'VIM_CONF'
@@ -3600,13 +3656,13 @@ if !isdirectory($HOME . "/.vim/undodir")
 endif
 VIM_CONF
     mkdir -p "$HOME/.vim/undodir"
-    success "~/.vimrc created (line numbers, clipboard, mouse, Dracula colors, space leader)"
+    success "$HOME/.vimrc created (line numbers, clipboard, mouse, Dracula colors, space leader)"
 fi
 
 # ---- ~/.nanorc (better nano for quick edits) ----
 NANORC="$HOME/.nanorc"
 if [[ -f "$NANORC" ]]; then
-    warn "~/.nanorc already exists"
+    warn "$HOME/.nanorc already exists"
 else
     info "Creating ~/.nanorc..."
     cat > "$NANORC" <<'NANO_CONF'
@@ -3653,7 +3709,7 @@ include "PLACEHOLDER_BREW_PREFIX/share/nano/*.nanorc"
 NANO_CONF
     # Replace placeholder with actual brew prefix
     /usr/bin/sed -i '' "s|PLACEHOLDER_BREW_PREFIX|$(brew --prefix)|g" "$NANORC"
-    success "~/.nanorc created (line numbers, auto-indent, mouse, syntax highlighting)"
+    success "$HOME/.nanorc created (line numbers, auto-indent, mouse, syntax highlighting)"
 fi
 
 # ---- bat extended config (file type mappings) ----
@@ -3844,7 +3900,7 @@ fi
 # ---- ripgrep config ----
 RIPGREPRC="$HOME/.ripgreprc"
 if [[ -f "$RIPGREPRC" ]]; then
-    warn "~/.ripgreprc already exists"
+    warn "$HOME/.ripgreprc already exists"
 else
     info "Creating ripgrep configuration..."
     cat > "$RIPGREPRC" <<'RG_CONF'
@@ -3883,13 +3939,13 @@ else
 --type-add=doc:*.{md,mdx,txt,rst}
 --type-add=style:*.{css,scss,sass,less}
 RG_CONF
-    success "~/.ripgreprc configured (smart-case, hidden files, custom types)"
+    success "$HOME/.ripgreprc configured (smart-case, hidden files, custom types)"
 fi
 
 # ---- fd ignore ----
 FDIGNORE="$HOME/.fdignore"
 if [[ -f "$FDIGNORE" ]]; then
-    warn "~/.fdignore already exists"
+    warn "$HOME/.fdignore already exists"
 else
     info "Creating fd ignore patterns..."
     cat > "$FDIGNORE" <<'FD_CONF'
@@ -3910,7 +3966,7 @@ __pycache__/
 .DS_Store
 .Trash/
 FD_CONF
-    success "~/.fdignore created"
+    success "$HOME/.fdignore created"
 fi
 
 # ---- btop Dracula theme ----
@@ -4216,14 +4272,14 @@ fi
 # ---- gemrc (Ruby) ----
 GEMRC="$HOME/.gemrc"
 if [[ -f "$GEMRC" ]]; then
-    warn "~/.gemrc already exists"
+    warn "$HOME/.gemrc already exists"
 else
     info "Creating gemrc..."
     cat > "$GEMRC" <<'GEM_CONF'
 # Skip documentation when installing gems (saves time and disk)
 gem: --no-document
 GEM_CONF
-    success "~/.gemrc created (no docs on gem install)"
+    success "$HOME/.gemrc created (no docs on gem install)"
 fi
 
 # ---- pgcli config ----
@@ -4273,7 +4329,7 @@ fi
 # ---- mycli config ----
 MYCLIRC="$HOME/.myclirc"
 if [[ -f "$MYCLIRC" ]]; then
-    warn "~/.myclirc already exists"
+    warn "$HOME/.myclirc already exists"
 else
     info "Creating mycli configuration..."
     cat > "$MYCLIRC" <<'MYCLI_CONF'
@@ -4309,7 +4365,7 @@ history_file = ~/.mycli-history
 # Wider output before wrapping
 wider_completion_menu = True
 MYCLI_CONF
-    success "~/.myclirc configured (multi-line, auto-expand, destructive warnings)"
+    success "$HOME/.myclirc configured (multi-line, auto-expand, destructive warnings)"
 fi
 
 # ---- yazi config ----
@@ -5316,7 +5372,7 @@ GITCONFIG_WORK="$HOME/.gitconfig-work"
 GITCONFIG_PERSONAL="$HOME/.gitconfig-personal"
 
 if [[ -f "$GITCONFIG_WORK" ]]; then
-    warn "~/.gitconfig-work already exists"
+    warn "$HOME/.gitconfig-work already exists"
 else
     cat > "$GITCONFIG_WORK" <<'GIT_WORK'
 # Git config for work projects (~/Code/work/)
@@ -5328,11 +5384,11 @@ else
 # [commit]
 #     gpgsign = true
 GIT_WORK
-    success "~/.gitconfig-work created (fill in your work email)"
+    success "$HOME/.gitconfig-work created (fill in your work email)"
 fi
 
 if [[ -f "$GITCONFIG_PERSONAL" ]]; then
-    warn "~/.gitconfig-personal already exists"
+    warn "$HOME/.gitconfig-personal already exists"
 else
     cat > "$GITCONFIG_PERSONAL" <<'GIT_PERSONAL'
 # Git config for personal projects (~/Code/personal/)
@@ -5344,7 +5400,7 @@ else
 # [commit]
 #     gpgsign = true
 GIT_PERSONAL
-    success "~/.gitconfig-personal created (fill in your personal email)"
+    success "$HOME/.gitconfig-personal created (fill in your personal email)"
 fi
 
 # Register includeIf directives in global gitconfig
@@ -5924,31 +5980,44 @@ else
 - **Industry best practices** — follow established patterns, OWASP, 12-factor, SOLID, DRY
 
 ## Environment
-- Shell: zsh with starship prompt, atuin history, fzf fuzzy finder
+- Shell: zsh with starship prompt, atuin history, fzf fuzzy finder, zsh-autosuggestions, zsh-syntax-highlighting
 - Editor: VS Code / Zed (Dracula theme, JetBrains Mono)
 - Terminal: Ghostty (Dracula theme)
 - Package managers: pnpm (preferred), npm, bun
 - Python: uv for packages (not pip), ruff for linting (not flake8/black)
+- JS/TS runtimes: Node (via mise), Bun, Deno
 - Version manager: mise (Node, Python, Go, Ruby — all in one)
-- Container runtime: OrbStack (macOS), Docker Engine (Linux)
+- Container runtime: OrbStack (macOS — provides docker + kubectl), Docker Engine (Linux)
 - Task runner: just (prefer over make for project-level tasks)
+- Shell note: `bat` is aliased to `cat`; use `/bin/cat` only inside heredoc subshells where bat breaks syntax
+- Dotfiles: chezmoi
+- Launcher: Raycast
+- API client: Bruno
+- Database GUI: TablePlus
+- Proxy/debugger: mitmproxy
+- Tunneling: ngrok
 
 ## Available CLI Tools (use these instead of manual approaches)
 - **Search**: `rg` (ripgrep) for content, `fd` for files, `fzf` for interactive
-- **Data**: `jq` for JSON, `yq` for YAML, `mlr` for CSV, `fx`/`jnv` for interactive JSON
-- **Git**: `lazygit` for interactive UI, `delta` for diffs, `difft` for syntax-aware diffs, `git-cliff` for changelogs
+- **Data**: `jq` for JSON, `yq` for YAML, `mlr` for CSV, `fx`/`jnv` for interactive JSON, `csvkit` for CSV
+- **Git**: `lazygit` for interactive UI, `delta` for diffs, `difft` for syntax-aware diffs, `git-cliff` for changelogs, `git-absorb` for auto fixup commits, `git-lfs` for large files
 - **Docker**: `lazydocker` for UI, `dive` to inspect layers, `hadolint` for Dockerfile linting
 - **Testing**: `hyperfine` to benchmark, `oha` for load testing, `hurl` for HTTP test files, `act` for local GitHub Actions
 - **Code quality**: `typos` for spell checking, `ast-grep` for structural search/replace, `shellcheck`/`shfmt` for shell
-- **Security**: `trivy` to scan containers/IaC, `gitleaks` for secrets, `semgrep` for static analysis
-- **IaC**: `tofu` (Terraform), `tflint` for linting, `infracost` for cost estimation
-- **HTTP**: `xh` for colorized requests, `curlie` for curl with httpie output
-- **Network**: `trippy` for traceroute TUI, `mtr`, `bandwhich` for bandwidth
+- **Security**: `trivy` to scan containers/IaC, `gitleaks` for secrets, `semgrep` for static analysis, `snyk` for dependency scanning, `detect-secrets` for pre-commit secret detection, `sops` for secrets encryption
+- **IaC**: `tofu` (Terraform), `tflint` for linting, `infracost` for cost estimation, `cfn-lint` for CloudFormation, `aws-sam-cli` for SAM
+- **HTTP**: `xh` for colorized requests, `curlie` for curl with httpie output, `grpcurl` for gRPC
+- **Network**: `trip` (trippy) for traceroute TUI, `sudo mtr` (requires root, lives in sbin), `bandwhich` for bandwidth, `nmap` for scanning, `mkcert` for local TLS certs
 - **Docs**: `d2` for diagrams, `pandoc` for conversion, `glow` for Markdown preview
-- **Database**: `pgcli`/`mycli` for auto-completing SQL, `lazysql` for TUI, `sq` for cross-database queries
-- **File watching**: `watchexec` for running commands on file changes
-- **Shell scripting**: `gum` for interactive prompts/spinners, `nushell` for structured data pipelines
-- **Terminal**: `zellij` for multiplexing, `mpv` for video playback
+- **Database**: `pgcli`/`mycli` for auto-completing SQL, `lazysql` for TUI, `sq` for cross-database queries, `dbmate` for migrations
+- **File management**: `yazi` for TUI file manager, `watchexec` for running commands on file changes, `rclone` for cloud storage sync
+- **Kubernetes**: `k9s` for TUI, `stern` for log tailing (kubectl via OrbStack)
+- **AWS**: `granted`/`assume` for role switching
+- **Shell scripting**: `gum` for interactive prompts/spinners, `nushell` for structured data pipelines, `parallel` for parallel execution
+- **Terminal**: `tmux` or `zellij` for multiplexing, `mpv` for video playback, `asciinema` for recording
+- **Images/Media**: `imagemagick` for image processing, `oxipng` for PNG optimization, `yt-dlp` for video downloads
+- **Logs**: `lnav` for log file navigation
+- **Modern replacements** (aliased over defaults): `bat`→cat, `eza`→ls, `procs`→ps, `dust`→du, `duf`→df, `btop`→top, `trash`→rm, `gping`→ping, `doggo`→dig, `viddy`→watch, `aria2c`→wget, `sd`→sed
 
 ## Code Standards
 - Use TypeScript strict mode for all TS projects
@@ -5991,6 +6060,9 @@ else
 - Keep PRs small and focused (< 400 lines)
 - Include tests with feature PRs
 - Reference GitHub issues in PR descriptions (Closes #123)
+- **Never auto-push** — always show a commit/diff summary and wait for explicit "push" approval
+- Always `git pull --rebase` on main before creating any new branch
+- Always `git checkout main` after submitting a PR — feature branches are ephemeral
 - Use `git standup` to see yesterday's work
 - Use `git cleanup` to prune merged branches
 - Use `git recent` to see branches by last commit date
@@ -6002,7 +6074,9 @@ When asked to implement a feature or fix:
 3. Implement with small, atomic commits (conventional commit format)
 4. Push and create PR: `gh pr create --title "..." --body "Closes #<issue>"`
 5. PR body should include: Summary, Changes (bullet list), Test plan
-6. After approval, merge with: `gh pm` (squash + delete branch)
+6. Comment on the referenced issue linking to the PR
+7. Use `/bin/cat` (not `cat`) inside heredoc subshells for `gh pr create --body` and `gh issue create --body`
+8. After approval, merge with: `gh pm` (squash + delete branch)
 
 ## Issue Tracking
 - Create issues for bugs, features, chores, and tech debt
@@ -6037,6 +6111,8 @@ Every project should have a README.md with:
 - Handle errors explicitly — no silent catches
 - Use async/await over .then() chains
 - Use zod for runtime validation at API boundaries
+- Always choose the architecturally correct solution — no quick hacks, no type casts to bypass issues, no eslint-disable comments
+- When multiple valid implementation approaches exist, present the options and let the user choose
 
 ## Error Handling Patterns
 - **TypeScript**: Use Result types or discriminated unions for expected errors, throw for unexpected
@@ -6088,6 +6164,8 @@ Every project should have a README.md with:
 - `trivy fs .` — scan for vulnerabilities
 - `npm audit` / `uv pip audit` — dependency audit
 - `semgrep --config auto .` — static analysis
+- `snyk test` — dependency vulnerability scanning
+- `detect-secrets scan` — pre-commit secret detection
 CLAUDE_MD_CONF
     success "Claude Code global CLAUDE.md created"
 fi
@@ -6987,13 +7065,13 @@ if [[ -f "$ZSHRC" ]]; then
         ' "$ZSHRC_BACKUP" > "$ZSHRC"
         echo "" >> "$ZSHRC"
         echo "$MANAGED_BLOCK" >> "$ZSHRC"
-        success "~/.zshrc managed block updated (backup: $ZSHRC_BACKUP)"
+        success "$HOME/.zshrc managed block updated (backup: $ZSHRC_BACKUP)"
     else
         info "Appending managed block to existing ~/.zshrc..."
         cp "$ZSHRC" "$ZSHRC_BACKUP"
         echo "" >> "$ZSHRC"
         echo "$MANAGED_BLOCK" >> "$ZSHRC"
-        success "~/.zshrc updated (backup: $ZSHRC_BACKUP)"
+        success "$HOME/.zshrc updated (backup: $ZSHRC_BACKUP)"
     fi
 else
     info "Creating ~/.zshrc..."
@@ -7005,7 +7083,7 @@ else
 
 ZSHRC_HEADER
     echo "$MANAGED_BLOCK" >> "$ZSHRC"
-    success "~/.zshrc created"
+    success "$HOME/.zshrc created"
 fi
 
 fi  # shell
@@ -7112,9 +7190,9 @@ banner "First-Run Setup"
 # ---- SSH Key Generation ----
 if [[ ! -f "$HOME/.ssh/id_ed25519" ]]; then
     echo ""
-    read -p "Generate an SSH key? [Y/n] " ssh_confirm
+    read -r -p "Generate an SSH key? [Y/n] " ssh_confirm
     if [[ ! "$ssh_confirm" =~ ^[Nn]$ ]]; then
-        read -p "Email for SSH key: " ssh_email
+        read -r -p "Email for SSH key: " ssh_email
         if [[ -n "$ssh_email" ]]; then
             mkdir -p "$HOME/.ssh"
             chmod 700 "$HOME/.ssh"
@@ -7132,13 +7210,13 @@ fi
 if installed gh; then
     if ! gh auth status &>/dev/null; then
         echo ""
-        read -p "Authenticate with GitHub? [Y/n] " gh_confirm
+        read -r -p "Authenticate with GitHub? [Y/n] " gh_confirm
         if [[ ! "$gh_confirm" =~ ^[Nn]$ ]]; then
             info "Opening GitHub authentication..."
             gh auth login
             # Add SSH key to GitHub if it was just generated
             if [[ -f "$HOME/.ssh/id_ed25519.pub" ]]; then
-                read -p "Add SSH key to GitHub? [Y/n] " ssh_gh_confirm
+                read -r -p "Add SSH key to GitHub? [Y/n] " ssh_gh_confirm
                 if [[ ! "$ssh_gh_confirm" =~ ^[Nn]$ ]]; then
                     gh ssh-key add "$HOME/.ssh/id_ed25519.pub" --title "$(hostname) $(date +%Y-%m-%d)"
                     success "SSH key added to GitHub"
@@ -7157,10 +7235,10 @@ GITCONFIG_PERSONAL="$HOME/.gitconfig-personal"
 # Work identity
 if [[ -f "$GITCONFIG_WORK" ]] && grep -q "^    # name = " "$GITCONFIG_WORK" 2>/dev/null; then
     echo ""
-    read -p "Set up your work git identity? [Y/n] " work_confirm
+    read -r -p "Set up your work git identity? [Y/n] " work_confirm
     if [[ ! "$work_confirm" =~ ^[Nn]$ ]]; then
-        read -p "Work name: " work_name
-        read -p "Work email: " work_email
+        read -r -p "Work name: " work_name
+        read -r -p "Work email: " work_email
         if [[ -n "$work_name" ]] && [[ -n "$work_email" ]]; then
             cat > "$GITCONFIG_WORK" <<GIT_WORK_ID
 [user]
@@ -7175,10 +7253,10 @@ fi
 # Personal identity
 if [[ -f "$GITCONFIG_PERSONAL" ]] && grep -q "^    # name = " "$GITCONFIG_PERSONAL" 2>/dev/null; then
     echo ""
-    read -p "Set up your personal git identity? [Y/n] " personal_confirm
+    read -r -p "Set up your personal git identity? [Y/n] " personal_confirm
     if [[ ! "$personal_confirm" =~ ^[Nn]$ ]]; then
-        read -p "Personal name: " personal_name
-        read -p "Personal email: " personal_email
+        read -r -p "Personal name: " personal_name
+        read -r -p "Personal email: " personal_email
         if [[ -n "$personal_name" ]] && [[ -n "$personal_email" ]]; then
             cat > "$GITCONFIG_PERSONAL" <<GIT_PERSONAL_ID
 [user]
@@ -7300,7 +7378,7 @@ fi
 
 if [[ "$DRY_RUN" == "false" ]]; then
     echo ""
-    read -p "Source ~/.zshrc now to activate everything? [Y/n] " source_confirm
+    read -r -p "Source ~/.zshrc now to activate everything? [Y/n] " source_confirm
     if [[ ! "$source_confirm" =~ ^[Nn]$ ]]; then
         # Use exec to replace the current shell so the new zshrc takes effect
         echo -e "${GREEN}${BOLD}  Reloading shell...${NC}"

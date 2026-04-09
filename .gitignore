@@ -19,3 +19,6 @@ Icon?
 
 # Logs
 *.log
+
+# Claude Code
+.claude/
