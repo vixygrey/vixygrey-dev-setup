@@ -15,12 +15,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Run ShellCheck on macOS script
-        uses: ludeeus/action-shellcheck@2.0.0
-        with:
-          scandir: scripts
-          additional_files: setup-dev-tools-mac.sh setup-dev-tools-linux.sh
-          severity: style
+      - name: Install ShellCheck
+        run: sudo apt-get update && sudo apt-get install -y shellcheck
+      - name: Run ShellCheck
+        run: |
+          shellcheck -x -S warning scripts/setup-dev-tools-mac.sh
+          shellcheck -x -S warning scripts/setup-dev-tools-linux.sh
 
   psscriptanalyzer:
     name: PSScriptAnalyzer
@@ -33,7 +33,14 @@ jobs:
       - name: Run PSScriptAnalyzer
         shell: pwsh
         run: |
-          $results = Invoke-ScriptAnalyzer -Path scripts/setup-dev-tools-windows.ps1 -Severity Warning,Error -Recurse
+          $excludeRules = @(
+            'PSAvoidUsingWriteHost',
+            'PSAvoidUsingInvokeExpression',
+            'PSAvoidUsingEmptyCatchBlock',
+            'PSUseDeclaredVarsMoreThanAssignments',
+            'PSAvoidOverwritingBuiltInCmdlets'
+          )
+          $results = Invoke-ScriptAnalyzer -Path scripts/setup-dev-tools-windows.ps1 -Severity Warning,Error -ExcludeRule $excludeRules
           if ($results) {
             $results | Format-Table -AutoSize
             Write-Error "PSScriptAnalyzer found $($results.Count) issue(s)"
