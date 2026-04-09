@@ -38,7 +38,11 @@ jobs:
             'PSAvoidUsingInvokeExpression',
             'PSAvoidUsingEmptyCatchBlock',
             'PSUseDeclaredVarsMoreThanAssignments',
-            'PSAvoidOverwritingBuiltInCmdlets'
+            'PSAvoidOverwritingBuiltInCmdlets',
+            'PSUseApprovedVerbs',
+            'PSUseSingularNouns',
+            'PSUseBOMForUnicodeEncodedFile',
+            'PSPossibleIncorrectUsageOfRedirectionOperator'
           )
           $results = Invoke-ScriptAnalyzer -Path scripts/setup-dev-tools-windows.ps1 -Severity Warning,Error -ExcludeRule $excludeRules
           if ($results) {

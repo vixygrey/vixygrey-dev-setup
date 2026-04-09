@@ -21,7 +21,6 @@ YELLOW=$'\033[1;33m'
 BLUE=$'\033[0;34m'
 MAGENTA=$'\033[0;35m'
 CYAN=$'\033[0;36m'
-WHITE=$'\033[1;37m'
 DIM=$'\033[2m'
 BOLD=$'\033[1m'
 NC=$'\033[0m'
@@ -1626,9 +1625,6 @@ else
 fi
 
 
-
-# fzf Dracula colors
-FZF_DRACULA='export FZF_DEFAULT_OPTS="--color=fg:#f8f8f2,bg:#282a36,hl:#bd93f9 --color=fg+:#f8f8f2,bg+:#44475a,hl+:#bd93f9 --color=info:#ffb86c,prompt:#50fa7b,pointer:#ff79c6 --color=marker:#ff79c6,spinner:#ffb86c,header:#6272a4"'
 
 # Starship prompt (rich config with Dracula palette)
 STARSHIP_CONFIG="$HOME/.config/starship.toml"
