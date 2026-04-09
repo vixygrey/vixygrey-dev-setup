@@ -152,34 +152,6 @@ Quick reference for all **209+ shortcuts** configured by the setup scripts.
 
 ---
 
-## tmux Keybindings
-
-**Prefix:** `Ctrl+A` (changed from default `Ctrl+B`)
-
-| Key (after prefix) | Action |
-|---------------------|--------|
-| `r` | Reload config |
-| `\|` | Split pane horizontally |
-| `-` | Split pane vertically |
-| `c` | New window (in current path) |
-| `h` / `j` / `k` / `l` | Navigate panes (vim-style) |
-| `H` / `J` / `K` / `L` | Resize panes (vim-style, repeatable) |
-| `v` (copy mode) | Begin selection |
-| `y` (copy mode) | Copy to clipboard |
-
-| Key (no prefix) | Action |
-|------------------|--------|
-| `Alt+Left/Right/Up/Down` | Navigate panes directly |
-
-**Plugins (via TPM):**
-| Key | Action |
-|-----|--------|
-| `prefix + I` | Install plugins |
-| `prefix + Ctrl+S` | Save session (tmux-resurrect) |
-| `prefix + Ctrl+R` | Restore session (tmux-resurrect) |
-
----
-
 ## Vim Keybindings
 
 **Leader key:** `Space`
@@ -442,7 +414,6 @@ Run from anywhere with `gj <recipe>` (or `just --justfile ~/.justfile <recipe>`)
 |----------|-------|
 | Shell aliases | 65 |
 | VS Code keybindings | 21 |
-| tmux keybindings | 12 |
 | Vim keybindings | 8 |
 | fzf keybindings | 7 |
 | Git aliases | 30 |

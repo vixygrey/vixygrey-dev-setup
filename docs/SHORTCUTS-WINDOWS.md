@@ -170,38 +170,6 @@ These PowerShell-specific aliases cover common commands that differ from their b
 
 ---
 
-## Terminal Multiplexer
-
-> **Note:** tmux is not natively available on Windows. Use **Windows Terminal panes** (see shortcuts below) or install **zellij** via scoop as an alternative terminal multiplexer that works well on Windows.
-
-If running tmux through WSL, the following keybindings apply:
-
-**Prefix:** `Ctrl+A` (changed from default `Ctrl+B`)
-
-| Key (after prefix) | Action |
-|---------------------|--------|
-| `r` | Reload config |
-| `\|` | Split pane horizontally |
-| `-` | Split pane vertically |
-| `c` | New window (in current path) |
-| `h` / `j` / `k` / `l` | Navigate panes (vim-style) |
-| `H` / `J` / `K` / `L` | Resize panes (vim-style, repeatable) |
-| `v` (copy mode) | Begin selection |
-| `y` (copy mode) | Copy to clipboard |
-
-| Key (no prefix) | Action |
-|------------------|--------|
-| `Alt+Left/Right/Up/Down` | Navigate panes directly |
-
-**Plugins (via TPM):**
-| Key | Action |
-|-----|--------|
-| `prefix + I` | Install plugins |
-| `prefix + Ctrl+S` | Save session (tmux-resurrect) |
-| `prefix + Ctrl+R` | Restore session (tmux-resurrect) |
-
----
-
 ## Vim Keybindings
 
 **Leader key:** `Space`

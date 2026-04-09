@@ -370,7 +370,6 @@ Faster, prettier, smarter replacements for standard Unix utilities.
 | **chezmoi** | Dotfile manager -- backup and restore configs across machines |
 | **mitmproxy** | Free HTTP debugging proxy -- inspect and modify API calls from any app |
 | **Ghostty** | Fast GPU-accelerated terminal -- daily driver, native macOS feel |
-| **tmux** | Terminal multiplexer -- persistent sessions, panes, and windows |
 | **zellij** | Modern terminal multiplexer -- discoverable UI, layouts, Rust-based |
 | **Raycast** | Spotlight replacement with extensions, snippets, and workflows |
 | **TypeScript** | Typed JavaScript -- installed globally for scripts and tooling |
@@ -428,10 +427,7 @@ Preview files in Finder by pressing spacebar.
 | **Pearcleaner** | Open-source deep app uninstaller -- finds leftover files and preferences |
 | **UniFi Identity Endpoint** | Wi-Fi, VPN, and device management for UniFi NAS |
 | **LuLu** | Free open-source outbound firewall -- see what phones home |
-| **Proton VPN** | Privacy-focused VPN |
-| **Proton Mail** | End-to-end encrypted email client |
-| **Proton Pass** | Password manager with end-to-end encryption |
-| **Proton Drive** | Encrypted cloud storage |
+| **Mullvad VPN** | Privacy-focused VPN -- no account required, anonymous payment accepted |
 
 ---
 
@@ -543,7 +539,6 @@ Applied consistently across all tools:
 | **Starship** | Dracula color palette in `starship.toml` |
 | **lazygit** | Full Dracula color scheme in config |
 | **k9s** | Dracula skin with all view colors |
-| **tmux** | Dracula status bar, pane borders, and colors |
 | **glow** | Dracula Markdown rendering style |
 | **gh-dash** | Dracula border and highlight colors |
 | **yazi** | Dracula file type colors and borders |
@@ -770,7 +765,6 @@ The script generates config files with sensible defaults:
 |------|------|------------|
 | `~/.zshrc` | Shell | Auto-written managed block with all init scripts, aliases, welcome screen |
 | `~/.zprofile` | Shell | Login shell PATH, editor, pager, LESS, XDG dirs, ulimit increase for Node.js |
-| `~/.tmux.conf` | tmux | Ctrl-a prefix, mouse, vim keys, Dracula status bar, TPM + tmux-resurrect + tmux-continuum (session save/restore) |
 | `~/.gitconfig` | git | Rebase pull, histogram diff, 30 aliases (st, co, lg, wip, cleanup, gone, standup, recent, worktree, stash-all, etc.), delta, rerere, auto-stash |
 | `~/.gitignore_global` | git | .DS_Store, .env, node_modules, editor files, secrets |
 | `~/.gitmessage` | git | Commit template with type/scope format |
@@ -1082,7 +1076,6 @@ This prints a full guide for removing all installed tools, configs, and settings
 | LuLu (firewall) | **simplewall** |
 | Quick Look plugins | **QuickLook** (winget) |
 | watchexec (file watcher) | **watchexec** (same tool, cross-platform) |
-| tmux | N/A (use Windows Terminal panes) |
 
 All Claude Code changes apply to Windows: 110 permissions, 7 rules (workflow, git, security, typescript, python, docker, iac), 3 hooks (format-on-edit, lint-python, lint-dockerfile), 20 commands.
 

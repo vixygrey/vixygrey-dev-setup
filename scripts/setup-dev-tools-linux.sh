@@ -230,7 +230,7 @@ list_categories() {
     printf "  %-25s %s\n" "ui"                  "Storybook, Playwright, Chrome"
     printf "  %-25s %s\n" "ux"                  "Lighthouse"
     printf "  %-25s %s\n" "docs"                "d2, Mermaid CLI"
-    printf "  %-25s %s\n" "linux-system"        "p7zip, gnome-sushi, caffeine, Proton suite"
+    printf "  %-25s %s\n" "linux-system"        "p7zip, gnome-sushi, caffeine, Mullvad VPN"
     printf "  %-25s %s\n" "linux-productivity"  "Flameshot, Espanso, Notion, Filezilla"
     printf "  %-25s %s\n" "linux-communication" "Slack, Telegram, Signal"
     printf "  %-25s %s\n" "linux-browsers"      "Firefox, Brave, Chrome"
@@ -2785,9 +2785,8 @@ pkg_install "gnome-sushi" "-" "sushi" "gnome-sushi (file previewer — Quick Loo
 pkg_install "caffeine" "caffeine" "-" "caffeine (prevent sleep — Amphetamine equivalent)"
 
 
-# Proton suite
-info "Proton VPN/Mail/Pass/Drive: download from proton.me or install via flatpak"
-flatpak_install "com.protonvpn.www" "Proton VPN"
+# Mullvad VPN
+pkg_install "mullvad-vpn" "mullvad-vpn" "-" "Mullvad VPN (privacy-focused, no account email required)"
 
 fi  # linux-system
 

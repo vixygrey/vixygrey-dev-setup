@@ -632,6 +632,10 @@ if [[ "$CLEANUP" == "true" ]]; then
     # Format: "type:name:display-name:replacement"
     DEPRECATED_TOOLS=(
         "brew:tmux:tmux:zellij"
+        "cask:protonvpn:Proton VPN:Mullvad VPN"
+        "cask:proton-mail:Proton Mail:removed"
+        "cask:proton-pass:Proton Pass:removed"
+        "cask:proton-drive:Proton Drive:removed"
         "cask:docker:Docker Desktop:OrbStack"
         "cask:warp:Warp terminal:Ghostty"
         "cask:iterm2:iTerm2:Ghostty"
@@ -1451,10 +1455,7 @@ banner "Mac Apps — System & Utilities"
 
 brew_cask_install "unifi-identity-endpoint" "UniFi Identity Endpoint (Wi-Fi, VPN, device management for UniFi NAS)"
 brew_cask_install "lulu" "LuLu (outbound firewall)"
-brew_cask_install "protonvpn" "Proton VPN"
-brew_cask_install "proton-mail" "Proton Mail"
-brew_cask_install "proton-pass" "Proton Pass (password manager)"
-brew_cask_install "proton-drive" "Proton Drive (encrypted cloud storage)"
+brew_cask_install "mullvadvpn" "Mullvad VPN (privacy-focused, no account email required)"
 
 # Utilities
 brew_cask_install "pearcleaner" "Pearcleaner (open-source deep app uninstaller)"

@@ -644,32 +644,6 @@ yt-dlp --list-formats URL                # show available formats
 
 ## Terminal Multiplexing
 
-### tmux vs zellij
-
-Both are installed. tmux is the established standard; zellij is the modern alternative with a discoverable UI.
-
-### tmux
-
-**Prefix:** `Ctrl+A` (remapped from default Ctrl+B)
-
-```bash
-tmux                         # start new session
-tmux new -s work             # named session
-tmux attach -t work          # reattach to session
-tmux ls                      # list sessions
-```
-
-| Key (after Ctrl+A) | Action |
-|---------------------|--------|
-| `\|` | Split horizontally |
-| `-` | Split vertically |
-| `c` | New window |
-| `h/j/k/l` | Navigate panes (vim-style) |
-| `H/J/K/L` | Resize panes |
-| `d` | Detach |
-| `Ctrl+S` | Save session (tmux-resurrect) |
-| `Ctrl+R` | Restore session |
-
 ### zellij
 
 ```bash
@@ -879,13 +853,13 @@ Already configured by the script with Dracula theme. Additional:
 3. **Notifications:** Preferences > Notifications > customize per-channel
 4. **Sidebar:** Organize channels with sections
 
-### Proton Suite (VPN, Mail, Pass, Drive)
+### Mullvad VPN
 
-1. **Sign in:** Create or sign in to your Proton account across all apps
-2. **Proton VPN:** Enable auto-connect, choose Secure Core for sensitive work
-3. **Proton Pass:** Import passwords from existing manager, install browser extension
-4. **Proton Mail:** Set up custom domain if needed, configure PGP
-5. **Proton Drive:** Choose sync folder, enable automatic photo backup
+1. **Account:** Create account at mullvad.net (no email required, anonymous payment accepted)
+2. **Auto-connect:** Settings > VPN settings > Launch on startup, Auto-connect
+3. **Kill switch:** Settings > VPN settings > Always require VPN
+4. **DNS:** Settings > VPN settings > Use custom DNS if needed
+5. **Server:** Choose server location close to you for best performance
 
 ### Snagit
 

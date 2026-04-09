@@ -241,7 +241,7 @@ function Show-Categories {
         @("ui",                    "Storybook, Playwright, Chrome")
         @("ux",                    "Lighthouse")
         @("docs",                  "d2, Mermaid CLI")
-        @("win-system",            "BCUninstaller, 7zip, simplewall, QuickLook, PowerToys, Proton apps")
+        @("win-system",            "BCUninstaller, 7zip, simplewall, QuickLook, PowerToys, Mullvad VPN")
         @("win-productivity",      "Notion, ShareX, Espanso, SumatraPDF")
         @("win-communication",     "Slack, Telegram, Signal")
         @("win-browsers",          "Firefox, Arc, Brave")
@@ -1237,11 +1237,8 @@ Install-WingetPackage "QL-Win.QuickLook" "QuickLook (preview files with spacebar
 # PowerToys already installed in dx section
 Write-Info "PowerToys Awake: Included in PowerToys (keeps screen awake)"
 
-# Proton suite
-Install-WingetPackage "Proton.ProtonVPN" "Proton VPN"
-Install-WingetPackage "Proton.ProtonMail" "Proton Mail"
-Install-WingetPackage "Proton.ProtonPass" "Proton Pass (password manager)"
-Install-WingetPackage "Proton.ProtonDrive" "Proton Drive (encrypted cloud storage)"
+# Mullvad VPN
+Install-WingetPackage "MullvadVPN.MullvadVPN" "Mullvad VPN (privacy-focused, no account email required)"
 
 Write-Info "Windows built-in: Clipboard History (Win+V), Taskbar management, Alt-Tab, Clock/Calendar"
 
