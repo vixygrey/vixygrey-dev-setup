@@ -35,23 +35,27 @@ ERROR_LOG="$LOG_DIR/setup-errors-$(date +%Y%m%d-%H%M%S).log"
 log() { echo "[$(date +%H:%M:%S)] $*" >> "$LOG_FILE"; }
 
 info() {
+    printf '\033[2K\r'
     echo -e "${BLUE}[INFO]${NC} $1"
     log "INFO: $1"
 }
 
 success() {
+    printf '\033[2K\r'
     echo -e "${GREEN}[  OK]${NC} $1"
     log "OK: $1"
     ((INSTALL_SUCCESS++)) || true
 }
 
 warn() {
+    printf '\033[2K\r'
     echo -e "${YELLOW}[SKIP]${NC} $1"
     log "SKIP: $1"
     ((INSTALL_SKIPPED++)) || true
 }
 
 error() {
+    printf '\033[2K\r'
     echo -e "${RED}[ ERR]${NC} $1"
     log "ERROR: $1"
     echo "[$(date +%H:%M:%S)] $1" >> "$ERROR_LOG"
@@ -61,6 +65,7 @@ error() {
 
 banner() {
     local title="$1"
+    printf '\033[2K\r'
     echo ""
     echo -e "${MAGENTA}${BOLD}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
     echo -e "${MAGENTA}${BOLD}  $title${NC}"
@@ -92,8 +97,8 @@ progress() {
     local bar_len=$((pct / 2))
     local bar=$(printf '█%.0s' $(seq 1 $bar_len 2>/dev/null) 2>/dev/null || echo "")
     local spaces=$(printf ' %.0s' $(seq 1 $((50 - bar_len)) 2>/dev/null) 2>/dev/null || echo "")
-    # \033[2K clears the entire line, \r returns to start
-    printf '\033[2K\r%s[%s%s%s%s] %d%% (%d/%d)%s\n' "$DIM" "$CYAN" "$bar" "$DIM" "$spaces" "$pct" "$INSTALL_CURRENT" "$INSTALL_TOTAL" "$NC"
+    # In-place progress bar — stays on current line, overwritten by next status message
+    printf '\033[2K\r%s[%s%s%s%s] %d%% (%d/%d)%s' "$DIM" "$CYAN" "$bar" "$DIM" "$spaces" "$pct" "$INSTALL_CURRENT" "$INSTALL_TOTAL" "$NC"
 }
 
 # -- State flags --------------------------------------------------------------
@@ -174,7 +179,6 @@ ALL_CATEGORIES=(
     mac-media
     mac-cloud
     mac-focus
-    mac-disk
     mac-bloat
     dracula
     configs
@@ -245,7 +249,6 @@ list_categories() {
     printf "  %-25s %s\n" "mac-media"           "mpv, oxipng, jpegoptim, 7zip, LibreOffice"
     printf "  %-25s %s\n" "mac-cloud"           "Google Drive, rclone, borg"
     printf "  %-25s %s\n" "mac-focus"           "newsboat"
-    printf "  %-25s %s\n" "mac-disk"            "dust, duf (CLI disk analyzers)"
     printf "  %-25s %s\n" "mac-bloat"           "Remove pre-installed Apple apps (GarageBand)"
     printf "  %-25s %s\n" "dracula"             "Dracula theme for all tools"
     printf "  %-25s %s\n" "configs"             "All dotfiles and tool configurations"
@@ -876,7 +879,7 @@ if ! installed rustup; then
             rm -f "$installer"
             return 1
         fi
-        if bash "$installer" -s -- -y --no-modify-path >> "$LOG_FILE" 2>&1; then
+        if sh "$installer" -y --no-modify-path >> "$LOG_FILE" 2>&1; then
             source "$HOME/.cargo/env" 2>/dev/null || true
             success "Rust installed via rustup"
         else
@@ -1380,10 +1383,12 @@ brew_install "zellij" "zellij (modern terminal multiplexer — discoverable UI, 
 if installed npm; then
     npm_global_install "@anthropic-ai/claude-code" "Claude Code (AI-assisted coding in terminal)"
 fi
-# GitHub Copilot CLI (installed as gh extension)
+# GitHub Copilot CLI (built-in on newer gh versions, or installed as gh extension)
 progress
 if installed gh; then
-    if gh extension list 2>/dev/null | grep -q "gh-copilot"; then
+    if gh copilot --help &>/dev/null; then
+        warn "GitHub Copilot CLI already available (built-in or extension)"
+    elif gh extension list 2>/dev/null | grep -q "gh-copilot"; then
         warn "GitHub Copilot CLI already installed"
     else
         info "Installing GitHub Copilot CLI..."
@@ -1536,13 +1541,8 @@ brew_install "newsboat" "newsboat (terminal RSS/Atom reader)"
 
 fi  # mac-focus
 
-# =============================================================================
-if should_run "mac-disk"; then
-banner "Mac Apps — Disk & File Utilities"
-
-# Disk analysis handled by dust and duf (free CLI tools already installed)
-
-fi  # mac-disk
+# mac-disk: Disk analysis handled by dust and duf (installed in "replacements" section)
+# No additional tools needed — section removed to avoid empty banner
 
 # =============================================================================
 if should_run "mac-bloat"; then
@@ -3471,13 +3471,18 @@ defaults write com.apple.dock wvous-br-modifier -int 0
 success "Hot corners disabled (all corners off)"
 
 # -- Safari --
-# Enable Developer menu
-defaults write com.apple.Safari IncludeDevelopMenu -bool true
-defaults write com.apple.Safari WebKitDeveloperExtrasEnabledPreferenceKey -bool true
-defaults write com.apple.Safari "com.apple.Safari.ContentPageGroupIdentifier.WebKit2DeveloperExtrasEnabled" -bool true
-# Show full URL in address bar
-defaults write com.apple.Safari ShowFullURLInSmartSearchField -bool true
-success "Safari configured (developer menu, full URL)"
+# Safari is sandboxed on modern macOS — writes may fail without Full Disk Access
+safari_ok=true
+defaults write com.apple.Safari IncludeDevelopMenu -bool true 2>/dev/null || safari_ok=false
+defaults write com.apple.Safari WebKitDeveloperExtrasEnabledPreferenceKey -bool true 2>/dev/null || safari_ok=false
+defaults write com.apple.Safari "com.apple.Safari.ContentPageGroupIdentifier.WebKit2DeveloperExtrasEnabled" -bool true 2>/dev/null || safari_ok=false
+defaults write com.apple.Safari ShowFullURLInSmartSearchField -bool true 2>/dev/null || safari_ok=false
+
+if [[ "$safari_ok" == "true" ]]; then
+    success "Safari configured (developer menu, full URL)"
+else
+    warn "Safari settings skipped — requires Full Disk Access (System Settings > Privacy & Security > Full Disk Access > Terminal)"
+fi
 
 # -- TextEdit --
 # Default to plain text (not rich text)
@@ -5542,49 +5547,115 @@ killall Finder 2>/dev/null || true
 success "Finder configured (hidden files visible, list view, path bar, no .DS_Store on network)"
 
 # ---- Finder Sidebar Favorites ----
+# Uses LSSharedFileList API via inline-compiled Swift (mysides is deprecated and broken on macOS 13+)
 info "Configuring Finder sidebar favorites..."
 if [[ "$DRY_RUN" != "true" ]]; then
-    # Install mysides (CLI tool to manage Finder sidebar) if not present
-    if ! command -v mysides &>/dev/null; then
-        brew install mysides >> "$LOG_FILE" 2>&1 || true
-    fi
+    SIDEBAR_TOOL="$(mktemp -d)/sidebar-tool"
+    SIDEBAR_SRC="${SIDEBAR_TOOL}.swift"
 
-    if command -v mysides &>/dev/null; then
-        # Remove default Apple sidebar items that clutter (keep AirDrop, Applications)
-        mysides remove "Recents" 2>/dev/null || true
-        mysides remove "Recent Tags" 2>/dev/null || true
-        mysides remove "All My Files" 2>/dev/null || true
-        mysides remove "Movies" 2>/dev/null || true
-        mysides remove "Music" 2>/dev/null || true
-        mysides remove "Pictures" 2>/dev/null || true
+    cat > "$SIDEBAR_SRC" << 'SIDEBAR_SWIFT'
+import Foundation
+import CoreServices
+
+func getList() -> LSSharedFileList? {
+    let listType = kLSSharedFileListFavoriteItems.takeUnretainedValue()
+    guard let listRef = LSSharedFileListCreate(nil, listType, nil) else { return nil }
+    return listRef.takeRetainedValue()
+}
+
+func getSnapshot(_ list: LSSharedFileList) -> [LSSharedFileListItem]? {
+    var seed: UInt32 = 0
+    guard let ref = LSSharedFileListCopySnapshot(list, &seed) else { return nil }
+    return ref.takeRetainedValue() as! [LSSharedFileListItem]
+}
+
+func listItems() {
+    guard let list = getList(), let snapshot = getSnapshot(list) else { return }
+    for item in snapshot {
+        if let urlRef = LSSharedFileListItemCopyResolvedURL(item, 0, nil) {
+            print((urlRef.takeRetainedValue() as URL).path)
+        }
+    }
+}
+
+func addItem(_ path: String) -> Bool {
+    guard let list = getList(), let snapshot = getSnapshot(list) else { return false }
+    let expanded = NSString(string: path).expandingTildeInPath
+    let url = URL(fileURLWithPath: expanded)
+    guard FileManager.default.fileExists(atPath: url.path) else { return false }
+    let insertAfter = snapshot.last
+    let result: LSSharedFileListItem?
+    if let after = insertAfter {
+        result = LSSharedFileListInsertItemURL(list, after, nil, nil, url as CFURL, nil, nil)
+    } else {
+        result = LSSharedFileListInsertItemURL(list, kLSSharedFileListItemBeforeFirst.takeUnretainedValue(), nil, nil, url as CFURL, nil, nil)
+    }
+    return result != nil
+}
+
+func removeItem(_ path: String) -> Bool {
+    guard let list = getList(), let snapshot = getSnapshot(list) else { return false }
+    let target = NSString(string: path).expandingTildeInPath
+    for item in snapshot {
+        if let urlRef = LSSharedFileListItemCopyResolvedURL(item, 0, nil) {
+            if (urlRef.takeRetainedValue() as URL).path == target { return LSSharedFileListItemRemove(list, item) == noErr }
+        }
+    }
+    return false
+}
+
+let args = CommandLine.arguments
+guard args.count >= 2 else { exit(1) }
+switch args[1] {
+case "list": listItems()
+case "add": exit(args.count >= 3 && addItem(args[2]) ? 0 : 1)
+case "remove": exit(args.count >= 3 && removeItem(args[2]) ? 0 : 1)
+default: exit(1)
+}
+SIDEBAR_SWIFT
+
+    if swiftc -suppress-warnings -o "$SIDEBAR_TOOL" "$SIDEBAR_SRC" >> "$LOG_FILE" 2>&1; then
+        # Remove default clutter items (keep AirDrop, Applications)
+        "$SIDEBAR_TOOL" remove "$HOME/Movies" 2>/dev/null || true
+        "$SIDEBAR_TOOL" remove "$HOME/Music" 2>/dev/null || true
+        "$SIDEBAR_TOOL" remove "$HOME/Pictures" 2>/dev/null || true
 
         # Add our organized folders to sidebar
-        SIDEBAR_ITEMS=(
-            "Code|$HOME/Code"
-            "Screenshots|$HOME/Screenshots"
-            "Scripts|$HOME/Scripts"
-            "Documents|$HOME/Documents"
-            "Reference|$HOME/Reference"
-            "Creative|$HOME/Creative"
-            "Media|$HOME/Media"
-            "Projects|$HOME/Projects"
-            "Archive|$HOME/Archive"
-            "Downloads|$HOME/Downloads"
+        SIDEBAR_FOLDERS=(
+            "$HOME/Code"
+            "$HOME/Screenshots"
+            "$HOME/Scripts"
+            "$HOME/Documents"
+            "$HOME/Reference"
+            "$HOME/Creative"
+            "$HOME/Media"
+            "$HOME/Projects"
+            "$HOME/Archive"
+            "$HOME/Downloads"
         )
 
-        for entry in "${SIDEBAR_ITEMS[@]}"; do
-            name="${entry%%|*}"
-            path="${entry##*|}"
-            if [[ -d "$path" ]]; then
+        sidebar_added=0
+        for folder in "${SIDEBAR_FOLDERS[@]}"; do
+            if [[ -d "$folder" ]]; then
                 # Remove first (in case it's already there with a different position)
-                mysides remove "$name" 2>/dev/null || true
-                mysides add "$name" "file://$path" 2>/dev/null || true
+                "$SIDEBAR_TOOL" remove "$folder" 2>/dev/null || true
+                if "$SIDEBAR_TOOL" add "$folder" 2>/dev/null; then
+                    ((sidebar_added++))
+                fi
             fi
         done
 
-        success "Finder sidebar updated (Code, Screenshots, Scripts, Documents, Reference, Creative, Media, Projects, Archive, Downloads)"
+        rm -f "$SIDEBAR_TOOL" "$SIDEBAR_SRC"
+        rmdir "$(dirname "$SIDEBAR_TOOL")" 2>/dev/null || true
+
+        if [[ "$sidebar_added" -gt 0 ]]; then
+            success "Finder sidebar updated ($sidebar_added folders added)"
+        else
+            warn "Finder sidebar — no folders added (directories may not exist yet)"
+        fi
     else
-        warn "mysides not available — Finder sidebar not updated (drag folders manually)"
+        rm -f "$SIDEBAR_SRC"
+        warn "Finder sidebar — Swift compilation failed (Xcode CLT may need updating)"
     fi
 else
     info "[DRY RUN] Would update Finder sidebar favorites"
@@ -7265,7 +7336,7 @@ if [[ "$DRY_RUN" == "false" ]]; then
         "uv:uv --version"
         "brew:brew --version"
         "code:code --version"
-        "docker:docker --version"
+        "docker/orbstack:docker --version || orbstack version"
         "starship:starship --version"
         "fzf:fzf --version"
         "eza:eza --version"
