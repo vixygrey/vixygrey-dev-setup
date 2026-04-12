@@ -246,7 +246,7 @@ list_categories() {
     printf "  %-25s %s\n" "mac-system"          "Pearcleaner, Quick Look plugins"
     printf "  %-25s %s\n" "mac-productivity"    "Notion, Skim, Transmit"
     printf "  %-25s %s\n" "mac-communication"   "Slack, Telegram"
-    printf "  %-25s %s\n" "mac-browsers"        "Firefox, Brave"
+    printf "  %-25s %s\n" "mac-browsers"        "Firefox, Brave, Carbonyl"
     printf "  %-25s %s\n" "mac-media"           "mpv, oxipng, jpegoptim, 7zip, LibreOffice"
     printf "  %-25s %s\n" "mac-cloud"           "Google Drive, rclone, borg"
     printf "  %-25s %s\n" "mac-focus"           "newsboat"
@@ -1501,6 +1501,8 @@ banner "Mac Apps — Browsers"
 brew_cask_install "google-chrome" "Google Chrome"
 brew_cask_install "firefox" "Firefox"
 brew_cask_install "brave-browser" "Brave Browser (privacy-focused Chromium)"
+
+npm_global_install "carbonyl" "Carbonyl (Chromium-based browser for the terminal)"
 
 fi  # mac-browsers
 
