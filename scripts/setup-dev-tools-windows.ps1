@@ -244,7 +244,7 @@ function Show-Categories {
         @("win-system",            "BCUninstaller, 7zip, simplewall, QuickLook, PowerToys, Mullvad VPN")
         @("win-productivity",      "Notion, ShareX, Espanso, SumatraPDF")
         @("win-communication",     "Slack, Telegram, Signal")
-        @("win-browsers",          "Firefox, Arc, Brave")
+        @("win-browsers",          "Firefox, Arc, Brave, Carbonyl")
         @("win-media",             "mpv, oxipng, jpegoptim, LibreOffice")
         @("win-cloud",             "Google Drive, rclone, Syncthing")
         @("win-focus",             "Reeder alternative")
@@ -1276,6 +1276,8 @@ Write-Banner "Windows Apps -- Browsers"
 Install-WingetPackage "Mozilla.Firefox" "Firefox"
 Install-WingetPackage "TheBrowserCompany.Arc" "Arc (modern Chromium browser)"
 Install-WingetPackage "BraveSoftware.BraveBrowser" "Brave Browser (privacy-focused Chromium)"
+
+Install-NpmGlobal "carbonyl" "Carbonyl (Chromium-based browser for the terminal)"
 
 } # win-browsers
 

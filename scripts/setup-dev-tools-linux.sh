@@ -234,7 +234,7 @@ list_categories() {
     printf "  %-25s %s\n" "linux-system"        "p7zip, gnome-sushi, caffeine, Mullvad VPN"
     printf "  %-25s %s\n" "linux-productivity"  "Flameshot, Espanso, Notion, Filezilla"
     printf "  %-25s %s\n" "linux-communication" "Slack, Telegram, Signal"
-    printf "  %-25s %s\n" "linux-browsers"      "Firefox, Brave, Chrome"
+    printf "  %-25s %s\n" "linux-browsers"      "Firefox, Brave, Chrome, Carbonyl"
     printf "  %-25s %s\n" "linux-media"         "mpv, oxipng, jpegoptim, LibreOffice"
     printf "  %-25s %s\n" "linux-cloud"         "rclone, syncthing, borgbackup, borgmatic"
     printf "  %-25s %s\n" "linux-focus"         "NewsFlash (RSS)"
@@ -2858,6 +2858,8 @@ if ! installed google-chrome-stable; then
     setup_chrome_repo
     pkg_install "google-chrome-stable" "google-chrome-stable" "-" "Google Chrome"
 fi
+
+npm_global_install "carbonyl" "Carbonyl (Chromium-based browser for the terminal)"
 
 fi  # linux-browsers
 
