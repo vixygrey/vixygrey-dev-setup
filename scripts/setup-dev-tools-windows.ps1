@@ -228,7 +228,7 @@ function Show-Categories {
         @("security",              "detect-secrets, gitleaks, trivy, semgrep, simplewall, Wireshark")
         @("replacements",          "eza, bat, fd, ripgrep, zoxide, btop, sd, dust, just, yazi, fx, etc.")
         @("data-processing",       "yq, miller, csvkit, pandoc, ffmpeg, ImageMagick")
-        @("code-quality",          "shellcheck, shfmt, act, hadolint, ruff, npkill, commitizen")
+        @("code-quality",          "shellcheck, shfmt, act, act3, hadolint, ruff, npkill, commitizen")
         @("perf-testing",          "hyperfine, oha")
         @("dev-servers",           "ngrok, miniserve, caddy")
         @("terminal-productivity", "glow, watchexec, pv, parallel, topgrade, fastfetch, lnav")
@@ -244,8 +244,8 @@ function Show-Categories {
         @("win-system",            "BCUninstaller, 7zip, simplewall, QuickLook, PowerToys, Mullvad VPN")
         @("win-productivity",      "Notion, ShareX, Espanso, SumatraPDF")
         @("win-communication",     "Slack, Telegram, Signal")
-        @("win-browsers",          "Firefox, Arc, Brave, Carbonyl")
-        @("win-media",             "mpv, oxipng, jpegoptim, LibreOffice")
+        @("win-browsers",          "Firefox, Arc, Brave, Carbonyl, w3m, monolith")
+        @("win-media",             "mpv, oxipng, jpegoptim, LibreOffice, cmus")
         @("win-cloud",             "Google Drive, rclone, Syncthing")
         @("win-focus",             "Reeder alternative")
         @("win-disk",              "dust, duf")
@@ -989,6 +989,7 @@ Write-Banner "Code Quality"
 Install-ScoopPackage "shellcheck" "shellcheck (shell script linter)"
 Install-ScoopPackage "shfmt" "shfmt (shell script formatter)"
 Install-ScoopPackage "act" "act (run GitHub Actions locally)"
+Install-ScoopPackage "act3" "act3 (glance at last 3 GitHub Actions runs)"
 Install-ScoopPackage "hadolint" "hadolint (Dockerfile linter)"
 Install-ScoopPackage "ruff" "ruff (fast Python linter+formatter)"
 Install-ScoopPackage "typos" "typos (source code spell checker -- fast, low false positives)"
@@ -1278,6 +1279,8 @@ Install-WingetPackage "TheBrowserCompany.Arc" "Arc (modern Chromium browser)"
 Install-WingetPackage "BraveSoftware.BraveBrowser" "Brave Browser (privacy-focused Chromium)"
 
 Install-NpmGlobal "carbonyl" "Carbonyl (Chromium-based browser for the terminal)"
+Install-ScoopPackage "w3m" "w3m (text-based terminal browser and pager)"
+Install-ScoopPackage "monolith" "monolith (save complete web pages as a single HTML file)"
 
 } # win-browsers
 
@@ -1289,6 +1292,7 @@ Install-ScoopPackage "mpv" "mpv (modern video player -- replaces IINA)"
 Install-ScoopPackage "oxipng" "oxipng (lossless PNG compression)"
 Install-ScoopPackage "jpegoptim" "jpegoptim (lossless JPEG compression)"
 Install-WingetPackage "TheDocumentFoundation.LibreOffice" "LibreOffice (free office suite)"
+Install-ScoopPackage "cmus" "cmus (ncurses terminal music player)"
 
 } # win-media
 
