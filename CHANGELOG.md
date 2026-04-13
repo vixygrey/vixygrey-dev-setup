@@ -1,5 +1,25 @@
 # Changelog
 
+## [2.1.0] - 2026-04-13
+
+### Features
+
+- **browsers**: Add Carbonyl (Chromium-based terminal browser) to mac/linux/windows browsers categories (#1)
+- **tools**: Add seven terminal CLI tools across platforms (#3):
+  - `w3m` and `monolith` in browsers
+  - `cmus` in media
+  - `nnn` and `progress` in terminal-productivity (mac + linux)
+  - `act3` in code-quality
+  - `sshclick` in networking (linux only)
+- **aliases**: Add `gha3` → `act3` (all platforms); `n` → `nnn -de`, `prog` → `progress -m` (mac + linux); `sshc` → `sshclick` (linux) (#5)
+- **configs**: Generate default `~/.config/cmus/rc` (Dracula palette, replaygain) and `~/.w3m/config` (UTF-8, cookies off) on mac + linux (#5)
+- **configs**: Export `NNN_OPTS`, `NNN_COLORS`, `NNN_FCOLORS`, `NNN_PLUG` in managed zshrc block (#5)
+
+### Documentation
+
+- Document all new tools in `GUIDE-MACOS.md`, `GUIDE-LINUX.md`, `GUIDE-WINDOWS.md` with usage examples (#5)
+- Update `SHORTCUTS-*.md` with new alias rows and a "Terminal Apps" section (#5)
+
 ## [Unreleased]
 
 ### Bug Fixes

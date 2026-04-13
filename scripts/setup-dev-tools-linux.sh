@@ -3,14 +3,14 @@
 # =============================================================================
 # Development Environment Setup Script (Linux)
 # =============================================================================
-# Version:  2.0.0
+# Version:  2.1.0
 # Updated:  2026-04-06
 # Platform: Linux (Ubuntu/Debian, Fedora/RHEL, Arch/Manjaro)
 # Run:      chmod +x setup-dev-tools-linux.sh && ./setup-dev-tools-linux.sh
 # Flags:    --dry-run, --skip <categories>, --only <categories>, --cleanup, --help
 # =============================================================================
 
-SCRIPT_VERSION="2.0.0"
+SCRIPT_VERSION="2.1.0"
 SCRIPT_START=$(date +%s)
 PYTHON_VERSION="3.12"
 
