@@ -47,6 +47,7 @@ Quick reference for all shortcuts and aliases configured by the setup scripts on
 | `ghd` | `gh dash` | GitHub dashboard (PRs, issues) |
 | `gdft` | `git dft` | Syntax-aware git diff |
 | `gha` | `act` | Run GitHub Actions locally |
+| `gha3` | `act3` | Glance at last 3 GitHub Actions runs |
 
 ### Containers & Kubernetes
 

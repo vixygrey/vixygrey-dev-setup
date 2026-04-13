@@ -629,6 +629,15 @@ act push                     # simulate push event
 act -j test                  # run specific job
 ```
 
+### act3 (glance at last 3 GitHub Actions runs)
+
+```powershell
+gha3                         # alias: view last 3 runs of every workflow
+act3 -r owner/repo           # view runs for a specific repo
+act3 -t html > status.html   # export HTML status page
+# Requires a GitHub token: `gh auth login` or $env:GH_TOKEN
+```
+
 ---
 
 ## Networking & Debugging
@@ -739,6 +748,34 @@ yt-dlp --list-formats URL                # show available formats
 7z x archive.7z              # extract
 7z l archive.zip             # list contents
 7z a -tzip archive.zip files\ # create zip specifically
+```
+
+### cmus (terminal music player)
+
+```powershell
+cmus                         # launch the TUI
+# Inside cmus:
+#   1–7 — switch views (library, playlist, queue, browser, filters, settings)
+#   a   — add directory to library    c — pause    x — play    v — stop
+#   b / z — next / previous track     s / r — shuffle / repeat
+#   / — search      q — quit
+# On Windows, audio routing depends on the Scoop build; may require WASAPI setup.
+```
+
+### w3m (terminal web browser)
+
+```powershell
+w3m https://example.com      # open URL in terminal
+w3m -dump https://example.com  # dump rendered text to stdout
+# Inside w3m: Tab — next link, Enter — follow, B — back, U — enter URL, q — quit
+```
+
+### monolith (save pages as single HTML)
+
+```powershell
+monolith https://example.com -o page.html
+monolith https://example.com -o page.html --no-js --no-audio
+# Embeds CSS, JS, images, and fonts inline — single-file web archive.
 ```
 
 ---

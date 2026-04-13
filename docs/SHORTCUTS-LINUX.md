@@ -56,6 +56,7 @@ Linux-specific alias differences from macOS:
 | `ghd` | `gh dash` | GitHub dashboard (PRs, issues) |
 | `gdft` | `git dft` | Syntax-aware git diff |
 | `gha` | `act` | Run GitHub Actions locally |
+| `gha3` | `act3` | Glance at last 3 GitHub Actions runs |
 
 ### Containers & Kubernetes
 
@@ -99,6 +100,14 @@ Linux-specific alias differences from macOS:
 | `par` | `parallel` | GNU parallel |
 | `lint-sh` | `shellcheck` | Lint shell scripts |
 | `fmt-sh` | `shfmt -w -i 4` | Format shell scripts |
+
+### Terminal Apps
+
+| Alias | Runs | What it does |
+|-------|------|-------------|
+| `n` | `nnn -de` | File manager (detail view, text in pager) |
+| `prog` | `progress -m` | Live progress bars for running cp/mv/dd/tar |
+| `sshc` | `sshclick` | SSH config manager for `~/.ssh/config` |
 
 ### Directory Shortcuts (via zoxide)
 

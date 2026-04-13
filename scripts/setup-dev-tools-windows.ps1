@@ -5969,6 +5969,7 @@ function serve { miniserve --color-scheme-dark dracula -qr . @args }
 function ghd { gh dash @args }
 function gdft { git dft @args }
 function gha { act @args }
+function gha3 { act3 @args }
 
 # -- Media & Conversion -------------------------------------------------------
 function ytdl { yt-dlp @args }
