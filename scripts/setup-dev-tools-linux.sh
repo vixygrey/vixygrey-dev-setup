@@ -4262,6 +4262,95 @@ MLR_CONF
     success "miller configured"
 fi
 
+# ---- cmus config ----
+CMUS_CONFIG_DIR="$HOME/.config/cmus"
+CMUS_CONFIG="$CMUS_CONFIG_DIR/rc"
+if [[ -f "$CMUS_CONFIG" ]]; then
+    warn "cmus config already exists"
+else
+    info "Creating cmus config (Dracula-inspired colors)..."
+    mkdir -p "$CMUS_CONFIG_DIR"
+    cat > "$CMUS_CONFIG" <<'CMUS_CONF'
+# cmus configuration — Dracula-inspired colors
+# Apply inside cmus with:  :source ~/.config/cmus/rc
+
+set replaygain=track
+set replaygain_limit=true
+
+set format_current= %a — %t
+set format_playlist= %-20%a %t (%l)
+set format_trackwin= %-20%a %t (%l)
+
+# Dracula palette (256-color)
+set color_bg=-1
+set color_cmdline_bg=-1
+set color_cmdline_fg=253
+set color_info=141
+set color_error=203
+set color_separator=61
+set color_statusline_bg=61
+set color_statusline_fg=253
+set color_titleline_bg=61
+set color_titleline_fg=253
+set color_win_bg=-1
+set color_win_cur=141
+set color_win_cur_sel_bg=61
+set color_win_cur_sel_fg=253
+set color_win_dir=117
+set color_win_fg=253
+set color_win_inactive_cur_sel_bg=61
+set color_win_inactive_cur_sel_fg=253
+set color_win_inactive_sel_bg=-1
+set color_win_inactive_sel_fg=141
+set color_win_sel_bg=61
+set color_win_sel_fg=253
+set color_win_title_bg=61
+set color_win_title_fg=253
+CMUS_CONF
+    success "cmus configured (Dracula colors, replaygain)"
+fi
+
+# ---- w3m config ----
+W3M_CONFIG_DIR="$HOME/.w3m"
+W3M_CONFIG="$W3M_CONFIG_DIR/config"
+if [[ -f "$W3M_CONFIG" ]]; then
+    warn "w3m config already exists"
+else
+    info "Creating w3m config (UTF-8, cookies off, colors)..."
+    mkdir -p "$W3M_CONFIG_DIR"
+    cat > "$W3M_CONFIG" <<'W3M_CONF'
+# w3m configuration — sensible privacy + display defaults
+display_charset UTF-8
+document_charset UTF-8
+system_charset UTF-8
+auto_detect 2
+
+display_image 0
+use_mouse 1
+tabstop 8
+show_lnum 0
+
+color 1
+basic_color terminal
+anchor_color blue
+image_color green
+form_color red
+mark_color cyan
+
+# Privacy — disable cookies by default
+use_cookie 0
+accept_cookie 0
+show_cookie 0
+
+follow_redirection 5
+use_proxy 1
+
+bookmark bookmark.html
+keep_cache_in_memory 0
+W3M_CONF
+    success "w3m configured (UTF-8, cookies off)"
+fi
+
 # ---- asciinema config ----
 ASCIINEMA_CONFIG_DIR="$HOME/.config/asciinema"
 ASCIINEMA_CONFIG="$ASCIINEMA_CONFIG_DIR/config"
@@ -7686,6 +7775,12 @@ export FZF_CTRL_T_OPTS=\"--preview 'bat --color=always --style=numbers --line-ra
 export FZF_ALT_C_COMMAND='fd --type d --hidden --follow --exclude .git'
 export FZF_ALT_C_OPTS=\"--preview 'eza --tree --icons --level=2 --color=always {}' --preview-window='right:50%:wrap'\"
 
+# -- nnn (terminal file manager) ----------------------------------------------
+export NNN_OPTS=\"deH\"
+export NNN_COLORS=\"2136\"
+export NNN_FCOLORS=\"c1e2272e006033f7c6d6abc4\"
+export NNN_PLUG=\"f:fzcd;o:fzopen;p:preview-tui\"
+
 # zsh plugins"
 
 if [[ -n "$ZSH_AUTOSUGGEST_PATH" ]]; then
@@ -7738,6 +7833,7 @@ alias lg=\"lazygit\"
 alias ghd=\"gh dash\"
 alias gdft=\"git dft\"
 alias gha=\"act\"
+alias gha3=\"act3\"
 
 # Containers & K8s
 alias lzd=\"lazydocker\"
@@ -7773,6 +7869,11 @@ alias loadtest=\"oha\"
 alias par=\"parallel\"
 alias lint-sh=\"shellcheck\"
 alias fmt-sh=\"shfmt -w -i 4\"
+
+# Terminal apps
+alias n=\"nnn -de\"
+alias prog=\"progress -m\"
+alias sshc=\"sshclick\"
 
 # Directory Shortcuts
 alias cw=\"z ~/Code/work\"

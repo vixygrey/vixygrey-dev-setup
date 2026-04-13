@@ -77,6 +77,12 @@ zi                  # interactive selection with fzf
 # File manager (yazi)
 y                   # open terminal file manager
 # j/k to navigate, l to enter, h to go back, q to quit
+
+# Alternative file manager (nnn — minimal, fast, keyboard-driven)
+n                   # alias: nnn -de (detail view, open text in pager)
+# Inside nnn: arrows to navigate, Enter to open, ! to spawn shell,
+#             ^G cd-quit to parent shell, q to quit, ? for help
+# Env vars: NNN_OPTS, NNN_COLORS, NNN_PLUG are pre-configured
 ```
 
 ### Searching
@@ -132,6 +138,11 @@ df                  # duf: colorful disk free table
 # Process management
 ps                  # procs: sortable process list
 ps --tree           # process tree view
+
+# Monitor ongoing cp/mv/dd/tar (progress)
+prog                # alias: progress -m — live % for running coreutils
+progress -w         # one-shot snapshot for all copy/move/dd ops
+# Useful when you started a big `cp` in another pane and want live ETA.
 ```
 
 ---
@@ -592,6 +603,15 @@ act push                     # simulate push event
 act -j test                  # run specific job
 ```
 
+### act3 (glance at last 3 GitHub Actions runs)
+
+```bash
+gha3                         # alias: view last 3 runs of every workflow
+act3 -r owner/repo           # view runs for a specific repo
+act3 -t html > status.html   # export HTML status page
+# Requires a GitHub token: `gh auth login` or $GH_TOKEN
+```
+
 ---
 
 ## Networking & Debugging
@@ -644,6 +664,16 @@ xh -d api.example.com/file  # download file
 
 curlie httpbin.org/get       # curl syntax, httpie output
 curlie -X POST api.example.com -d '{"key":"val"}'
+```
+
+### sshclick (SSH config manager)
+
+```bash
+sshc host list                              # alias: list hosts in ~/.ssh/config
+sshclick host add prod --hostname prod.example.com --user deploy
+sshclick host show prod                     # show merged config for a host
+sshclick group list                         # view host groups
+# Organizes ~/.ssh/config with groups, comments, and safe edits.
 ```
 
 ---
@@ -701,6 +731,42 @@ yt-dlp --list-formats URL                # show available formats
 7z x archive.7z              # extract
 7z l archive.zip             # list contents
 7z a -tzip archive.zip files/ # create zip specifically
+```
+
+### cmus (terminal music player)
+
+```bash
+cmus                         # launch the TUI
+# Inside cmus:
+#   1–7 — switch views (library, playlist, queue, browser, filters, settings)
+#   a   — add directory to library
+#   c   — toggle pause     x — play     v — stop
+#   b / z — next / previous track
+#   s / r — toggle shuffle / repeat
+#   /   — search current view    q — quit
+# Config: ~/.config/cmus/rc (Dracula colors pre-configured)
+```
+
+### w3m (terminal web browser)
+
+```bash
+w3m https://example.com      # open URL in terminal
+w3m -dump https://example.com  # dump rendered text to stdout
+w3m -T text/html local.html  # render a local HTML file
+# Inside w3m:
+#   Tab — next link    Enter — follow link
+#   B   — back         U — enter URL     a — add bookmark
+#   q   — quit         h — help
+# Config: ~/.w3m/config (UTF-8, cookies off by default)
+```
+
+### monolith (save pages as single HTML)
+
+```bash
+monolith https://example.com -o page.html
+monolith https://example.com -o page.html --no-js --no-audio
+monolith -o bundle.html /tmp/local.html     # bundle a local file with deps
+# Embeds CSS, JS, images, and fonts inline — single-file web archive.
 ```
 
 ---
