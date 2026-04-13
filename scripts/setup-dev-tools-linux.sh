@@ -218,15 +218,15 @@ list_categories() {
     printf "  %-25s %s\n" "security"            "detect-secrets, gitleaks, trivy, semgrep, Snyk, ClamAV"
     printf "  %-25s %s\n" "replacements"        "eza, bat, fd, ripgrep, zoxide, btop, sd, dust, just, yazi, fx, etc."
     printf "  %-25s %s\n" "data-processing"     "yq, miller, csvkit, pandoc, ffmpeg, ImageMagick"
-    printf "  %-25s %s\n" "code-quality"        "shellcheck, shfmt, act, hadolint, ruff, commitizen, ni"
+    printf "  %-25s %s\n" "code-quality"        "shellcheck, shfmt, act, act3, hadolint, ruff, commitizen, ni"
     printf "  %-25s %s\n" "perf-testing"        "hyperfine, oha"
     printf "  %-25s %s\n" "dev-servers"         "ngrok, miniserve, caddy"
-    printf "  %-25s %s\n" "terminal-productivity" "glow, watchexec, pv, parallel, gum, nushell, newsboat, topgrade, fastfetch, lnav"
+    printf "  %-25s %s\n" "terminal-productivity" "glow, watchexec, pv, parallel, gum, nushell, newsboat, topgrade, fastfetch, lnav, nnn, progress"
     printf "  %-25s %s\n" "k8s-github"          "stern, gh-dash"
     printf "  %-25s %s\n" "database"            "pgcli, mycli, lazysql, usql, sq"
     printf "  %-25s %s\n" "containers"          "lazydocker, dive, kubectl, k9s"
     printf "  %-25s %s\n" "api"                 "Bruno, grpcurl"
-    printf "  %-25s %s\n" "networking"          "mtr, bandwhich, nmap"
+    printf "  %-25s %s\n" "networking"          "mtr, bandwhich, nmap, sshclick"
     printf "  %-25s %s\n" "dx"                  "fzf, starship, atuin, VS Code, Zed, Alacritty, tmux"
     printf "  %-25s %s\n" "ui"                  "Storybook, Playwright, Chrome"
     printf "  %-25s %s\n" "ux"                  "Lighthouse"
@@ -234,8 +234,8 @@ list_categories() {
     printf "  %-25s %s\n" "linux-system"        "p7zip, gnome-sushi, caffeine, Mullvad VPN"
     printf "  %-25s %s\n" "linux-productivity"  "Flameshot, Espanso, Notion, Filezilla"
     printf "  %-25s %s\n" "linux-communication" "Slack, Telegram, Signal"
-    printf "  %-25s %s\n" "linux-browsers"      "Firefox, Brave, Chrome, Carbonyl"
-    printf "  %-25s %s\n" "linux-media"         "mpv, oxipng, jpegoptim, LibreOffice"
+    printf "  %-25s %s\n" "linux-browsers"      "Firefox, Brave, Chrome, Carbonyl, w3m, monolith"
+    printf "  %-25s %s\n" "linux-media"         "mpv, oxipng, jpegoptim, LibreOffice, cmus"
     printf "  %-25s %s\n" "linux-cloud"         "rclone, syncthing, borgbackup, borgmatic"
     printf "  %-25s %s\n" "linux-focus"         "NewsFlash (RSS)"
     printf "  %-25s %s\n" "linux-disk"          "ncdu"
@@ -2171,6 +2171,19 @@ else
     progress
 fi
 
+# act3 (glance at last 3 GitHub Actions runs)
+if ! installed act3; then
+    if installed brew; then
+        brew tap dhth/tap >> "$LOG_FILE" 2>&1 || true
+        brew_install "act3" "act3 (glance at last 3 GitHub Actions runs)"
+    else
+        github_release_install "dhth/act3" "act3" "https://github.com/dhth/act3/releases/download/VERSION/act3_VERSION_linux_ARCH.tar.gz" "act3 (glance at last 3 GitHub Actions runs)"
+    fi
+else
+    warn "act3 already installed"
+    progress
+fi
+
 # hadolint (Dockerfile linter)
 if ! installed hadolint; then
     if installed brew; then
@@ -2376,6 +2389,12 @@ else
     progress
 fi
 
+# nnn (tiny, fast terminal file manager)
+pkg_install "nnn" "nnn" "nnn" "nnn (tiny, fast terminal file manager)"
+
+# progress (coreutils progress viewer)
+pkg_install "progress" "progress" "progress" "progress (coreutils progress viewer — cp, mv, dd, tar)"
+
 fi  # terminal-productivity
 
 # =============================================================================
@@ -2546,6 +2565,9 @@ pkg_install "mtr" "mtr" "mtr" "mtr (combines ping + traceroute)"
 cargo_install "bandwhich" "bandwhich (real-time bandwidth by process)"
 pkg_install "nmap" "nmap" "nmap" "nmap (network scanning)"
 cargo_install "trippy" "trippy (modern traceroute TUI with charts)"
+
+# sshclick (SSH config manager)
+pip_install "sshclick" "sshclick (SSH config manager — organize ~/.ssh/config)"
 
 fi  # networking
 
@@ -2861,6 +2883,24 @@ fi
 
 npm_global_install "carbonyl" "Carbonyl (Chromium-based browser for the terminal)"
 
+# w3m (text-based terminal browser)
+pkg_install "w3m" "w3m" "w3m" "w3m (text-based terminal browser and pager)"
+
+# monolith (save complete web pages as a single HTML file)
+if ! installed monolith; then
+    case "$PKG_MANAGER" in
+        apt) pkg_install "monolith" "-" "-" "monolith (save web pages as single HTML)" ;;
+        dnf) pkg_install "-" "monolith" "-" "monolith (save web pages as single HTML)" ;;
+        pacman) pkg_install "-" "-" "monolith" "monolith (save web pages as single HTML)" ;;
+    esac
+    if ! installed monolith; then
+        cargo_install "monolith" "monolith (save web pages as single HTML)"
+    fi
+else
+    warn "monolith already installed"
+    progress
+fi
+
 fi  # linux-browsers
 
 # =============================================================================
@@ -2876,6 +2916,9 @@ pkg_install "jpegoptim" "jpegoptim" "jpegoptim" "jpegoptim (lossless JPEG compre
 
 # LibreOffice (usually pre-installed)
 pkg_install "libreoffice" "libreoffice" "libreoffice-fresh" "LibreOffice"
+
+# cmus (ncurses terminal music player)
+pkg_install "cmus" "cmus" "cmus" "cmus (ncurses terminal music player)"
 
 fi  # linux-media
 

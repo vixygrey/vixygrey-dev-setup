@@ -231,10 +231,10 @@ list_categories() {
     printf "  %-25s %s\n" "security"            "detect-secrets, gitleaks, trivy, semgrep, Snyk, ClamAV, Objective-See"
     printf "  %-25s %s\n" "replacements"        "eza, bat, fd, ripgrep, zoxide, btop, sd, dust, just, yazi, fx, etc."
     printf "  %-25s %s\n" "data-processing"     "yq, miller, csvkit, pandoc, ffmpeg, ImageMagick"
-    printf "  %-25s %s\n" "code-quality"        "shellcheck, shfmt, act, hadolint, ruff, commitizen, ni"
+    printf "  %-25s %s\n" "code-quality"        "shellcheck, shfmt, act, act3, hadolint, ruff, commitizen, ni"
     printf "  %-25s %s\n" "perf-testing"        "hyperfine, oha"
     printf "  %-25s %s\n" "dev-servers"         "ngrok, miniserve, caddy"
-    printf "  %-25s %s\n" "terminal-productivity" "glow, watchexec, pv, parallel, gum, nushell, topgrade, fastfetch"
+    printf "  %-25s %s\n" "terminal-productivity" "glow, watchexec, pv, parallel, gum, nushell, topgrade, fastfetch, nnn, progress"
     printf "  %-25s %s\n" "k8s-github"          "stern, gh-dash"
     printf "  %-25s %s\n" "database"            "pgcli, mycli, usql, sq, TablePlus"
     printf "  %-25s %s\n" "containers"          "lazydocker, dive, kubectl, k9s"
@@ -246,8 +246,8 @@ list_categories() {
     printf "  %-25s %s\n" "mac-system"          "Pearcleaner, Quick Look plugins"
     printf "  %-25s %s\n" "mac-productivity"    "Notion, Skim, Transmit"
     printf "  %-25s %s\n" "mac-communication"   "Slack, Telegram"
-    printf "  %-25s %s\n" "mac-browsers"        "Firefox, Brave, Carbonyl"
-    printf "  %-25s %s\n" "mac-media"           "mpv, oxipng, jpegoptim, 7zip, LibreOffice"
+    printf "  %-25s %s\n" "mac-browsers"        "Firefox, Brave, Carbonyl, w3m, monolith"
+    printf "  %-25s %s\n" "mac-media"           "mpv, oxipng, jpegoptim, 7zip, LibreOffice, cmus"
     printf "  %-25s %s\n" "mac-cloud"           "Google Drive, rclone, borg"
     printf "  %-25s %s\n" "mac-focus"           "newsboat"
     printf "  %-25s %s\n" "mac-bloat"           "Remove pre-installed Apple apps (GarageBand)"
@@ -1213,6 +1213,8 @@ banner "Code Quality"
 brew_install "shellcheck" "shellcheck (shell script linter)"
 brew_install "shfmt" "shfmt (shell script formatter)"
 brew_install "act" "act (run GitHub Actions locally)"
+brew tap dhth/tap >> "$LOG_FILE" 2>&1 || true
+brew_install "act3" "act3 (glance at last 3 GitHub Actions runs)"
 brew_install "hadolint" "hadolint (Dockerfile linter — catches bad practices)"
 
 # Python linting (ruff — extremely fast, replaces flake8+black+isort)
@@ -1265,6 +1267,8 @@ brew_install "topgrade" "topgrade (update everything — brew, npm, pip, macOS, 
 brew_install "fastfetch" "fastfetch (quick system info display — faster neofetch)"
 brew_install "nano" "nano (latest — better than macOS built-in)"
 brew_install "lnav" "lnav (advanced log file viewer — auto-format, SQL queries on logs)"
+brew_install "nnn" "nnn (tiny, fast terminal file manager)"
+brew_install "progress" "progress (coreutils progress viewer — cp, mv, dd, tar)"
 
 fi  # terminal-productivity
 
@@ -1503,6 +1507,8 @@ brew_cask_install "firefox" "Firefox"
 brew_cask_install "brave-browser" "Brave Browser (privacy-focused Chromium)"
 
 npm_global_install "carbonyl" "Carbonyl (Chromium-based browser for the terminal)"
+brew_install "w3m" "w3m (text-based terminal browser and pager)"
+brew_install "monolith" "monolith (save complete web pages as a single HTML file)"
 
 fi  # mac-browsers
 
@@ -1514,6 +1520,7 @@ brew_install "mpv" "mpv (terminal video player)"
 brew_install "oxipng" "oxipng (lossless PNG compression)"
 brew_install "jpegoptim" "jpegoptim (lossless JPEG compression)"
 brew_install "p7zip" "7zip (archive tool — zip, 7z, rar, tar)"
+brew_install "cmus" "cmus (ncurses terminal music player)"
 brew_cask_install "libreoffice" "LibreOffice (free office suite)"
 
 fi  # mac-media
