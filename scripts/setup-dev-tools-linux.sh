@@ -225,9 +225,9 @@ list_categories() {
     printf "  %-25s %s\n" "k8s-github"          "stern, gh-dash"
     printf "  %-25s %s\n" "database"            "pgcli, mycli, lazysql, usql, sq"
     printf "  %-25s %s\n" "containers"          "lazydocker, dive, kubectl, k9s"
-    printf "  %-25s %s\n" "api"                 "Bruno, grpcurl"
+    printf "  %-25s %s\n" "api"                 "Postman, grpcurl"
     printf "  %-25s %s\n" "networking"          "mtr, bandwhich, nmap, sshclick"
-    printf "  %-25s %s\n" "dx"                  "fzf, starship, atuin, VS Code, Zed, Alacritty, tmux"
+    printf "  %-25s %s\n" "dx"                  "fzf, starship, atuin, VS Code, Alacritty, tmux"
     printf "  %-25s %s\n" "ui"                  "Storybook, Playwright, Chrome"
     printf "  %-25s %s\n" "ux"                  "Lighthouse"
     printf "  %-25s %s\n" "docs"                "d2, Mermaid CLI"
@@ -2537,10 +2537,10 @@ fi  # containers
 if should_run "api"; then
 banner "API Development"
 
-# Bruno
-snap_install "bruno" "Bruno (open-source API client)" ""
-if ! installed bruno && ! snap list bruno &>/dev/null; then
-    flatpak_install "com.usebruno.Bruno" "Bruno (open-source API client)"
+# Postman
+snap_install "postman" "Postman (industry-standard API client)" ""
+if ! installed postman && ! snap list postman &>/dev/null; then
+    flatpak_install "com.getpostman.Postman" "Postman (industry-standard API client)"
 fi
 
 # grpcurl
@@ -2643,31 +2643,7 @@ if ! installed code && [[ "$PKG_MANAGER" == "pacman" ]]; then
     snap_install "code" "VS Code" "classic"
 fi
 
-# Cursor removed (paid) — use VS Code + Zed
-
-# Zed
-if ! installed zed; then
-    info "Installing Zed editor..."
-    if [[ "$DRY_RUN" != "true" ]]; then
-        installer
-        installer="$(mktemp)"
-        curl -fsSL https://zed.dev/install.sh -o "$installer" 2>/dev/null
-        if [[ ! -s "$installer" ]]; then
-            error "Failed to download Zed installer"
-            rm -f "$installer"
-        else
-            sh "$installer" >> "$LOG_FILE" 2>&1 || true
-            rm -f "$installer"
-        fi
-        if installed zed; then
-            success "Zed installed"
-        else
-            flatpak_install "dev.zed.Zed" "Zed editor"
-        fi
-    fi
-else
-    warn "Zed already installed"
-fi
+# Cursor removed (paid) — use VS Code
 
 # Alacritty
 pkg_install "alacritty" "alacritty" "alacritty" "Alacritty (GPU-accelerated terminal)"
@@ -5574,42 +5550,6 @@ FASTFETCH_CONF
     success "fastfetch configured (themed layout, Nerd Font icons, dev tool versions)"
 fi
 
-# ---- Zed editor config ----
-ZED_CONFIG_DIR="$HOME/.config/zed"
-ZED_CONFIG="$ZED_CONFIG_DIR/settings.json"
-if [[ -f "$ZED_CONFIG" ]]; then
-    warn "Zed config already exists"
-else
-    info "Creating Zed configuration..."
-    mkdir -p "$ZED_CONFIG_DIR"
-    cat > "$ZED_CONFIG" <<'ZED_CONF'
-{
-    "theme": "Dracula",
-    "ui_font_family": "Inter",
-    "ui_font_size": 15,
-    "buffer_font_family": "JetBrains Mono",
-    "buffer_font_size": 14,
-    "buffer_line_height": { "custom": 1.6 },
-    "buffer_font_features": { "calt": true, "liga": true },
-    "tab_size": 2,
-    "format_on_save": "on",
-    "autosave": "on_focus_change",
-    "relative_line_numbers": true,
-    "scrollbar": { "show": "auto" },
-    "indent_guides": { "enabled": true, "coloring": "indent_aware" },
-    "inlay_hints": { "enabled": true },
-    "git": { "inline_blame": { "enabled": true } },
-    "terminal": {
-        "font_family": "JetBrains Mono NF",
-        "font_size": 13,
-        "blinking": "on"
-    },
-    "telemetry": { "diagnostics": false, "metrics": false }
-}
-ZED_CONF
-    success "Zed configured (Dracula theme, JetBrains Mono, format on save)"
-fi
-
 # ---- direnv config ----
 DIRENV_CONFIG_DIR="$HOME/.config/direnv"
 DIRENV_CONFIG="$DIRENV_CONFIG_DIR/direnv.toml"
@@ -6098,7 +6038,7 @@ else
 
 ## Environment
 - Shell: zsh with starship prompt, atuin history, fzf fuzzy finder, zsh-autosuggestions, zsh-syntax-highlighting
-- Editor: VS Code / Zed (Dracula theme, JetBrains Mono)
+- Editor: VS Code (Dracula theme, JetBrains Mono)
 - Terminal: Ghostty (Dracula theme)
 - Package managers: pnpm (preferred), npm, bun
 - Python: uv for packages (not pip), ruff for linting (not flake8/black)
@@ -6109,7 +6049,7 @@ else
 - Shell note: `bat` is aliased to `cat`; use `/bin/cat` only inside heredoc subshells where bat breaks syntax
 - Dotfiles: chezmoi
 - Launcher: Raycast
-- API client: Bruno
+- API client: Postman
 - Database GUI: TablePlus
 - Proxy/debugger: mitmproxy
 - Tunneling: ngrok

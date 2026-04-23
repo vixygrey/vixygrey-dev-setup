@@ -238,9 +238,9 @@ list_categories() {
     printf "  %-25s %s\n" "k8s-github"          "stern, gh-dash"
     printf "  %-25s %s\n" "database"            "pgcli, mycli, usql, sq, TablePlus"
     printf "  %-25s %s\n" "containers"          "lazydocker, dive, kubectl, k9s"
-    printf "  %-25s %s\n" "api"                 "Bruno, grpcurl"
+    printf "  %-25s %s\n" "api"                 "Postman, grpcurl"
     printf "  %-25s %s\n" "networking"          "mtr, bandwhich, nmap"
-    printf "  %-25s %s\n" "dx"                  "fzf, starship, atuin, VS Code, Zed, Ghostty, zellij, Raycast"
+    printf "  %-25s %s\n" "dx"                  "fzf, starship, atuin, VS Code, Ghostty, zellij, Raycast"
     printf "  %-25s %s\n" "ux"                  "Lighthouse"
     printf "  %-25s %s\n" "docs"                "d2, Mermaid CLI"
     printf "  %-25s %s\n" "mac-system"          "Pearcleaner, Quick Look plugins"
@@ -1336,7 +1336,7 @@ fi  # containers
 if should_run "api"; then
 banner "API Development"
 
-brew_cask_install "bruno" "Bruno (open-source API client, git-friendly)"
+brew_cask_install "postman" "Postman (industry-standard API client)"
 brew_install "grpcurl" "grpcurl (curl for gRPC)"
 
 fi  # api
@@ -1377,7 +1377,6 @@ if [[ -f "$VSCODE_CLI" ]] && ! installed code; then
     ln -sf "$VSCODE_CLI" /usr/local/bin/code 2>/dev/null || \
     sudo ln -sf "$VSCODE_CLI" /usr/local/bin/code 2>/dev/null || true
 fi
-brew_cask_install "zed" "Zed (fast native editor from ex-Atom team — GPU-rendered)"
 brew_cask_install "ghostty" "Ghostty (fast GPU-accelerated terminal)"
 brew_install "zellij" "zellij (modern terminal multiplexer — discoverable UI, layouts)"
 
@@ -4724,42 +4723,6 @@ GHOSTTY_CONF
     success "Ghostty configured (JetBrains Mono, Dracula theme, transparent titlebar)"
 fi
 
-# ---- Zed editor config ----
-ZED_CONFIG_DIR="$HOME/.config/zed"
-ZED_CONFIG="$ZED_CONFIG_DIR/settings.json"
-if [[ -f "$ZED_CONFIG" ]]; then
-    warn "Zed config already exists"
-else
-    info "Creating Zed configuration..."
-    mkdir -p "$ZED_CONFIG_DIR"
-    cat > "$ZED_CONFIG" <<'ZED_CONF'
-{
-    "theme": "Dracula",
-    "ui_font_family": "Inter",
-    "ui_font_size": 15,
-    "buffer_font_family": "JetBrains Mono",
-    "buffer_font_size": 14,
-    "buffer_line_height": { "custom": 1.6 },
-    "buffer_font_features": { "calt": true, "liga": true },
-    "tab_size": 2,
-    "format_on_save": "on",
-    "autosave": "on_focus_change",
-    "relative_line_numbers": true,
-    "scrollbar": { "show": "auto" },
-    "indent_guides": { "enabled": true, "coloring": "indent_aware" },
-    "inlay_hints": { "enabled": true },
-    "git": { "inline_blame": { "enabled": true } },
-    "terminal": {
-        "font_family": "JetBrains Mono NF",
-        "font_size": 13,
-        "blinking": "on"
-    },
-    "telemetry": { "diagnostics": false, "metrics": false }
-}
-ZED_CONF
-    success "Zed configured (Dracula theme, JetBrains Mono, format on save)"
-fi
-
 # ---- direnv config ----
 DIRENV_CONFIG_DIR="$HOME/.config/direnv"
 DIRENV_CONFIG="$DIRENV_CONFIG_DIR/direnv.toml"
@@ -6083,7 +6046,7 @@ else
 
 ## Environment
 - Shell: zsh with starship prompt, atuin history, fzf fuzzy finder, zsh-autosuggestions, zsh-syntax-highlighting
-- Editor: VS Code / Zed (Dracula theme, JetBrains Mono)
+- Editor: VS Code (Dracula theme, JetBrains Mono)
 - Terminal: Ghostty (Dracula theme)
 - Package managers: pnpm (preferred), npm, bun
 - Python: uv for packages (not pip), ruff for linting (not flake8/black)
@@ -6094,7 +6057,7 @@ else
 - Shell note: `bat` is aliased to `cat`; use `/bin/cat` only inside heredoc subshells where bat breaks syntax
 - Dotfiles: chezmoi
 - Launcher: Raycast
-- API client: Bruno
+- API client: Postman
 - Database GUI: TablePlus
 - Proxy/debugger: mitmproxy
 - Tunneling: ngrok
