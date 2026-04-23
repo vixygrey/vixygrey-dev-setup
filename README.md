@@ -52,7 +52,7 @@ chmod +x scripts/setup-dev-tools-mac.sh
 4. Applies the **Dracula** theme everywhere
 5. Sets macOS system defaults (Dock, keyboard, Finder, screenshots, wallpaper, screensaver, etc.)
 6. Configures Finder sidebar with custom favorites via **LSSharedFileList** API
-7. Clears Dock of default pins (start fresh, drag your own)
+7. Curates the Dock via `dockutil` -- pins Finder, System Settings, VS Code, Ghostty, Raycast (skips any missing app)
 8. Optionally **removes pre-installed Apple bloat** (GarageBand, News, Stocks, etc.)
 9. Auto-writes `~/.zshrc` with a managed block (preserves your customizations)
 10. Exports a `Brewfile` snapshot (with descriptions) for reproducibility
@@ -416,6 +416,9 @@ Preview files in Finder by pressing spacebar.
 | **UniFi Identity Endpoint** | Wi-Fi, VPN, and device management for UniFi NAS |
 | **LuLu** | Free open-source outbound firewall -- see what phones home |
 | **Mullvad VPN** | Privacy-focused VPN -- no account required, anonymous payment accepted |
+| **mas** | Mac App Store CLI -- script MAS installs and updates |
+| **dockutil** | Manage Dock pins programmatically (used by the setup script to curate the Dock) |
+| **terminal-notifier** | Send macOS notifications from shell scripts (used by the setup script for run-complete/failure alerts) |
 
 ---
 

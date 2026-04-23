@@ -73,6 +73,19 @@ banner() {
     log "=== $title ==="
 }
 
+# macOS notification helpers — silently no-op if terminal-notifier isn't installed yet
+notify_success() {
+    local message="$1"
+    command -v terminal-notifier >/dev/null 2>&1 || return 0
+    terminal-notifier -title "Dev Setup" -subtitle "Completed" -message "$message" -sound Glass -group vixygrey-dev-setup >/dev/null 2>&1 || true
+}
+
+notify_failure() {
+    local message="$1"
+    command -v terminal-notifier >/dev/null 2>&1 || return 0
+    terminal-notifier -title "Dev Setup" -subtitle "Failed" -message "$message" -sound Basso -group vixygrey-dev-setup >/dev/null 2>&1 || true
+}
+
 # -- Counters -----------------------------------------------------------------
 INSTALL_SUCCESS=0
 INSTALL_SKIPPED=0
@@ -243,7 +256,7 @@ list_categories() {
     printf "  %-25s %s\n" "dx"                  "fzf, starship, atuin, VS Code, Ghostty, zellij, Raycast"
     printf "  %-25s %s\n" "ux"                  "Lighthouse"
     printf "  %-25s %s\n" "docs"                "d2, Mermaid CLI"
-    printf "  %-25s %s\n" "mac-system"          "Pearcleaner, Quick Look plugins"
+    printf "  %-25s %s\n" "mac-system"          "Pearcleaner, Quick Look plugins, mas, dockutil, terminal-notifier"
     printf "  %-25s %s\n" "mac-productivity"    "Notion, Skim, Transmit"
     printf "  %-25s %s\n" "mac-communication"   "Slack, Telegram"
     printf "  %-25s %s\n" "mac-browsers"        "Firefox, Brave, Carbonyl, w3m, monolith"
@@ -1486,6 +1499,11 @@ brew_cask_install "mullvadvpn" "Mullvad VPN (privacy-focused, no account email r
 
 # Utilities
 brew_cask_install "pearcleaner" "Pearcleaner (open-source deep app uninstaller)"
+
+# macOS scripting helpers — used by this script (Dock, notifications, MAS apps)
+brew_install "mas" "mas (Mac App Store CLI — install/update MAS apps from a script)"
+brew_install "dockutil" "dockutil (manage Dock pins programmatically)"
+brew_install "terminal-notifier" "terminal-notifier (send macOS notifications from shell scripts)"
 
 # Quick Look plugins (preview files in Finder with spacebar)
 brew_cask_install "qlmarkdown" "QLMarkdown (preview Markdown in Finder)"
@@ -3528,14 +3546,37 @@ sudo pmset -c displaysleep 120 2>/dev/null || true  # charger: 2 hours
 sudo pmset -b displaysleep 75 2>/dev/null || true   # battery: 1hr 15min
 success "Screensaver at 45min, display sleep at 2hr (charger) / 1h15m (battery)"
 
-# -- Clear Dock (remove all default pinned apps so user can set their own) --
+# -- Dock: clear defaults and pin a curated set via dockutil --
+# Pinned apps (in order): Finder, System Settings, VS Code, Ghostty, Raycast.
+# Only pins an app if it exists on disk — survives a partial install.
 if [[ "$DRY_RUN" != "true" ]]; then
-    info "Clearing all default apps from Dock (pin your own via drag-and-drop)..."
-    defaults write com.apple.dock persistent-apps -array
-    defaults write com.apple.dock persistent-others -array
-    success "Dock cleared — drag apps to Dock to pin them"
+    if command -v dockutil >/dev/null 2>&1; then
+        info "Configuring Dock with curated pins via dockutil..."
+        dockutil --remove all --no-restart >/dev/null 2>&1 || true
+
+        dock_pins=(
+            "/System/Library/CoreServices/Finder.app"
+            "/System/Applications/System Settings.app"
+            "/Applications/Visual Studio Code.app"
+            "/Applications/Ghostty.app"
+            "/Applications/Raycast.app"
+        )
+        for app in "${dock_pins[@]}"; do
+            if [[ -d "$app" ]]; then
+                dockutil --add "$app" --no-restart >/dev/null 2>&1 || warn "dockutil: failed to pin $(basename "$app" .app)"
+            else
+                warn "Dock: skipping $(basename "$app" .app) — not installed"
+            fi
+        done
+        success "Dock configured (Finder, System Settings, VS Code, Ghostty, Raycast)"
+    else
+        # Fallback if dockutil didn't install: clear the Dock the old way
+        warn "dockutil not installed — clearing Dock via defaults instead"
+        defaults write com.apple.dock persistent-apps -array
+        defaults write com.apple.dock persistent-others -array
+    fi
 else
-    info "[DRY RUN] Would clear all default apps from Dock"
+    info "[DRY RUN] Would pin Finder, System Settings, VS Code, Ghostty, Raycast to Dock via dockutil"
 fi
 
 # Restart Dock to apply all Dock/Hot Corner/Mission Control changes
@@ -7496,6 +7537,13 @@ if [[ "$DRY_RUN" == "true" ]]; then
     echo -e "${YELLOW}${BOLD}  This was a dry run — no changes were made.${NC}"
     echo -e "${YELLOW}  Run without --dry-run to install everything.${NC}"
     echo ""
+else
+    # macOS notification: success or failure summary
+    if [[ ${#FAILED_ITEMS[@]} -gt 0 ]]; then
+        notify_failure "${INSTALL_FAILED} item(s) failed — see $ERROR_LOG"
+    else
+        notify_success "Installed $INSTALL_SUCCESS, skipped $INSTALL_SKIPPED in ${MINUTES}m ${SECONDS_REMAINING}s"
+    fi
 fi
 
 if [[ "$DRY_RUN" == "false" ]]; then

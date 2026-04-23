@@ -1,5 +1,16 @@
 # Changelog
 
+## [Unreleased]
+
+### Added
+
+- **tools**: Add `mas` (Mac App Store CLI), `dockutil` (Dock management), and `terminal-notifier` (macOS notifications) to the `mac-system` category (#15)
+- **script**: Emit a macOS notification at end of run — success notification with install/skip/fail counts and duration, or failure notification with error log path if any step errored (uses `terminal-notifier`, no-op if not installed)
+
+### Changed
+
+- **Dock**: Replace the `defaults write persistent-apps -array` clearing block with a `dockutil` sequence that removes all defaults then pins a curated set (Finder, System Settings, VS Code, Ghostty, Raycast). Any app not present on disk is skipped with a warning, so partial installs still succeed. Falls back to the previous clear-only behavior if `dockutil` isn't installed (#15)
+
 ## [3.0.0] - 2026-04-23
 
 **BREAKING:** Linux and Windows support removed. This is now a macOS-only project.
