@@ -236,7 +236,7 @@ list_categories() {
     printf "  %-25s %s\n" "dev-servers"         "ngrok, miniserve, caddy"
     printf "  %-25s %s\n" "terminal-productivity" "glow, watchexec, pv, parallel, gum, nushell, topgrade, fastfetch, nnn, progress"
     printf "  %-25s %s\n" "k8s-github"          "stern, gh-dash"
-    printf "  %-25s %s\n" "database"            "pgcli, mycli, usql, sq, TablePlus"
+    printf "  %-25s %s\n" "database"            "pgcli, mycli, lazysql, harlequin, usql, sq, TablePlus"
     printf "  %-25s %s\n" "containers"          "lazydocker, dive, kubectl, k9s"
     printf "  %-25s %s\n" "api"                 "Postman, grpcurl"
     printf "  %-25s %s\n" "networking"          "mtr, bandwhich, nmap"
@@ -1158,6 +1158,9 @@ brew_install "hexyl" "hexyl (replaces hexdump — colorized hex viewer)"
 # curl/wget -> aria2: multi-connection parallel downloads, 3-10x faster
 brew_install "aria2" "aria2 (replaces curl/wget for downloads — multi-connection, BitTorrent)"
 
+# tar/unzip/7z -> ouch: universal archive tool, auto-detects format
+brew_install "ouch" "ouch (universal archive tool — compress/decompress any format)"
+
 # rm -> trash: moves to macOS Trash instead of permanent delete
 brew_install "trash" "trash (replaces rm — moves to macOS Trash, recoverable)"
 
@@ -1302,6 +1305,27 @@ banner "Database & Data"
 brew_install "pgcli" "pgcli (auto-completing Postgres CLI)"
 brew_install "mycli" "mycli (auto-completing MySQL CLI)"
 brew_install "lazysql" "lazysql (TUI for databases — interactive SQL in terminal)"
+
+# harlequin (terminal SQL IDE — DuckDB/Postgres/MySQL, multi-tab, autocomplete)
+if installed harlequin; then
+    warn "harlequin already installed"
+    progress
+elif installed uv; then
+    info "Installing harlequin via uv (with postgres,mysql,s3 adapters)..."
+    if [[ "$DRY_RUN" != "true" ]]; then
+        if uv tool install 'harlequin[postgres,mysql,s3]' >> "$LOG_FILE" 2>&1; then
+            success "harlequin installed (DuckDB + Postgres + MySQL + S3 adapters)"
+        else
+            error "Failed to install harlequin via uv"
+        fi
+    else
+        info "[DRY RUN] Would: uv tool install 'harlequin[postgres,mysql,s3]'"
+    fi
+    progress
+else
+    warn "Skipping harlequin — uv not installed"
+    progress
+fi
 # usql — not in Homebrew, install via Go
 progress
 if installed go; then
@@ -4427,6 +4451,25 @@ PGCLI_CONF
     success "pgcli configured (multi-line, auto-expand, destructive warnings, bat pager)"
 fi
 
+# ---- harlequin config ----
+HARLEQUIN_CONFIG_DIR="$HOME/.config/harlequin"
+HARLEQUIN_CONFIG="$HARLEQUIN_CONFIG_DIR/config.toml"
+if [[ -f "$HARLEQUIN_CONFIG" ]]; then
+    warn "harlequin config already exists"
+else
+    info "Creating harlequin configuration..."
+    mkdir -p "$HARLEQUIN_CONFIG_DIR"
+    cat > "$HARLEQUIN_CONFIG" <<'HARLEQUIN_CONF'
+# Harlequin SQL IDE — https://harlequin.sql/docs/config-file/
+[defaults]
+theme = "dracula"
+keymap_name = ["vscode"]
+show_files = true
+locale = "en_US.UTF-8"
+HARLEQUIN_CONF
+    success "harlequin configured (Dracula theme, vscode keymap)"
+fi
+
 # ---- mycli config ----
 MYCLIRC="$HOME/.myclirc"
 if [[ -f "$MYCLIRC" ]]; then
@@ -7088,6 +7131,9 @@ alias fmt-sh="shfmt -w -i 4"
 # -- Terminal Apps ------------------------------------------------------------
 alias n="nnn -de"
 alias prog="progress -m"
+
+# -- Database -----------------------------------------------------------------
+alias hq="harlequin"
 
 # -- Directory Shortcuts (using zoxide for smart jumping) --------------------
 alias cw="z ~/Code/work"

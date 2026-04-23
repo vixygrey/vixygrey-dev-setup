@@ -1,0 +1,42 @@
+# Pre-commit hooks for vixygrey-dev-setup
+# Install:  pre-commit install
+# Run all:  pre-commit run --all-files
+# Update:   pre-commit autoupdate
+
+repos:
+  # ShellCheck — mirrors CI (warning severity, follow sourced files)
+  # Uses shellcheck-py (pip-bundled binary) instead of the Docker-based
+  # koalaman/shellcheck-precommit so no container runtime is required.
+  - repo: https://github.com/shellcheck-py/shellcheck-py
+    rev: v0.10.0.1
+    hooks:
+      - id: shellcheck
+        args: ["-x", "-S", "warning"]
+        files: ^scripts/setup-dev-tools-(mac|linux)\.sh$
+
+  # Secret scanning — fast pre-commit pass before pushing
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.21.2
+    hooks:
+      - id: gitleaks
+
+  # Source spell checker — low false-positive rate, configurable via .typos.toml
+  - repo: https://github.com/crate-ci/typos
+    rev: v1.27.3
+    hooks:
+      - id: typos
+
+  # File hygiene — restricted to text-config files to avoid touching the
+  # 7k-line setup scripts (which embed heredocs that may rely on exact bytes).
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace
+        files: \.(md|yaml|yml|json|toml)$
+      - id: end-of-file-fixer
+        files: \.(md|yaml|yml|json|toml)$
+      - id: check-merge-conflict
+      - id: check-yaml
+        files: \.(yaml|yml)$
+      - id: check-added-large-files
+        args: ["--maxkb=500"]

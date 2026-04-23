@@ -32,6 +32,18 @@ pwsh -Command "Invoke-ScriptAnalyzer -Path scripts/setup-dev-tools-windows.ps1 -
 
 CI runs both ShellCheck and PSScriptAnalyzer automatically on every PR.
 
+### Pre-commit hooks (recommended)
+
+The repo ships a `.pre-commit-config.yaml` that runs ShellCheck (matching CI), gitleaks, typos, and a few file-hygiene checks before every commit. Install once:
+
+```bash
+pre-commit install                    # installs the git hook
+pre-commit run --all-files            # run all hooks against the whole repo
+pre-commit autoupdate                 # bump hook versions
+```
+
+`pre-commit` is installed by the setup scripts on all three platforms.
+
 ## Guidelines
 
 - **Keep scripts idempotent** -- every install block should skip if the tool is already present

@@ -223,7 +223,7 @@ list_categories() {
     printf "  %-25s %s\n" "dev-servers"         "ngrok, miniserve, caddy"
     printf "  %-25s %s\n" "terminal-productivity" "glow, watchexec, pv, parallel, gum, nushell, newsboat, topgrade, fastfetch, lnav, nnn, progress"
     printf "  %-25s %s\n" "k8s-github"          "stern, gh-dash"
-    printf "  %-25s %s\n" "database"            "pgcli, mycli, lazysql, usql, sq"
+    printf "  %-25s %s\n" "database"            "pgcli, mycli, lazysql, harlequin, usql, sq, DBeaver"
     printf "  %-25s %s\n" "containers"          "lazydocker, dive, kubectl, k9s"
     printf "  %-25s %s\n" "api"                 "Postman, grpcurl"
     printf "  %-25s %s\n" "networking"          "mtr, bandwhich, nmap, sshclick"
@@ -2053,6 +2053,17 @@ fi
 # aria2
 pkg_install "aria2" "aria2" "aria2" "aria2 (multi-connection downloads)"
 
+# tar/unzip/7z -> ouch: universal archive tool, auto-detects format
+if ! installed ouch; then
+    case "$PKG_MANAGER" in
+        pacman) pkg_install "-" "-" "ouch" "ouch (universal archive tool)" ;;
+        *) cargo_install "ouch" "ouch (universal archive tool — compress/decompress any format)" ;;
+    esac
+else
+    warn "ouch already installed"
+    progress
+fi
+
 # trash-cli (replaces rm)
 pip_install "trash-cli" "trash-cli (replaces rm — moves to Trash, recoverable)"
 
@@ -2433,6 +2444,27 @@ banner "Database & Data"
 pip_install "pgcli" "pgcli (auto-completing Postgres CLI)"
 pip_install "mycli" "mycli (auto-completing MySQL CLI)"
 cargo_install "lazysql" "lazysql (TUI for databases — interactive SQL in terminal)"
+
+# harlequin (terminal SQL IDE — DuckDB/Postgres/MySQL, multi-tab, autocomplete)
+if installed harlequin; then
+    warn "harlequin already installed"
+    progress
+elif installed uv; then
+    info "Installing harlequin via uv (with postgres,mysql,s3 adapters)..."
+    if [[ "$DRY_RUN" != "true" ]]; then
+        if uv tool install 'harlequin[postgres,mysql,s3]' >> "$LOG_FILE" 2>&1; then
+            success "harlequin installed (DuckDB + Postgres + MySQL + S3 adapters)"
+        else
+            error "Failed to install harlequin via uv"
+        fi
+    else
+        info "[DRY RUN] Would: uv tool install 'harlequin[postgres,mysql,s3]'"
+    fi
+    progress
+else
+    warn "Skipping harlequin — uv not installed"
+    progress
+fi
 
 # usql
 if installed go; then
@@ -5210,6 +5242,25 @@ PGCLI_CONF
     success "pgcli configured"
 fi
 
+# ---- harlequin config ----
+HARLEQUIN_CONFIG_DIR="$HOME/.config/harlequin"
+HARLEQUIN_CONFIG="$HARLEQUIN_CONFIG_DIR/config.toml"
+if [[ -f "$HARLEQUIN_CONFIG" ]]; then
+    warn "harlequin config already exists"
+else
+    info "Creating harlequin configuration..."
+    mkdir -p "$HARLEQUIN_CONFIG_DIR"
+    cat > "$HARLEQUIN_CONFIG" <<'HARLEQUIN_CONF'
+# Harlequin SQL IDE — https://harlequin.sql/docs/config-file/
+[defaults]
+theme = "dracula"
+keymap_name = ["vscode"]
+show_files = true
+locale = "en_US.UTF-8"
+HARLEQUIN_CONF
+    success "harlequin configured (Dracula theme, vscode keymap)"
+fi
+
 # ---- mycli config ----
 MYCLIRC="$HOME/.myclirc"
 if [[ -f "$MYCLIRC" ]]; then
@@ -7814,6 +7865,9 @@ alias fmt-sh=\"shfmt -w -i 4\"
 alias n=\"nnn -de\"
 alias prog=\"progress -m\"
 alias sshc=\"sshclick\"
+
+# Database
+alias hq=\"harlequin\"
 
 # Directory Shortcuts
 alias cw=\"z ~/Code/work\"

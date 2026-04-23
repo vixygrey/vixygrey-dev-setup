@@ -39,6 +39,12 @@ Quick reference for all shortcuts and aliases configured by the setup scripts on
 | `dl` | `aria2c` | Multi-connection downloader |
 | `wget` | `aria2c` | Download with 16 connections |
 
+### Database
+
+| Alias | Runs | What it does |
+|-------|------|-------------|
+| `hq` | `harlequin` | Terminal SQL IDE (DuckDB/Postgres/MySQL) |
+
 ### Git & GitHub
 
 | Alias | Runs | What it does |

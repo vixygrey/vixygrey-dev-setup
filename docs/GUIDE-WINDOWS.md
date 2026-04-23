@@ -231,6 +231,7 @@ Every standard tool has a faster, modern alternative:
 | `jx` | `fx` | Interactive JSON viewer |
 | `md` | `glow` | Render Markdown in terminal |
 | `dl` | `aria2c` | Multi-connection downloader |
+| `tar` / `unzip` / `7z` | `ouch` | Universal archive tool -- auto-detects format |
 
 > **Windows alias differences:** `ps`, `ping`, `dig`, and `watch` are PowerShell built-ins and cannot be overridden. Use `psg`, `ping2`, `dig2`, and `watch2` instead. Similarly, `pip` is aliased as `pip2` to avoid conflicts.
 
@@ -518,6 +519,20 @@ lazysql                      # interactive database TUI
 # Browse tables, run queries, view results in a table
 ```
 
+### harlequin (terminal SQL IDE)
+
+Multi-tab SQL IDE with autocomplete, query history, and a results grid. Configured with the Dracula theme and vscode keymap at `~/.config/harlequin/config.toml`.
+
+```powershell
+hq                           # alias for harlequin (opens last DB or DuckDB in-memory)
+harlequin                    # explicit
+harlequin file.duckdb        # open a DuckDB file
+harlequin -P 5432 -u postgres mydb     # connect to Postgres
+harlequin --adapter mysql -h localhost mydb   # connect to MySQL
+```
+
+Adapters bundled by the setup script: DuckDB (default), Postgres, MySQL, S3.
+
 ### sq (jq for databases)
 
 ```powershell
@@ -724,7 +739,7 @@ oxipng -o 4 image.png        # lossless PNG compression
 jpegoptim --strip-all photo.jpg  # lossless JPEG compression
 
 # Batch compress
-fd -e png -x oxipng -o 4 {}  # compress all PNGs in project
+fd -e png -x oxipng -o 4 {}  # compress all ONGs in project
 
 # Resize / convert (ImageMagick)
 magick input.png -resize 800x600 output.png   # resize image
@@ -1171,6 +1186,7 @@ Language-specific rules are in `~\.claude\rules\`:
 | `lint-sh` | `shellcheck` | Quality |
 | `update` | `topgrade` | System |
 | `sysinfo` | `fastfetch` | System |
+| `hq` | `harlequin` | Database |
 
 ### Directory Shortcuts
 

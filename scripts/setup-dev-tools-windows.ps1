@@ -233,7 +233,7 @@ function Show-Categories {
         @("dev-servers",           "ngrok, miniserve, caddy")
         @("terminal-productivity", "glow, watchexec, pv, parallel, topgrade, fastfetch, lnav")
         @("k8s-github",            "stern, gh-dash")
-        @("database",              "pgcli, mycli, usql, sq, DBeaver")
+        @("database",              "pgcli, mycli, lazysql, harlequin, usql, sq, DBeaver")
         @("containers",            "lazydocker, dive, kubectl, k9s")
         @("api",                   "Postman, grpcurl")
         @("networking",            "mtr/WinMTR, bandwhich, nmap")
@@ -932,6 +932,7 @@ Install-ScoopPackage "tree" "tree (directory listing)"
 Install-ScoopPackage "viddy" "viddy (replaces watch -- diff highlighting, history)"
 Install-ScoopPackage "hexyl" "hexyl (replaces hexdump -- colorized hex viewer)"
 Install-ScoopPackage "aria2" "aria2 (replaces curl/wget for downloads -- multi-connection, BitTorrent)"
+Install-ScoopPackage "ouch" "ouch (universal archive tool -- compress/decompress any format)"
 Install-ScoopPackage "difftastic" "difftastic (replaces diff for code -- syntax-aware structural diffs)"
 Install-ScoopPackage "vivid" "vivid (LS_COLORS generator -- colorize file listings by type)"
 Install-ScoopPackage "just" "just (replaces make -- simpler task runner, no tab issues)"
@@ -1072,6 +1073,25 @@ Write-Banner "Database & Data"
 Install-ScoopPackage "pgcli" "pgcli (auto-completing Postgres CLI)"
 Install-ScoopPackage "mycli" "mycli (auto-completing MySQL CLI)"
 Install-ScoopPackage "lazysql" "lazysql (TUI for databases -- interactive SQL in terminal)"
+
+# harlequin (terminal SQL IDE -- DuckDB/Postgres/MySQL, multi-tab, autocomplete)
+if (Test-Command "harlequin") {
+    Write-Warn "harlequin already installed"
+} elseif (Test-Command "uv") {
+    if (-not $DRY_RUN) {
+        Write-Info "Installing harlequin via uv (with postgres,mysql,s3 adapters)..."
+        uv tool install 'harlequin[postgres,mysql,s3]' 2>&1 | Out-File $LOG_FILE -Append
+        if (Test-Command "harlequin") {
+            Write-Success "harlequin installed (DuckDB + Postgres + MySQL + S3 adapters)"
+        } else {
+            Write-Error "Failed to install harlequin via uv"
+        }
+    } else {
+        Write-Info "[DRY RUN] Would: uv tool install 'harlequin[postgres,mysql,s3]'"
+    }
+} else {
+    Write-Warn "Skipping harlequin -- uv not installed"
+}
 
 # usql via go install
 if (Test-Command "go") {
@@ -3312,6 +3332,27 @@ keyword_casing = upper
 smart_completion = True
 "@
         Write-Success "pgcli configured (multi-line, auto-expand, destructive warnings)"
+    }
+}
+
+# ---- harlequin config ----
+$harlequinConfigDir = Join-Path $HOME ".config\harlequin"
+$harlequinConfig = Join-Path $harlequinConfigDir "config.toml"
+if (Test-Path $harlequinConfig) {
+    Write-Warn "harlequin config already exists"
+} else {
+    if (-not $DRY_RUN) {
+        Write-Info "Creating harlequin configuration..."
+        if (-not (Test-Path $harlequinConfigDir)) { New-Item -ItemType Directory -Path $harlequinConfigDir -Force | Out-Null }
+        Set-Content -Path $harlequinConfig -Value @"
+# Harlequin SQL IDE -- https://harlequin.sql/docs/config-file/
+[defaults]
+theme = "dracula"
+keymap_name = ["vscode"]
+show_files = true
+locale = "en_US.UTF-8"
+"@
+        Write-Success "harlequin configured (Dracula theme, vscode keymap)"
     }
 }
 
@@ -5909,6 +5950,7 @@ Set-Alias -Name lzd -Value lazydocker -Force -ErrorAction SilentlyContinue
 Set-Alias -Name k -Value kubectl -Force -ErrorAction SilentlyContinue
 Set-Alias -Name md -Value glow -Force -ErrorAction SilentlyContinue
 Set-Alias -Name y -Value yazi -Force -ErrorAction SilentlyContinue
+Set-Alias -Name hq -Value harlequin -Force -ErrorAction SilentlyContinue
 
 # Parameterized aliases as functions
 function ls { eza --icons @args }

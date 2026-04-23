@@ -229,6 +229,7 @@ Faster, prettier, smarter replacements for standard Unix utilities.
 | `watch` | **viddy** | Modern watch with diff highlighting and history |
 | `hexdump` | **hexyl** | Colorized hex viewer with ASCII sidebar |
 | `curl`/`wget` | **aria2** | Multi-connection parallel downloads, 3-10x faster, BitTorrent |
+| `tar`/`unzip`/`7z` | **ouch** | Universal archive tool -- auto-detects format from extension |
 | `rm` | **trash** | Moves files to macOS Trash instead of permanent delete |
 | `rsync` | **rsync** (latest) | Updated rsync with better progress and Apple metadata |
 | `tree` | **tree** | Directory listing in tree format |
@@ -326,6 +327,7 @@ Faster, prettier, smarter replacements for standard Unix utilities.
 | **pgcli** | Auto-completing PostgreSQL CLI with syntax highlighting |
 | **mycli** | Auto-completing MySQL CLI with syntax highlighting |
 | **lazysql** | TUI for databases -- interactive SQL queries in terminal |
+| **harlequin** | Terminal SQL IDE -- multi-tab, autocomplete, DuckDB/Postgres/MySQL/S3 |
 | **usql** | Universal SQL CLI -- connects to Postgres, MySQL, SQLite, and more |
 | **sq** | jq for databases -- query SQLite, Postgres, CSV from one tool |
 | **dbmate** | Lightweight, framework-agnostic database migration tool |
@@ -553,6 +555,7 @@ Applied consistently across all tools:
 | **yazi** | Dracula file type colors and borders |
 | **btop** | Full Dracula theme with custom color palette |
 | **lazydocker** | Dracula borders and options colors |
+| **harlequin** | Dracula theme set in config.toml |
 | **vivid** | Dracula-themed LS_COLORS for file type coloring |
 | **vim** | Dracula-ish color scheme (no plugin needed) |
 | **VS Code brackets** | Dracula-colored bracket pair colorization |
@@ -810,6 +813,7 @@ The script generates config files with sensible defaults:
 | `~/.config/lazydocker/` | lazydocker | Dracula theme, timestamps, compose support |
 | `~/.config/pip/pip.conf` | pip | Require virtualenv, no telemetry |
 | `~/.config/pgcli/config` | pgcli | Multi-line, auto-expand, destructive warnings, bat pager |
+| `~/.config/harlequin/config.toml` | harlequin | Dracula theme, vscode keymap, file tree on |
 | `~/.config/gh/config.yml` | GitHub CLI | SSH protocol, VS Code editor, delta pager, aliases (co, pv, pc, pl, il, pm, rel) |
 | `~/.aws/config` | AWS CLI | Default region, json output, bat pager, auto-prompt, SSO template |
 | `~/.config/git/hooks/` | git | Global pre-commit hooks (debug statements, large files >5MB, conflict markers) |
