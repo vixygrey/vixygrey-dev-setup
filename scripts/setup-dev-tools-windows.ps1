@@ -1,7 +1,7 @@
 # =============================================================================
 # Development Environment Setup Script (Windows)
 # =============================================================================
-# Version:  2.1.0
+# Version:  2.2.0
 # Updated:  2026-04-06
 # Platform: Windows 10/11 (x64)
 # Run:      Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned
@@ -9,7 +9,7 @@
 # Flags:    --dry-run, --skip <categories>, --only <categories>, --cleanup, --help
 # =============================================================================
 
-$SCRIPT_VERSION = "2.1.0"
+$SCRIPT_VERSION = "2.2.0"
 $SCRIPT_START = Get-Date
 
 # Don't abort on errors — we count failures instead
