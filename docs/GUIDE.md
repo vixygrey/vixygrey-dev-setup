@@ -952,6 +952,54 @@ Installed automatically by the setup script via Homebrew Cask.
 
 ---
 
+## macOS Scripting Helpers
+
+The setup script installs three CLI tools that it also consumes itself. They're equally useful for your own shell scripts.
+
+### mas (Mac App Store CLI)
+
+Install and update MAS apps from the command line — useful for dotfiles, CI, and onboarding scripts.
+
+```bash
+mas signin you@example.com           # sign in once (prompts for password)
+mas list                             # show installed MAS apps
+mas search xcode                     # find apps by name
+mas install 497799835                # install Xcode by ID
+mas upgrade                          # upgrade all outdated MAS apps
+```
+
+The setup script does not install any MAS apps by default — `mas` is provided so your own scripts can.
+
+### dockutil (Dock management)
+
+Programmatically add, remove, and reorder Dock items. Used by the setup script to pin Finder, System Settings, VS Code, Ghostty, and Raycast.
+
+```bash
+dockutil --list                                      # show current Dock contents
+dockutil --add /Applications/VS\ Code.app            # pin an app
+dockutil --remove "VS Code"                          # unpin by label
+dockutil --move "VS Code" --after "Finder"           # reorder
+dockutil --remove all --no-restart && killall Dock   # reset the Dock
+```
+
+### terminal-notifier (macOS notifications)
+
+Send native macOS notifications from shell scripts. The setup script uses it for run-complete and failure alerts.
+
+```bash
+terminal-notifier -title "Build" -message "Finished in 42s" -sound Glass
+terminal-notifier -title "Deploy" -subtitle "prod" -message "Succeeded" -group my-pipeline
+terminal-notifier -title "Error" -message "Tests failed" -sound Basso
+```
+
+Useful for long-running local commands:
+
+```bash
+npm run build && terminal-notifier -title "Build" -message "Done" -sound Glass
+```
+
+---
+
 ## Claude Code
 
 ### Custom Slash Commands
@@ -1132,9 +1180,15 @@ The setup script configures these macOS defaults automatically via `defaults wri
 - Small icon size (36px), no recent apps shown
 - Scale minimize effect (faster than genie)
 - Minimize windows into application icon
-- Clears all default pinned apps (add your own by dragging)
+- **Curated pins via `dockutil`:** Finder, System Settings, VS Code, Ghostty, Raycast (any app not yet installed is skipped with a warning so partial installs still succeed)
 - Mission Control: fixed Spaces order, fast animations, grouped by app
 - Hot corners: all disabled to prevent accidental triggers
+
+To re-run just the Dock curation:
+
+```bash
+./scripts/setup-dev-tools-mac.sh --only macos-defaults
+```
 
 ### Screenshots
 
