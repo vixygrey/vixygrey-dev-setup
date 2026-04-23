@@ -1,0 +1,12 @@
+# typos configuration — https://github.com/crate-ci/typos
+# Accept identifiers that typos' default dictionary flags incorrectly.
+
+[default.extend-identifiers]
+# Cask/package IDs for third-party apps we reference by their upstream name.
+iterm = "iterm"
+iterm2 = "iterm2"
+iTerm2 = "iTerm2"
+
+[default.extend-words]
+# Same, as whole-word fallback.
+iterm = "iterm"

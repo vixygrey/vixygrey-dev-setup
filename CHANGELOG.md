@@ -54,4 +54,3 @@
 ### Refactoring
 
 - Remove tmux (replaced by zellij), replace Proton suite with Mullvad VPN
-
