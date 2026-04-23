@@ -1,5 +1,15 @@
 # Changelog
 
+## [2.2.0] - 2026-04-23
+
+### Changed
+
+- **api**: Replace Bruno with Postman as the API client across mac (brew cask `postman`), linux (snap/flatpak `com.getpostman.Postman`), and windows (winget `Postman.Postman`) (#8)
+
+### Removed
+
+- **editors**: Remove Zed editor install and `~/.config/zed/settings.json` config block from all three setup scripts; VS Code is now the sole configured editor (#8)
+
 ## [2.1.0] - 2026-04-13
 
 ### Features
