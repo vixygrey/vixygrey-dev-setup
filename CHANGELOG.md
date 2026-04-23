@@ -1,6 +1,8 @@
 # Changelog
 
-## [Unreleased]
+## [3.0.0] - 2026-04-23
+
+**BREAKING:** Linux and Windows support removed. This is now a macOS-only project.
 
 ### Added
 
@@ -9,7 +11,7 @@
 
 ### Removed
 
-- **platforms**: Drop Linux and Windows support (#12). Deleted `scripts/setup-dev-tools-linux.sh`, `scripts/setup-dev-tools-windows.ps1`, and their per-platform `docs/GUIDE-*` / `docs/SHORTCUTS-*` files. Remaining macOS docs renamed to `docs/GUIDE.md` and `docs/SHORTCUTS.md`. CI workflows simplified to ShellCheck-only; release workflow now produces a single macOS zip.
+- **platforms**: Drop Linux and Windows support (#12, #13). Deleted `scripts/setup-dev-tools-linux.sh`, `scripts/setup-dev-tools-windows.ps1`, and their per-platform `docs/GUIDE-*` / `docs/SHORTCUTS-*` files. Remaining macOS docs renamed to `docs/GUIDE.md` and `docs/SHORTCUTS.md`. CI workflows simplified to ShellCheck-only; release workflow now produces a single macOS zip.
 
 ## [2.2.0] - 2026-04-23
 
