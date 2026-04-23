@@ -348,7 +348,7 @@ Faster, prettier, smarter replacements for standard Unix utilities.
 
 | Tool | Description |
 |------|-------------|
-| **Bruno** | Open-source API client -- Postman alternative, stores in git |
+| **Postman** | Industry-standard API client -- collections, environments, scripting |
 | **grpcurl** | curl for gRPC services |
 
 ---
@@ -375,7 +375,6 @@ Faster, prettier, smarter replacements for standard Unix utilities.
 | **atuin** | Replaces shell history with SQLite-backed, fuzzy-searchable database |
 | **mise** | Universal version manager -- Node, Python, Go, Ruby all in one (replaces nvm + pyenv + rbenv) |
 | **VS Code** | Primary code editor and IDE |
-| **Zed** | Fast native editor from ex-Atom team -- GPU-rendered |
 | **Claude Code** | AI-assisted coding in the terminal |
 | **GitHub Copilot CLI** | AI suggestions in the terminal (via `gh copilot suggest`) |
 | **chezmoi** | Dotfile manager -- backup and restore configs across machines |
@@ -542,7 +541,6 @@ Applied consistently across all tools:
 | Tool | How |
 |------|-----|
 | **VS Code** | Extension auto-installed, set as default theme |
-| **Zed** | Dracula theme set in settings.json |
 | **bat** | Dracula syntax theme in config |
 | **delta** | Dracula syntax theme for git diffs |
 | **Ghostty** | Full 16-color Dracula palette in config |
@@ -804,7 +802,6 @@ The script generates config files with sensible defaults:
 | `~/.newsboat/urls` | newsboat | Starter RSS feeds (Claude Code, Node, Rust, GitHub) |
 | `~/Library/Application Support/nushell/env.nu` | nushell | Starship prompt, Homebrew paths |
 | `~/.config/ghostty/config` | Ghostty | JetBrains Mono, Dracula palette, transparent titlebar |
-| `~/.config/zed/settings.json` | Zed | Dracula theme, JetBrains Mono, format on save, relative line numbers, inline blame, no telemetry |
 | `~/.config/fastfetch/config.jsonc` | fastfetch | Nerd Font icons, package counts, Node/Python/Go/Rust/Docker versions, battery, disk, colored output |
 | `~/.config/mise/config.toml` | mise | Auto-install, trust ~/Code |
 | `~/.config/topgrade.toml` | topgrade | Cleanup, greedy cask updates |
@@ -1225,7 +1222,7 @@ These 150+ CLI tools and configs are installed on every platform:
 
 **Database:** pgcli, mycli, lazysql, usql, sq, dbmate
 
-**Editors:** VS Code, Zed
+**Editors:** VS Code
 
 **JS tooling:** TypeScript, tsx, Turborepo, Lighthouse, Mermaid CLI
 
@@ -1234,7 +1231,7 @@ These 150+ CLI tools and configs are installed on every platform:
 ## 60+ Shared Config Files
 
 Identical content across all platforms (paths adjusted per OS):
-starship, atuin, glow, btop, lazygit, lazydocker, k9s, yazi, gh-dash, stern, mise, fastfetch, direnv, caddy, ngrok, yt-dlp, asciinema, pgcli, zed, ghostty, .editorconfig, .prettierrc, .shellcheckrc, .curlrc, .npmrc, .ripgreprc, .fdignore, .vimrc, .nanorc, .gitignore_global, .gitmessage, .myclirc, .gemrc, .actrc, .mlrrc, .justfile, VS Code settings/keybindings/extensions, Docker, AWS CLI, GitHub CLI, pip, git global config, SSH config, Claude Code config (settings, CLAUDE.md, 6 rules, 3 hooks, 10 commands)
+starship, atuin, glow, btop, lazygit, lazydocker, k9s, yazi, gh-dash, stern, mise, fastfetch, direnv, caddy, ngrok, yt-dlp, asciinema, pgcli, ghostty, .editorconfig, .prettierrc, .shellcheckrc, .curlrc, .npmrc, .ripgreprc, .fdignore, .vimrc, .nanorc, .gitignore_global, .gitmessage, .myclirc, .gemrc, .actrc, .mlrrc, .justfile, VS Code settings/keybindings/extensions, Docker, AWS CLI, GitHub CLI, pip, git global config, SSH config, Claude Code config (settings, CLAUDE.md, 6 rules, 3 hooks, 10 commands)
 
 ---
 

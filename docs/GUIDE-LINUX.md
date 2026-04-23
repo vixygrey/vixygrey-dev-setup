@@ -1031,19 +1031,13 @@ Already configured by the script. Additional recommended steps:
 2. **GitHub Copilot:** Install extension, sign in with GitHub
 3. **Keyboard shortcuts:** The script installs 21 keybindings (see SHORTCUTS.md)
 
-### Zed
+### Postman (API Client)
 
-Already configured by the script with Dracula theme. Additional:
-1. **Sign in:** Zed > Sign In for collaboration features
-2. **AI integration:** Settings > AI > configure Claude or Copilot
-3. **Vim mode:** Already enabled by default in script config
-
-### Bruno (API Client)
-
-1. **Create a collection:** New Collection > choose a directory (git-friendly)
-2. **Import from Postman:** Collection > Import > Postman Collection
-3. **Environment variables:** Environments > add dev/staging/prod configs
-4. **Tests:** Each request supports pre-request and post-response scripts
+1. **Sign in:** Sign in with your Postman account to sync collections across devices
+2. **Create a collection:** New > Collection > organize requests by service or feature
+3. **Environments:** Environments tab > add dev/staging/prod with variables
+4. **Tests:** Each request supports pre-request and test scripts (Tests tab)
+5. **Import:** File > Import supports OpenAPI, cURL, and other Postman exports
 
 ### Notion
 

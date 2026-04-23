@@ -235,9 +235,9 @@ function Show-Categories {
         @("k8s-github",            "stern, gh-dash")
         @("database",              "pgcli, mycli, usql, sq, DBeaver")
         @("containers",            "lazydocker, dive, kubectl, k9s")
-        @("api",                   "Bruno, grpcurl")
+        @("api",                   "Postman, grpcurl")
         @("networking",            "mtr/WinMTR, bandwhich, nmap")
-        @("dx",                    "fzf, starship, atuin, VS Code, Zed, Alacritty, PowerToys")
+        @("dx",                    "fzf, starship, atuin, VS Code, Alacritty, PowerToys")
         @("ui",                    "Storybook, Playwright, Chrome")
         @("ux",                    "Lighthouse")
         @("docs",                  "d2, Mermaid CLI")
@@ -1111,7 +1111,7 @@ Install-ScoopPackage "k9s" "k9s (terminal UI for Kubernetes)"
 if (Test-ShouldRun "api") {
 Write-Banner "API Development"
 
-Install-WingetPackage "Bruno.Bruno" "Bruno (open-source API client, git-friendly)"
+Install-WingetPackage "Postman.Postman" "Postman (industry-standard API client)"
 Install-ScoopPackage "grpcurl" "grpcurl (curl for gRPC)"
 
 } # api
@@ -1140,9 +1140,6 @@ Install-ScoopPackage "chezmoi" "chezmoi (dotfile manager -- backup/restore confi
 # Editors & terminals
 Install-WingetPackage "Microsoft.VisualStudioCode" "VS Code"
 Install-ScoopPackage "alacritty" "Alacritty (fast GPU-accelerated terminal)"
-
-# Zed
-Write-Info "Zed: Check availability at https://zed.dev for Windows"
 
 # Windows Terminal is built-in on Windows 11 / available via winget
 Install-WingetPackage "Microsoft.WindowsTerminal" "Windows Terminal"
@@ -3531,44 +3528,6 @@ loc:
     }
 }
 
-# ---- Zed editor config ----
-$zedConfigDir = Join-Path $HOME ".config\zed"
-$zedConfig = Join-Path $zedConfigDir "settings.json"
-if (Test-Path $zedConfig) {
-    Write-Warn "Zed config already exists"
-} else {
-    if (-not $DRY_RUN) {
-        Write-Info "Creating Zed configuration..."
-        if (-not (Test-Path $zedConfigDir)) { New-Item -ItemType Directory -Path $zedConfigDir -Force | Out-Null }
-        Set-Content -Path $zedConfig -Value @"
-{
-    "theme": "Dracula",
-    "ui_font_family": "Inter",
-    "ui_font_size": 15,
-    "buffer_font_family": "JetBrains Mono",
-    "buffer_font_size": 14,
-    "buffer_line_height": { "custom": 1.6 },
-    "buffer_font_features": { "calt": true, "liga": true },
-    "tab_size": 2,
-    "format_on_save": "on",
-    "autosave": "on_focus_change",
-    "relative_line_numbers": true,
-    "scrollbar": { "show": "auto" },
-    "indent_guides": { "enabled": true, "coloring": "indent_aware" },
-    "inlay_hints": { "enabled": true },
-    "git": { "inline_blame": { "enabled": true } },
-    "terminal": {
-        "font_family": "JetBrains Mono NF",
-        "font_size": 13,
-        "blinking": "on"
-    },
-    "telemetry": { "diagnostics": false, "metrics": false }
-}
-"@
-        Write-Success "Zed configured (Dracula theme, JetBrains Mono, format on save)"
-    }
-}
-
 # ---- direnv config ----
 $direnvConfigDir = Join-Path $HOME ".config\direnv"
 $direnvConfig = Join-Path $direnvConfigDir "direnv.toml"
@@ -4978,7 +4937,7 @@ if (Test-Path $claudeMd) {
 
 ## Environment
 - Shell: PowerShell with Starship prompt
-- Editor: VS Code / Zed (Dracula theme, JetBrains Mono)
+- Editor: VS Code (Dracula theme, JetBrains Mono)
 - Terminal: Windows Terminal / Alacritty (Dracula theme)
 - Package managers: pnpm (preferred), npm, bun
 - Python: uv for packages (not pip), ruff for linting (not flake8/black)
