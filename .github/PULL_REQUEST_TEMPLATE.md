@@ -8,11 +8,10 @@ What this PR does and why.
 
 ## Test Plan
 
-- [ ] Ran affected script(s) with `--dry-run`
-- [ ] Ran affected script(s) on a real system
-- [ ] ShellCheck passes (`shellcheck scripts/setup-dev-tools-mac.sh scripts/setup-dev-tools-linux.sh`)
-- [ ] Updated documentation (README, guides, shortcuts) if behavior changed
-- [ ] New tool added to all applicable platform scripts
+- [ ] Ran the setup script with `--dry-run`
+- [ ] Ran the setup script on a real macOS system
+- [ ] ShellCheck passes (`shellcheck scripts/setup-dev-tools-mac.sh`)
+- [ ] Updated documentation (README, GUIDE, SHORTCUTS) if behavior changed
 
 ## Related Issues
 

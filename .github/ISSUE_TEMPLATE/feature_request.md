@@ -14,13 +14,6 @@ A clear description of the feature or tool you'd like added.
 
 Why is this useful? What problem does it solve?
 
-## Platform
-
-- [ ] macOS
-- [ ] Linux
-- [ ] Windows
-- [ ] All platforms
-
 ## Proposed Solution
 
 How you think this should work (install method, config, category placement).

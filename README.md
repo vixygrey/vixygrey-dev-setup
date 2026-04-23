@@ -5,53 +5,29 @@
 [![GitHub release](https://img.shields.io/github/v/release/vixygrey/vixygrey-dev-setup?display_name=tag&sort=semver)](https://github.com/vixygrey/vixygrey-dev-setup/releases/latest)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 ![macOS](https://img.shields.io/badge/macOS-supported-brightgreen)
-![Linux](https://img.shields.io/badge/Linux-supported-brightgreen)
-![Windows](https://img.shields.io/badge/Windows-supported-brightgreen)
 ![ShellCheck](https://img.shields.io/badge/ShellCheck-passing-brightgreen)
 ![Tools](https://img.shields.io/badge/tools-220%2B-purple)
 ![Configs](https://img.shields.io/badge/configs-60%2B-purple)
 
-Three platform-specific scripts that install and configure **220+ tools** with **60+ config files** for development, GitHub, AWS/CDK, IaC, DX, UI/UX, security, backup, and daily productivity. Safe to re-run -- each skips anything already installed.
+A single setup script that installs and configures **220+ tools** with **60+ config files** for development, GitHub, AWS/CDK, IaC, DX, UI/UX, security, backup, and daily productivity on macOS. Safe to re-run -- it skips anything already installed.
 
-| Platform | Script | Package Managers |
-|----------|--------|-----------------|
-| **macOS** | `scripts/setup-dev-tools-mac.sh` | Homebrew |
-| **Windows** | `scripts/setup-dev-tools-windows.ps1` | winget + Scoop |
-| **Linux** | `scripts/setup-dev-tools-linux.sh` | apt / dnf / pacman + snap + flatpak |
+| Script | Package Manager |
+|--------|-----------------|
+| `scripts/setup-dev-tools-mac.sh` | Homebrew |
 
 ## Documentation
 
-Each platform has a self-contained guide and shortcuts reference:
-
-| Platform | Guide | Shortcuts |
-|----------|-------|-----------|
-| **macOS** | [Guide](docs/GUIDE-MACOS.md) | [Shortcuts](docs/SHORTCUTS-MACOS.md) |
-| **Linux** | [Guide](docs/GUIDE-LINUX.md) | [Shortcuts](docs/SHORTCUTS-LINUX.md) |
-| **Windows** | [Guide](docs/GUIDE-WINDOWS.md) | [Shortcuts](docs/SHORTCUTS-WINDOWS.md) |
+- [Guide](docs/GUIDE.md) -- daily workflow, tool usage, and setup walkthrough
+- [Shortcuts](docs/SHORTCUTS.md) -- keyboard shortcuts and shell aliases reference
 
 ## Quick Start
 
-### macOS
 ```bash
 chmod +x scripts/setup-dev-tools-mac.sh
 ./scripts/setup-dev-tools-mac.sh
 ```
 
-### Windows (PowerShell as Administrator)
-```powershell
-Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
-.\scripts\setup-dev-tools-windows.ps1
-```
-
-### Linux (Ubuntu/Debian, Fedora/RHEL, or Arch)
-```bash
-chmod +x scripts/setup-dev-tools-linux.sh
-./scripts/setup-dev-tools-linux.sh
-```
-
-## CLI Options (all three scripts)
-
-All scripts share the same flags:
+## CLI Options
 
 ```bash
 ./scripts/setup-dev-tools-mac.sh --help              # Show all options
@@ -66,7 +42,7 @@ All scripts share the same flags:
 ./scripts/setup-dev-tools-mac.sh --version           # Show script version
 ```
 
-> Platform-specific categories use prefixes: `mac-*`, `win-*`, `linux-*` (e.g., `--skip win-bloat`)
+> macOS-only categories use the `mac-*` prefix (e.g., `--skip mac-bloat`).
 
 ## What It Does
 
@@ -113,11 +89,11 @@ All scripts share the same flags:
 |------|-------------|
 | **Xcode CLI Tools** | Compilers, git, headers -- required before everything else |
 | **Homebrew** | macOS package manager |
-| **coreutils** | GNU core utilities -- Linux-compatible versions of standard tools |
-| **gnu-sed** | GNU sed -- consistent behavior with Linux scripts |
-| **gnu-tar** | GNU tar -- consistent behavior with Linux scripts |
+| **coreutils** | GNU core utilities -- drop-in replacements for macOS' BSD versions |
+| **gnu-sed** | GNU sed -- GNU-flavored regex and flags |
+| **gnu-tar** | GNU tar -- GNU-flavored flags |
 | **gawk** | GNU awk -- full-featured awk replacement |
-| **findutils** | GNU find and xargs -- Linux-compatible |
+| **findutils** | GNU find and xargs |
 
 ---
 
@@ -581,7 +557,6 @@ The script sets up Claude Code with a comprehensive configuration for full-stack
 | `~/.claude/rules/docker.md` | Docker rules (multi-stage builds, non-root, hadolint, dive) |
 | `~/.claude/rules/iac.md` | IaC rules (remote state, tflint, infracost, trivy config scan) |
 | `~/.claude/hooks/format-on-edit.sh` | Auto-format with Prettier after Claude edits JS/TS/CSS/JSON/MD files |
-| `~/.claude/hooks/format-on-edit.ps1` | Auto-format hook (PowerShell version for Windows) |
 | `~/.claude/hooks/lint-python.sh` | Auto-lint and fix Python files with ruff after Claude edits them |
 | `~/.claude/hooks/lint-dockerfile.sh` | Lint Dockerfiles with hadolint after Claude edits them |
 
@@ -1067,202 +1042,18 @@ This prints a full guide for removing all installed tools, configs, and settings
 
 ---
 
----
-
-# Windows Script (`setup-dev-tools-windows.ps1`)
-
-## Overview
-
-4,200+ lines of PowerShell. Uses **winget** for GUI/desktop apps and **Scoop** for CLI dev tools. Run as Administrator for registry edits.
-
-## Platform-Specific Substitutions
-
-| macOS App | Windows Equivalent |
-|-----------|--------------------|
-| Raycast | **PowerToys** (Run, Color Picker) |
-| Ghostty | **Windows Terminal** (built-in) + **Alacritty** |
-| mitmproxy | **mitmproxy** (same tool, cross-platform) |
-| Skim | **SumatraPDF** |
-| Pearcleaner | **BCUninstaller** |
-| Transmit | **WinSCP** |
-| LuLu (firewall) | **simplewall** |
-| Quick Look plugins | **QuickLook** (winget) |
-| watchexec (file watcher) | **watchexec** (same tool, cross-platform) |
-
-All Claude Code changes apply to Windows: 110 permissions, 7 rules (workflow, git, security, typescript, python, docker, iac), 3 hooks (format-on-edit, lint-python, lint-dockerfile), 20 commands.
-
-## Windows System Tweaks
-
-Registry edits applied by the `windows-defaults` category:
-- Fast keyboard repeat, no autocorrect
-- Show hidden files and file extensions
-- Small taskbar, disable web search in Start
-- Disable Copilot, reduce animations
-- DNS set to Cloudflare + Quad9 + Google
-
-## Windows Bloat Removal (`win-bloat`)
-
-Removes pre-installed Windows apps via `winget uninstall`:
-Clipchamp, Xbox Game Bar, Bing News, Get Help, Tips, Mail, Weather, Maps, People, Solitaire, Mixed Reality Portal, Cortana, Feedback Hub, Power Automate, Teams (free)
-
-## Shell: PowerShell Profile
-
-Managed block in `$PROFILE` with:
-- Starship, Atuin, Zoxide initialization
-- PSReadLine (prediction, ListView, tab completion -- replaces zsh-autosuggestions)
-- All aliases translated to PowerShell (`Set-Alias` + wrapper functions)
-- Dracula fzf colors, environment variables
-
-## Windows Terminal
-
-Dracula color scheme and JetBrains Mono NF font auto-configured in Windows Terminal settings.
-
----
-
-# Linux Script (`setup-dev-tools-linux.sh`)
-
-## Overview
-
-5,300+ lines of Bash. Auto-detects distro at runtime and supports:
-
-| Distro Family | Package Manager | Examples |
-|---------------|----------------|----------|
-| **Debian/Ubuntu** | apt | Ubuntu, Debian, Pop!_OS, Linux Mint, Elementary |
-| **Fedora/RHEL** | dnf | Fedora, RHEL, CentOS, Rocky, Alma |
-| **Arch** | pacman | Arch, Manjaro, EndeavourOS |
-
-Also uses **snap**, **flatpak**, **cargo**, and **Linuxbrew** as fallbacks.
-
-## Platform-Specific Substitutions
-
-| macOS App | Linux Equivalent |
-|-----------|-----------------|
-| Raycast | **ulauncher** |
-| Ghostty | **Alacritty** + **kitty** |
-| mitmproxy | **mitmproxy** (same tool, cross-platform) |
-| dust/duf (disk analysis) | **ncdu** |
-| Skim | **Evince** (usually pre-installed) |
-| Transmit | **FileZilla** |
-| Quick Look plugins | **GNOME Sushi** |
-| newsboat (RSS) | **newsboat** (same tool, cross-platform) |
-| OrbStack | **Docker Engine** (native, no VM overhead) |
-| watchexec | **watchexec** (same tool, cross-platform) |
-
-GUI apps installed via snap/flatpak where native packages are unavailable.
-
-All Claude Code changes apply to Linux: 110 permissions, 7 rules, 3 hooks, 20 commands.
-
-## External Repos Auto-Added
-
-The script adds official repositories for tools not in default repos:
-- Docker Engine (docker.com)
-- GitHub CLI (cli.github.com)
-- Brave Browser (brave.com)
-- Google Chrome (google.com)
-- VS Code (microsoft.com)
-- Trivy (aquasecurity)
-
-## Ubuntu/Debian Notes
-
-Some tools have different binary names on Debian-based systems. The script creates symlinks automatically:
-- `batcat` -> `bat`
-- `fdfind` -> `fd`
-
-Many Rust CLI tools not in apt are installed via `cargo install` as fallback (eza, zoxide, sd, procs, gping, xh, etc.).
-
-## Linux System Tweaks (`linux-defaults`)
-
-GNOME settings applied via `gsettings` (skipped if not GNOME):
-- Fast keyboard repeat, reduced animations
-- Show hidden files in Nautilus
-- Dark theme (Adwaita-dark)
-- Dock auto-hide and small icons
-- Screenshots to `~/Screenshots`
-- DNS via systemd-resolved (Cloudflare + Quad9 + Google)
-- GTK bookmarks configured for file manager sidebar (Code, Scripts, Documents, etc.)
-
-## Shell: zsh
-
-Installs zsh and sets it as default shell. Managed block in `~/.zshrc` with:
-- Same aliases as macOS (eza, bat, fd, etc.)
-- Tool initialization (starship, atuin, zoxide, direnv, mise)
-- Plugin paths auto-detected across distros
-- `xclip` for clipboard operations (replaces `pbcopy`)
-
-## Fonts
-
-Downloaded from GitHub to `~/.local/share/fonts/` and cached with `fc-cache -fv`:
-JetBrains Mono, JetBrains Mono NF, MesloLGS NF, Fira Code, Fira Code NF, Inter, Hack NF
-
----
-
-# Cross-Platform Tool Coverage
-
-## Identical Across All Three Scripts
-
-These 150+ CLI tools and configs are installed on every platform:
-
-**Dev tools:** git, gh, mise, node, python, go, rust, bun, uv, pnpm, jq, direnv, cmake, docker, mitmproxy
-
-**Modern replacements:** eza, bat, fd, ripgrep, zoxide, btop, sd, dust, duf, procs, gping, xh, curlie, doggo, tokei, viddy, hexyl, aria2, difftastic, vivid, just, yazi, fx, jnv, tldr, trash
-
-**Git:** delta, lazygit, git-absorb, git-cliff, git-lfs, pre-commit, gnupg
-
-**AWS:** aws-cli, sam-cli, cdk, cfn-lint, granted
-
-**IaC:** opentofu, tflint, infracost
-
-**Security:** detect-secrets, gitleaks, trivy, semgrep, cosign, snyk, mkcert, ssh-audit, clamav, age, sops
-
-**Data:** yq, miller, csvkit, pandoc, imagemagick, ffmpeg, yt-dlp
-
-**Code quality:** shellcheck, shfmt, act, hadolint, ruff, typos, ast-grep, npkill, commitizen, commitlint, ni, hyperfine, oha, hurl
-
-**Servers:** ngrok, miniserve, caddy
-
-**Productivity:** glow, watchexec, pv, parallel, asciinema, gum, nushell, topgrade, fastfetch, lnav, starship, atuin, fzf, chezmoi
-
-**K8s:** stern, kubectl, k9s, lazydocker, dive
-
-**Database:** pgcli, mycli, lazysql, usql, sq, dbmate
-
-**Editors:** VS Code
-
-**JS tooling:** TypeScript, tsx, Turborepo, Lighthouse, Mermaid CLI
-
-**Backup:** rclone, borg, borgmatic
-
-## 60+ Shared Config Files
-
-Identical content across all platforms (paths adjusted per OS):
-starship, atuin, glow, btop, lazygit, lazydocker, k9s, yazi, gh-dash, stern, mise, fastfetch, direnv, caddy, ngrok, yt-dlp, asciinema, pgcli, ghostty, .editorconfig, .prettierrc, .shellcheckrc, .curlrc, .npmrc, .ripgreprc, .fdignore, .vimrc, .nanorc, .gitignore_global, .gitmessage, .myclirc, .gemrc, .actrc, .mlrrc, .justfile, VS Code settings/keybindings/extensions, Docker, AWS CLI, GitHub CLI, pip, git global config, SSH config, Claude Code config (settings, CLAUDE.md, 6 rules, 3 hooks, 10 commands)
-
----
-
 ## Troubleshooting
 
-### macOS
 ```bash
+# Inspect the failure log
 cat ~/.local/share/dev-setup/setup-*.log | grep ERROR
+
+# Check Homebrew health
 brew doctor
+
+# Resume after a failure (skips already-completed steps)
 ./scripts/setup-dev-tools-mac.sh --resume
-```
 
-### Windows (PowerShell)
-```powershell
-Get-Content $HOME\.local\share\dev-setup\setup-*.log | Select-String ERROR
-scoop checkup
-.\setup-dev-tools-windows.ps1 --resume
-```
-
-### Linux
-```bash
-cat ~/.local/share/dev-setup/setup-*.log | grep ERROR
-./setup-dev-tools-linux.sh --resume
-```
-
-### All Platforms
-```bash
 # Preview without changes
 ./scripts/setup-dev-tools-mac.sh --dry-run
 

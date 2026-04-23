@@ -6095,7 +6095,7 @@ else
 - Python: uv for packages (not pip), ruff for linting (not flake8/black)
 - JS/TS runtimes: Node (via mise), Bun, Deno
 - Version manager: mise (Node, Python, Go, Ruby — all in one)
-- Container runtime: OrbStack (macOS — provides docker + kubectl), Docker Engine (Linux)
+- Container runtime: OrbStack (provides docker + kubectl)
 - Task runner: just (prefer over make for project-level tasks)
 - Shell note: `bat` is aliased to `cat`; use `/bin/cat` only inside heredoc subshells where bat breaks syntax
 - Dotfiles: chezmoi
