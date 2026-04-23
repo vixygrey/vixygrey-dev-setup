@@ -1,5 +1,16 @@
 # Changelog
 
+## [Unreleased]
+
+### Added
+
+- **tools**: Add `ouch` (universal archive tool) and `harlequin` (terminal SQL IDE) to the macOS setup, with `hq` alias and Dracula-themed `~/.config/harlequin/config.toml` (#11)
+- **repo**: Wire up `.pre-commit-config.yaml` (shellcheck via `shellcheck-py`, gitleaks, typos, file-hygiene hooks) and `.typos.toml` (#11)
+
+### Removed
+
+- **platforms**: Drop Linux and Windows support (#12). Deleted `scripts/setup-dev-tools-linux.sh`, `scripts/setup-dev-tools-windows.ps1`, and their per-platform `docs/GUIDE-*` / `docs/SHORTCUTS-*` files. Remaining macOS docs renamed to `docs/GUIDE.md` and `docs/SHORTCUTS.md`. CI workflows simplified to ShellCheck-only; release workflow now produces a single macOS zip.
+
 ## [2.2.0] - 2026-04-23
 
 ### Changed

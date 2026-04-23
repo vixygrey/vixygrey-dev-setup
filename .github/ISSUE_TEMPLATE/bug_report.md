@@ -8,10 +8,9 @@ assignees: ""
 
 ## Environment
 
-- **OS**: (e.g., macOS 15.3, Ubuntu 24.04, Windows 11)
-- **Script**: (e.g., setup-dev-tools-mac.sh)
+- **macOS version**: (e.g., macOS 15.3)
 - **Script version**: (run `./scripts/setup-dev-tools-mac.sh --version`)
-- **Shell**: (e.g., zsh 5.9, bash 5.2, PowerShell 7.4)
+- **Shell**: (e.g., zsh 5.9)
 
 ## Description
 

@@ -14,27 +14,22 @@ Thanks for your interest in contributing to this project! Here's how to get invo
 
 ## Development Requirements
 
-- [shellcheck](https://github.com/koalaman/shellcheck) for linting bash scripts
-- [PowerShell](https://github.com/PowerShell/PowerShell) + [PSScriptAnalyzer](https://github.com/PowerShell/PSScriptAnalyzer) for linting the Windows script (optional, runs in CI)
+- [shellcheck](https://github.com/koalaman/shellcheck) for linting the setup script
+- [pre-commit](https://pre-commit.com/) (recommended) -- runs ShellCheck, gitleaks, typos, and file-hygiene checks before every commit
 
 ## Linting
 
-All scripts must pass their respective linters with zero issues before merging.
+The setup script must pass ShellCheck with zero issues before merging.
 
 ```bash
-# Bash scripts (macOS + Linux)
-shellcheck scripts/setup-dev-tools-mac.sh
-shellcheck scripts/setup-dev-tools-linux.sh
-
-# PowerShell script (Windows) -- requires pwsh
-pwsh -Command "Invoke-ScriptAnalyzer -Path scripts/setup-dev-tools-windows.ps1 -Severity Warning,Error"
+shellcheck -x -S warning scripts/setup-dev-tools-mac.sh
 ```
 
-CI runs both ShellCheck and PSScriptAnalyzer automatically on every PR.
+CI runs ShellCheck automatically on every PR.
 
 ### Pre-commit hooks (recommended)
 
-The repo ships a `.pre-commit-config.yaml` that runs ShellCheck (matching CI), gitleaks, typos, and a few file-hygiene checks before every commit. Install once:
+The repo ships a `.pre-commit-config.yaml` that runs ShellCheck (matching CI), gitleaks, typos, and a few file-hygiene checks. Install once:
 
 ```bash
 pre-commit install                    # installs the git hook
@@ -42,16 +37,15 @@ pre-commit run --all-files            # run all hooks against the whole repo
 pre-commit autoupdate                 # bump hook versions
 ```
 
-`pre-commit` is installed by the setup scripts on all three platforms.
+`pre-commit` is installed by the setup script.
 
 ## Guidelines
 
-- **Keep scripts idempotent** -- every install block should skip if the tool is already present
+- **Keep the script idempotent** -- every install block should skip if the tool is already present
 - **Use the existing helper functions** (`installed`, `brew_install`, `log`, `info`, `warn`, etc.) rather than raw commands
 - **Test with `--dry-run`** before running a full install to verify your changes parse correctly
 - **One tool per commit** when adding new tools; group related config changes together
-- **Update documentation** if you add a new tool or change behavior (README, platform guides, shortcuts)
-- **Don't break cross-platform parity** -- if a tool is available on all platforms, add it to all three scripts
+- **Update documentation** if you add a new tool or change behavior (README, GUIDE, SHORTCUTS)
 - **Follow the category system** -- place tools in the correct category and update `ALL_CATEGORIES` if adding a new one
 
 ## Adding a New Tool
@@ -72,7 +66,7 @@ pre-commit autoupdate                 # bump hook versions
 ## Reporting Issues
 
 - Use GitHub Issues for bugs, feature requests, and tool suggestions
-- Include your OS version and the script output/log when reporting bugs
+- Include your macOS version and the script output/log when reporting bugs
 - Check existing issues before opening a new one
 
 ## License

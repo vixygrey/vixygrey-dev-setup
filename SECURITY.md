@@ -2,7 +2,7 @@
 
 ## Scope
 
-This policy covers the setup scripts in this repository (`setup-dev-tools-mac.sh`, `setup-dev-tools-linux.sh`, `setup-dev-tools-windows.ps1`) and their configuration outputs. It does not cover vulnerabilities in the third-party tools these scripts install.
+This policy covers the setup script in this repository (`scripts/setup-dev-tools-mac.sh`) and its configuration outputs. It does not cover vulnerabilities in the third-party tools the script installs.
 
 ## Reporting a Vulnerability
 

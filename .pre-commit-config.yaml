@@ -12,7 +12,7 @@ repos:
     hooks:
       - id: shellcheck
         args: ["-x", "-S", "warning"]
-        files: ^scripts/setup-dev-tools-(mac|linux)\.sh$
+        files: ^scripts/setup-dev-tools-mac\.sh$
 
   # Secret scanning — fast pre-commit pass before pushing
   - repo: https://github.com/gitleaks/gitleaks
