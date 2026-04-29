@@ -10,7 +10,7 @@
 # Flags:    --dry-run, --list, --skip <cats>, --only <cats>, --cleanup, --help
 # =============================================================================
 
-SCRIPT_VERSION="3.1.0"
+SCRIPT_VERSION="3.2.0"
 SCRIPT_START=$(date +%s)
 PYTHON_VERSION="3.12"
 

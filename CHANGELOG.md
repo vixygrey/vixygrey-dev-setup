@@ -1,5 +1,16 @@
 # Changelog
 
+## [3.2.0] - 2026-04-29
+
+### Changed
+
+- **Dock**: Stop pinning a curated app list (Finder, System Settings, VS Code, Ghostty, Raycast) on setup — Dock contents are personal preference. Enable Dock auto-hide by default (`com.apple.dock autohide = true`). `dockutil` is still installed for manual Dock management (#20)
+- **ci**: Bump GitHub Actions runtimes to Node 24 (#18)
+
+### Added
+
+- **repo**: Version-controlled GitHub repository ruleset for `main` at `.github/rulesets/main.json` (PR-only, squash-merge, ShellCheck required, force pushes / branch deletion blocked, linear history, admin bypass) plus apply/update instructions in `.github/rulesets/README.md`. Already applied live (#22)
+
 ## [3.1.0] - 2026-04-23
 
 ### Added
