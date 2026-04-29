@@ -1177,18 +1177,14 @@ The setup script configures these macOS defaults automatically via `defaults wri
 
 ### Dock
 
+- Auto-hide enabled
 - Small icon size (36px), no recent apps shown
 - Scale minimize effect (faster than genie)
 - Minimize windows into application icon
-- **Curated pins via `dockutil`:** Finder, System Settings, VS Code, Ghostty, Raycast (any app not yet installed is skipped with a warning so partial installs still succeed)
 - Mission Control: fixed Spaces order, fast animations, grouped by app
 - Hot corners: all disabled to prevent accidental triggers
 
-To re-run just the Dock curation:
-
-```bash
-./scripts/setup-dev-tools-mac.sh --only macos-defaults
-```
+`dockutil` is still installed for manual Dock management — see the dockutil section above.
 
 ### Screenshots
 

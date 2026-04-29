@@ -3420,8 +3420,7 @@ if [[ "$DRY_RUN" != "true" ]]; then
 
 # -- Dock --
 # Auto-hide the Dock
-# Keep Dock visible but small
-defaults write com.apple.dock autohide -bool false
+defaults write com.apple.dock autohide -bool true
 # Small Dock icon size
 defaults write com.apple.dock tilesize -integer 36
 # Don't show recent applications
@@ -3545,39 +3544,6 @@ defaults -currentHost write com.apple.screensaver idleTime -int 2700 2>/dev/null
 sudo pmset -c displaysleep 120 2>/dev/null || true  # charger: 2 hours
 sudo pmset -b displaysleep 75 2>/dev/null || true   # battery: 1hr 15min
 success "Screensaver at 45min, display sleep at 2hr (charger) / 1h15m (battery)"
-
-# -- Dock: clear defaults and pin a curated set via dockutil --
-# Pinned apps (in order): Finder, System Settings, VS Code, Ghostty, Raycast.
-# Only pins an app if it exists on disk — survives a partial install.
-if [[ "$DRY_RUN" != "true" ]]; then
-    if command -v dockutil >/dev/null 2>&1; then
-        info "Configuring Dock with curated pins via dockutil..."
-        dockutil --remove all --no-restart >/dev/null 2>&1 || true
-
-        dock_pins=(
-            "/System/Library/CoreServices/Finder.app"
-            "/System/Applications/System Settings.app"
-            "/Applications/Visual Studio Code.app"
-            "/Applications/Ghostty.app"
-            "/Applications/Raycast.app"
-        )
-        for app in "${dock_pins[@]}"; do
-            if [[ -d "$app" ]]; then
-                dockutil --add "$app" --no-restart >/dev/null 2>&1 || warn "dockutil: failed to pin $(basename "$app" .app)"
-            else
-                warn "Dock: skipping $(basename "$app" .app) — not installed"
-            fi
-        done
-        success "Dock configured (Finder, System Settings, VS Code, Ghostty, Raycast)"
-    else
-        # Fallback if dockutil didn't install: clear the Dock the old way
-        warn "dockutil not installed — clearing Dock via defaults instead"
-        defaults write com.apple.dock persistent-apps -array
-        defaults write com.apple.dock persistent-others -array
-    fi
-else
-    info "[DRY RUN] Would pin Finder, System Settings, VS Code, Ghostty, Raycast to Dock via dockutil"
-fi
 
 # Restart Dock to apply all Dock/Hot Corner/Mission Control changes
 killall Dock 2>/dev/null || true
