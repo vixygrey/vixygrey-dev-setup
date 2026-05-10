@@ -240,7 +240,7 @@ list_categories() {
     printf "  %-25s %s\n" "core"                "mise (Node, Python), Go, Rust, OrbStack, bun, uv, pnpm"
     printf "  %-25s %s\n" "git"                 "Git, GitHub CLI, delta, lazygit, pre-commit"
     printf "  %-25s %s\n" "aws"                 "AWS CLI, CDK, SAM, Granted, cfn-lint"
-    printf "  %-25s %s\n" "iac"                 "OpenTofu (Terraform), tflint, infracost"
+    printf "  %-25s %s\n" "iac"                 "OpenTofu (Terraform), tflint, terraform-docs, checkov, infracost"
     printf "  %-25s %s\n" "security"            "detect-secrets, gitleaks, trivy, semgrep, Snyk, ClamAV, Objective-See"
     printf "  %-25s %s\n" "replacements"        "eza, bat, fd, ripgrep, zoxide, btop, sd, dust, just, yazi, fx, etc."
     printf "  %-25s %s\n" "data-processing"     "yq, miller, csvkit, pandoc, ffmpeg, ImageMagick"
@@ -253,7 +253,7 @@ list_categories() {
     printf "  %-25s %s\n" "containers"          "lazydocker, dive, kubectl, k9s"
     printf "  %-25s %s\n" "api"                 "Postman, grpcurl"
     printf "  %-25s %s\n" "networking"          "mtr, bandwhich, nmap"
-    printf "  %-25s %s\n" "dx"                  "fzf, starship, atuin, Kiro, Ghostty, zellij, Raycast"
+    printf "  %-25s %s\n" "dx"                  "fzf, starship, atuin, Kiro, Ghostty, zellij, Raycast, aider, llm, repomix"
     printf "  %-25s %s\n" "ux"                  "Lighthouse"
     printf "  %-25s %s\n" "docs"                "d2, Mermaid CLI"
     printf "  %-25s %s\n" "mac-system"          "Pearcleaner, Quick Look plugins, mas, dockutil, terminal-notifier"
@@ -1038,7 +1038,11 @@ banner "Infrastructure as Code"
 
 brew_install "opentofu" "OpenTofu (open-source Terraform — multi-cloud IaC)"
 brew_install "tflint" "tflint (Terraform linter)"
+brew_install "terraform-docs" "terraform-docs (auto-generate module docs from variables/outputs)"
+brew_install "checkov" "checkov (IaC static analysis — Terraform, CloudFormation, Kubernetes, Dockerfile)"
 brew_install "infracost" "infracost (cost estimation for Terraform changes before apply)"
+# Note: tfsec was folded into trivy (installed under 'security'). Run `trivy config .`
+# instead — same Terraform misconfig coverage, broader scan surface.
 
 fi  # iac
 
@@ -1451,6 +1455,13 @@ if installed gh; then
             error "Failed to install GitHub Copilot CLI extension"
         fi
     fi
+fi
+
+# Additional agentic / LLM CLIs that pair with Claude Code + Kiro
+brew_install "aider" "aider (terminal AI pair programmer — git-aware edit loops)"
+brew_install "llm" "llm (Simon Willison's CLI — one-shot prompts, plugins, SQLite logs, embeddings)"
+if installed npm; then
+    npm_global_install "repomix" "repomix (pack a repo into a single LLM-friendly file with token counts)"
 fi
 
 # Productivity apps
@@ -6102,6 +6113,8 @@ else
       "Bash(act *)",
       "Bash(tofu *)",
       "Bash(tflint *)",
+      "Bash(terraform-docs *)",
+      "Bash(checkov *)",
       "Bash(infracost *)",
       "Bash(trivy *)",
       "Bash(semgrep *)",
@@ -6250,7 +6263,8 @@ else
 - **Testing**: `hyperfine` to benchmark, `oha` for load testing, `hurl` for HTTP test files, `act` for local GitHub Actions
 - **Code quality**: `typos` for spell checking, `ast-grep` for structural search/replace, `shellcheck`/`shfmt` for shell
 - **Security**: `trivy` to scan containers/IaC, `gitleaks` for secrets, `semgrep` for static analysis, `snyk` for dependency scanning, `detect-secrets` for pre-commit secret detection, `sops` for secrets encryption
-- **IaC**: `tofu` (Terraform), `tflint` for linting, `infracost` for cost estimation, `cfn-lint` for CloudFormation, `aws-sam-cli` for SAM
+- **IaC**: `tofu` (Terraform), `tflint` for linting, `terraform-docs` for module READMEs, `checkov` for static analysis, `infracost` for cost estimation, `cfn-lint` for CloudFormation, `aws-sam-cli` for SAM (note: `tfsec` checks live in `trivy config`)
+- **AI / agentic**: `claude` (Claude Code) for in-terminal pair programming, `aider` for git-aware AI edit loops, `llm` for one-shot prompts and embeddings, `repomix` to pack a repo into a single LLM-friendly file
 - **HTTP**: `xh` for colorized requests, `curlie` for curl with httpie output, `grpcurl` for gRPC
 - **Network**: `trip` (trippy) for traceroute TUI, `sudo mtr` (requires root, lives in sbin), `bandwhich` for bandwidth, `nmap` for scanning, `mkcert` for local TLS certs
 - **Docs**: `d2` for diagrams, `pandoc` for conversion, `glow` for Markdown preview
@@ -6528,11 +6542,13 @@ DOCKER_RULES
 
 - Use OpenTofu/Terraform with state stored remotely (S3 + DynamoDB)
 - Lint with `tflint` before applying
+- Document modules with `terraform-docs` (auto-generate variable/output sections)
+- Run `checkov -d .` for IaC static analysis (Terraform, CloudFormation, Kubernetes, Dockerfile)
+- Scan with `trivy config .` for misconfigurations (covers what tfsec used to)
 - Estimate costs with `infracost` before applying changes
 - Use modules for reusable infrastructure patterns
 - Tag all resources: project, environment, owner, managed-by
 - Use workspaces or separate state files per environment
-- Scan with `trivy config .` for misconfigurations
 IAC_RULES
 
     success "Claude Code rules created (workflow, git, security, typescript, python, docker, iac)"
@@ -6729,10 +6745,12 @@ CMD_DOCKER
 Review the infrastructure-as-code in this project:
 
 1. Run `tflint` on any Terraform/OpenTofu files
-2. Run `trivy config .` to scan for misconfigurations
-3. Run `infracost breakdown --path .` to estimate costs (if infracost is configured)
-4. Check for: missing tags, overly permissive IAM, unencrypted resources, missing backups
-5. Check CDK code for L1 constructs that should be L2/L3
+2. Run `trivy config .` to scan for misconfigurations (broad surface — IaC + Dockerfile + K8s)
+3. Run `checkov -d .` for IaC-focused static analysis (different rule set than trivy — they're complementary)
+4. Run `infracost breakdown --path .` to estimate costs (if infracost is configured)
+5. If Terraform modules are present, run `terraform-docs markdown table .` and verify the README's variable/output sections are up to date
+6. Check for: missing tags, overly permissive IAM, unencrypted resources, missing backups
+7. Check CDK code for L1 constructs that should be L2/L3
 
 Report findings with severity and recommended fixes.
 CMD_IAC
