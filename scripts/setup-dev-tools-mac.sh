@@ -2539,20 +2539,38 @@ if [[ -f "$KIRO_MCP" ]]; then
 else
     info "Creating Kiro MCP server config..."
     mkdir -p "$KIRO_MCP_DIR"
-    # Unquoted heredoc: $HOME is pre-expanded at install time so the filesystem
-    # server gets a real path; \${TOKEN} stays literal so Kiro substitutes it
-    # from the user's shell env at runtime (matches Kiro's documented pattern).
+    # Resolve absolute paths for npx and uvx. Required because Kiro is a GUI
+    # app — when launched from Finder/Spotlight/Raycast it inherits launchd's
+    # PATH (/usr/bin:/bin:/usr/sbin:/sbin), not the user's interactive shell
+    # PATH. Bare "command": "npx" would silently fail to spawn MCP servers
+    # unless the user launches Kiro from a terminal. Same well-known issue as
+    # Claude Desktop. Pre-expand to absolute paths in the JSON.
+    BREW_BIN="$(brew --prefix 2>/dev/null)/bin"
+    [[ -x "$BREW_BIN/npx" ]] || BREW_BIN="/opt/homebrew/bin"
+    [[ -x "$BREW_BIN/npx" ]] || BREW_BIN="/usr/local/bin"
+    KIRO_NPX="$BREW_BIN/npx"
+    KIRO_UVX="$BREW_BIN/uvx"
+    if [[ ! -x "$KIRO_NPX" ]]; then
+        warn "  npx not found at $KIRO_NPX — MCP servers using npx may fail when Kiro is launched from Finder"
+    fi
+    if [[ ! -x "$KIRO_UVX" ]]; then
+        warn "  uvx not found at $KIRO_UVX — MCP servers using uvx may fail when Kiro is launched from Finder"
+    fi
+    # Unquoted heredoc: $HOME, $KIRO_NPX, $KIRO_UVX pre-expand at install time
+    # so processes spawned by Kiro under launchd's restricted PATH still
+    # resolve. \${TOKEN} stays literal so Kiro substitutes from shell env at
+    # runtime (matches Kiro's documented pattern).
     cat > "$KIRO_MCP" <<KIRO_MCP_CONF
 {
   "mcpServers": {
     "filesystem": {
-      "command": "npx",
+      "command": "$KIRO_NPX",
       "args": ["-y", "@modelcontextprotocol/server-filesystem", "$HOME/Code"],
       "disabled": false,
       "autoApprove": ["read_file", "list_directory", "search_files"]
     },
     "github": {
-      "command": "npx",
+      "command": "$KIRO_NPX",
       "args": ["-y", "@modelcontextprotocol/server-github"],
       "env": {
         "GITHUB_PERSONAL_ACCESS_TOKEN": "\${GITHUB_TOKEN}"
@@ -2561,31 +2579,31 @@ else
       "autoApprove": ["search_repositories", "get_file_contents", "list_issues", "list_pull_requests"]
     },
     "git": {
-      "command": "uvx",
+      "command": "$KIRO_UVX",
       "args": ["mcp-server-git"],
       "disabled": false,
       "autoApprove": ["git_status", "git_diff", "git_log", "git_show"]
     },
     "fetch": {
-      "command": "uvx",
+      "command": "$KIRO_UVX",
       "args": ["mcp-server-fetch"],
       "disabled": false,
       "autoApprove": ["fetch"]
     },
     "context7": {
-      "command": "npx",
+      "command": "$KIRO_NPX",
       "args": ["-y", "@upstash/context7-mcp"],
       "disabled": false,
       "autoApprove": ["resolve-library-id", "get-library-docs"]
     },
     "aws-docs": {
-      "command": "uvx",
+      "command": "$KIRO_UVX",
       "args": ["awslabs.aws-documentation-mcp-server"],
       "disabled": false,
       "autoApprove": ["search_documentation", "read_documentation"]
     },
     "notion": {
-      "command": "npx",
+      "command": "$KIRO_NPX",
       "args": ["-y", "@notionhq/notion-mcp-server"],
       "env": {
         "NOTION_TOKEN": "\${NOTION_TOKEN}"
@@ -2594,13 +2612,13 @@ else
       "autoApprove": ["API-get-self", "API-get-user", "API-get-users", "API-retrieve-a-page", "API-retrieve-a-database", "API-post-search", "API-get-block-children"]
     },
     "playwright": {
-      "command": "npx",
+      "command": "$KIRO_NPX",
       "args": ["-y", "@playwright/mcp"],
       "disabled": true,
       "autoApprove": []
     },
     "postgres": {
-      "command": "npx",
+      "command": "$KIRO_NPX",
       "args": ["-y", "@modelcontextprotocol/server-postgres", "postgresql://localhost:5432/postgres"],
       "disabled": true,
       "autoApprove": []
@@ -3752,6 +3770,11 @@ case ":$PATH:" in
   *":$PNPM_HOME:"*) ;;
   *) export PATH="$PNPM_HOME:$PATH" ;;
 esac
+
+# uv tool / pipx — persistent binaries installed by `uv tool install` (e.g.
+# harlequin, checkov) land in ~/.local/bin. Must be on PATH for those tools
+# to be reachable as bare commands.
+export PATH="$HOME/.local/bin:$PATH"
 
 # Personal scripts
 export PATH="$HOME/Scripts/bin:$PATH"
@@ -6155,6 +6178,41 @@ else
       "Bash(newsboat *)",
       "Bash(zellij *)",
       "Bash(gum *)",
+      "Bash(uvx *)",
+      "Bash(kiro *)",
+      "Bash(aider *)",
+      "Bash(llm *)",
+      "Bash(repomix *)",
+      "Bash(chezmoi *)",
+      "Bash(mas *)",
+      "Bash(dockutil *)",
+      "Bash(terminal-notifier *)",
+      "Bash(ouch *)",
+      "Bash(harlequin *)",
+      "Bash(hq *)",
+      "Bash(granted *)",
+      "Bash(assume *)",
+      "Bash(topgrade *)",
+      "Bash(git-absorb *)",
+      "Bash(act3 *)",
+      "Bash(npkill *)",
+      "Bash(mkcert *)",
+      "Bash(mitmproxy *)",
+      "Bash(mitmdump *)",
+      "Bash(bandwhich *)",
+      "Bash(nmap *)",
+      "Bash(gping *)",
+      "Bash(doggo *)",
+      "Bash(procs *)",
+      "Bash(btop *)",
+      "Bash(viddy *)",
+      "Bash(trash *)",
+      "Bash(yt-dlp *)",
+      "Bash(aria2c *)",
+      "Bash(parallel *)",
+      "Bash(lnav *)",
+      "Bash(glow *)",
+      "Bash(fastfetch *)",
       "Read",
       "Edit",
       "Write",
@@ -7108,6 +7166,11 @@ MANAGED_BLOCK=$(cat <<'MANAGED_ZSHRC'
 
 # Deduplicate PATH
 typeset -U PATH path
+
+# uv tool / pipx persistent binaries (harlequin, checkov, anything user
+# installs via `uv tool install`). .zprofile sets this too — re-asserting
+# here for non-login interactive shells.
+export PATH="$HOME/.local/bin:$PATH"
 
 # Personal scripts
 export PATH="$HOME/Scripts/bin:$PATH"
