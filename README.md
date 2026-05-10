@@ -966,6 +966,8 @@ Auto-installed by the script:
 | **YAML** | YAML language support with validation |
 | **Even Better TOML** | TOML language support |
 | **Terraform (HashiCorp)** | Terraform / OpenTofu language support |
+| **AWS Toolkit** | Local Lambda debugging via SAM, CloudFormation/SAM YAML schemas, ECS exec terminal, AWS resource explorer (S3/Lambda/CloudWatch), credential/SSO management ([OpenVSX](https://open-vsx.org/extension/amazonwebservices/aws-toolkit-vscode)) |
+| **cfn-lint** | CloudFormation/SAM template linter — pairs with the `cfn-lint` CLI |
 
 ### Kiro Settings Highlights
 

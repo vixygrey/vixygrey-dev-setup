@@ -2516,6 +2516,9 @@ if installed kiro; then
         "redhat.vscode-yaml"
         "tamasfe.even-better-toml"
         "hashicorp.terraform"
+        # AWS development
+        "amazonwebservices.aws-toolkit-vscode"
+        "kddejong.vscode-cfn-lint"
     )
     for ext in "${KIRO_EXTENSIONS[@]}"; do
         if kiro --list-extensions 2>/dev/null | grep -qi "$ext"; then
