@@ -996,6 +996,7 @@ The script writes a sensible default `~/.kiro/settings/mcp.json` with these enab
 | **fetch** | HTTP fetch with HTML→Markdown conversion | `mcp-server-fetch` (uvx) |
 | **context7** | Fetch up-to-date library docs by package name | `@upstash/context7-mcp` (npx) |
 | **aws-docs** | Search and read AWS documentation | `awslabs.aws-documentation-mcp-server` (uvx) |
+| **notion** | Search Notion pages/databases, read blocks, retrieve users | `@notionhq/notion-mcp-server` (npx); needs `NOTION_TOKEN` from an internal integration |
 
 And these are written **disabled** — flip `"disabled": false` to opt in:
 
@@ -1004,7 +1005,9 @@ And these are written **disabled** — flip `"disabled": false` to opt in:
 | **playwright** | Spawns a real browser; only enable when doing E2E work |
 | **postgres** | Needs a running database and connection string |
 
-Edit `~/.kiro/settings/mcp.json` to add more (Notion, Linear, Slack, Sentry, Stripe, etc.) or override per-project at `<repo>/.kiro/settings/mcp.json` — workspace config wins.
+Edit `~/.kiro/settings/mcp.json` to add more (Linear, Slack, Sentry, Stripe, etc.) or override per-project at `<repo>/.kiro/settings/mcp.json` — workspace config wins.
+
+**Notion setup:** create an internal integration at <https://www.notion.so/profile/integrations>, copy the `secret_...` token, export it (`echo 'export NOTION_TOKEN=secret_...' >> ~/.zshrc.local`), then share the specific Notion pages/databases you want the agent to reach via the page's `…` menu → "Connect to" → your integration. Without page access the integration sees nothing; this is the intended Notion permission model.
 
 ---
 

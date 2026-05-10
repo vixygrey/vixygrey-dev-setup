@@ -2569,6 +2569,15 @@ else
       "disabled": false,
       "autoApprove": ["search_documentation", "read_documentation"]
     },
+    "notion": {
+      "command": "npx",
+      "args": ["-y", "@notionhq/notion-mcp-server"],
+      "env": {
+        "OPENAPI_MCP_HEADERS": "{\"Authorization\":\"Bearer ${NOTION_TOKEN}\",\"Notion-Version\":\"2022-06-28\"}"
+      },
+      "disabled": false,
+      "autoApprove": ["API-get-self", "API-get-user", "API-get-users", "API-retrieve-a-page", "API-retrieve-a-database", "API-post-search", "API-get-block-children"]
+    },
     "playwright": {
       "command": "npx",
       "args": ["-y", "@playwright/mcp"],
@@ -2584,8 +2593,9 @@ else
   }
 }
 KIRO_MCP_CONF
-    success "Kiro MCP config created (filesystem, github, git, fetch, context7, aws-docs enabled; playwright + postgres disabled by default)"
+    success "Kiro MCP config created (filesystem, github, git, fetch, context7, aws-docs, notion enabled; playwright + postgres disabled by default)"
     info "  Edit $KIRO_MCP to enable more servers or change scope"
+    info "  Notion: export NOTION_TOKEN=secret_... (create an internal integration at https://www.notion.so/profile/integrations)"
 fi
 
 # ---- Fonts (required for icons in eza, starship, lazygit, etc.) ----
