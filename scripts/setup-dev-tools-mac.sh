@@ -779,6 +779,13 @@ fi
 preflight
 acquire_lock
 
+# Truncate state file on a fresh run so it doesn't accumulate duplicates across
+# repeated invocations. Preserved when --resume is passed so previous successes
+# can short-circuit. (Issue #28)
+if [[ "$RESUME" != "true" ]]; then
+    : > "$STATE_FILE"
+fi
+
 # =============================================================================
 # PREREQUISITES (always runs — required for everything else)
 # =============================================================================
