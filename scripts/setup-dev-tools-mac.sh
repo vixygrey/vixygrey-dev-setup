@@ -2516,6 +2516,9 @@ if installed kiro; then
         "redhat.vscode-yaml"
         "tamasfe.even-better-toml"
         "hashicorp.terraform"
+        # AWS development
+        "amazonwebservices.aws-toolkit-vscode"
+        "kddejong.vscode-cfn-lint"
     )
     for ext in "${KIRO_EXTENSIONS[@]}"; do
         if kiro --list-extensions 2>/dev/null | grep -qi "$ext"; then
@@ -2602,6 +2605,58 @@ else
       "disabled": false,
       "autoApprove": ["search_documentation", "read_documentation"]
     },
+    "aws-pricing": {
+      "command": "$KIRO_UVX",
+      "args": ["awslabs.aws-pricing-mcp-server@latest"],
+      "disabled": false,
+      "autoApprove": ["*"]
+    },
+    "aws-iac": {
+      "command": "$KIRO_UVX",
+      "args": ["awslabs.aws-iac-mcp-server@latest"],
+      "disabled": false,
+      "autoApprove": ["*"]
+    },
+    "aws-knowledge": {
+      "command": "$KIRO_UVX",
+      "args": ["awslabs.aws-knowledge-mcp-server@latest"],
+      "disabled": false,
+      "autoApprove": ["*"]
+    },
+    "cloudwatch": {
+      "command": "$KIRO_UVX",
+      "args": ["awslabs.cloudwatch-mcp-server@latest"],
+      "env": {
+        "AWS_REGION": "\${AWS_REGION}",
+        "AWS_PROFILE": "\${AWS_PROFILE}"
+      },
+      "disabled": false,
+      "autoApprove": [
+        "describe_alarms", "describe_alarm_history", "list_metrics",
+        "get_metric_data", "get_metric_statistics",
+        "describe_log_groups", "describe_log_streams", "get_log_events",
+        "start_query", "get_query_results", "describe_queries",
+        "describe_metric_filters"
+      ]
+    },
+    "iam": {
+      "command": "$KIRO_UVX",
+      "args": ["awslabs.iam-mcp-server@latest"],
+      "env": {
+        "AWS_REGION": "\${AWS_REGION}",
+        "AWS_PROFILE": "\${AWS_PROFILE}"
+      },
+      "disabled": false,
+      "autoApprove": [
+        "list_users", "list_roles", "list_groups", "list_policies",
+        "list_attached_role_policies", "list_role_policies",
+        "list_attached_user_policies", "list_attached_group_policies",
+        "get_user", "get_role", "get_group", "get_policy",
+        "get_role_policy", "get_user_policy", "get_policy_version",
+        "get_account_summary", "get_account_authorization_details",
+        "simulate_principal_policy", "simulate_custom_policy"
+      ]
+    },
     "notion": {
       "command": "$KIRO_NPX",
       "args": ["-y", "@notionhq/notion-mcp-server"],
@@ -2622,13 +2677,80 @@ else
       "args": ["-y", "@modelcontextprotocol/server-postgres", "postgresql://localhost:5432/postgres"],
       "disabled": true,
       "autoApprove": []
+    },
+    "aws-ccapi": {
+      "command": "$KIRO_UVX",
+      "args": ["awslabs.ccapi-mcp-server@latest"],
+      "env": {
+        "AWS_REGION": "\${AWS_REGION}",
+        "AWS_PROFILE": "\${AWS_PROFILE}"
+      },
+      "disabled": true,
+      "autoApprove": []
+    },
+    "aws-serverless": {
+      "command": "$KIRO_UVX",
+      "args": ["awslabs.aws-serverless-mcp-server@latest"],
+      "env": {
+        "AWS_REGION": "\${AWS_REGION}",
+        "AWS_PROFILE": "\${AWS_PROFILE}"
+      },
+      "disabled": true,
+      "autoApprove": []
+    },
+    "aws-lambda-tool": {
+      "command": "$KIRO_UVX",
+      "args": ["awslabs.lambda-tool-mcp-server@latest"],
+      "env": {
+        "AWS_REGION": "\${AWS_REGION}",
+        "AWS_PROFILE": "\${AWS_PROFILE}"
+      },
+      "disabled": true,
+      "autoApprove": []
+    },
+    "aws-eks": {
+      "command": "$KIRO_UVX",
+      "args": ["awslabs.eks-mcp-server@latest"],
+      "env": {
+        "AWS_REGION": "\${AWS_REGION}",
+        "AWS_PROFILE": "\${AWS_PROFILE}"
+      },
+      "disabled": true,
+      "autoApprove": []
+    },
+    "aws-ecs": {
+      "command": "$KIRO_UVX",
+      "args": ["awslabs.ecs-mcp-server@latest"],
+      "env": {
+        "AWS_REGION": "\${AWS_REGION}",
+        "AWS_PROFILE": "\${AWS_PROFILE}"
+      },
+      "disabled": true,
+      "autoApprove": []
+    },
+    "aws-dynamodb": {
+      "command": "$KIRO_UVX",
+      "args": ["awslabs.dynamodb-mcp-server@latest"],
+      "env": {
+        "AWS_REGION": "\${AWS_REGION}",
+        "AWS_PROFILE": "\${AWS_PROFILE}"
+      },
+      "disabled": true,
+      "autoApprove": []
     }
   }
 }
 KIRO_MCP_CONF
-    success "Kiro MCP config created (filesystem, github, git, fetch, context7, aws-docs, notion enabled; playwright + postgres disabled by default)"
+    success "Kiro MCP config created"
+    info "  Enabled: filesystem, github, git, fetch, context7, notion, aws-docs,"
+    info "           aws-pricing, aws-iac, aws-knowledge, cloudwatch, iam"
+    info "  Disabled (opt-in per project): playwright, postgres, aws-ccapi,"
+    info "           aws-serverless, aws-lambda-tool, aws-eks, aws-ecs, aws-dynamodb"
     info "  Edit $KIRO_MCP to enable more servers or change scope"
-    info "  Notion: export NOTION_TOKEN=secret_... (create an internal integration at https://www.notion.so/profile/integrations)"
+    info "  Notion: export NOTION_TOKEN=secret_... (https://www.notion.so/profile/integrations)"
+    info "  AWS:    AWS servers use the standard AWS credential chain — works with"
+    info "           ~/.aws/credentials, AWS SSO, or 'assume <profile>' (granted)."
+    info "           Set AWS_REGION and AWS_PROFILE in your shell to scope requests."
 fi
 
 # ---- Fonts (required for icons in eza, starship, lazygit, etc.) ----
