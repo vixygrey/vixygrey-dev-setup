@@ -253,7 +253,7 @@ list_categories() {
     printf "  %-25s %s\n" "containers"          "lazydocker, dive, kubectl, k9s"
     printf "  %-25s %s\n" "api"                 "Postman, grpcurl"
     printf "  %-25s %s\n" "networking"          "mtr, bandwhich, nmap"
-    printf "  %-25s %s\n" "dx"                  "fzf, starship, atuin, VS Code, Ghostty, zellij, Raycast"
+    printf "  %-25s %s\n" "dx"                  "fzf, starship, atuin, Kiro, Ghostty, zellij, Raycast"
     printf "  %-25s %s\n" "ux"                  "Lighthouse"
     printf "  %-25s %s\n" "docs"                "d2, Mermaid CLI"
     printf "  %-25s %s\n" "mac-system"          "Pearcleaner, Quick Look plugins, mas, dockutil, terminal-notifier"
@@ -615,9 +615,10 @@ if [[ "$UNINSTALL" == "true" ]]; then
     echo "# Remove Claude Code config (CAREFUL — contains your custom rules):"
     echo "  rm -rf ~/.claude/settings.json ~/.claude/CLAUDE.md ~/.claude/rules ~/.claude/hooks ~/.claude/commands"
     echo ""
-    echo "# Remove VS Code settings:"
-    echo "  rm -f ~/Library/Application\\ Support/Code/User/settings.json"
-    echo "  rm -f ~/Library/Application\\ Support/Code/User/keybindings.json"
+    echo "# Remove Kiro settings:"
+    echo "  rm -f ~/Library/Application\\ Support/Kiro/User/settings.json"
+    echo "  rm -f ~/Library/Application\\ Support/Kiro/User/keybindings.json"
+    echo "  rm -f ~/.kiro/settings/mcp.json"
     echo ""
     echo "# Remove helper scripts:"
     echo "  rm -rf ~/Scripts/bin"
@@ -653,7 +654,8 @@ if [[ "$CLEANUP" == "true" ]]; then
         "cask:docker:Docker Desktop:OrbStack"
         "cask:warp:Warp terminal:Ghostty"
         "cask:iterm2:iTerm2:Ghostty"
-        "cask:cursor:Cursor (AI editor):VS Code + Claude Code"
+        "cask:cursor:Cursor (AI editor):Kiro + Claude Code"
+        "cask:visual-studio-code:VS Code:Kiro (VS Code fork with built-in Claude agent)"
         "cask:cleanshot:CleanShot X:removed"
         "cask:soulver:Soulver 3:removed"
         "cask:numi:Numi:removed"
@@ -1406,13 +1408,18 @@ brew_install "atuin" "atuin (replaces shell history — SQLite-backed, searchabl
 # mise already installed in core section
 
 # Editors & terminals
-brew_cask_install "visual-studio-code" "VS Code"
-# Ensure VS Code 'code' CLI is in PATH (brew cask installs the app but not the CLI symlink)
-VSCODE_CLI="/Applications/Visual Studio Code.app/Contents/Resources/app/bin/code"
-if [[ -f "$VSCODE_CLI" ]] && ! installed code; then
-    info "Adding VS Code 'code' CLI to PATH..."
-    ln -sf "$VSCODE_CLI" /usr/local/bin/code 2>/dev/null || \
-    sudo ln -sf "$VSCODE_CLI" /usr/local/bin/code 2>/dev/null || true
+brew_cask_install "kiro" "Kiro (AWS agentic IDE — VS Code fork with built-in Claude agent, specs, steering, hooks)"
+# Ensure Kiro 'kiro' CLI is in PATH (brew cask installs the app but not the CLI symlink).
+# Symlink into Homebrew's bin dir so the CLI is on PATH on both Apple Silicon
+# (/opt/homebrew/bin) and Intel (/usr/local/bin) without depending on /usr/local being writable.
+KIRO_CLI="/Applications/Kiro.app/Contents/Resources/app/bin/kiro"
+if [[ -f "$KIRO_CLI" ]] && ! installed kiro; then
+    info "Adding Kiro 'kiro' CLI to PATH..."
+    KIRO_LINK_DIR="$(brew --prefix 2>/dev/null)/bin"
+    [[ -d "$KIRO_LINK_DIR" ]] || KIRO_LINK_DIR="/usr/local/bin"
+    ln -sf "$KIRO_CLI" "$KIRO_LINK_DIR/kiro" 2>/dev/null || \
+    sudo ln -sf "$KIRO_CLI" "$KIRO_LINK_DIR/kiro" 2>/dev/null || true
+    hash -r 2>/dev/null || true
 fi
 brew_cask_install "ghostty" "Ghostty (fast GPU-accelerated terminal)"
 brew_install "zellij" "zellij (modern terminal multiplexer — discoverable UI, layouts)"
@@ -1640,14 +1647,14 @@ fi  # mac-bloat
 if should_run "dracula"; then
 banner "Dracula Theme"
 
-# VS Code - Dracula theme
-if installed code; then
-    if code --list-extensions 2>/dev/null | grep -qi "dracula-theme.theme-dracula"; then
-        warn "VS Code Dracula theme already installed"
+# Kiro - Dracula theme (extensions resolved via OpenVSX)
+if installed kiro; then
+    if kiro --list-extensions 2>/dev/null | grep -qi "dracula-theme.theme-dracula"; then
+        warn "Kiro Dracula theme already installed"
     else
-        info "Installing Dracula theme for VS Code..."
-        code --install-extension dracula-theme.theme-dracula
-        success "VS Code Dracula theme installed"
+        info "Installing Dracula theme for Kiro..."
+        kiro --install-extension dracula-theme.theme-dracula
+        success "Kiro Dracula theme installed"
     fi
 fi
 
@@ -2215,13 +2222,16 @@ git:
   autoRefresh: true
   branchLogCmd: "git log --graph --color=always --abbrev-commit --decorate --date=relative --pretty=medium {{branchName}} --"
 os:
-  editPreset: "vscode"
+  edit: 'kiro -- {{filename}}'
+  editAtLine: 'kiro --goto -- {{filename}}:{{line}}'
+  editAtLineAndWait: 'kiro --goto --wait -- {{filename}}:{{line}}'
+  editInTerminal: false
   open: "open {{filename}}"
   openLink: "open {{link}}"
 notARepository: skip
 promptToReturnFromSubprocess: false
 LAZYGIT_CONF
-    success "lazygit configured (Dracula theme, delta pager, auto-fetch, VS Code editor)"
+    success "lazygit configured (Dracula theme, delta pager, auto-fetch, Kiro editor)"
 fi
 
 # ---- k9s Dracula skin ----
@@ -2333,16 +2343,16 @@ K9S_CFG
     success "k9s Dracula skin configured"
 fi
 
-# ---- VS Code settings ----
-VSCODE_SETTINGS_DIR="$HOME/Library/Application Support/Code/User"
-VSCODE_SETTINGS="$VSCODE_SETTINGS_DIR/settings.json"
-if [[ -f "$VSCODE_SETTINGS" ]]; then
-    warn "VS Code settings.json already exists — not overwriting"
+# ---- Kiro settings ----
+KIRO_SETTINGS_DIR="$HOME/Library/Application Support/Kiro/User"
+KIRO_SETTINGS="$KIRO_SETTINGS_DIR/settings.json"
+if [[ -f "$KIRO_SETTINGS" ]]; then
+    warn "Kiro settings.json already exists — not overwriting"
     info "  To use Dracula, add: \"workbench.colorTheme\": \"Dracula\""
 else
-    info "Creating VS Code settings..."
-    mkdir -p "$VSCODE_SETTINGS_DIR"
-    cat > "$VSCODE_SETTINGS" <<'VSCODE_CONF'
+    info "Creating Kiro settings..."
+    mkdir -p "$KIRO_SETTINGS_DIR"
+    cat > "$KIRO_SETTINGS" <<'KIRO_CONF'
 {
     "workbench.colorTheme": "Dracula",
     "workbench.iconTheme": "vs-seti",
@@ -2441,24 +2451,30 @@ else
         }
     }
 }
-VSCODE_CONF
-    success "VS Code settings configured with Dracula theme"
+KIRO_CONF
+    success "Kiro settings configured with Dracula theme"
 fi
 
-# ---- VS Code essential extensions ----
-if installed code; then
-    info "Installing VS Code extensions..."
-    VSCODE_EXTENSIONS=(
+# ---- Kiro essential extensions (resolved from OpenVSX) ----
+# Note: Kiro is a VS Code fork that uses OpenVSX, not the Microsoft Marketplace.
+# Closed-source extensions like github.copilot and ms-vscode.* are unavailable —
+# Kiro ships its own AI agent (Claude Sonnet), so Copilot is redundant anyway.
+if installed kiro; then
+    info "Installing Kiro extensions (from OpenVSX)..."
+    KIRO_EXTENSIONS=(
         # Theme
         "dracula-theme.theme-dracula"
         # Formatting & linting
         "esbenp.prettier-vscode"
         "dbaeumer.vscode-eslint"
+        "charliermarsh.ruff"
         # Language support
         "bradlc.vscode-tailwindcss"
         "ms-python.python"
         "golang.go"
         "rust-lang.rust-analyzer"
+        "astro-build.astro-vscode"
+        "svelte.svelte-vscode"
         # Editor enhancements
         "formulahendry.auto-rename-tag"
         "christian-kohler.path-intellisense"
@@ -2468,30 +2484,115 @@ if installed code; then
         "christian-kohler.npm-intellisense"
         "naumovs.color-highlight"
         "mechatroner.rainbow-csv"
+        "editorconfig.editorconfig"
         # Git
         "eamodio.gitlens"
         "mhutchie.git-graph"
-        # AI
-        "github.copilot"
         # Productivity
         "gruntfuggly.todo-tree"
         "wix.vscode-import-cost"
         "ms-azuretools.vscode-docker"
         "mikestead.dotenv"
         "yzhang.markdown-all-in-one"
+        "davidanson.vscode-markdownlint"
         "redhat.vscode-yaml"
         "tamasfe.even-better-toml"
+        "hashicorp.terraform"
     )
-    for ext in "${VSCODE_EXTENSIONS[@]}"; do
-        if code --list-extensions 2>/dev/null | grep -qi "$ext"; then
-            warn "VS Code extension $ext already installed"
+    for ext in "${KIRO_EXTENSIONS[@]}"; do
+        if kiro --list-extensions 2>/dev/null | grep -qi "$ext"; then
+            warn "Kiro extension $ext already installed"
         else
-            if ! code --install-extension "$ext" >> "$LOG_FILE" 2>&1; then
-                warn "Failed to install VS Code extension: $ext"
+            if ! kiro --install-extension "$ext" >> "$LOG_FILE" 2>&1; then
+                warn "Failed to install Kiro extension: $ext (may not be on OpenVSX)"
             fi
         fi
     done
-    success "VS Code extensions installed"
+    success "Kiro extensions installed"
+fi
+
+# ---- Kiro MCP servers (global config) ----
+# MCP (Model Context Protocol) servers extend Kiro's built-in agent with extra tools.
+# Workspace overrides live in <repo>/.kiro/settings/mcp.json (precedence over global).
+KIRO_MCP_DIR="$HOME/.kiro/settings"
+KIRO_MCP="$KIRO_MCP_DIR/mcp.json"
+if [[ -f "$KIRO_MCP" ]]; then
+    warn "Kiro MCP config already exists — not overwriting ($KIRO_MCP)"
+else
+    info "Creating Kiro MCP server config..."
+    mkdir -p "$KIRO_MCP_DIR"
+    # Unquoted heredoc: $HOME is pre-expanded at install time so the filesystem
+    # server gets a real path; \${TOKEN} stays literal so Kiro substitutes it
+    # from the user's shell env at runtime (matches Kiro's documented pattern).
+    cat > "$KIRO_MCP" <<KIRO_MCP_CONF
+{
+  "mcpServers": {
+    "filesystem": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-filesystem", "$HOME/Code"],
+      "disabled": false,
+      "autoApprove": ["read_file", "list_directory", "search_files"]
+    },
+    "github": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-github"],
+      "env": {
+        "GITHUB_PERSONAL_ACCESS_TOKEN": "\${GITHUB_TOKEN}"
+      },
+      "disabled": false,
+      "autoApprove": ["search_repositories", "get_file_contents", "list_issues", "list_pull_requests"]
+    },
+    "git": {
+      "command": "uvx",
+      "args": ["mcp-server-git"],
+      "disabled": false,
+      "autoApprove": ["git_status", "git_diff", "git_log", "git_show"]
+    },
+    "fetch": {
+      "command": "uvx",
+      "args": ["mcp-server-fetch"],
+      "disabled": false,
+      "autoApprove": ["fetch"]
+    },
+    "context7": {
+      "command": "npx",
+      "args": ["-y", "@upstash/context7-mcp"],
+      "disabled": false,
+      "autoApprove": ["resolve-library-id", "get-library-docs"]
+    },
+    "aws-docs": {
+      "command": "uvx",
+      "args": ["awslabs.aws-documentation-mcp-server"],
+      "disabled": false,
+      "autoApprove": ["search_documentation", "read_documentation"]
+    },
+    "notion": {
+      "command": "npx",
+      "args": ["-y", "@notionhq/notion-mcp-server"],
+      "env": {
+        "NOTION_TOKEN": "\${NOTION_TOKEN}"
+      },
+      "disabled": false,
+      "autoApprove": ["API-get-self", "API-get-user", "API-get-users", "API-retrieve-a-page", "API-retrieve-a-database", "API-post-search", "API-get-block-children"]
+    },
+    "playwright": {
+      "command": "npx",
+      "args": ["-y", "@playwright/mcp"],
+      "disabled": true,
+      "autoApprove": []
+    },
+    "postgres": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-postgres", "postgresql://localhost:5432/postgres"],
+      "disabled": true,
+      "autoApprove": []
+    }
+  }
+}
+KIRO_MCP_CONF
+    success "Kiro MCP config created (filesystem, github, git, fetch, context7, aws-docs, notion enabled; playwright + postgres disabled by default)"
+    info "  Edit $KIRO_MCP to enable more servers or change scope"
+    info "  Notion: export NOTION_TOKEN=secret_... (create an internal integration at https://www.notion.so/profile/integrations)"
 fi
 
 # ---- Fonts (required for icons in eza, starship, lazygit, etc.) ----
@@ -3176,10 +3277,15 @@ else
 Icon?
 
 # -- Editors ------------------------------------------------------------------
-# VS Code
+# Kiro / VS Code (Kiro is a VS Code fork, both layouts apply)
 .vscode/settings.json
 .vscode/launch.json
 *.code-workspace
+# Kiro per-workspace user state — keep .kiro/steering, .kiro/specs, .kiro/hooks
+# and .kiro/settings/mcp.json under version control; ignore local agent state.
+.kiro/.cache/
+.kiro/.tmp/
+.kiro/local/
 
 # JetBrains
 .idea/
@@ -3581,8 +3687,8 @@ if [[ -f /opt/homebrew/bin/brew ]]; then
 fi
 
 # Default editor
-export EDITOR="code --wait"
-export VISUAL="code --wait"
+export EDITOR="kiro --wait"
+export VISUAL="kiro --wait"
 
 # Default pager
 export PAGER="bat --style=plain --paging=always"
@@ -4348,7 +4454,7 @@ else
     cat > "$GH_CONFIG" <<'GH_CONF'
 # GitHub CLI configuration
 git_protocol: ssh
-editor: code --wait
+editor: kiro --wait
 prompt: enabled
 pager: delta
 
@@ -4369,7 +4475,7 @@ aliases:
     pm: pr merge --squash --delete-branch
     rel: release create --generate-notes
 GH_CONF
-    success "GitHub CLI configured (SSH protocol, VS Code editor, delta pager, aliases)"
+    success "GitHub CLI configured (SSH protocol, Kiro editor, delta pager, aliases)"
 fi
 
 # ---- pip config ----
@@ -4546,7 +4652,7 @@ max_height = 1000
 
 [opener]
 edit = [
-    { run = 'code "$@"', desc = "Open in VS Code", block = true, for = "unix" },
+    { run = 'kiro "$@"', desc = "Open in Kiro", block = true, for = "unix" },
 ]
 YAZI_CONF
 
@@ -4580,7 +4686,7 @@ rules = [
     { name = "*.go", fg = "#8be9fd" },
 ]
 YAZI_THEME
-    success "yazi configured (hidden files, VS Code opener, Dracula theme)"
+    success "yazi configured (hidden files, Kiro opener, Dracula theme)"
 fi
 
 # ---- just config (global justfile with common recipes) ----
@@ -4799,15 +4905,15 @@ DIRENV_CONF
     success "direnv configured (hidden env diff, auto-trust ~/Code)"
 fi
 
-# ---- VS Code keybindings ----
-VSCODE_KEYBINDINGS_DIR="$HOME/Library/Application Support/Code/User"
-VSCODE_KEYBINDINGS="$VSCODE_KEYBINDINGS_DIR/keybindings.json"
-if [[ -f "$VSCODE_KEYBINDINGS" ]]; then
-    warn "VS Code keybindings already exist"
+# ---- Kiro keybindings ----
+KIRO_KEYBINDINGS_DIR="$HOME/Library/Application Support/Kiro/User"
+KIRO_KEYBINDINGS="$KIRO_KEYBINDINGS_DIR/keybindings.json"
+if [[ -f "$KIRO_KEYBINDINGS" ]]; then
+    warn "Kiro keybindings already exist"
 else
-    info "Creating VS Code keybindings..."
-    mkdir -p "$VSCODE_KEYBINDINGS_DIR"
-    cat > "$VSCODE_KEYBINDINGS" <<'VSCODE_KEYS'
+    info "Creating Kiro keybindings..."
+    mkdir -p "$KIRO_KEYBINDINGS_DIR"
+    cat > "$KIRO_KEYBINDINGS" <<'KIRO_KEYS'
 [
     // Toggle terminal
     {
@@ -4924,10 +5030,24 @@ else
     {
         "key": "cmd+shift+t",
         "command": "workbench.action.reopenClosedEditor"
+    },
+    // Kiro AI agent (built-in Claude)
+    {
+        "key": "cmd+i",
+        "command": "kiro.agent.openChat"
+    },
+    {
+        "key": "cmd+shift+i",
+        "command": "kiro.agent.inlineEdit",
+        "when": "editorTextFocus"
+    },
+    {
+        "key": "cmd+shift+s",
+        "command": "kiro.specs.create"
     }
 ]
-VSCODE_KEYS
-    success "VS Code keybindings created"
+KIRO_KEYS
+    success "Kiro keybindings created"
 fi
 
 # Set RIPGREP_CONFIG_PATH in zshrc (needed for ripgrep to read config)
@@ -5099,6 +5219,9 @@ out/
 
 # IDE
 .vscode/settings.json
+.kiro/.cache/
+.kiro/.tmp/
+.kiro/local/
 .idea/
 
 # OS
@@ -6096,7 +6219,7 @@ else
 
 ## Environment
 - Shell: zsh with starship prompt, atuin history, fzf fuzzy finder, zsh-autosuggestions, zsh-syntax-highlighting
-- Editor: VS Code (Dracula theme, JetBrains Mono)
+- Editor: Kiro (Dracula theme, JetBrains Mono — VS Code fork with built-in Claude agent)
 - Terminal: Ghostty (Dracula theme)
 - Package managers: pnpm (preferred), npm, bun
 - Python: uv for packages (not pip), ruff for linting (not flake8/black)
@@ -7166,8 +7289,8 @@ alias update="topgrade"
 alias sysinfo="fastfetch"
 
 # -- Terminal Welcome Screen --------------------------------------------------
-# Colorful greeting on new terminal sessions (not in VS Code integrated terminal)
-if [[ "$TERM_PROGRAM" != "vscode" ]] && [[ -z "$INSIDE_EMACS" ]]; then
+# Colorful greeting on new terminal sessions (skip in Kiro/VS Code integrated terminal)
+if [[ "$TERM_PROGRAM" != "vscode" ]] && [[ "$TERM_PROGRAM" != "kiro" ]] && [[ -z "$INSIDE_EMACS" ]]; then
     if command -v fastfetch &>/dev/null; then
         fastfetch --logo small 2>/dev/null
     fi
@@ -7263,7 +7386,7 @@ echo "  [~/.newsboat]           RSS reader (vim keys, Dracula colors, starter UR
 echo "  [~/.config/ghostty]     GPU-accelerated terminal with Dracula theme"
 echo "  [~/.justfile]           Global task runner recipes"
 echo "  [~/.config/brewfile]    Brewfile snapshot for reproducibility"
-echo "  [VS Code]               Dracula theme, extensions, JetBrains Mono"
+echo "  [Kiro]                  Dracula, extensions (OpenVSX), JetBrains Mono, MCP servers configured"
 echo "  [lazygit]               Dracula theme, delta pager"
 echo "  [k9s]                   Dracula skin"
 echo "  [Finder]                Hidden files, path bar, list view"
@@ -7418,7 +7541,7 @@ if [[ "$DRY_RUN" == "false" ]]; then
         "bun:bun --version"
         "uv:uv --version"
         "brew:brew --version"
-        "code:code --version"
+        "kiro:kiro --version"
         "docker/orbstack:docker --version || orbstack version"
         "starship:starship --version"
         "fzf:fzf --version"

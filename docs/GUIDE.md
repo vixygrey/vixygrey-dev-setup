@@ -882,12 +882,22 @@ Already configured by the script with Dracula theme and JetBrains Mono font. Opt
 2. **Opacity:** Add `background-opacity = 0.95` for slight transparency
 3. **Shell integration:** Automatic (zsh integration built-in)
 
-### VS Code
+### Kiro
 
-Already configured by the script. Additional recommended steps:
-1. **Sign in for Settings Sync:** Cmd+Shift+P > "Settings Sync: Turn On"
-2. **GitHub Copilot:** Install extension, sign in with GitHub
-3. **Keyboard shortcuts:** The script installs 21 keybindings (see SHORTCUTS.md)
+Already configured by the script (Dracula theme, JetBrains Mono, format on save, OpenVSX extensions, MCP servers, custom keybindings). Additional recommended steps:
+
+1. **Sign in:** First launch prompts for AWS Builder ID — sign up free at [kiro.dev](https://kiro.dev) if you don't have one.
+2. **Steering rules:** Create `.kiro/steering/` in any repo and add `.md` files for project-wide context the agent always reads. The `update-config` skill in this dotfiles repo lives here as an example.
+3. **Specs:** Cmd+Shift+S (or "Kiro: Create Spec") turns a one-line ask into structured `requirements.md` → `design.md` → `tasks.md` under `.kiro/specs/<feature>/`.
+4. **Hooks:** Add `.kiro/hooks/<name>.json` to trigger an agent action on file save / open / create — e.g. "regenerate the OpenAPI client whenever `schema.yaml` changes".
+5. **MCP servers:** Already configured globally at `~/.kiro/settings/mcp.json`. Override per project at `<repo>/.kiro/settings/mcp.json`. Edit `disabled: true` → `false` on `playwright` and `postgres` when you want them.
+6. **Extensions:** Search OpenVSX, not the Microsoft Marketplace. `github.copilot` and `ms-vscode.*` are unavailable; Kiro's built-in agent replaces Copilot.
+7. **Keyboard shortcuts:** The script installs custom keybindings (see SHORTCUTS.md), including `⌘I` (open agent), `⌘⇧I` (inline edit), `⌘⇧S` (create spec).
+8. **Imported VS Code settings:** First launch offers to import `~/Library/Application Support/Code/User/`; safe to accept — the script's settings get merged.
+
+#### Suggested workflow with Kiro + Claude Code (CLI)
+
+Kiro is the IDE-native agent (UI surface, specs, hooks, inline edit). Claude Code is the terminal-native agent (full repo context, long-running tasks, automation). They share the same file system and can be used together — let Kiro handle interactive editing and Claude Code handle batch refactors, ultrareview, and CI-driven loops. Steering rules under `.kiro/steering/` are read by Kiro; the same content can live in `CLAUDE.md` for Claude Code.
 
 ### TablePlus
 
@@ -972,13 +982,13 @@ The setup script does not install any MAS apps by default — `mas` is provided 
 
 ### dockutil (Dock management)
 
-Programmatically add, remove, and reorder Dock items. Used by the setup script to pin Finder, System Settings, VS Code, Ghostty, and Raycast.
+Programmatically add, remove, and reorder Dock items. The setup script installs `dockutil` and enables Dock auto-hide, but does not curate a pin list — pin whatever you want yourself with the commands below.
 
 ```bash
 dockutil --list                                      # show current Dock contents
-dockutil --add /Applications/VS\ Code.app            # pin an app
-dockutil --remove "VS Code"                          # unpin by label
-dockutil --move "VS Code" --after "Finder"           # reorder
+dockutil --add /Applications/Kiro.app                # pin an app
+dockutil --remove "Kiro"                             # unpin by label
+dockutil --move "Kiro" --after "Finder"              # reorder
 dockutil --remove all --no-restart && killall Dock   # reset the Dock
 ```
 
