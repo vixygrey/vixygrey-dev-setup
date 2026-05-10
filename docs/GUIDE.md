@@ -982,7 +982,7 @@ The setup script does not install any MAS apps by default — `mas` is provided 
 
 ### dockutil (Dock management)
 
-Programmatically add, remove, and reorder Dock items. Used by the setup script to pin Finder, System Settings, Kiro, Ghostty, and Raycast.
+Programmatically add, remove, and reorder Dock items. The setup script installs `dockutil` and enables Dock auto-hide, but does not curate a pin list — pin whatever you want yourself with the commands below.
 
 ```bash
 dockutil --list                                      # show current Dock contents

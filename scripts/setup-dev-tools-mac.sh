@@ -1409,12 +1409,17 @@ brew_install "atuin" "atuin (replaces shell history — SQLite-backed, searchabl
 
 # Editors & terminals
 brew_cask_install "kiro" "Kiro (AWS agentic IDE — VS Code fork with built-in Claude agent, specs, steering, hooks)"
-# Ensure Kiro 'kiro' CLI is in PATH (brew cask installs the app but not the CLI symlink)
+# Ensure Kiro 'kiro' CLI is in PATH (brew cask installs the app but not the CLI symlink).
+# Symlink into Homebrew's bin dir so the CLI is on PATH on both Apple Silicon
+# (/opt/homebrew/bin) and Intel (/usr/local/bin) without depending on /usr/local being writable.
 KIRO_CLI="/Applications/Kiro.app/Contents/Resources/app/bin/kiro"
 if [[ -f "$KIRO_CLI" ]] && ! installed kiro; then
     info "Adding Kiro 'kiro' CLI to PATH..."
-    ln -sf "$KIRO_CLI" /usr/local/bin/kiro 2>/dev/null || \
-    sudo ln -sf "$KIRO_CLI" /usr/local/bin/kiro 2>/dev/null || true
+    KIRO_LINK_DIR="$(brew --prefix 2>/dev/null)/bin"
+    [[ -d "$KIRO_LINK_DIR" ]] || KIRO_LINK_DIR="/usr/local/bin"
+    ln -sf "$KIRO_CLI" "$KIRO_LINK_DIR/kiro" 2>/dev/null || \
+    sudo ln -sf "$KIRO_CLI" "$KIRO_LINK_DIR/kiro" 2>/dev/null || true
+    hash -r 2>/dev/null || true
 fi
 brew_cask_install "ghostty" "Ghostty (fast GPU-accelerated terminal)"
 brew_install "zellij" "zellij (modern terminal multiplexer — discoverable UI, layouts)"
@@ -2444,18 +2449,7 @@ else
             "strings": "off",
             "other": "off"
         }
-    },
-
-    // Kiro AI agent (built-in — Claude Sonnet)
-    "kiro.agent.autoExecute": false,
-    "kiro.agent.confirmDestructiveActions": true,
-    "kiro.steering.enabled": true,
-    "kiro.specs.enabled": true,
-    "kiro.hooks.enabled": true,
-    "kiro.mcp.enabled": true,
-
-    // Disable Kiro telemetry (matches telemetry.telemetryLevel above)
-    "kiro.telemetry.enabled": false
+    }
 }
 KIRO_CONF
     success "Kiro settings configured with Dracula theme"
@@ -2527,12 +2521,15 @@ if [[ -f "$KIRO_MCP" ]]; then
 else
     info "Creating Kiro MCP server config..."
     mkdir -p "$KIRO_MCP_DIR"
-    cat > "$KIRO_MCP" <<'KIRO_MCP_CONF'
+    # Unquoted heredoc: $HOME is pre-expanded at install time so the filesystem
+    # server gets a real path; \${TOKEN} stays literal so Kiro substitutes it
+    # from the user's shell env at runtime (matches Kiro's documented pattern).
+    cat > "$KIRO_MCP" <<KIRO_MCP_CONF
 {
   "mcpServers": {
     "filesystem": {
       "command": "npx",
-      "args": ["-y", "@modelcontextprotocol/server-filesystem", "${HOME}/Code"],
+      "args": ["-y", "@modelcontextprotocol/server-filesystem", "$HOME/Code"],
       "disabled": false,
       "autoApprove": ["read_file", "list_directory", "search_files"]
     },
@@ -2540,7 +2537,7 @@ else
       "command": "npx",
       "args": ["-y", "@modelcontextprotocol/server-github"],
       "env": {
-        "GITHUB_PERSONAL_ACCESS_TOKEN": "${GITHUB_TOKEN}"
+        "GITHUB_PERSONAL_ACCESS_TOKEN": "\${GITHUB_TOKEN}"
       },
       "disabled": false,
       "autoApprove": ["search_repositories", "get_file_contents", "list_issues", "list_pull_requests"]
@@ -2573,7 +2570,7 @@ else
       "command": "npx",
       "args": ["-y", "@notionhq/notion-mcp-server"],
       "env": {
-        "OPENAPI_MCP_HEADERS": "{\"Authorization\":\"Bearer ${NOTION_TOKEN}\",\"Notion-Version\":\"2022-06-28\"}"
+        "NOTION_TOKEN": "\${NOTION_TOKEN}"
       },
       "disabled": false,
       "autoApprove": ["API-get-self", "API-get-user", "API-get-users", "API-retrieve-a-page", "API-retrieve-a-database", "API-post-search", "API-get-block-children"]
@@ -3690,8 +3687,8 @@ if [[ -f /opt/homebrew/bin/brew ]]; then
 fi
 
 # Default editor
-export EDITOR="code --wait"
-export VISUAL="code --wait"
+export EDITOR="kiro --wait"
+export VISUAL="kiro --wait"
 
 # Default pager
 export PAGER="bat --style=plain --paging=always"
@@ -7544,7 +7541,7 @@ if [[ "$DRY_RUN" == "false" ]]; then
         "bun:bun --version"
         "uv:uv --version"
         "brew:brew --version"
-        "code:code --version"
+        "kiro:kiro --version"
         "docker/orbstack:docker --version || orbstack version"
         "starship:starship --version"
         "fzf:fzf --version"

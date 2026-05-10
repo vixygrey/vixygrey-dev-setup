@@ -52,7 +52,7 @@ chmod +x scripts/setup-dev-tools-mac.sh
 4. Applies the **Dracula** theme everywhere
 5. Sets macOS system defaults (Dock, keyboard, Finder, screenshots, wallpaper, screensaver, etc.)
 6. Configures Finder sidebar with custom favorites via **LSSharedFileList** API
-7. Curates the Dock via `dockutil` -- pins Finder, System Settings, Kiro, Ghostty, Raycast (skips any missing app)
+7. Sets the Dock to auto-hide and installs `dockutil` so you can curate pins yourself (no automatic pin list — see GUIDE.md for examples)
 8. Optionally **removes pre-installed Apple bloat** (GarageBand, News, Stocks, etc.)
 9. Auto-writes `~/.zshrc` with a managed block (preserves your customizations)
 10. Exports a `Brewfile` snapshot (with descriptions) for reproducibility
@@ -969,7 +969,7 @@ Auto-installed by the script:
 - Sticky scroll (3 lines max)
 - Inlay hints on unless pressed
 - Terminal uses JetBrains Mono NF
-- Kiro agent: confirm-on-destructive enabled, telemetry off, steering/specs/hooks/mcp all enabled
+- VS Code-style telemetry disabled (`telemetry.telemetryLevel: off`); Kiro agent settings (steering, specs, hooks, MCP) are configured through Kiro's own UI / `Cmd+,`, not via `settings.json`
 
 ### Kiro AI Agent (built-in Claude)
 
