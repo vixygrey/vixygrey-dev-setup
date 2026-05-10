@@ -1,5 +1,28 @@
 # Changelog
 
+## [4.0.0] - 2026-05-10
+
+**BREAKING:** VS Code is replaced with **Kiro** (AWS's agentic IDE — VS Code fork with built-in Claude agent, specs, steering, hooks, MCP). Re-running the script on a v3.x machine will leave VS Code in place but switch the toolchain (`EDITOR`, lazygit, yazi, `gh`) to point at `kiro`. Run `--cleanup` to also uninstall the now-deprecated `visual-studio-code` cask.
+
+### Changed
+
+- **editor**: Replace `visual-studio-code` cask with `kiro`. Settings move from `~/Library/Application Support/Code/User/` to `~/Library/Application Support/Kiro/User/`. CLI symlink installs into `$(brew --prefix)/bin/kiro` so it lands on PATH on both Apple Silicon and Intel. `EDITOR`/`VISUAL`, `gh editor`, lazygit edit/editAtLine, and yazi opener all switch from `code` to `kiro` (#24)
+- **extensions**: Curate the auto-installed extension list for **OpenVSX** (Kiro's registry — Microsoft Marketplace closed-source extensions are unavailable). Drop `github.copilot` (Kiro ships its own Claude agent, redundant). Add `charliermarsh.ruff`, `astro-build.astro-vscode`, `svelte.svelte-vscode`, `editorconfig.editorconfig`, `davidanson.vscode-markdownlint`, `hashicorp.terraform` (#24)
+- **keybindings**: Keep the 21 VS Code muscle-memory bindings; add three Kiro-specific ones — `⌘I` (open agent chat), `⌘⇧I` (inline edit with agent), `⌘⇧S` (create a spec from a one-line ask) (#24)
+- **gitignore template**: Editor section now covers both `.vscode/` and `.kiro/` layouts; `.kiro/.cache`, `.kiro/.tmp`, `.kiro/local` are ignored while `.kiro/steering`, `.kiro/specs`, `.kiro/hooks`, and `.kiro/settings/mcp.json` stay version-controlled by default (#24)
+- **terminal welcome**: Skip the fastfetch banner in both `TERM_PROGRAM=vscode` and `TERM_PROGRAM=kiro` integrated terminals (#24)
+- **docs**: Replace VS Code sections in README, GUIDE, and SHORTCUTS with Kiro equivalents — covering OpenVSX, the four agent primitives (steering / specs / hooks / MCP), the Kiro + Claude Code workflow, and the new keybindings (#24)
+
+### Added
+
+- **kiro/mcp**: Auto-write a global MCP server config at `~/.kiro/settings/mcp.json` with sensible defaults — **filesystem, github, git, fetch, context7, aws-docs, notion** enabled and **playwright, postgres** written disabled (opt-in). Token references (`${GITHUB_TOKEN}`, `${NOTION_TOKEN}`) are kept literal so Kiro substitutes them at runtime; `$HOME` is pre-expanded at install time so the filesystem server gets a real path (#24)
+- **dx**: Add agentic AI CLIs that pair with Claude Code + Kiro — `aider` (terminal AI pair programmer with git-aware edit loops), `llm` (Simon Willison's CLI for one-shot prompts, plugins, SQLite logging, embeddings), `repomix` (pack a repo into a single LLM-friendly file with token counts) (#26, #29)
+- **iac**: Add `terraform-docs` (auto-generate module README sections from variables/outputs) and `checkov` (IaC static analysis — Terraform, CloudFormation, Kubernetes, Dockerfile). Note: `tfsec` is no longer installed standalone — its checks are folded into `trivy config`, which is already installed under `security`. Wired into the iac rules, the `/iac-review` slash command (now runs both trivy + checkov + terraform-docs), and the Claude Code Bash allowlist (#27, #29)
+
+### Fixed
+
+- **state**: Truncate `~/.local/share/dev-setup/completed-items.txt` on non-resume runs. `mark_done` always appends; `is_done` only checks the state file when `--resume` is passed. Without truncation, the file grew unbounded across repeated runs. `--resume` runs are preserved so previous successes can short-circuit (#28, #29)
+
 ## [3.2.0] - 2026-04-29
 
 ### Changed
