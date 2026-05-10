@@ -3753,6 +3753,11 @@ case ":$PATH:" in
   *) export PATH="$PNPM_HOME:$PATH" ;;
 esac
 
+# uv tool / pipx — persistent binaries installed by `uv tool install` (e.g.
+# harlequin, checkov) land in ~/.local/bin. Must be on PATH for those tools
+# to be reachable as bare commands.
+export PATH="$HOME/.local/bin:$PATH"
+
 # Personal scripts
 export PATH="$HOME/Scripts/bin:$PATH"
 
@@ -7108,6 +7113,11 @@ MANAGED_BLOCK=$(cat <<'MANAGED_ZSHRC'
 
 # Deduplicate PATH
 typeset -U PATH path
+
+# uv tool / pipx persistent binaries (harlequin, checkov, anything user
+# installs via `uv tool install`). .zprofile sets this too — re-asserting
+# here for non-login interactive shells.
+export PATH="$HOME/.local/bin:$PATH"
 
 # Personal scripts
 export PATH="$HOME/Scripts/bin:$PATH"
