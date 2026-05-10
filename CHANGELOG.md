@@ -1,5 +1,21 @@
 # Changelog
 
+## [4.1.0] - 2026-05-10
+
+Minor release rolling up two follow-up PRs to v4.0.0: a tool-discoverability audit (#31) and the AWS MCP / toolkit fleet (#32). Fully backward-compatible.
+
+### Added
+
+- **kiro/mcp**: Add 11 AWS MCP servers backed by [awslabs/mcp](https://awslabs.github.io/mcp/). Five enabled by default (read-only or autoApprove-reads-only): `aws-pricing` (no AWS creds needed), `aws-iac` (CDK + Terraform + CloudFormation patterns, replaces the deprecated cdk-mcp-server), `aws-knowledge` (broader knowledge base), `cloudwatch` (Logs/Metrics queries, read ops only auto-approved), `iam` (read/simulate only auto-approved — every mutation still prompts). Six written disabled-by-default for opt-in per workspace: `aws-ccapi` (Cloud Control API CRUD), `aws-serverless` (SAM lifecycle), `aws-lambda-tool` (call deployed Lambdas as agent tools), `aws-eks`, `aws-ecs`, `aws-dynamodb`. All use `${AWS_REGION}` / `${AWS_PROFILE}` from the launching shell (#32)
+- **kiro/extensions**: Add `amazonwebservices.aws-toolkit-vscode` (local Lambda debugging via SAM, CloudFormation/SAM YAML schemas, ECS exec terminal, AWS resource explorer, credential/SSO management) and `kddejong.vscode-cfn-lint` (template linter, pairs with the `cfn-lint` CLI). Both verified on OpenVSX (#32)
+- **docs**: README documents the AWS credential setup chain (`aws configure`, AWS SSO via `granted`/`assume`, explicit env vars) and the Notion integration sharing model (#32)
+
+### Fixed
+
+- **path**: Add `~/.local/bin` to `.zprofile` and the managed `.zshrc` block. `uv tool install` (and `pipx`) put persistent binaries there — without this, `harlequin` and anything else the user installs via `uv tool install` was unreachable as a bare command (#31)
+- **kiro/mcp**: Pre-expand `npx` and `uvx` to absolute paths in `~/.kiro/settings/mcp.json`. Kiro is a GUI app; when launched from Finder, Spotlight, or Raycast it inherits launchd's restricted PATH (`/usr/bin:/bin:/usr/sbin:/sbin`), not the user's interactive shell PATH. Bare `"command": "npx"` silently failed to spawn MCP servers for any user who didn't launch Kiro from a terminal — the most common launch path. Same well-known issue as Claude Desktop. Resolution chain falls back to `/opt/homebrew/bin` then `/usr/local/bin` if `brew --prefix` fails (#31)
+- **claude**: Refresh the Claude Code Bash permission allowlist with 36 entries covering v4.0.0 additions (`kiro`, `aider`, `llm`, `repomix`, `uvx`) plus 30+ tools installed by earlier versions that had never been allowlisted (`mas`, `dockutil`, `terminal-notifier`, `harlequin`, `granted`, `assume`, `topgrade`, `git-absorb`, `mkcert`, `mitmproxy`, `bandwhich`, `nmap`, `procs`, `btop`, `trash`, `yt-dlp`, `parallel`, `lnav`, `glow`, `fastfetch`, etc.). 169 allow entries total. `claude *` deliberately excluded as recursive (#31)
+
 ## [4.0.0] - 2026-05-10
 
 **BREAKING:** VS Code is replaced with **Kiro** (AWS's agentic IDE — VS Code fork with built-in Claude agent, specs, steering, hooks, MCP). Re-running the script on a v3.x machine will leave VS Code in place but switch the toolchain (`EDITOR`, lazygit, yazi, `gh`) to point at `kiro`. Run `--cleanup` to also uninstall the now-deprecated `visual-studio-code` cask.
