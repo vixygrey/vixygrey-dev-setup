@@ -815,7 +815,7 @@ The script generates config files with sensible defaults:
 | `~/.gemrc` | Ruby | No docs on gem install |
 | `~/Library/.../Kiro/User/settings.json` | Kiro | Dracula, JetBrains Mono, format on save, file nesting, bracket pair colorization, per-language formatters (ruff for Python, go for Go, rust-analyzer for Rust), agent + MCP toggles |
 | `~/Library/.../Kiro/User/keybindings.json` | Kiro | Custom keyboard shortcuts (incl. ⌘I open agent, ⌘⇧I inline edit, ⌘⇧S create spec) |
-| `~/.kiro/settings/mcp.json` | Kiro MCP | Global MCP servers: filesystem, github, git, fetch, context7, aws-docs (playwright + postgres written disabled) |
+| `~/.kiro/settings/mcp.json` | Kiro MCP | Global MCP servers — enabled: filesystem, github, git, fetch, context7, notion, aws-docs, aws-pricing, aws-iac, aws-knowledge, cloudwatch, iam. Disabled (opt-in): playwright, postgres, aws-ccapi, aws-serverless, aws-lambda-tool, aws-eks, aws-ecs, aws-dynamodb |
 | `~/Library/.../lazygit/config.yml` | lazygit | Dracula theme, delta pager, nerd fonts, auto-fetch, Kiro editor (`kiro --goto`), rounded borders |
 | `~/Library/.../k9s/skins/dracula.yaml` | k9s | Full Dracula skin |
 
@@ -1002,18 +1002,45 @@ The script writes a sensible default `~/.kiro/settings/mcp.json` with these enab
 | **fetch** | HTTP fetch with HTML→Markdown conversion | `mcp-server-fetch` (uvx) |
 | **context7** | Fetch up-to-date library docs by package name | `@upstash/context7-mcp` (npx) |
 | **aws-docs** | Search and read AWS documentation | `awslabs.aws-documentation-mcp-server` (uvx) |
+| **aws-pricing** | Pre-deployment cost estimation ("what would this CDK stack cost?") | `awslabs.aws-pricing-mcp-server` (uvx) — no AWS credentials needed |
+| **aws-iac** | CDK + Terraform + CloudFormation patterns, security guidance, cdk-nag | `awslabs.aws-iac-mcp-server` (uvx) — replaces deprecated cdk-mcp-server |
+| **aws-knowledge** | Broader AWS knowledge base — services overview, best practices, FAQs | `awslabs.aws-knowledge-mcp-server` (uvx) |
+| **cloudwatch** | Query CloudWatch Logs + metrics, inspect alarm state | `awslabs.cloudwatch-mcp-server` (uvx); needs AWS creds; only read-only ops auto-approved |
+| **iam** | Read IAM users, roles, groups, policies; simulate principal policies | `awslabs.iam-mcp-server` (uvx); needs AWS creds; **only `list_*` / `get_*` / `simulate_*` auto-approved — every mutation prompts** |
 | **notion** | Search Notion pages/databases, read blocks, retrieve users | `@notionhq/notion-mcp-server` (npx); needs `NOTION_TOKEN` from an internal integration |
 
-And these are written **disabled** — flip `"disabled": false` to opt in:
+And these are written **disabled** — flip `"disabled": false` to opt in per-workspace:
 
 | Server | Why disabled by default |
 |--------|-------------------------|
 | **playwright** | Spawns a real browser; only enable when doing E2E work |
 | **postgres** | Needs a running database and connection string |
+| **aws-ccapi** | AWS Cloud Control API — full CRUD on any supported resource. Extreme blast radius; enable per-workspace when actively doing infra work |
+| **aws-serverless** | Full SAM application lifecycle (build, deploy, invoke). Mutates Lambda/API GW/etc. |
+| **aws-lambda-tool** | Calls your *already-deployed* Lambdas as MCP tools. Different shape — for using Lambdas as agent tools, not deploying them |
+| **aws-eks** | EKS cluster + Kubernetes resource management |
+| **aws-ecs** | ECS task / service deployment |
+| **aws-dynamodb** | DynamoDB table operations and data access |
 
 Edit `~/.kiro/settings/mcp.json` to add more (Linear, Slack, Sentry, Stripe, etc.) or override per-project at `<repo>/.kiro/settings/mcp.json` — workspace config wins.
 
 **Notion setup:** create an internal integration at <https://www.notion.so/profile/integrations>, copy the `secret_...` token, export it (`echo 'export NOTION_TOKEN=secret_...' >> ~/.zshrc.local`), then share the specific Notion pages/databases you want the agent to reach via the page's `…` menu → "Connect to" → your integration. Without page access the integration sees nothing; this is the intended Notion permission model.
+
+**AWS setup:** the AWS servers use the standard AWS credential chain — anything that works for `aws sts get-caller-identity` works here. Three common setups:
+
+```bash
+# 1) Long-lived access keys (least preferred)
+aws configure                       # writes ~/.aws/credentials
+
+# 2) AWS SSO via `granted` (installed under the `aws` module)
+assume <profile>                    # exports AWS_PROFILE for the shell
+
+# 3) Per-shell env vars (CI-style)
+export AWS_REGION=us-east-1
+export AWS_PROFILE=my-dev-account
+```
+
+Kiro reads `${AWS_REGION}` and `${AWS_PROFILE}` from the shell that launched it at startup. If you change profile mid-session, restart Kiro (or use `Kiro: Reload Window`). The pre-approved `autoApprove` list for `iam` covers only read/simulate operations — every IAM mutation (`create_role`, `attach_role_policy`, etc.) will still prompt for confirmation.
 
 ---
 
