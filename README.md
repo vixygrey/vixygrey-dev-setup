@@ -155,7 +155,10 @@ chmod +x scripts/setup-dev-tools-mac.sh
 |------|-------------|
 | **OpenTofu** | Open-source Terraform alternative -- multi-cloud infrastructure as code |
 | **tflint** | Terraform/OpenTofu linter -- catches errors before apply |
+| **terraform-docs** | Auto-generate module README sections from variables and outputs |
+| **checkov** | IaC static analysis -- Terraform, CloudFormation, Kubernetes, Dockerfile |
 | **infracost** | Cost estimation for Terraform changes before apply |
+| _tfsec_ | _Folded into `trivy config` -- not installed separately_ |
 
 ---
 
@@ -353,8 +356,11 @@ Faster, prettier, smarter replacements for standard Unix utilities.
 | **atuin** | Replaces shell history with SQLite-backed, fuzzy-searchable database |
 | **mise** | Universal version manager -- Node, Python, Go, Ruby all in one (replaces nvm + pyenv + rbenv) |
 | **Kiro** | Primary code editor and IDE — VS Code fork with built-in Claude agent (specs, steering, hooks, MCP) |
-| **Claude Code** | AI-assisted coding in the terminal |
+| **Claude Code** | AI-assisted coding in the terminal (Anthropic, agentic) |
 | **GitHub Copilot CLI** | AI suggestions in the terminal (via `gh copilot suggest`) |
+| **aider** | Terminal AI pair programmer -- git-aware edit loops, complementary to Claude Code |
+| **llm** | Simon Willison's CLI -- one-shot prompts, plugin ecosystem, SQLite logging, embeddings |
+| **repomix** | Pack a repo into a single LLM-friendly file with token counts -- great for bootstrapping any agent |
 | **chezmoi** | Dotfile manager -- backup and restore configs across machines |
 | **mitmproxy** | Free HTTP debugging proxy -- inspect and modify API calls from any app |
 | **Ghostty** | Fast GPU-accelerated terminal -- daily driver, native macOS feel |
@@ -593,7 +599,7 @@ The script sets up Claude Code with a comprehensive configuration for full-stack
 Common safe commands are pre-approved so Claude doesn't ask every time:
 - **Package managers**: npm, pnpm, bun, npx, uv, cargo, pip
 - **Git**: all git and gh commands
-- **AWS & IaC**: aws, cdk, sam, tofu, tflint, infracost
+- **AWS & IaC**: aws, cdk, sam, tofu, tflint, terraform-docs, checkov, infracost
 - **Docker & K8s**: docker, docker-compose, kubectl, k9s, stern
 - **Build tools**: make, just, tsc, jest, vitest
 - **File tools**: cat, bat, ls, eza, find, grep, rg, fd, fzf, tree, jq, yq, fx, mlr, csvlook
