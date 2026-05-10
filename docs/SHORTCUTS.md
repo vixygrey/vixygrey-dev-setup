@@ -137,7 +137,9 @@ Quick reference for all **209+ shortcuts** configured by the setup scripts.
 
 ---
 
-## VS Code Keybindings
+## Kiro Keybindings
+
+Kiro is a VS Code fork, so the standard VS Code shortcuts work. The script also installs these custom bindings, including three Kiro-specific ones for the built-in Claude agent.
 
 | Shortcut | Action |
 |----------|--------|
@@ -163,6 +165,9 @@ Quick reference for all **209+ shortcuts** configured by the setup scripts.
 | `Cmd+.` | Quick fix |
 | `Cmd+W` | Close editor tab |
 | `Cmd+Shift+T` | Reopen closed editor |
+| `Cmd+I` | Open Kiro agent chat |
+| `Cmd+Shift+I` | Inline edit with Kiro agent |
+| `Cmd+Shift+S` | Create a new Kiro spec from a one-line ask |
 
 ---
 
@@ -427,7 +432,7 @@ Run from anywhere with `gj <recipe>` (or `just --justfile ~/.justfile <recipe>`)
 | Category | Count |
 |----------|-------|
 | Shell aliases | 65 |
-| VS Code keybindings | 21 |
+| Kiro keybindings | 24 |
 | Vim keybindings | 8 |
 | fzf keybindings | 7 |
 | Git aliases | 30 |
@@ -435,4 +440,4 @@ Run from anywhere with `gj <recipe>` (or `just --justfile ~/.justfile <recipe>`)
 | Global justfile recipes | 27 |
 | Hot corners | 4 |
 | Claude Code commands | 20 |
-| **Total** | **209** |
+| **Total** | **212** |

@@ -52,7 +52,7 @@ chmod +x scripts/setup-dev-tools-mac.sh
 4. Applies the **Dracula** theme everywhere
 5. Sets macOS system defaults (Dock, keyboard, Finder, screenshots, wallpaper, screensaver, etc.)
 6. Configures Finder sidebar with custom favorites via **LSSharedFileList** API
-7. Curates the Dock via `dockutil` -- pins Finder, System Settings, VS Code, Ghostty, Raycast (skips any missing app)
+7. Curates the Dock via `dockutil` -- pins Finder, System Settings, Kiro, Ghostty, Raycast (skips any missing app)
 8. Optionally **removes pre-installed Apple bloat** (GarageBand, News, Stocks, etc.)
 9. Auto-writes `~/.zshrc` with a managed block (preserves your customizations)
 10. Exports a `Brewfile` snapshot (with descriptions) for reproducibility
@@ -352,7 +352,7 @@ Faster, prettier, smarter replacements for standard Unix utilities.
 | **zsh-syntax-highlighting** | Command coloring in the terminal -- red for errors |
 | **atuin** | Replaces shell history with SQLite-backed, fuzzy-searchable database |
 | **mise** | Universal version manager -- Node, Python, Go, Ruby all in one (replaces nvm + pyenv + rbenv) |
-| **VS Code** | Primary code editor and IDE |
+| **Kiro** | Primary code editor and IDE — VS Code fork with built-in Claude agent (specs, steering, hooks, MCP) |
 | **Claude Code** | AI-assisted coding in the terminal |
 | **GitHub Copilot CLI** | AI suggestions in the terminal (via `gh copilot suggest`) |
 | **chezmoi** | Dotfile manager -- backup and restore configs across machines |
@@ -521,7 +521,7 @@ Applied consistently across all tools:
 
 | Tool | How |
 |------|-----|
-| **VS Code** | Extension auto-installed, set as default theme |
+| **Kiro** | Extension auto-installed, set as default theme |
 | **bat** | Dracula syntax theme in config |
 | **delta** | Dracula syntax theme for git diffs |
 | **Ghostty** | Full 16-color Dracula palette in config |
@@ -537,7 +537,7 @@ Applied consistently across all tools:
 | **harlequin** | Dracula theme set in config.toml |
 | **vivid** | Dracula-themed LS_COLORS for file type coloring |
 | **vim** | Dracula-ish color scheme (no plugin needed) |
-| **VS Code brackets** | Dracula-colored bracket pair colorization |
+| **Kiro brackets** | Dracula-colored bracket pair colorization |
 | **macOS** | System highlight color set to Dracula purple |
 
 ---
@@ -775,7 +775,7 @@ The script generates config files with sensible defaults:
 | `~/.config/ngrok/ngrok.yml` | ngrok | Base config (add authtoken) |
 | `~/.config/caddy/Caddyfile` | Caddy | Development server template |
 | `~/.config/asciinema/config` | asciinema | 2s idle limit, no keystroke recording |
-| `~/.config/yazi/yazi.toml` | yazi | Hidden files, VS Code opener, Dracula theme |
+| `~/.config/yazi/yazi.toml` | yazi | Hidden files, Kiro opener, Dracula theme |
 | `~/.config/zellij/config.kdl` | zellij | Dracula theme, compact layout, mouse, Ctrl-a prefix |
 | `~/.config/mpv/mpv.conf` | mpv | Hardware accel, save position, screenshots to ~/Screenshots |
 | `~/.config/git-cliff/cliff.toml` | git-cliff | Conventional commits changelog template |
@@ -792,7 +792,7 @@ The script generates config files with sensible defaults:
 | `~/.config/pip/pip.conf` | pip | Require virtualenv, no telemetry |
 | `~/.config/pgcli/config` | pgcli | Multi-line, auto-expand, destructive warnings, bat pager |
 | `~/.config/harlequin/config.toml` | harlequin | Dracula theme, vscode keymap, file tree on |
-| `~/.config/gh/config.yml` | GitHub CLI | SSH protocol, VS Code editor, delta pager, aliases (co, pv, pc, pl, il, pm, rel) |
+| `~/.config/gh/config.yml` | GitHub CLI | SSH protocol, Kiro editor, delta pager, aliases (co, pv, pc, pl, il, pm, rel) |
 | `~/.aws/config` | AWS CLI | Default region, json output, bat pager, auto-prompt, SSO template |
 | `~/.config/git/hooks/` | git | Global pre-commit hooks (debug statements, large files >5MB, conflict markers) |
 | `~/.config/brewfile/Brewfile` | Homebrew | Snapshot of all installed packages with descriptions |
@@ -807,9 +807,10 @@ The script generates config files with sensible defaults:
 | `~/.nanorc` | nano | Line numbers, auto-indent, mouse, syntax highlighting |
 | `~/.myclirc` | mycli | Multi-line, auto-expand, destructive warnings |
 | `~/.gemrc` | Ruby | No docs on gem install |
-| `~/Library/.../Code/User/settings.json` | VS Code | Dracula, JetBrains Mono, format on save, 27 extensions, file nesting, bracket pair colorization, per-language formatters (ruff for Python, go for Go, rust-analyzer for Rust) |
-| `~/Library/.../Code/User/keybindings.json` | VS Code | Custom keyboard shortcuts |
-| `~/Library/.../lazygit/config.yml` | lazygit | Dracula theme, delta pager, nerd fonts, auto-fetch, VS Code editor, rounded borders |
+| `~/Library/.../Kiro/User/settings.json` | Kiro | Dracula, JetBrains Mono, format on save, file nesting, bracket pair colorization, per-language formatters (ruff for Python, go for Go, rust-analyzer for Rust), agent + MCP toggles |
+| `~/Library/.../Kiro/User/keybindings.json` | Kiro | Custom keyboard shortcuts (incl. ⌘I open agent, ⌘⇧I inline edit, ⌘⇧S create spec) |
+| `~/.kiro/settings/mcp.json` | Kiro MCP | Global MCP servers: filesystem, github, git, fetch, context7, aws-docs (playwright + postgres written disabled) |
+| `~/Library/.../lazygit/config.yml` | lazygit | Dracula theme, delta pager, nerd fonts, auto-fetch, Kiro editor (`kiro --goto`), rounded borders |
 | `~/Library/.../k9s/skins/dracula.yaml` | k9s | Full Dracula skin |
 
 ---
@@ -917,23 +918,28 @@ All aliases are auto-written to `~/.zshrc`:
 | **vivid LS_COLORS** | Dracula-themed file type coloring via `vivid generate dracula` |
 | **fzf config** | Dracula colors, fd for file finding, bat for preview, eza tree for directory preview, keybindings (ctrl-/ toggle preview, ctrl-y copy) |
 | **Plugin guards** | Zsh plugin sources have defensive `[[ -f ]]` guards |
-| **Terminal welcome** | fastfetch + date + random dev tip on new terminal sessions (not in VS Code) |
+| **Terminal welcome** | fastfetch + date + random dev tip on new terminal sessions (not in Kiro/VS Code integrated terminal) |
 
 ---
 
-## VS Code Extensions
+## Kiro Extensions
 
-27 extensions auto-installed by the script:
+Extensions are resolved from **OpenVSX** (the open-source registry — Kiro is a VS Code fork that does not use the Microsoft Marketplace). Closed-source extensions like `github.copilot` and `ms-vscode.*` are unavailable; Kiro's built-in Claude agent replaces Copilot anyway.
+
+Auto-installed by the script:
 
 | Extension | Purpose |
 |-----------|---------|
 | **Dracula Official** | Color theme |
 | **Prettier** | Code formatter (default for JS/TS/CSS/JSON/MD) |
 | **ESLint** | JavaScript/TypeScript linter |
+| **Ruff** | Python linter/formatter (set as default formatter for `.py`) |
 | **Tailwind CSS IntelliSense** | Tailwind class autocomplete |
 | **Python** | Python language support |
 | **Go** | Go language support (also used as formatter for Go files) |
 | **rust-analyzer** | Rust language support (also used as formatter for Rust files) |
+| **Astro** | Astro component support |
+| **Svelte** | Svelte component support |
 | **Auto Rename Tag** | Rename paired HTML/JSX tags |
 | **Path Intellisense** | Autocomplete file paths |
 | **Error Lens** | Inline error/warning highlights |
@@ -942,19 +948,20 @@ All aliases are auto-written to `~/.zshrc`:
 | **npm Intellisense** | Autocomplete npm module imports |
 | **Color Highlight** | Highlight color codes in the editor |
 | **Rainbow CSV** | Colorize CSV columns for readability |
+| **EditorConfig** | Honour `.editorconfig` per-project rules |
 | **GitLens** | Git blame, history, and annotations |
 | **Git Graph** | Visual git history graph |
-| **GitHub Copilot** | AI code completion |
 | **Todo Tree** | Find and highlight TODO/FIXME comments across the project |
 | **Import Cost** | Show size of imported JS/TS packages inline |
 | **Docker** | Dockerfile and docker-compose support |
 | **DotENV** | .env file syntax highlighting |
 | **Markdown All in One** | Markdown shortcuts, preview, table of contents |
+| **markdownlint** | Lint Markdown for style/consistency |
 | **YAML** | YAML language support with validation |
 | **Even Better TOML** | TOML language support |
-| **Ruff** | Python linter/formatter (set as default formatter for Python files) |
+| **Terraform (HashiCorp)** | Terraform / OpenTofu language support |
 
-### VS Code Settings Highlights
+### Kiro Settings Highlights
 
 - File nesting enabled (test files, lockfiles, config files grouped under parent)
 - Bracket pair colorization with Dracula colors
@@ -962,6 +969,42 @@ All aliases are auto-written to `~/.zshrc`:
 - Sticky scroll (3 lines max)
 - Inlay hints on unless pressed
 - Terminal uses JetBrains Mono NF
+- Kiro agent: confirm-on-destructive enabled, telemetry off, steering/specs/hooks/mcp all enabled
+
+### Kiro AI Agent (built-in Claude)
+
+Kiro ships with a Claude-powered agent and four primitives — no extension required:
+
+| Primitive | What it is | Where it lives |
+|-----------|------------|----------------|
+| **Steering** | Project-wide rules and conventions the agent always reads | `.kiro/steering/*.md` |
+| **Specs** | Structured plan + design docs for a feature, generated from a one-line ask | `.kiro/specs/<feature>/` |
+| **Hooks** | Triggers that run an agent action on file events (save, create, etc.) | `.kiro/hooks/*.json` |
+| **MCP servers** | External tools (filesystem, GitHub, docs, browsers, DBs) the agent can call | `~/.kiro/settings/mcp.json` (global), `.kiro/settings/mcp.json` (workspace) |
+
+Workspace-scoped `.kiro/steering`, `.kiro/specs`, `.kiro/hooks`, and `.kiro/settings/mcp.json` should be **committed** so teammates and CI agents share the same context. Local-only state (`.kiro/.cache`, `.kiro/.tmp`, `.kiro/local`) is gitignored by the script.
+
+### Kiro MCP Servers
+
+The script writes a sensible default `~/.kiro/settings/mcp.json` with these enabled:
+
+| Server | Purpose | Notes |
+|--------|---------|-------|
+| **filesystem** | Read/list/search files in `~/Code` | `@modelcontextprotocol/server-filesystem` (npx) |
+| **github** | Search repos, read files, list issues/PRs | needs `GITHUB_TOKEN` env var |
+| **git** | `git status/diff/log/show` for the current repo | `mcp-server-git` (uvx) |
+| **fetch** | HTTP fetch with HTML→Markdown conversion | `mcp-server-fetch` (uvx) |
+| **context7** | Fetch up-to-date library docs by package name | `@upstash/context7-mcp` (npx) |
+| **aws-docs** | Search and read AWS documentation | `awslabs.aws-documentation-mcp-server` (uvx) |
+
+And these are written **disabled** — flip `"disabled": false` to opt in:
+
+| Server | Why disabled by default |
+|--------|-------------------------|
+| **playwright** | Spawns a real browser; only enable when doing E2E work |
+| **postgres** | Needs a running database and connection string |
+
+Edit `~/.kiro/settings/mcp.json` to add more (Notion, Linear, Slack, Sentry, Stripe, etc.) or override per-project at `<repo>/.kiro/settings/mcp.json` — workspace config wins.
 
 ---
 
