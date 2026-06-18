@@ -7,7 +7,7 @@
 # Updated:  2026-04-05
 # Platform: macOS (Apple Silicon + Intel)
 # Run:      chmod +x setup-dev-tools.sh && ./setup-dev-tools.sh
-# Flags:    --dry-run, --list, --skip <cats>, --only <cats>, --cleanup, --help
+# Flags:    --dry-run, --list, --skip <cats>, --only <cats>, --interactive, --cleanup, --help
 # =============================================================================
 
 SCRIPT_VERSION="4.1.0"
@@ -120,6 +120,7 @@ DRY_RUN=false
 RESUME=false
 UNINSTALL=false
 CLEANUP=false
+INTERACTIVE=false
 SKIP_CATEGORIES=()
 ONLY_CATEGORIES=()
 
@@ -201,6 +202,140 @@ ALL_CATEGORIES=(
     shell
 )
 
+# Category descriptions for interactive picker (must match ALL_CATEGORIES order)
+declare -A CATEGORY_DESC=(
+    [prerequisites]="Xcode CLI Tools, Homebrew, GNU coreutils"
+    [core]="mise (Node, Python), Go, Rust, OrbStack, bun, uv, pnpm"
+    [git]="Git, GitHub CLI, delta, lazygit, pre-commit"
+    [aws]="AWS CLI, CDK, SAM, Granted, cfn-lint"
+    [iac]="OpenTofu (Terraform), tflint, terraform-docs, checkov, infracost"
+    [security]="detect-secrets, gitleaks, trivy, semgrep, Snyk, ClamAV"
+    [replacements]="eza, bat, fd, ripgrep, zoxide, btop, sd, dust, just, yazi"
+    [data-processing]="yq, miller, csvkit, pandoc, ffmpeg, ImageMagick"
+    [code-quality]="shellcheck, shfmt, act, hadolint, ruff, commitizen"
+    [perf-testing]="hyperfine, oha"
+    [dev-servers]="ngrok, miniserve, caddy"
+    [terminal-productivity]="glow, watchexec, gum, nushell, topgrade, fastfetch"
+    [k8s-github]="stern, gh-dash"
+    [database]="pgcli, mycli, lazysql, harlequin, usql, sq, TablePlus"
+    [containers]="lazydocker, dive, kubectl, k9s"
+    [api]="Postman, grpcurl"
+    [networking]="mtr, bandwhich, nmap"
+    [dx]="fzf, starship, atuin, Kiro, Ghostty, zellij, Raycast, aider, llm"
+    [ux]="Lighthouse"
+    [docs]="d2, Mermaid CLI"
+    [mac-system]="Pearcleaner, Quick Look plugins, dockutil"
+    [mac-productivity]="Notion, Skim, Transmit"
+    [mac-communication]="Slack, Telegram"
+    [mac-browsers]="Firefox, Brave, Carbonyl, w3m"
+    [mac-media]="mpv, oxipng, jpegoptim, 7zip, LibreOffice, cmus"
+    [mac-cloud]="Google Drive, rclone, borg"
+    [mac-focus]="newsboat"
+    [mac-bloat]="Remove pre-installed Apple apps (GarageBand)"
+    [dracula]="Dracula theme for all tools"
+    [configs]="All dotfiles and tool configurations"
+    [filesystem]="Directory structure, helper scripts, git identity"
+    [macos-defaults]="Dock, Finder, keyboard, screenshots, Touch ID, DNS"
+    [shell]="\$HOME/.zshrc, Brewfile export"
+)
+
+# -- Interactive category picker -----------------------------------------------
+interactive_select() {
+    echo ""
+    echo -e "${BOLD}${CYAN}Interactive Mode — Select categories to install${NC}"
+    echo ""
+
+    if command -v gum &>/dev/null; then
+        # Build label list: "category — description"
+        local labels=()
+        for cat in "${ALL_CATEGORIES[@]}"; do
+            labels+=("$cat — ${CATEGORY_DESC[$cat]:-}")
+        done
+
+        # gum choose with multi-select, all pre-selected
+        local selected
+        selected=$(printf '%s\n' "${labels[@]}" | gum choose --no-limit --height=35 \
+            --header="Space to toggle, Enter to confirm" \
+            --selected="*" \
+            --cursor-prefix="[ ] " --selected-prefix="[✓] " --unselected-prefix="[ ] ") || true
+
+        if [[ -z "$selected" ]]; then
+            echo -e "${RED}No categories selected. Exiting.${NC}"
+            exit 0
+        fi
+
+        # Extract category names (everything before " — ")
+        while IFS= read -r line; do
+            ONLY_CATEGORIES+=("${line%% — *}")
+        done <<< "$selected"
+    else
+        # Fallback: numbered menu with toggle
+        local -a selected_flags=()
+        for _ in "${ALL_CATEGORIES[@]}"; do
+            selected_flags+=(1)  # all selected by default
+        done
+
+        while true; do
+            echo -e "${BOLD}Toggle categories (all selected by default):${NC}"
+            echo ""
+            for i in "${!ALL_CATEGORIES[@]}"; do
+                local cat="${ALL_CATEGORIES[$i]}"
+                local mark
+                if [[ "${selected_flags[$i]}" -eq 1 ]]; then
+                    mark="${GREEN}[✓]${NC}"
+                else
+                    mark="${DIM}[ ]${NC}"
+                fi
+                printf "  %s %2d) %-25s %s\n" "$mark" "$((i + 1))" "$cat" "${DIM}${CATEGORY_DESC[$cat]:-}${NC}"
+            done
+
+            echo ""
+            echo -e "  ${CYAN}a${NC}) Select all  ${CYAN}n${NC}) Select none  ${CYAN}Enter${NC}) Confirm"
+            echo ""
+            read -rp "  Toggle (number, a, n, or Enter to confirm): " choice
+
+            if [[ -z "$choice" ]]; then
+                break
+            elif [[ "$choice" == "a" ]]; then
+                for i in "${!selected_flags[@]}"; do selected_flags[$i]=1; done
+            elif [[ "$choice" == "n" ]]; then
+                for i in "${!selected_flags[@]}"; do selected_flags[$i]=0; done
+            elif [[ "$choice" =~ ^[0-9]+$ ]] && (( choice >= 1 && choice <= ${#ALL_CATEGORIES[@]} )); then
+                local idx=$((choice - 1))
+                if [[ "${selected_flags[$idx]}" -eq 1 ]]; then
+                    selected_flags[$idx]=0
+                else
+                    selected_flags[$idx]=1
+                fi
+            else
+                echo -e "  ${RED}Invalid input. Enter a number (1-${#ALL_CATEGORIES[@]}), a, n, or Enter.${NC}"
+            fi
+
+            # Clear the menu for redraw (move cursor up)
+            local lines_to_clear=$(( ${#ALL_CATEGORIES[@]} + 5 ))
+            for ((j = 0; j < lines_to_clear; j++)); do
+                printf '\033[A\033[2K'
+            done
+        done
+
+        # Build ONLY_CATEGORIES from selected flags
+        for i in "${!ALL_CATEGORIES[@]}"; do
+            if [[ "${selected_flags[$i]}" -eq 1 ]]; then
+                ONLY_CATEGORIES+=("${ALL_CATEGORIES[$i]}")
+            fi
+        done
+
+        if [[ ${#ONLY_CATEGORIES[@]} -eq 0 ]]; then
+            echo -e "${RED}No categories selected. Exiting.${NC}"
+            exit 0
+        fi
+    fi
+
+    echo ""
+    echo -e "${GREEN}Selected ${#ONLY_CATEGORIES[@]}/${#ALL_CATEGORIES[@]} categories:${NC} ${ONLY_CATEGORIES[*]}"
+    echo ""
+}
+
 # -- CLI argument parsing -----------------------------------------------------
 show_help() {
     echo ""
@@ -214,6 +349,7 @@ show_help() {
     echo "  --resume            Skip items that succeeded in a previous run"
     echo "  --uninstall         Show commands to remove everything (no changes made)"
     echo "  --cleanup           Remove tools from previous versions no longer in this script"
+    echo "  --interactive, -i   Interactively pick which categories to install"
     echo "  --skip <cats>       Skip categories (comma-separated)"
     echo "  --only <cats>       Only run these categories (comma-separated)"
     echo "  --list-categories   List all available categories"
@@ -222,6 +358,7 @@ show_help() {
     echo ""
     echo "Examples:"
     echo "  ./setup-dev-tools.sh                          # Install everything"
+    echo "  ./setup-dev-tools.sh -i                       # Interactive category picker"
     echo "  ./setup-dev-tools.sh --dry-run                # Preview only"
     echo "  ./setup-dev-tools.sh --list                   # List all tools"
     echo "  ./setup-dev-tools.sh --resume                 # Continue after a failure"
@@ -298,6 +435,10 @@ while [[ $# -gt 0 ]]; do
             CLEANUP=true
             shift
             ;;
+        --interactive|-i)
+            INTERACTIVE=true
+            shift
+            ;;
         --skip)
             if [[ -z "${2:-}" ]] || [[ "$2" == --* ]]; then
                 echo -e "${RED}ERROR: --skip requires a comma-separated list of categories${NC}"
@@ -348,6 +489,15 @@ while [[ $# -gt 0 ]]; do
             ;;
     esac
 done
+
+# -- Interactive mode (must run before validation, populates ONLY_CATEGORIES) --
+if [[ "$INTERACTIVE" == "true" ]]; then
+    if [[ ${#ONLY_CATEGORIES[@]} -gt 0 ]] || [[ ${#SKIP_CATEGORIES[@]} -gt 0 ]]; then
+        echo -e "${RED}ERROR: --interactive cannot be combined with --only or --skip${NC}"
+        exit 1
+    fi
+    interactive_select
+fi
 
 # -- Validate --skip/--only category names early ------------------------------
 for cat in "${SKIP_CATEGORIES[@]}" "${ONLY_CATEGORIES[@]}"; do
