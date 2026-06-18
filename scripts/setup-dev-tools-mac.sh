@@ -429,7 +429,7 @@ brew_cask_install() {
         mark_done "cask:$cask"
     else
         info "Installing $name..."
-        if brew install --cask "$cask" >> "$LOG_FILE" 2>&1; then
+        if brew install --cask --adopt "$cask" >> "$LOG_FILE" 2>&1; then
             success "$name installed"
             mark_done "cask:$cask"
         else
@@ -644,20 +644,22 @@ if [[ "$CLEANUP" == "true" ]]; then
     echo ""
 
     # Tools removed in current version (were in previous versions, now replaced or dropped)
-    # Format: "type:name:display-name:replacement"
+    # Format: "type:name:display-name:replacement:appname"
+    # appname (optional, 5th field) = actual .app name when it differs from display-name.
+    # Used as fallback to find apps in /Applications that weren't installed via Homebrew.
     DEPRECATED_TOOLS=(
         "brew:tmux:tmux:zellij"
         "cask:protonvpn:Proton VPN:Mullvad VPN"
         "cask:proton-mail:Proton Mail:removed"
         "cask:proton-pass:Proton Pass:removed"
         "cask:proton-drive:Proton Drive:removed"
-        "cask:docker:Docker Desktop:OrbStack"
-        "cask:warp:Warp terminal:Ghostty"
-        "cask:iterm2:iTerm2:Ghostty"
-        "cask:cursor:Cursor (AI editor):Kiro + Claude Code"
-        "cask:visual-studio-code:VS Code:Kiro (VS Code fork with built-in Claude agent)"
+        "cask:docker:Docker Desktop:OrbStack:Docker"
+        "cask:warp:Warp terminal:Ghostty:Warp"
+        "cask:iterm2:iTerm2:Ghostty:iTerm"
+        "cask:cursor:Cursor (AI editor):Kiro + Claude Code:Cursor"
+        "cask:visual-studio-code:VS Code:Kiro (VS Code fork with built-in Claude agent):Visual Studio Code"
         "cask:cleanshot:CleanShot X:removed"
-        "cask:soulver:Soulver 3:removed"
+        "cask:soulver:Soulver 3:removed:Soulver 3"
         "cask:numi:Numi:removed"
         "cask:hazel:Hazel:macOS Automator/scripts"
         "cask:popclip:PopClip:removed"
@@ -669,7 +671,7 @@ if [[ "$CLEANUP" == "true" ]]; then
         "cask:daisydisk:DaisyDisk:dust + duf (CLI)"
         "cask:proxyman:Proxyman:mitmproxy"
         "cask:appcleaner:AppCleaner:Pearcleaner"
-        "cask:bartender:Bartender:removed"
+        "cask:bartender:Bartender:removed:Bartender 4"
         "cask:jordanbaird-ice:Ice:removed"
         "mas:1502839586:Hand Mirror:removed"
         "formula:dog:dog (DNS tool):doggo"
@@ -678,7 +680,7 @@ if [[ "$CLEANUP" == "true" ]]; then
         "cask:anki:Anki:removed"
         "cask:discord:Discord:removed"
         "cask:figma:Figma:removed"
-        "cask:gimp:GIMP:removed"
+        "cask:gimp:GIMP:removed:GIMP-2.10"
         "cask:keyboardcleantool:KeyboardCleanTool:removed"
         "cask:pocket-casts:Pocket Casts:removed"
         "cask:yoink:Yoink:removed"
@@ -708,7 +710,7 @@ if [[ "$CLEANUP" == "true" ]]; then
         "formula:gifski:gifski:removed"
         "mas:6475002485:Reeder:newsboat"
         "formula:mas:mas:removed"
-        "cask:dbeaver-community:DBeaver Community:pgcli/mycli/sq (CLI)"
+        "cask:dbeaver-community:DBeaver Community:pgcli/mycli/sq (CLI):DBeaver"
         "cask:iina:IINA:mpv (CLI)"
         "cask:imageoptim:ImageOptim:oxipng + jpegoptim (CLI)"
         "cask:keka:Keka:p7zip (CLI)"
@@ -719,7 +721,9 @@ if [[ "$CLEANUP" == "true" ]]; then
     CLEANUP_SKIPPED=0
 
     for entry in "${DEPRECATED_TOOLS[@]}"; do
-        IFS=':' read -r type name display replacement <<< "$entry"
+        IFS=':' read -r type name display replacement appname <<< "$entry"
+        # appname defaults to display name when not specified (5th field)
+        appname="${appname:-$display}"
 
         case "$type" in
             formula)
@@ -744,17 +748,40 @@ if [[ "$CLEANUP" == "true" ]]; then
                         if brew uninstall --cask "$name" >> "$LOG_FILE" 2>&1; then success "$display removed"; else error "Failed to remove $display"; fi
                         ((CLEANUP_COUNT++))
                     fi
+                elif [[ -d "/Applications/$appname.app" ]]; then
+                    # App exists but wasn't installed via Homebrew (manual / direct download)
+                    if [[ "$DRY_RUN" == "true" ]]; then
+                        info "[DRY RUN] Would remove: $display (not managed by Homebrew, replaced by $replacement)"
+                    else
+                        info "Removing $display (not managed by Homebrew, replaced by $replacement)..."
+                        if installed trash; then
+                            trash "/Applications/$appname.app" >> "$LOG_FILE" 2>&1 && success "$display trashed" || error "Failed to remove $display"
+                        else
+                            sudo rm -rf "/Applications/$appname.app" 2>/dev/null && success "$display removed" || error "Failed to remove $display"
+                        fi
+                        ((CLEANUP_COUNT++))
+                    fi
                 else
                     ((CLEANUP_SKIPPED++))
                 fi
                 ;;
             mas)
-                if mas list 2>/dev/null | grep -q "$name"; then
+                # Check mas registry first (if mas is installed), then fall back to /Applications
+                if installed mas && mas list 2>/dev/null | grep -q "$name"; then
                     if [[ "$DRY_RUN" == "true" ]]; then
                         info "[DRY RUN] Would remove: $display (replaced by $replacement)"
                     else
                         info "Removing $display (replaced by $replacement)..."
-                        sudo rm -rf "/Applications/$display.app" 2>/dev/null || true
+                        sudo rm -rf "/Applications/$appname.app" 2>/dev/null || true
+                        ((CLEANUP_COUNT++))
+                        success "$display removed"
+                    fi
+                elif [[ -d "/Applications/$appname.app" ]]; then
+                    if [[ "$DRY_RUN" == "true" ]]; then
+                        info "[DRY RUN] Would remove: $display (replaced by $replacement)"
+                    else
+                        info "Removing $display (replaced by $replacement)..."
+                        sudo rm -rf "/Applications/$appname.app" 2>/dev/null || true
                         ((CLEANUP_COUNT++))
                         success "$display removed"
                     fi
@@ -853,6 +880,7 @@ fi
 
 # Install Node.js LTS and Python via mise
 if installed mise; then
+    if ! is_done "install:mise-node"; then
     if ! mise ls node 2>/dev/null | grep -q "lts"; then
         info "Installing Node.js LTS via mise..."
         if [[ "$DRY_RUN" != "true" ]]; then
@@ -865,7 +893,10 @@ if installed mise; then
     else
         warn "Node.js LTS already installed via mise"
     fi
+    mark_done "install:mise-node"
+    fi
 
+    if ! is_done "install:mise-python"; then
     if ! mise ls python 2>/dev/null | grep -q "$PYTHON_VERSION"; then
         info "Installing Python $PYTHON_VERSION via mise..."
         if [[ "$DRY_RUN" != "true" ]]; then
@@ -877,6 +908,8 @@ if installed mise; then
         fi
     else
         warn "Python $PYTHON_VERSION already installed via mise"
+    fi
+    mark_done "install:mise-python"
     fi
 
     # Ensure mise shims are in PATH for the rest of this script
@@ -893,6 +926,7 @@ brew_install "pkg-config" "pkg-config"
 
 # Rust (rustup manages the toolchain — installs rustc, cargo, etc.)
 progress
+if ! is_done "install:rust"; then
 if ! installed rustup; then
     info "Installing Rust via rustup..."
     if [[ "$DRY_RUN" == "true" ]]; then
@@ -913,6 +947,8 @@ if ! installed rustup; then
 else
     warn "Rust (rustup) already installed"
 fi
+mark_done "install:rust"
+fi
 
 # Docker (OrbStack is faster alternative — both installed, pick your preference)
 brew_cask_install "orbstack" "OrbStack (Docker runtime — faster, 2-5x less memory than Docker Desktop)"
@@ -922,6 +958,7 @@ brew_install "oven-sh/bun/bun" "bun (fast JS runtime/bundler/test runner)"
 
 # pnpm
 progress
+if ! is_done "install:pnpm"; then
 if ! installed pnpm; then
     info "Installing pnpm..."
     installer="$(mktemp)"
@@ -938,6 +975,8 @@ if ! installed pnpm; then
     fi
 else
     warn "pnpm already installed"
+fi
+mark_done "install:pnpm"
 fi
 
 # -- Verify all runtimes are in PATH for the rest of the script ----------------
@@ -1012,6 +1051,7 @@ brew_cask_install "session-manager-plugin" "AWS SSM Session Manager Plugin"
 
 # Granted (multi-account credential switching)
 progress
+if ! is_done "install:granted"; then
 if ! installed granted && ! installed assume; then
     info "Installing Granted (AWS SSO credential switching)..."
     brew tap common-fate/granted >> "$LOG_FILE" 2>&1 || true
@@ -1023,11 +1063,15 @@ if ! installed granted && ! installed assume; then
 else
     warn "Granted already installed"
 fi
+mark_done "install:granted"
+fi
 
 # AWS CDK (via npm)
 if installed npm; then
     npm_global_install "aws-cdk" "AWS CDK CLI"
     npm_global_install "cdk-nag" "cdk-nag"
+else
+    progress; progress  # keep progress bar accurate when npm unavailable
 fi
 
 fi  # aws
@@ -1066,6 +1110,7 @@ brew_install "cosign" "cosign (sign & verify container images)"
 
 # snyk CLI
 progress
+if ! is_done "install:snyk"; then
 if ! installed snyk; then
     info "Installing Snyk CLI..."
     brew tap snyk/tap >> "$LOG_FILE" 2>&1 || true
@@ -1076,6 +1121,8 @@ if ! installed snyk; then
     fi
 else
     warn "Snyk CLI already installed"
+fi
+mark_done "install:snyk"
 fi
 
 # Network security
@@ -1102,10 +1149,16 @@ else
 fi
 
 # Install local CA for mkcert
+if ! is_done "install:mkcert-ca"; then
 if installed mkcert; then
     info "Installing local CA for mkcert (enables trusted localhost HTTPS)..."
-    mkcert -install 2>/dev/null || true
-    success "mkcert local CA installed"
+    if mkcert -install >> "$LOG_FILE" 2>&1; then
+        success "mkcert local CA installed"
+    else
+        error "Failed to install mkcert local CA (check $LOG_FILE)"
+    fi
+fi
+mark_done "install:mkcert-ca"
 fi
 
 fi  # security
@@ -1133,7 +1186,7 @@ brew_install "zoxide" "zoxide (replaces cd — smart frecency-based jumping)"
 
 # diff -> delta: syntax highlighting, side-by-side, git integration
 # (already installed in Git section, just noting the replacement)
-info "delta (replaces diff — already installed in Git section)"
+warn "delta (replaces diff — already installed in Git section)"
 
 # man -> tldr: community-driven simplified man pages with examples
 brew_install "tldr" "tldr (replaces man — simplified with examples)"
@@ -1257,6 +1310,8 @@ if installed npm; then
     npm_global_install "commitizen" "commitizen (interactive conventional commits)"
     npm_global_install "@commitlint/cli" "commitlint (enforce conventional commit format)"
     npm_global_install "@antfu/ni" "ni (universal package runner — auto-detects npm/yarn/pnpm/bun)"
+else
+    progress; progress; progress; progress  # keep progress bar accurate when npm unavailable
 fi
 
 fi  # code-quality
@@ -1439,6 +1494,8 @@ brew_install "zellij" "zellij (modern terminal multiplexer — discoverable UI, 
 # Claude Code (installed via npm, not brew)
 if installed npm; then
     npm_global_install "@anthropic-ai/claude-code" "Claude Code (AI-assisted coding in terminal)"
+else
+    progress  # keep progress bar accurate when npm unavailable
 fi
 # GitHub Copilot CLI (built-in on newer gh versions, or installed as gh extension)
 progress
@@ -1460,9 +1517,7 @@ fi
 # Additional agentic / LLM CLIs that pair with Claude Code + Kiro
 brew_install "aider" "aider (terminal AI pair programmer — git-aware edit loops)"
 brew_install "llm" "llm (Simon Willison's CLI — one-shot prompts, plugins, SQLite logs, embeddings)"
-if installed npm; then
-    npm_global_install "repomix" "repomix (pack a repo into a single LLM-friendly file with token counts)"
-fi
+brew_install "repomix" "repomix (pack a repo into a single LLM-friendly file with token counts)"
 
 # Productivity apps
 brew_cask_install "raycast" "Raycast (Spotlight replacement with extensions)"
@@ -1479,13 +1534,19 @@ if installed npm; then
     npm_global_install "typescript" "TypeScript"
     npm_global_install "tsx" "tsx (TS execute)"
     npm_global_install "turbo" "Turborepo"
+else
+    progress; progress; progress  # keep progress bar accurate when npm unavailable
 fi
 
 # fzf key bindings
-if [[ ! -f "$HOME/.fzf.zsh" ]] && installed fzf; then
+if ! is_done "install:fzf-keybindings"; then
+FZF_INSTALL_SCRIPT="$(brew --prefix 2>/dev/null)/opt/fzf/install"
+if [[ ! -f "$HOME/.fzf.zsh" ]] && installed fzf && [[ -x "$FZF_INSTALL_SCRIPT" ]]; then
     info "Setting up fzf key bindings..."
-    "$(brew --prefix)/opt/fzf/install" --key-bindings --completion --no-update-rc --no-bash --no-fish
+    "$FZF_INSTALL_SCRIPT" --key-bindings --completion --no-update-rc --no-bash --no-fish
     success "fzf key bindings configured"
+fi
+mark_done "install:fzf-keybindings"
 fi
 
 fi  # dx
@@ -1498,6 +1559,8 @@ banner "UX & Design"
 # Lighthouse (via npm)
 if installed npm; then
     npm_global_install "lighthouse" "Lighthouse CLI"
+else
+    progress  # keep progress bar accurate when npm unavailable
 fi
 
 fi  # ux
@@ -1510,6 +1573,8 @@ brew_install "d2" "d2 (code-to-diagram scripting language)"
 
 if installed npm; then
     npm_global_install "@mermaid-js/mermaid-cli" "Mermaid CLI (render diagrams from CLI)"
+else
+    progress  # keep progress bar accurate when npm unavailable
 fi
 
 fi  # docs
@@ -1667,12 +1732,15 @@ banner "Dracula Theme"
 
 # Kiro - Dracula theme (extensions resolved via OpenVSX)
 if installed kiro; then
+    if ! is_done "config:kiro-dracula"; then
     if kiro --list-extensions 2>/dev/null | grep -qi "dracula-theme.theme-dracula"; then
         warn "Kiro Dracula theme already installed"
     else
         info "Installing Dracula theme for Kiro..."
         kiro --install-extension dracula-theme.theme-dracula
         success "Kiro Dracula theme installed"
+    fi
+    mark_done "config:kiro-dracula"
     fi
 fi
 
@@ -1681,16 +1749,20 @@ if installed bat; then
     BAT_CONFIG_DIR="$(bat --config-dir 2>/dev/null)"
     if [[ -n "$BAT_CONFIG_DIR" ]]; then
         mkdir -p "$BAT_CONFIG_DIR"
+        if ! is_done "config:bat-dracula"; then
         if [[ -f "$BAT_CONFIG_DIR/config" ]] && grep -q 'Dracula' "$BAT_CONFIG_DIR/config" 2>/dev/null; then
             warn "bat Dracula theme already configured"
         else
             echo '--theme="Dracula"' >> "$BAT_CONFIG_DIR/config"
             success "bat Dracula theme configured"
         fi
+        mark_done "config:bat-dracula"
+        fi
     fi
 fi
 
 # delta (git diffs) - Dracula colors
+if ! is_done "config:delta-dracula"; then
 if git config --global delta.syntax-theme &>/dev/null; then
     warn "delta syntax theme already set"
 else
@@ -1698,11 +1770,14 @@ else
     git config --global delta.syntax-theme Dracula
     success "delta Dracula theme configured"
 fi
+mark_done "config:delta-dracula"
+fi
 
 
 
 # Starship prompt (rich config with Dracula palette)
 STARSHIP_CONFIG="$HOME/.config/starship.toml"
+if ! is_done "config:starship"; then
 if [[ -f "$STARSHIP_CONFIG" ]] && grep -q "dracula" "$STARSHIP_CONFIG" 2>/dev/null; then
     warn "Starship config already configured"
 else
@@ -1931,6 +2006,8 @@ yellow = "#f1fa8c"
 STARSHIP_CONF
     success "Starship prompt configured (rich two-line prompt, Dracula theme)"
 fi
+mark_done "config:starship"
+fi
 
 fi  # dracula
 
@@ -1967,6 +2044,8 @@ git config --global branch.sort -committerdate
 
 # Remember merge conflict resolutions and auto-apply next time
 git config --global rerere.enabled true
+
+success "  git core settings configured (rebase, histogram diff, rerere)"
 
 # Useful aliases
 # Basic shortcuts
@@ -2014,10 +2093,11 @@ git config --global alias.wt "worktree"
 git config --global alias.wta "worktree add"
 git config --global alias.wtl "worktree list"
 
-success "git global settings configured"
+success "  git aliases configured (30+ shortcuts for status, log, branch, diff, worktree)"
 
 # ---- GPG + pinentry-mac ----
 GPG_AGENT_CONF="$HOME/.gnupg/gpg-agent.conf"
+if ! is_done "config:gpg-pinentry"; then
 if [[ -f "$GPG_AGENT_CONF" ]] && grep -q "pinentry-mac" "$GPG_AGENT_CONF" 2>/dev/null; then
     warn "GPG pinentry-mac already configured"
 else
@@ -2041,10 +2121,13 @@ GPG_CONFIG
         success "GPG pinentry-mac configured (passphrases cached 8 hours)"
     fi
 fi
+mark_done "config:gpg-pinentry"
+fi
 
 # ---- aria2 ----
 ARIA2_CONFIG_DIR="$HOME/.aria2"
 ARIA2_CONFIG="$ARIA2_CONFIG_DIR/aria2.conf"
+if ! is_done "config:aria2"; then
 if [[ -f "$ARIA2_CONFIG" ]]; then
     warn "aria2 config already exists"
 else
@@ -2125,10 +2208,13 @@ ARIA2_CONF
     /usr/bin/sed -i '' "s|PLACEHOLDER_HOME|$HOME|g" "$ARIA2_CONFIG"
     success "aria2 configured (16 connections, auto-resume, BitTorrent)"
 fi
+mark_done "config:aria2"
+fi
 
 # ---- atuin ----
 ATUIN_CONFIG_DIR="$HOME/.config/atuin"
 ATUIN_CONFIG="$ATUIN_CONFIG_DIR/config.toml"
+if ! is_done "config:atuin"; then
 if [[ -f "$ATUIN_CONFIG" ]]; then
     warn "atuin config already exists"
 else
@@ -2195,10 +2281,14 @@ stats.show_in_footer = true
 ATUIN_CONF
     success "atuin configured (fuzzy search, local-only, history filter, enter=paste)"
 fi
+mark_done "config:atuin"
+fi
 
 # ---- lazygit Dracula theme ----
+if installed lazygit; then
 LAZYGIT_CONFIG_DIR="$HOME/Library/Application Support/lazygit"
 LAZYGIT_CONFIG="$LAZYGIT_CONFIG_DIR/config.yml"
+if ! is_done "config:lazygit"; then
 if [[ -f "$LAZYGIT_CONFIG" ]] && grep -q "activeBorderColor" "$LAZYGIT_CONFIG" 2>/dev/null; then
     warn "lazygit theme already configured"
 else
@@ -2251,11 +2341,15 @@ promptToReturnFromSubprocess: false
 LAZYGIT_CONF
     success "lazygit configured (Dracula theme, delta pager, auto-fetch, Kiro editor)"
 fi
+mark_done "config:lazygit"
+fi
+fi  # installed lazygit
 
 # ---- k9s Dracula skin ----
 K9S_SKINS_DIR="$HOME/Library/Application Support/k9s/skins"
 K9S_CONFIG_DIR="$HOME/Library/Application Support/k9s"
 K9S_SKIN="$K9S_SKINS_DIR/dracula.yaml"
+if ! is_done "config:k9s-dracula"; then
 if [[ -f "$K9S_SKIN" ]]; then
     warn "k9s Dracula skin already exists"
 else
@@ -2360,10 +2454,13 @@ K9S_CFG
     fi
     success "k9s Dracula skin configured"
 fi
+mark_done "config:k9s-dracula"
+fi
 
 # ---- Kiro settings ----
 KIRO_SETTINGS_DIR="$HOME/Library/Application Support/Kiro/User"
 KIRO_SETTINGS="$KIRO_SETTINGS_DIR/settings.json"
+if ! is_done "config:kiro-settings"; then
 if [[ -f "$KIRO_SETTINGS" ]]; then
     warn "Kiro settings.json already exists — not overwriting"
     info "  To use Dracula, add: \"workbench.colorTheme\": \"Dracula\""
@@ -2472,6 +2569,8 @@ else
 KIRO_CONF
     success "Kiro settings configured with Dracula theme"
 fi
+mark_done "config:kiro-settings"
+fi
 
 # ---- Kiro essential extensions (resolved from OpenVSX) ----
 # Note: Kiro is a VS Code fork that uses OpenVSX, not the Microsoft Marketplace.
@@ -2537,6 +2636,7 @@ fi
 # Workspace overrides live in <repo>/.kiro/settings/mcp.json (precedence over global).
 KIRO_MCP_DIR="$HOME/.kiro/settings"
 KIRO_MCP="$KIRO_MCP_DIR/mcp.json"
+if ! is_done "config:kiro-mcp"; then
 if [[ -f "$KIRO_MCP" ]]; then
     warn "Kiro MCP config already exists — not overwriting ($KIRO_MCP)"
 else
@@ -2752,6 +2852,8 @@ KIRO_MCP_CONF
     info "           ~/.aws/credentials, AWS SSO, or 'assume <profile>' (granted)."
     info "           Set AWS_REGION and AWS_PROFILE in your shell to scope requests."
 fi
+mark_done "config:kiro-mcp"
+fi
 
 # ---- Fonts (required for icons in eza, starship, lazygit, etc.) ----
 info "Installing development fonts..."
@@ -2768,6 +2870,7 @@ success "Development fonts installed"
 
 # ---- shellcheck config ----
 SHELLCHECK_RC="$HOME/.shellcheckrc"
+if ! is_done "config:shellcheck"; then
 if [[ -f "$SHELLCHECK_RC" ]]; then
     warn "shellcheck config already exists"
 else
@@ -2783,10 +2886,13 @@ disable=SC1091,SC2034
 SHELLCHECK_CONF
     success "shellcheck configured"
 fi
+mark_done "config:shellcheck"
+fi
 
 # ---- glow config (Dracula) ----
 GLOW_CONFIG_DIR="$HOME/.config/glow"
 GLOW_CONFIG="$GLOW_CONFIG_DIR/glow.yml"
+if ! is_done "config:glow"; then
 if [[ -f "$GLOW_CONFIG" ]]; then
     warn "glow config already exists"
 else
@@ -2802,9 +2908,12 @@ width: 120
 GLOW_CONF
     success "glow configured (Dracula style, mouse, pager)"
 fi
+mark_done "config:glow"
+fi
 
 # ---- ngrok config ----
 NGROK_CONFIG_DIR="$HOME/.config/ngrok"
+if ! is_done "config:ngrok"; then
 if [[ ! -d "$NGROK_CONFIG_DIR" ]]; then
     info "Creating ngrok config directory..."
     mkdir -p "$NGROK_CONFIG_DIR"
@@ -2819,10 +2928,13 @@ NGROK_CONF
 else
     warn "ngrok config directory already exists"
 fi
+mark_done "config:ngrok"
+fi
 
 # ---- yt-dlp config ----
 YT_DLP_CONFIG_DIR="$HOME/.config/yt-dlp"
 YT_DLP_CONFIG="$YT_DLP_CONFIG_DIR/config"
+if ! is_done "config:yt-dlp"; then
 if [[ -f "$YT_DLP_CONFIG" ]]; then
     warn "yt-dlp config already exists"
 else
@@ -2857,11 +2969,14 @@ else
 YTDLP_CONF
     success "yt-dlp configured (best quality, aria2c downloader, metadata)"
 fi
+mark_done "config:yt-dlp"
+fi
 
 # difftastic aliases already configured in git global settings above
 
 # ---- caddy config ----
 CADDY_CONFIG_DIR="$HOME/.config/caddy"
+if ! is_done "config:caddy"; then
 if [[ ! -d "$CADDY_CONFIG_DIR" ]]; then
     info "Creating Caddy config template..."
     mkdir -p "$CADDY_CONFIG_DIR"
@@ -2885,9 +3000,12 @@ CADDY_CONF
 else
     warn "Caddy config directory already exists"
 fi
+mark_done "config:caddy"
+fi
 
 # ---- act config (GitHub Actions local runner) ----
 ACT_CONFIG="$HOME/.actrc"
+if ! is_done "config:act"; then
 if [[ -f "$ACT_CONFIG" ]]; then
     warn "act config already exists"
 else
@@ -2905,9 +3023,12 @@ else
 ACT_CONF
     success "act configured (medium Ubuntu images, container reuse)"
 fi
+mark_done "config:act"
+fi
 
 # ---- miller config ----
 MLR_CONFIG="$HOME/.mlrrc"
+if ! is_done "config:miller"; then
 if [[ -f "$MLR_CONFIG" ]]; then
     warn "miller config already exists"
 else
@@ -2923,10 +3044,13 @@ else
 MLR_CONF
     success "miller configured (CSV input, pretty table output)"
 fi
+mark_done "config:miller"
+fi
 
 # ---- asciinema config ----
 ASCIINEMA_CONFIG_DIR="$HOME/.config/asciinema"
 ASCIINEMA_CONFIG="$ASCIINEMA_CONFIG_DIR/config"
+if ! is_done "config:asciinema"; then
 if [[ -f "$ASCIINEMA_CONFIG" ]]; then
     warn "asciinema config already exists"
 else
@@ -2948,10 +3072,13 @@ overwrite = yes
 ASCIINEMA_CONF
     success "asciinema configured (2s idle limit, no keystroke recording)"
 fi
+mark_done "config:asciinema"
+fi
 
 # ---- gh-dash config ----
 GH_DASH_CONFIG_DIR="$HOME/.config/gh-dash"
 GH_DASH_CONFIG="$GH_DASH_CONFIG_DIR/config.yml"
+if ! is_done "config:gh-dash"; then
 if [[ -f "$GH_DASH_CONFIG" ]]; then
     warn "gh-dash config already exists"
 else
@@ -2993,9 +3120,13 @@ GHDASH_CONF
         success "gh-dash configured (Dracula theme, PR/issue sections)"
     fi
 fi
+mark_done "config:gh-dash"
+fi
 
 # ---- stern config ----
+if installed stern; then
 STERN_CONFIG="$HOME/.config/stern/config.yaml"
+if ! is_done "config:stern"; then
 if [[ -f "$STERN_CONFIG" ]]; then
     warn "stern config already exists"
 else
@@ -3018,10 +3149,15 @@ since: 5m
 STERN_CONF
     success "stern configured (50 tail lines, 5m lookback, timestamps)"
 fi
+mark_done "config:stern"
+fi
+fi  # installed stern
 
 # ---- zellij config ----
+if installed zellij; then
 ZELLIJ_CONFIG_DIR="$HOME/.config/zellij"
 ZELLIJ_CONFIG="$ZELLIJ_CONFIG_DIR/config.kdl"
+if ! is_done "config:zellij"; then
 if [[ -f "$ZELLIJ_CONFIG" ]]; then
     warn "zellij config already exists"
 else
@@ -3071,11 +3207,15 @@ scroll_buffer_size 50000
 ZELLIJ_CONF
     success "zellij configured (Dracula theme, compact layout, mouse)"
 fi
+mark_done "config:zellij"
+fi
+fi  # installed zellij
 
 # ---- newsboat config ----
 NEWSBOAT_DIR="$HOME/.newsboat"
 NEWSBOAT_CONFIG="$NEWSBOAT_DIR/config"
 NEWSBOAT_URLS="$NEWSBOAT_DIR/urls"
+if ! is_done "config:newsboat"; then
 if [[ -f "$NEWSBOAT_CONFIG" ]]; then
     warn "newsboat config already exists"
 else
@@ -3129,10 +3269,13 @@ https://github.blog/feed/ "~GitHub Blog"
 NEWSBOAT_URLS_CONF
     success "newsboat configured (vim keys, Dracula colors, starter URLs)"
 fi
+mark_done "config:newsboat"
+fi
 
 # ---- mpv config ----
 MPV_CONFIG_DIR="$HOME/.config/mpv"
 MPV_CONFIG="$MPV_CONFIG_DIR/mpv.conf"
+if ! is_done "config:mpv"; then
 if [[ -f "$MPV_CONFIG" ]]; then
     warn "mpv config already exists"
 else
@@ -3172,10 +3315,13 @@ screenshot-format=png
 MPV_CONF
     success "mpv configured (hardware accel, save position, screenshots)"
 fi
+mark_done "config:mpv"
+fi
 
 # ---- cmus config ----
 CMUS_CONFIG_DIR="$HOME/.config/cmus"
 CMUS_CONFIG="$CMUS_CONFIG_DIR/rc"
+if ! is_done "config:cmus"; then
 if [[ -f "$CMUS_CONFIG" ]]; then
     warn "cmus config already exists"
 else
@@ -3222,10 +3368,13 @@ set color_win_title_fg=253
 CMUS_CONF
     success "cmus configured (Dracula colors, replaygain)"
 fi
+mark_done "config:cmus"
+fi
 
 # ---- w3m config ----
 W3M_CONFIG_DIR="$HOME/.w3m"
 W3M_CONFIG="$W3M_CONFIG_DIR/config"
+if ! is_done "config:w3m"; then
 if [[ -f "$W3M_CONFIG" ]]; then
     warn "w3m config already exists"
 else
@@ -3269,10 +3418,13 @@ keep_cache_in_memory 0
 W3M_CONF
     success "w3m configured (UTF-8, cookies off)"
 fi
+mark_done "config:w3m"
+fi
 
 # ---- nushell config ----
 NUSHELL_CONFIG_DIR="$HOME/Library/Application Support/nushell"
 NUSHELL_ENV="$NUSHELL_CONFIG_DIR/env.nu"
+if ! is_done "config:nushell"; then
 if [[ -f "$NUSHELL_ENV" ]]; then
     warn "nushell config already exists"
 else
@@ -3293,10 +3445,13 @@ $env.PATH = ($env.PATH | prepend "/opt/homebrew/bin" | prepend ($env.HOME + "/.l
 NUSHELL_ENV_CONF
     success "nushell env configured (starship prompt, Homebrew paths)"
 fi
+mark_done "config:nushell"
+fi
 
 # ---- git-cliff config ----
 GIT_CLIFF_CONFIG_DIR="$HOME/.config/git-cliff"
 GIT_CLIFF_CONFIG="$GIT_CLIFF_CONFIG_DIR/cliff.toml"
+if ! is_done "config:git-cliff"; then
 if [[ -f "$GIT_CLIFF_CONFIG" ]]; then
     warn "git-cliff config already exists"
 else
@@ -3348,9 +3503,12 @@ sort_commits = "newest"
 GIT_CLIFF_CONF
     success "git-cliff configured (conventional commits, grouped changelog)"
 fi
+mark_done "config:git-cliff"
+fi
 
 # ---- SSH config ----
 SSH_CONFIG="$HOME/.ssh/config"
+if ! is_done "config:ssh"; then
 if [[ -f "$SSH_CONFIG" ]]; then
     warn "SSH config already exists"
 else
@@ -3404,6 +3562,8 @@ SSH_CONF
     chmod 600 "$SSH_CONFIG"
     success "SSH configured (multiplexing, keychain, keep-alive, strong algorithms)"
 fi
+mark_done "config:ssh"
+fi
 
 # Generate SSH key if none exists
 if [[ ! -f "$HOME/.ssh/id_ed25519" ]]; then
@@ -3415,6 +3575,7 @@ fi
 
 # ---- Global .gitignore ----
 GLOBAL_GITIGNORE="$HOME/.gitignore_global"
+if ! is_done "config:gitignore-global"; then
 if [[ -f "$GLOBAL_GITIGNORE" ]]; then
     warn "Global .gitignore already exists"
 else
@@ -3506,9 +3667,12 @@ GITIGNORE_GLOBAL
     git config --global core.excludesfile "$GLOBAL_GITIGNORE"
     success "Global .gitignore created and registered with git"
 fi
+mark_done "config:gitignore-global"
+fi
 
 # ---- .npmrc ----
 NPMRC="$HOME/.npmrc"
+if ! is_done "config:npmrc"; then
 if [[ -f "$NPMRC" ]]; then
     warn ".npmrc already exists"
 else
@@ -3535,9 +3699,12 @@ engine-strict=true
 NPMRC_CONF
     success ".npmrc configured (save-exact, no telemetry, prefer-offline)"
 fi
+mark_done "config:npmrc"
+fi
 
 # ---- .editorconfig ----
 EDITORCONFIG="$HOME/.editorconfig"
+if ! is_done "config:editorconfig"; then
 if [[ -f "$EDITORCONFIG" ]]; then
     warn ".editorconfig already exists"
 else
@@ -3579,9 +3746,12 @@ indent_size = 4
 EDITORCONFIG_CONF
     success ".editorconfig created (utf-8, lf, 2-space indent, trim whitespace)"
 fi
+mark_done "config:editorconfig"
+fi
 
 # ---- .prettierrc ----
 PRETTIERRC="$HOME/.prettierrc"
+if ! is_done "config:prettierrc"; then
 if [[ -f "$PRETTIERRC" ]]; then
     warn ".prettierrc already exists"
 else
@@ -3601,9 +3771,12 @@ else
 PRETTIER_CONF
     success ".prettierrc created (single quotes, trailing commas, 100 width)"
 fi
+mark_done "config:prettierrc"
+fi
 
 # ---- .curlrc ----
 CURLRC="$HOME/.curlrc"
+if ! is_done "config:curlrc"; then
 if [[ -f "$CURLRC" ]]; then
     warn ".curlrc already exists"
 else
@@ -3636,10 +3809,13 @@ else
 CURLRC_CONF
     success ".curlrc configured (follow redirects, retry, compression, timeouts)"
 fi
+mark_done "config:curlrc"
+fi
 
 # ---- Docker daemon config ----
 DOCKER_CONFIG_DIR="$HOME/.docker"
 DOCKER_DAEMON="$DOCKER_CONFIG_DIR/daemon.json"
+if ! is_done "config:docker-daemon"; then
 if [[ -f "$DOCKER_DAEMON" ]]; then
     warn "Docker daemon.json already exists"
 else
@@ -3665,6 +3841,8 @@ else
 }
 DOCKER_CONF
     success "Docker configured (BuildKit, log rotation 10m x 3, garbage collection)"
+fi
+mark_done "config:docker-daemon"
 fi
 
 # ---- Docker buildx as default builder ----
@@ -3819,15 +3997,19 @@ fi  # DRY_RUN
 fi  # macos-defaults
 
 # ---- ~/.hushlogin (suppress "Last login" message) ----
+if ! is_done "config:hushlogin"; then
 if [[ -f "$HOME/.hushlogin" ]]; then
     warn "$HOME/.hushlogin already exists"
 else
     touch "$HOME/.hushlogin"
     success "$HOME/.hushlogin created (suppresses 'Last login' in terminal)"
 fi
+mark_done "config:hushlogin"
+fi
 
 # ---- ~/.zprofile (login shell — PATH set once, not on every subshell) ----
 ZPROFILE="$HOME/.zprofile"
+if ! is_done "config:zprofile"; then
 if [[ -f "$ZPROFILE" ]]; then
     warn "$HOME/.zprofile already exists"
 else
@@ -3933,9 +4115,12 @@ source ~/.orbstack/shell/init.zsh 2>/dev/null || :
 ZPROFILE_CONF
     success "$HOME/.zprofile created (editor, pager, XDG, Go, Rust, bun, pnpm, mise, direnv, OrbStack)"
 fi
+mark_done "config:zprofile"
+fi
 
 # ---- ~/.zshenv (every zsh invocation — interactive or not) ----
 ZSHENV="$HOME/.zshenv"
+if ! is_done "config:zshenv"; then
 if [[ -f "$ZSHENV" ]]; then
     warn "$HOME/.zshenv already exists"
 else
@@ -3948,9 +4133,12 @@ command -v mise &>/dev/null && eval "$(mise activate zsh)"
 ZSHENV_CONF
     success "$HOME/.zshenv created (mise activation for all shell types)"
 fi
+mark_done "config:zshenv"
+fi
 
 # ---- ~/.vimrc (basic vim config for server editing) ----
 VIMRC="$HOME/.vimrc"
+if ! is_done "config:vimrc"; then
 if [[ -f "$VIMRC" ]]; then
     warn "$HOME/.vimrc already exists"
 else
@@ -4059,9 +4247,12 @@ VIM_CONF
     mkdir -p "$HOME/.vim/undodir"
     success "$HOME/.vimrc created (line numbers, clipboard, mouse, Dracula colors, space leader)"
 fi
+mark_done "config:vimrc"
+fi
 
 # ---- ~/.nanorc (better nano for quick edits) ----
 NANORC="$HOME/.nanorc"
+if ! is_done "config:nanorc"; then
 if [[ -f "$NANORC" ]]; then
     warn "$HOME/.nanorc already exists"
 else
@@ -4112,8 +4303,11 @@ NANO_CONF
     /usr/bin/sed -i '' "s|PLACEHOLDER_BREW_PREFIX|$(brew --prefix)|g" "$NANORC"
     success "$HOME/.nanorc created (line numbers, auto-indent, mouse, syntax highlighting)"
 fi
+mark_done "config:nanorc"
+fi
 
 # ---- bat extended config (file type mappings) ----
+if ! is_done "config:bat-mappings"; then
 if installed bat; then
     BAT_CONFIG_DIR="$(bat --config-dir 2>/dev/null)"
     BAT_CONFIG="$BAT_CONFIG_DIR/config"
@@ -4151,9 +4345,12 @@ BAT_MAPPINGS
         fi
     fi
 fi
+mark_done "config:bat-mappings"
+fi
 
 # ---- mise global config (default tool versions) ----
 MISE_CONFIG="$HOME/.config/mise/config.toml"
+if ! is_done "config:mise-global"; then
 if [[ -f "$MISE_CONFIG" ]]; then
     warn "mise global config already exists"
 else
@@ -4185,9 +4382,12 @@ verbose = false
 MISE_CONF
     success "mise configured (auto-install, trust ~/Code)"
 fi
+mark_done "config:mise-global"
+fi
 
 # ---- topgrade config ----
 TOPGRADE_CONFIG="$HOME/.config/topgrade.toml"
+if ! is_done "config:topgrade"; then
 if [[ -f "$TOPGRADE_CONFIG" ]]; then
     warn "topgrade config already exists"
 else
@@ -4215,9 +4415,12 @@ greedy_cask = true
 TOPGRADE_CONF
     success "topgrade configured (cleanup, greedy cask updates)"
 fi
+mark_done "config:topgrade"
+fi
 
 # ---- fastfetch config ----
 FASTFETCH_CONFIG="$HOME/.config/fastfetch/config.jsonc"
+if ! is_done "config:fastfetch"; then
 if [[ -f "$FASTFETCH_CONFIG" ]]; then
     warn "fastfetch config already exists"
 else
@@ -4297,9 +4500,12 @@ else
 FASTFETCH_CONF
     success "fastfetch configured (themed layout, Nerd Font icons, dev tool versions)"
 fi
+mark_done "config:fastfetch"
+fi
 
 # ---- ripgrep config ----
 RIPGREPRC="$HOME/.ripgreprc"
+if ! is_done "config:ripgreprc"; then
 if [[ -f "$RIPGREPRC" ]]; then
     warn "$HOME/.ripgreprc already exists"
 else
@@ -4342,9 +4548,12 @@ else
 RG_CONF
     success "$HOME/.ripgreprc configured (smart-case, hidden files, custom types)"
 fi
+mark_done "config:ripgreprc"
+fi
 
 # ---- fd ignore ----
 FDIGNORE="$HOME/.fdignore"
+if ! is_done "config:fdignore"; then
 if [[ -f "$FDIGNORE" ]]; then
     warn "$HOME/.fdignore already exists"
 else
@@ -4369,10 +4578,13 @@ __pycache__/
 FD_CONF
     success "$HOME/.fdignore created"
 fi
+mark_done "config:fdignore"
+fi
 
 # ---- btop Dracula theme ----
 BTOP_CONFIG_DIR="$HOME/.config/btop"
 BTOP_CONFIG="$BTOP_CONFIG_DIR/btop.conf"
+if ! is_done "config:btop"; then
 if [[ -f "$BTOP_CONFIG" ]]; then
     warn "btop config already exists"
 else
@@ -4453,10 +4665,13 @@ theme[process_end]="#ff79c6"
 BTOP_DRACULA
     success "btop configured with Dracula theme"
 fi
+mark_done "config:btop"
+fi
 
 # ---- lazydocker Dracula config ----
 LAZYDOCKER_CONFIG_DIR="$HOME/.config/lazydocker"
 LAZYDOCKER_CONFIG="$LAZYDOCKER_CONFIG_DIR/config.yml"
+if ! is_done "config:lazydocker"; then
 if [[ -f "$LAZYDOCKER_CONFIG" ]]; then
     warn "lazydocker config already exists"
 else
@@ -4485,9 +4700,12 @@ logs:
 LAZYDOCKER_CONF
     success "lazydocker configured with Dracula theme"
 fi
+mark_done "config:lazydocker"
+fi
 
 # ---- Git commit template ----
 GIT_COMMIT_TEMPLATE="$HOME/.gitmessage"
+if ! is_done "config:git-commit-template"; then
 if [[ -f "$GIT_COMMIT_TEMPLATE" ]]; then
     warn "Git commit template already exists"
 else
@@ -4508,9 +4726,12 @@ GIT_TEMPLATE
     git config --global commit.template "$GIT_COMMIT_TEMPLATE"
     success "Git commit template created and registered"
 fi
+mark_done "config:git-commit-template"
+fi
 
 # ---- Global git hooks directory ----
 GIT_HOOKS_DIR="$HOME/.config/git/hooks"
+if ! is_done "config:git-hooks"; then
 if [[ -d "$GIT_HOOKS_DIR" ]]; then
     warn "Global git hooks directory already exists"
 else
@@ -4570,9 +4791,12 @@ HOOK_PRECOMMIT
 
     success "Global git hooks created (debug check, large file check, conflict markers)"
 fi
+mark_done "config:git-hooks"
+fi
 
 # ---- AWS config ----
 AWS_CONFIG="$HOME/.aws/config"
+if ! is_done "config:aws"; then
 if [[ -f "$AWS_CONFIG" ]]; then
     warn "AWS config already exists"
 else
@@ -4605,10 +4829,13 @@ AWS_CONF
     chmod 600 "$AWS_CONFIG"
     success "AWS CLI configured (us-east-1, json, bat pager, auto-prompt)"
 fi
+mark_done "config:aws"
+fi
 
 # ---- GitHub CLI config ----
 GH_CONFIG_DIR="$HOME/.config/gh"
 GH_CONFIG="$GH_CONFIG_DIR/config.yml"
+if ! is_done "config:gh-cli"; then
 if [[ -f "$GH_CONFIG" ]]; then
     warn "GitHub CLI config already exists"
 else
@@ -4640,10 +4867,13 @@ aliases:
 GH_CONF
     success "GitHub CLI configured (SSH protocol, Kiro editor, delta pager, aliases)"
 fi
+mark_done "config:gh-cli"
+fi
 
 # ---- pip config ----
 PIP_CONFIG_DIR="$HOME/.config/pip"
 PIP_CONFIG="$PIP_CONFIG_DIR/pip.conf"
+if ! is_done "config:pip"; then
 if [[ -f "$PIP_CONFIG" ]]; then
     warn "pip config already exists"
 else
@@ -4669,9 +4899,12 @@ compile = true
 PIP_CONF
     success "pip configured (require virtualenv, no telemetry)"
 fi
+mark_done "config:pip"
+fi
 
 # ---- gemrc (Ruby) ----
 GEMRC="$HOME/.gemrc"
+if ! is_done "config:gemrc"; then
 if [[ -f "$GEMRC" ]]; then
     warn "$HOME/.gemrc already exists"
 else
@@ -4682,10 +4915,13 @@ gem: --no-document
 GEM_CONF
     success "$HOME/.gemrc created (no docs on gem install)"
 fi
+mark_done "config:gemrc"
+fi
 
 # ---- pgcli config ----
 PGCLI_CONFIG_DIR="$HOME/.config/pgcli"
 PGCLI_CONFIG="$PGCLI_CONFIG_DIR/config"
+if ! is_done "config:pgcli"; then
 if [[ -f "$PGCLI_CONFIG" ]]; then
     warn "pgcli config already exists"
 else
@@ -4726,10 +4962,13 @@ smart_completion = True
 PGCLI_CONF
     success "pgcli configured (multi-line, auto-expand, destructive warnings, bat pager)"
 fi
+mark_done "config:pgcli"
+fi
 
 # ---- harlequin config ----
 HARLEQUIN_CONFIG_DIR="$HOME/.config/harlequin"
 HARLEQUIN_CONFIG="$HARLEQUIN_CONFIG_DIR/config.toml"
+if ! is_done "config:harlequin"; then
 if [[ -f "$HARLEQUIN_CONFIG" ]]; then
     warn "harlequin config already exists"
 else
@@ -4745,9 +4984,12 @@ locale = "en_US.UTF-8"
 HARLEQUIN_CONF
     success "harlequin configured (Dracula theme, vscode keymap)"
 fi
+mark_done "config:harlequin"
+fi
 
 # ---- mycli config ----
 MYCLIRC="$HOME/.myclirc"
+if ! is_done "config:mycli"; then
 if [[ -f "$MYCLIRC" ]]; then
     warn "$HOME/.myclirc already exists"
 else
@@ -4787,10 +5029,13 @@ wider_completion_menu = True
 MYCLI_CONF
     success "$HOME/.myclirc configured (multi-line, auto-expand, destructive warnings)"
 fi
+mark_done "config:mycli"
+fi
 
 # ---- yazi config ----
 YAZI_CONFIG_DIR="$HOME/.config/yazi"
 YAZI_CONFIG="$YAZI_CONFIG_DIR/yazi.toml"
+if ! is_done "config:yazi"; then
 if [[ -f "$YAZI_CONFIG" ]]; then
     warn "yazi config already exists"
 else
@@ -4851,9 +5096,12 @@ rules = [
 YAZI_THEME
     success "yazi configured (hidden files, Kiro opener, Dracula theme)"
 fi
+mark_done "config:yazi"
+fi
 
 # ---- just config (global justfile with common recipes) ----
 JUSTFILE_GLOBAL="$HOME/.justfile"
+if ! is_done "config:justfile"; then
 if [[ -f "$JUSTFILE_GLOBAL" ]]; then
     warn "Global justfile already exists"
 else
@@ -4989,10 +5237,13 @@ loc:
 JUSTFILE_CONF
     success "Global justfile created (~/.justfile — system, git, docker, network, cleanup, info recipes)"
 fi
+mark_done "config:justfile"
+fi
 
 # ---- Ghostty config ----
 GHOSTTY_CONFIG_DIR="$HOME/.config/ghostty"
 GHOSTTY_CONFIG="$GHOSTTY_CONFIG_DIR/config"
+if ! is_done "config:ghostty"; then
 if [[ -f "$GHOSTTY_CONFIG" ]]; then
     warn "Ghostty config already exists"
 else
@@ -5041,10 +5292,13 @@ mouse-hide-while-typing = true
 GHOSTTY_CONF
     success "Ghostty configured (JetBrains Mono, Dracula theme, transparent titlebar)"
 fi
+mark_done "config:ghostty"
+fi
 
 # ---- direnv config ----
 DIRENV_CONFIG_DIR="$HOME/.config/direnv"
 DIRENV_CONFIG="$DIRENV_CONFIG_DIR/direnv.toml"
+if ! is_done "config:direnv"; then
 if [[ -f "$DIRENV_CONFIG" ]]; then
     warn "direnv config already exists"
 else
@@ -5067,10 +5321,13 @@ prefix = [
 DIRENV_CONF
     success "direnv configured (hidden env diff, auto-trust ~/Code)"
 fi
+mark_done "config:direnv"
+fi
 
 # ---- Kiro keybindings ----
 KIRO_KEYBINDINGS_DIR="$HOME/Library/Application Support/Kiro/User"
 KIRO_KEYBINDINGS="$KIRO_KEYBINDINGS_DIR/keybindings.json"
+if ! is_done "config:kiro-keybindings"; then
 if [[ -f "$KIRO_KEYBINDINGS" ]]; then
     warn "Kiro keybindings already exist"
 else
@@ -5211,6 +5468,8 @@ else
 ]
 KIRO_KEYS
     success "Kiro keybindings created"
+fi
+mark_done "config:kiro-keybindings"
 fi
 
 # Set RIPGREP_CONFIG_PATH in zshrc (needed for ripgrep to read config)
