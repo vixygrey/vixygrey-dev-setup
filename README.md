@@ -310,7 +310,7 @@ Faster, prettier, smarter replacements for standard Unix utilities.
 | **usql** | Universal SQL CLI -- connects to Postgres, MySQL, SQLite, and more |
 | **sq** | jq for databases -- query SQLite, Postgres, CSV from one tool |
 | **dbmate** | Lightweight, framework-agnostic database migration tool |
-| **TablePlus** | Native macOS database GUI -- fast, clean, supports 20+ databases |
+| **DBeaver** | Free, open-source universal database GUI -- supports nearly every database and driver |
 
 ---
 
@@ -329,7 +329,7 @@ Faster, prettier, smarter replacements for standard Unix utilities.
 
 | Tool | Description |
 |------|-------------|
-| **Postman** | Industry-standard API client -- collections, environments, scripting |
+| **Bruno** | Local-first, git-friendly API client -- collections stored as plain-text files |
 | **grpcurl** | curl for gRPC services |
 
 ---
@@ -356,6 +356,7 @@ Faster, prettier, smarter replacements for standard Unix utilities.
 | **atuin** | Replaces shell history with SQLite-backed, fuzzy-searchable database |
 | **mise** | Universal version manager -- Node, Python, Go, Ruby all in one (replaces nvm + pyenv + rbenv) |
 | **Kiro** | Primary code editor and IDE — VS Code fork with built-in Claude agent (specs, steering, hooks, MCP) |
+| **Visual Studio Code** | Secondary editor — installed with the same extension set as Kiro (from the Microsoft Marketplace) |
 | **Claude Code** | AI-assisted coding in the terminal (Anthropic, agentic) |
 | **GitHub Copilot CLI** | AI suggestions in the terminal (via `gh copilot suggest`) |
 | **aider** | Terminal AI pair programmer -- git-aware edit loops, complementary to Claude Code |
@@ -386,6 +387,7 @@ Faster, prettier, smarter replacements for standard Unix utilities.
 |------|-------------|
 | **d2** | Code-to-diagram scripting language -- declarative diagrams as code |
 | **Mermaid CLI** | Render Mermaid diagrams (flowcharts, sequences, ERDs) from CLI |
+| **draw.io** | Open-source desktop diagram editor -- architecture & system diagrams (offline) |
 
 ---
 
@@ -434,20 +436,10 @@ Preview files in Finder by pressing spacebar.
 |-----|-------------|
 | **Notion** | All-in-one workspace -- docs, wikis, databases, project tracking |
 | **Notion Calendar** | Calendar app with Notion integration |
-| **Notion Mail** | Email client with Notion integration |
-| **Snagit** | Screenshots, scrolling capture, annotations, and video recording |
+| **Shottr** | Fast native screenshots -- scrolling capture, OCR, annotations (local-only, no account) |
 | **Claude** | AI assistant |
 | **Skim** | Lightweight PDF reader with annotations -- faster than Preview |
-| **Transmit** | Premium SFTP/S3 file transfer client -- fast, dual-pane |
-
----
-
-## Mac Apps -- Communication
-
-| App | Description |
-|-----|-------------|
-| **Slack** | Team messaging and collaboration |
-| **Telegram** | Encrypted messaging with channels and bots |
+| **Cyberduck** | Free, open-source SFTP/S3/cloud file transfer |
 
 ---
 
@@ -456,8 +448,6 @@ Preview files in Finder by pressing spacebar.
 | App | Description |
 |-----|-------------|
 | **Google Chrome** | Primary Chromium browser for development and DevTools |
-| **Firefox** | Privacy-focused browser for cross-browser testing |
-| **Brave** | Privacy-focused Chromium browser with built-in ad blocking |
 
 ---
 
@@ -469,7 +459,6 @@ Preview files in Finder by pressing spacebar.
 | **oxipng** | Lossless PNG compression -- CLI, scriptable, CI-friendly |
 | **jpegoptim** | Lossless JPEG compression -- strip metadata, optimize |
 | **p7zip** | Archive tool -- zip, 7z, rar, tar from the command line |
-| **LibreOffice** | Free office suite -- documents, spreadsheets, presentations |
 
 ---
 
@@ -618,11 +607,16 @@ Destructive commands are blocked:
 
 ## Filesystem Structure
 
-The scripts create an organized directory layout for both development and personal use:
+The scripts create a deliberately **ADD-friendly** directory layout: few top-level
+roots, shallow nesting, no overlapping categories, and an `~/Inbox` dump zone so
+nothing has to be filed in the moment. When in doubt, drop it in `Inbox` (or use
+Spotlight to find things) rather than agonizing over where it "should" go.
 
 ```
 ~/
-|-- Code/                        # -- Development --
+|-- Inbox/                       # Dump zone — drop ANYTHING here, sort later or never
+|
+|-- Code/                        # -- Development (unchanged) --
 |   |-- work/                    # Work projects
 |   |   |-- <org-name>/          # Grouped by GitHub org
 |   |   +-- scratch/             # Throwaway experiments
@@ -639,47 +633,24 @@ The scripts create an organized directory layout for both development and person
 |
 |-- Screenshots/                 # Screenshots save here
 |
-|-- Documents/                   # -- Life Admin --
-|   |-- finance/
-|   |   |-- taxes/               # Tax returns, W-2s, 1099s
-|   |   |-- invoices/            # Sent/received invoices
-|   |   +-- statements/          # Bank/credit card statements
+|-- Docs/                        # -- Life Admin (a few flat buckets) --
+|   |-- finance/                 # Statements, taxes, invoices
 |   |-- health/                  # Medical records, insurance cards
-|   |-- legal/                   # Contracts, agreements, legal docs
-|   |-- travel/                  # Itineraries, bookings, visa docs
-|   |-- insurance/               # Policies, claims
-|   |-- contracts/               # Work/freelance contracts
+|   |-- admin/                   # Legal, insurance, contracts
 |   |-- receipts/                # Purchase receipts, warranties
-|   +-- design/                  # Design files, mockups
+|   +-- travel/                  # Itineraries, bookings
 |
-|-- Reference/                   # -- Quick-Access Knowledge --
-|   |-- manuals/                 # Product/software manuals
-|   |-- cheatsheets/             # CLI, language, tool cheatsheets
-|   +-- bookmarks-export/        # Exported browser bookmarks
-|
-|-- Creative/                    # -- Creative Work --
-|   |-- design/                  # Graphic design projects
+|-- Creative/                    # -- Creative Work (flat) --
 |   |-- writing/                 # Blog posts, drafts, notes
-|   |-- video-editing/           # Video projects, raw footage
-|   +-- assets/
-|       |-- icons/               # Icon collections
-|       |-- fonts/               # Custom/downloaded fonts
-|       |-- stock-photos/        # Stock imagery
-|       +-- templates/           # Document/design templates
+|   |-- design/                  # Graphic/design projects, mockups, assets
+|   +-- video/                   # Video projects, raw footage
 |
 |-- Media/                       # -- Personal Media --
-|   |-- photos/                  # Personal photos
-|   |-- videos/                  # Personal videos
-|   |-- music/                   # Music files
-|   +-- wallpapers/              # Desktop/phone wallpapers
+|   |-- photos/
+|   |-- videos/
+|   +-- music/
 |
-|-- Projects/                    # -- Non-Code Projects --
-|   |-- side-hustles/            # Business/freelance projects
-|   +-- home/                    # Home improvement, DIY
-|
-+-- Archive/                     # -- Cold Storage --
-    |-- old-projects/            # Completed/abandoned projects
-    +-- old-docs/                # Old documents for reference
++-- Archive/                     # Cold storage — one bucket for old/done stuff
 ```
 
 ### Helper Scripts (~/Scripts/bin/)

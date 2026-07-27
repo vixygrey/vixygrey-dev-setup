@@ -189,7 +189,6 @@ ALL_CATEGORIES=(
     docs
     mac-system
     mac-productivity
-    mac-communication
     mac-browsers
     mac-media
     mac-cloud
@@ -217,18 +216,17 @@ declare -A CATEGORY_DESC=(
     [dev-servers]="ngrok, miniserve, caddy"
     [terminal-productivity]="glow, watchexec, gum, nushell, topgrade, fastfetch"
     [k8s-github]="stern, gh-dash"
-    [database]="pgcli, mycli, lazysql, harlequin, usql, sq, TablePlus"
+    [database]="pgcli, mycli, lazysql, harlequin, usql, sq, DBeaver"
     [containers]="lazydocker, dive, kubectl, k9s"
-    [api]="Postman, grpcurl"
+    [api]="Bruno, grpcurl"
     [networking]="mtr, bandwhich, nmap"
-    [dx]="fzf, starship, atuin, Kiro, Ghostty, zellij, Raycast, aider, llm"
+    [dx]="fzf, starship, atuin, Kiro, VS Code, Ghostty, zellij, Raycast, aider, llm"
     [ux]="Lighthouse"
-    [docs]="d2, Mermaid CLI"
+    [docs]="d2, Mermaid CLI, draw.io"
     [mac-system]="Pearcleaner, Quick Look plugins, dockutil"
-    [mac-productivity]="Notion, Skim, Transmit"
-    [mac-communication]="Slack, Telegram"
-    [mac-browsers]="Firefox, Brave, Carbonyl, w3m"
-    [mac-media]="mpv, oxipng, jpegoptim, 7zip, LibreOffice, cmus"
+    [mac-productivity]="Notion, Skim, Cyberduck"
+    [mac-browsers]="Carbonyl, w3m"
+    [mac-media]="mpv, oxipng, jpegoptim, 7zip, cmus"
     [mac-cloud]="Google Drive, rclone, borg"
     [mac-focus]="newsboat"
     [mac-bloat]="Remove pre-installed Apple apps (GarageBand)"
@@ -386,18 +384,17 @@ list_categories() {
     printf "  %-25s %s\n" "dev-servers"         "ngrok, miniserve, caddy"
     printf "  %-25s %s\n" "terminal-productivity" "glow, watchexec, pv, parallel, gum, nushell, topgrade, fastfetch, nnn, progress"
     printf "  %-25s %s\n" "k8s-github"          "stern, gh-dash"
-    printf "  %-25s %s\n" "database"            "pgcli, mycli, lazysql, harlequin, usql, sq, TablePlus"
+    printf "  %-25s %s\n" "database"            "pgcli, mycli, lazysql, harlequin, usql, sq, DBeaver"
     printf "  %-25s %s\n" "containers"          "lazydocker, dive, kubectl, k9s"
-    printf "  %-25s %s\n" "api"                 "Postman, grpcurl"
+    printf "  %-25s %s\n" "api"                 "Bruno, grpcurl"
     printf "  %-25s %s\n" "networking"          "mtr, bandwhich, nmap"
-    printf "  %-25s %s\n" "dx"                  "fzf, starship, atuin, Kiro, Ghostty, zellij, Raycast, aider, llm, repomix"
+    printf "  %-25s %s\n" "dx"                  "fzf, starship, atuin, Kiro, VS Code, Ghostty, zellij, Raycast, aider, llm, repomix"
     printf "  %-25s %s\n" "ux"                  "Lighthouse"
-    printf "  %-25s %s\n" "docs"                "d2, Mermaid CLI"
-    printf "  %-25s %s\n" "mac-system"          "Pearcleaner, Quick Look plugins, mas, dockutil, terminal-notifier"
-    printf "  %-25s %s\n" "mac-productivity"    "Notion, Skim, Transmit"
-    printf "  %-25s %s\n" "mac-communication"   "Slack, Telegram"
-    printf "  %-25s %s\n" "mac-browsers"        "Firefox, Brave, Carbonyl, w3m, monolith"
-    printf "  %-25s %s\n" "mac-media"           "mpv, oxipng, jpegoptim, 7zip, LibreOffice, cmus"
+    printf "  %-25s %s\n" "docs"                "d2, Mermaid CLI, draw.io"
+    printf "  %-25s %s\n" "mac-system"          "Pearcleaner, Quick Look plugins, dockutil, terminal-notifier"
+    printf "  %-25s %s\n" "mac-productivity"    "Notion, Skim, Cyberduck"
+    printf "  %-25s %s\n" "mac-browsers"        "Carbonyl, w3m, monolith"
+    printf "  %-25s %s\n" "mac-media"           "mpv, oxipng, jpegoptim, 7zip, cmus"
     printf "  %-25s %s\n" "mac-cloud"           "Google Drive, rclone, borg"
     printf "  %-25s %s\n" "mac-focus"           "newsboat"
     printf "  %-25s %s\n" "mac-bloat"           "Remove pre-installed Apple apps (GarageBand)"
@@ -807,7 +804,6 @@ if [[ "$CLEANUP" == "true" ]]; then
         "cask:warp:Warp terminal:Ghostty:Warp"
         "cask:iterm2:iTerm2:Ghostty:iTerm"
         "cask:cursor:Cursor (AI editor):Kiro + Claude Code:Cursor"
-        "cask:visual-studio-code:VS Code:Kiro (VS Code fork with built-in Claude agent):Visual Studio Code"
         "cask:cleanshot:CleanShot X:removed"
         "cask:soulver:Soulver 3:removed:Soulver 3"
         "cask:numi:Numi:removed"
@@ -817,7 +813,10 @@ if [[ "$CLEANUP" == "true" ]]; then
         "cask:wireshark:Wireshark:removed"
         "cask:topnotch:TopNotch:removed"
         "cask:syncthing:Syncthing:removed"
-        "cask:arc:Arc:Brave"
+        "cask:arc:Arc:Google Chrome"
+        "cask:firefox:Firefox:removed"
+        "cask:brave-browser:Brave Browser:removed:Brave Browser"
+        "cask:postman:Postman:Bruno"
         "cask:daisydisk:DaisyDisk:dust + duf (CLI)"
         "cask:proxyman:Proxyman:mitmproxy"
         "cask:appcleaner:AppCleaner:Pearcleaner"
@@ -845,7 +844,7 @@ if [[ "$CLEANUP" == "true" ]]; then
         "formula:git-secrets:git-secrets:gitleaks + detect-secrets"
         "formula:trufflehog:trufflehog:gitleaks + detect-secrets"
         "cask:the-unarchiver:The Unarchiver:p7zip (CLI)"
-        "cask:cyberduck:Cyberduck:Transmit"
+        "cask:transmit:Transmit:Cyberduck:Transmit"
         "cask:colima:colima:OrbStack"
         "cask:blockblock:BlockBlock:removed"
         "cask:oversight:OverSight:removed"
@@ -855,16 +854,21 @@ if [[ "$CLEANUP" == "true" ]]; then
         "mas:937984704:Amphetamine:removed"
         "cask:stats:Stats:removed"
         "cask:rectangle:Rectangle:removed"
-        "cask:shottr:Shottr:removed"
+        "cask:snagit:Snagit:Shottr:Snagit"
         "cask:signal:Signal:removed"
         "formula:gifski:gifski:removed"
         "mas:6475002485:Reeder:newsboat"
         "formula:mas:mas:removed"
-        "cask:dbeaver-community:DBeaver Community:pgcli/mycli/sq (CLI):DBeaver"
+        "cask:tableplus:TablePlus:DBeaver:TablePlus"
         "cask:iina:IINA:mpv (CLI)"
         "cask:imageoptim:ImageOptim:oxipng + jpegoptim (CLI)"
         "cask:keka:Keka:p7zip (CLI)"
         "formula:entr:entr:watchexec"
+        "cask:zed:Zed:Kiro + VS Code:Zed"
+        "cask:slack:Slack:removed"
+        "cask:telegram:Telegram:removed"
+        "cask:notion-mail:Notion Mail:removed (retired by Notion):Notion Mail"
+        "cask:libreoffice:LibreOffice:Google Workspace:LibreOffice"
     )
 
     CLEANUP_COUNT=0
@@ -1572,7 +1576,7 @@ else
 fi
 brew_install "neilotoole/sq/sq" "sq (jq for databases — query SQLite, Postgres, CSV from one tool)"
 brew_install "dbmate" "dbmate (lightweight DB migrations)"
-brew_cask_install "tableplus" "TablePlus (native DB GUI — daily driver)"
+brew_cask_install "dbeaver-community" "DBeaver Community (free, open-source universal DB GUI)"
 
 fi  # database
 
@@ -1591,7 +1595,7 @@ fi  # containers
 if should_run "api"; then
 banner "API Development"
 
-brew_cask_install "postman" "Postman (industry-standard API client)"
+brew_cask_install "bruno" "Bruno (local-first, git-friendly API client)"
 brew_install "grpcurl" "grpcurl (curl for gRPC)"
 
 fi  # api
@@ -1637,6 +1641,7 @@ if [[ -f "$KIRO_CLI" ]] && ! installed kiro; then
     sudo ln -sf "$KIRO_CLI" "$KIRO_LINK_DIR/kiro" 2>/dev/null || true
     hash -r 2>/dev/null || true
 fi
+brew_cask_install "visual-studio-code" "Visual Studio Code (same extensions as Kiro)"
 brew_cask_install "ghostty" "Ghostty (fast GPU-accelerated terminal)"
 brew_install "zellij" "zellij (modern terminal multiplexer — discoverable UI, layouts)"
 
@@ -1727,6 +1732,8 @@ else
     progress  # keep progress bar accurate when npm unavailable
 fi
 
+brew_cask_install "drawio" "draw.io (open-source desktop diagram editor — architecture & system diagrams)"
+
 fi  # docs
 
 # =============================================================================
@@ -1740,8 +1747,7 @@ brew_cask_install "mullvadvpn" "Mullvad VPN (privacy-focused, no account email r
 # Utilities
 brew_cask_install "pearcleaner" "Pearcleaner (open-source deep app uninstaller)"
 
-# macOS scripting helpers — used by this script (Dock, notifications, MAS apps)
-brew_install "mas" "mas (Mac App Store CLI — install/update MAS apps from a script)"
+# macOS scripting helpers — used by this script (Dock pins, notifications)
 brew_install "dockutil" "dockutil (manage Dock pins programmatically)"
 brew_install "terminal-notifier" "terminal-notifier (send macOS notifications from shell scripts)"
 
@@ -1759,33 +1765,21 @@ banner "Mac Apps — Productivity"
 brew_cask_install "claude" "Claude (AI assistant)"
 brew_cask_install "notion" "Notion (docs, wikis, project tracking)"
 brew_cask_install "notion-calendar" "Notion Calendar"
-brew_cask_install "notion-mail" "Notion Mail"
-brew_cask_install "snagit" "Snagit (screenshots, scrolling capture, annotations, video)"
+brew_cask_install "shottr" "Shottr (fast native screenshots — scrolling capture, OCR, annotations)"
 
 # PDF & documents
 brew_cask_install "skim" "Skim (lightweight PDF reader with annotations — faster than Preview)"
 
 # File transfer
-brew_cask_install "transmit" "Transmit (fast SFTP/S3 client, dual-pane)"
+brew_cask_install "cyberduck" "Cyberduck (free, open-source SFTP/S3/cloud transfer)"
 
 fi  # mac-productivity
-
-# =============================================================================
-if should_run "mac-communication"; then
-banner "Mac Apps — Communication"
-
-brew_cask_install "slack" "Slack"
-brew_cask_install "telegram" "Telegram"
-
-fi  # mac-communication
 
 # =============================================================================
 if should_run "mac-browsers"; then
 banner "Mac Apps — Browsers"
 
 brew_cask_install "google-chrome" "Google Chrome"
-brew_cask_install "firefox" "Firefox"
-brew_cask_install "brave-browser" "Brave Browser (privacy-focused Chromium)"
 
 npm_global_install "carbonyl" "Carbonyl (Chromium-based browser for the terminal)"
 brew_install "w3m" "w3m (text-based terminal browser and pager)"
@@ -1802,7 +1796,6 @@ brew_install "oxipng" "oxipng (lossless PNG compression)"
 brew_install "jpegoptim" "jpegoptim (lossless JPEG compression)"
 brew_install "p7zip" "7zip (archive tool — zip, 7z, rar, tar)"
 brew_install "cmus" "cmus (ncurses terminal music player)"
-brew_cask_install "libreoffice" "LibreOffice (free office suite)"
 
 fi  # mac-media
 
@@ -2023,11 +2016,13 @@ read_only = " 󰌾"
 read_only_style = "fg:red"
 
 [directory.substitutions]
-"Documents" = "󰈙 "
+"Inbox" = "📥 "
+"Docs" = "󰈙 "
 "Downloads" = " "
 "Code" = " "
 "Creative" = "🎨"
 "Media" = "🎵"
+"Archive" = "📦 "
 
 # -- Git branch ---------------------------------------------------------------
 [git_branch]
@@ -2722,63 +2717,76 @@ fi
 mark_done "config:kiro-settings"
 fi
 
-# ---- Kiro essential extensions (resolved from OpenVSX) ----
-# Note: Kiro is a VS Code fork that uses OpenVSX, not the Microsoft Marketplace.
-# Closed-source extensions like github.copilot and ms-vscode.* are unavailable —
-# Kiro ships its own AI agent (Claude Sonnet), so Copilot is redundant anyway.
-if installed kiro; then
-    info "Installing Kiro extensions (from OpenVSX)..."
-    KIRO_EXTENSIONS=(
-        # Theme
-        "dracula-theme.theme-dracula"
-        # Formatting & linting
-        "esbenp.prettier-vscode"
-        "dbaeumer.vscode-eslint"
-        "charliermarsh.ruff"
-        # Language support
-        "bradlc.vscode-tailwindcss"
-        "ms-python.python"
-        "golang.go"
-        "rust-lang.rust-analyzer"
-        "astro-build.astro-vscode"
-        "svelte.svelte-vscode"
-        # Editor enhancements
-        "formulahendry.auto-rename-tag"
-        "christian-kohler.path-intellisense"
-        "usernamehw.errorlens"
-        "aaron-bond.better-comments"
-        "streetsidesoftware.code-spell-checker"
-        "christian-kohler.npm-intellisense"
-        "naumovs.color-highlight"
-        "mechatroner.rainbow-csv"
-        "editorconfig.editorconfig"
-        # Git
-        "eamodio.gitlens"
-        "mhutchie.git-graph"
-        # Productivity
-        "gruntfuggly.todo-tree"
-        "wix.vscode-import-cost"
-        "ms-azuretools.vscode-docker"
-        "mikestead.dotenv"
-        "yzhang.markdown-all-in-one"
-        "davidanson.vscode-markdownlint"
-        "redhat.vscode-yaml"
-        "tamasfe.even-better-toml"
-        "hashicorp.terraform"
-        # AWS development
-        "amazonwebservices.aws-toolkit-vscode"
-        "kddejong.vscode-cfn-lint"
-    )
-    for ext in "${KIRO_EXTENSIONS[@]}"; do
-        if kiro --list-extensions 2>/dev/null | grep -qi "$ext"; then
-            warn "Kiro extension $ext already installed"
+# ---- Editor extensions (shared by Kiro and VS Code) ----
+# Kiro is a VS Code fork, so both editors use identical extension IDs — Kiro
+# resolves them from OpenVSX, VS Code from the Microsoft Marketplace.
+# Closed-source extensions like github.copilot and ms-vscode.* are unavailable
+# on OpenVSX; Kiro ships its own AI agent (Claude Sonnet), so Copilot is redundant.
+EDITOR_EXTENSIONS=(
+    # Theme
+    "dracula-theme.theme-dracula"
+    # Formatting & linting
+    "esbenp.prettier-vscode"
+    "dbaeumer.vscode-eslint"
+    "charliermarsh.ruff"
+    # Language support
+    "bradlc.vscode-tailwindcss"
+    "ms-python.python"
+    "golang.go"
+    "rust-lang.rust-analyzer"
+    "astro-build.astro-vscode"
+    "svelte.svelte-vscode"
+    # Editor enhancements
+    "formulahendry.auto-rename-tag"
+    "christian-kohler.path-intellisense"
+    "usernamehw.errorlens"
+    "aaron-bond.better-comments"
+    "streetsidesoftware.code-spell-checker"
+    "christian-kohler.npm-intellisense"
+    "naumovs.color-highlight"
+    "mechatroner.rainbow-csv"
+    "editorconfig.editorconfig"
+    # Git
+    "eamodio.gitlens"
+    "mhutchie.git-graph"
+    # Productivity
+    "gruntfuggly.todo-tree"
+    "wix.vscode-import-cost"
+    "ms-azuretools.vscode-docker"
+    "mikestead.dotenv"
+    "yzhang.markdown-all-in-one"
+    "davidanson.vscode-markdownlint"
+    "redhat.vscode-yaml"
+    "tamasfe.even-better-toml"
+    "hashicorp.terraform"
+    # AWS development
+    "amazonwebservices.aws-toolkit-vscode"
+    "kddejong.vscode-cfn-lint"
+)
+
+# install_editor_extensions <cli> <source-label>
+# Installs EDITOR_EXTENSIONS into an editor via its CLI, skipping any already present.
+install_editor_extensions() {
+    local editor_cli="$1" source="$2" ext
+    info "Installing extensions for $editor_cli (from $source)..."
+    for ext in "${EDITOR_EXTENSIONS[@]}"; do
+        if "$editor_cli" --list-extensions 2>/dev/null | grep -qi "$ext"; then
+            warn "$editor_cli extension $ext already installed"
         else
-            if ! kiro --install-extension "$ext" >> "$LOG_FILE" 2>&1; then
-                warn "Failed to install Kiro extension: $ext (may not be on OpenVSX)"
+            if ! "$editor_cli" --install-extension "$ext" >> "$LOG_FILE" 2>&1; then
+                warn "Failed to install $editor_cli extension: $ext (may not be on $source)"
             fi
         fi
     done
-    success "Kiro extensions installed"
+    success "$editor_cli extensions installed"
+}
+
+if installed kiro; then
+    install_editor_extensions kiro "OpenVSX"
+fi
+
+if installed code; then
+    install_editor_extensions code "the Microsoft Marketplace"
 fi
 
 # ---- Kiro MCP servers (global config) ----
@@ -5630,7 +5638,14 @@ fi
 if should_run "filesystem"; then
 info "Setting up filesystem structure..."
 
+# ADD-friendly layout: few top-level roots, shallow nesting, no overlapping
+# categories, and an ~/Inbox dump zone so nothing needs to be filed in the moment.
+# ~/Code is kept as-is because aliases, per-directory git identity, mise/direnv
+# trust, and the MCP filesystem scope all depend on it.
 DIRS=(
+    # -- Inbox (dump zone — drop anything here, sort later or never) -----------
+    "$HOME/Inbox"
+
     # -- Development ----------------------------------------------------------
     "$HOME/Code/work"
     "$HOME/Code/work/scratch"
@@ -5647,50 +5662,30 @@ DIRS=(
     # -- Screenshots ----------------------------------------------------------
     "$HOME/Screenshots"
 
-    # -- Documents (organized by life area) -----------------------------------
-    "$HOME/Documents/finance/taxes"
-    "$HOME/Documents/finance/invoices"
-    "$HOME/Documents/finance/statements"
-    "$HOME/Documents/health"
-    "$HOME/Documents/legal"
-    "$HOME/Documents/travel"
-    "$HOME/Documents/insurance"
-    "$HOME/Documents/contracts"
-    "$HOME/Documents/receipts"
-    "$HOME/Documents/design"
+    # -- Docs (life admin — a few flat, non-overlapping buckets) --------------
+    "$HOME/Docs/finance"    # statements, taxes, invoices
+    "$HOME/Docs/health"
+    "$HOME/Docs/admin"      # legal, insurance, contracts
+    "$HOME/Docs/receipts"
+    "$HOME/Docs/travel"
 
-    # -- Reference (quick-access knowledge) -----------------------------------
-    "$HOME/Reference/manuals"
-    "$HOME/Reference/cheatsheets"
-    "$HOME/Reference/bookmarks-export"
-
-    # -- Creative -------------------------------------------------------------
-    "$HOME/Creative/design"
+    # -- Creative (flat) ------------------------------------------------------
     "$HOME/Creative/writing"
-    "$HOME/Creative/video-editing"
-    "$HOME/Creative/assets/icons"
-    "$HOME/Creative/assets/fonts"
-    "$HOME/Creative/assets/stock-photos"
-    "$HOME/Creative/assets/templates"
+    "$HOME/Creative/design"
+    "$HOME/Creative/video"
 
     # -- Media ----------------------------------------------------------------
     "$HOME/Media/photos"
     "$HOME/Media/videos"
     "$HOME/Media/music"
-    "$HOME/Media/wallpapers"
 
-    # -- Projects (non-code personal projects) --------------------------------
-    "$HOME/Projects/side-hustles"
-    "$HOME/Projects/home"
-
-    # -- Archive (cold storage for old stuff) ---------------------------------
-    "$HOME/Archive/old-projects"
-    "$HOME/Archive/old-docs"
+    # -- Archive (one bucket for old/done stuff) ------------------------------
+    "$HOME/Archive"
 )
 for dir in "${DIRS[@]}"; do
     mkdir -p "$dir"
 done
-success "Directory structure created (~/Code, ~/Scripts, ~/Documents, ~/Reference, ~/Creative, ~/Media, ~/Projects, ~/Archive)"
+success "Directory structure created (~/Inbox, ~/Code, ~/Scripts, ~/Docs, ~/Creative, ~/Media, ~/Archive)"
 
 # ---- Helper Scripts ----
 info "Creating helper scripts in ~/Scripts/bin..."
@@ -6363,18 +6358,18 @@ SIDEBAR_SWIFT
         "$SIDEBAR_TOOL" remove "$HOME/Music" 2>/dev/null || true
         "$SIDEBAR_TOOL" remove "$HOME/Pictures" 2>/dev/null || true
 
-        # Add our organized folders to sidebar
+        # Add our organized folders to sidebar.
+        # Inbox and Downloads (the two dump zones) go first for zero-friction access.
         SIDEBAR_FOLDERS=(
+            "$HOME/Inbox"
+            "$HOME/Downloads"
             "$HOME/Code"
-            "$HOME/Screenshots"
-            "$HOME/Scripts"
-            "$HOME/Documents"
-            "$HOME/Reference"
+            "$HOME/Docs"
             "$HOME/Creative"
             "$HOME/Media"
-            "$HOME/Projects"
             "$HOME/Archive"
-            "$HOME/Downloads"
+            "$HOME/Screenshots"
+            "$HOME/Scripts"
         )
 
         sidebar_added=0
@@ -6711,11 +6706,11 @@ else
       "Bash(gum *)",
       "Bash(uvx *)",
       "Bash(kiro *)",
+      "Bash(code *)",
       "Bash(aider *)",
       "Bash(llm *)",
       "Bash(repomix *)",
       "Bash(chezmoi *)",
-      "Bash(mas *)",
       "Bash(dockutil *)",
       "Bash(terminal-notifier *)",
       "Bash(ouch *)",
@@ -6828,7 +6823,7 @@ else
 
 ## Environment
 - Shell: zsh with starship prompt, atuin history, fzf fuzzy finder, zsh-autosuggestions, zsh-syntax-highlighting
-- Editor: Kiro (Dracula theme, JetBrains Mono — VS Code fork with built-in Claude agent)
+- Editors: Kiro (primary — VS Code fork with built-in Claude agent) and VS Code (same extension set); both Dracula theme, JetBrains Mono. CLIs available: `kiro`, `code`
 - Terminal: Ghostty (Dracula theme)
 - Package managers: pnpm (preferred), npm, bun
 - Python: uv for packages (not pip), ruff for linting (not flake8/black)
@@ -6839,10 +6834,23 @@ else
 - Shell note: `bat` is aliased to `cat`; use `/bin/cat` only inside heredoc subshells where bat breaks syntax
 - Dotfiles: chezmoi
 - Launcher: Raycast
-- API client: Postman
-- Database GUI: TablePlus
+- API client: Bruno (local-first, git-friendly — collections as `.bru` files)
+- Database: DBeaver (GUI) + CLIs pgcli, mycli, lazysql, harlequin, usql, sq; migrations via dbmate
+- Diagrams: draw.io (GUI, architecture/system diagrams) + d2 / Mermaid (code-based)
+- Screenshots: Shottr (saved to ~/Screenshots)
+- File transfer: Cyberduck (GUI) + rclone (CLI)
 - Proxy/debugger: mitmproxy
 - Tunneling: ngrok
+- Docs / PM: Notion (+ Notion Calendar)
+- Cloud storage: Google Drive desktop (primary sync) + rclone; borg for versioned backups
+- Browser: Google Chrome (primary); Carbonyl / w3m in the terminal
+- Password manager: Apple Passwords (iCloud Keychain) — no third-party manager installed
+
+## Working Context
+- Independent **fractional CIO/CTO and consultant**; company is **VixenTec LLC**.
+- All company work runs on **Google Workspace** (Gmail, Docs/Sheets/Slides, Drive, Meet, Chat, Vids). Produce documents/deliverables in Google Workspace, not a local office suite (no LibreOffice/MS Office installed). Use **Google Meet** for calls (no Zoom); **Google Chat** for messaging (no Slack).
+- Tool philosophy: prefer **open-source, CLI-first, privacy-preserving, and minimal** options; declutter aggressively. When recommending tools, lead with one option that fits these and flag any that don't.
+- **ADD-friendly home layout** (low-decision, shallow): `~/Inbox` (dump zone — drop anything, sort later), `~/Code` (work/personal/oss/learning), `~/Docs` (finance, health, admin, receipts, travel), `~/Creative`, `~/Media`, `~/Archive`, `~/Screenshots`, `~/Scripts`. When in doubt where a file goes, suggest `~/Inbox` rather than a deep path.
 
 ## Available CLI Tools (use these instead of manual approaches)
 - **Search**: `rg` (ripgrep) for content, `fd` for files, `fzf` for interactive
