@@ -1,5 +1,33 @@
 # Changelog
 
+## [6.0.0] - 2026-07-27
+
+**BREAKING:** Removes the `mac-communication` category (both Slack and Telegram are dropped), so `--only mac-communication` / `--skip mac-communication` are no longer valid category names. Also restructures the `~/` filesystem layout (see Changed) — re-running on an existing machine creates the new folders alongside the old ones; it does not migrate or delete existing files. Curates the installed app set for a solo fractional CIO/CTO consulting workflow (Google Workspace); run `--cleanup` to uninstall the retired apps (#39).
+
+### Added
+
+- **editor**: Re-add `visual-studio-code`, installed alongside Kiro and sharing a single extension list (`EDITOR_EXTENSIONS`) via a new `install_editor_extensions` helper — Kiro resolves from OpenVSX, VS Code from the Microsoft Marketplace. Grants `Bash(code *)` in the Claude Code allowlist (#39)
+- **apps**: Add `bruno` (local-first, git-friendly API client), `dbeaver-community` (universal DB GUI), `cyberduck` (SFTP/S3/cloud transfer), `shottr` (native screenshots with scrolling capture + OCR), and `drawio` (offline architecture/system diagrams) (#39)
+- **filesystem**: Add an `~/Inbox` dump zone, pinned first (with `~/Downloads`) in the Finder sidebar, for a lower-friction, ADD-friendly layout. Starship gains `Inbox`/`Docs`/`Archive` directory icons (#39)
+- **claude**: Expand the generated global `~/.claude/CLAUDE.md` — a fuller Environment section plus a new Working Context section (Google Workspace, open-source/CLI/privacy/minimal tooling philosophy, and the ADD-friendly home-folder layout) (#39)
+
+### Changed
+
+- **filesystem**: Restructure `~/` for fewer top-level roots and shallower nesting — `~/Documents` (10 nested subfolders) becomes a flat `~/Docs` (finance, health, admin, receipts, travel); `~/Reference`, `~/Projects`, and `~/Creative/assets/*` are collapsed; `~/Archive` becomes a single bucket. `~/Code` is intentionally unchanged (aliases, per-directory git identity, mise/direnv trust, and the MCP filesystem scope depend on it) (#39)
+- **api**: Replace `postman` with `bruno`. **database**: replace `tableplus` with `dbeaver-community`. **file-transfer**: replace `transmit` with `cyberduck`. **screenshots**: replace `snagit` with `shottr`. Each retired tool's `--cleanup` entry now points at its replacement (#39)
+
+### Removed
+
+- **apps**: Drop `brave-browser`, `firefox`, `slack`, `telegram`, `notion-mail`, and `libreoffice` from install (all moved to the `--cleanup` deprecation list). `zed` added to `--cleanup` as well (it was never installed by the script) (#39)
+- **mas**: Drop the `mas` (Mac App Store CLI) install entirely — nothing was being installed via the App Store anymore, which had left `mas` both installed and marked-for-removal. `--cleanup` still removes any leftover `mas` and old App Store apps via the `/Applications` fallback. Removes `Bash(mas *)` from the Claude Code allowlist (#39)
+- **category**: Remove the now-empty `mac-communication` category (#39)
+
+## [5.0.0] - 2026-06-18
+
+### Added
+
+- **script**: Interactive category picker — run with `--interactive` / `-i` to select which categories to install from a checkbox menu instead of passing `--only` / `--skip` (closes #35, #36)
+
 ## [4.1.0] - 2026-05-10
 
 Minor release rolling up two follow-up PRs to v4.0.0: a tool-discoverability audit (#31) and the AWS MCP / toolkit fleet (#32). Fully backward-compatible.
