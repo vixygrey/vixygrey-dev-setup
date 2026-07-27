@@ -862,18 +862,11 @@ sops --decrypt secrets.yaml  # decrypt to stdout
 3. **Enable Clipboard History:** Raycast Settings > Extensions > Clipboard History > enable
 4. **Window management:** Raycast Settings > Extensions > Window Management > enable (replaces Rectangle)
 
-### Brave Browser
+### Google Chrome
 
-1. **Import bookmarks:** Brave Settings > Bookmarks > Import
-2. **Extensions:** uBlock Origin (pre-installed), React DevTools, axe DevTools, JSON Formatter, Lighthouse
-3. **Privacy:** Settings > Shields > Aggressive mode for trackers
-4. **Default search:** Settings > Search engine > DuckDuckGo or Brave Search
-
-### Firefox
-
-1. **Privacy:** Settings > Privacy & Security > Strict tracking protection
-2. **Extensions:** uBlock Origin, React DevTools, axe DevTools
-3. **Developer tools:** Settings > Developer Tools > enable browser console
+1. **Import bookmarks:** Chrome Settings > Bookmarks > Import bookmarks and settings
+2. **Extensions:** uBlock Origin, React DevTools, axe DevTools, JSON Formatter, Lighthouse
+3. **Default search:** Settings > Search engine > DuckDuckGo
 
 ### Ghostty (Terminal)
 
@@ -899,20 +892,21 @@ Already configured by the script (Dracula theme, JetBrains Mono, format on save,
 
 Kiro is the IDE-native agent (UI surface, specs, hooks, inline edit). Claude Code is the terminal-native agent (full repo context, long-running tasks, automation). They share the same file system and can be used together — let Kiro handle interactive editing and Claude Code handle batch refactors, ultrareview, and CI-driven loops. Steering rules under `.kiro/steering/` are read by Kiro; the same content can live in `CLAUDE.md` for Claude Code.
 
-### TablePlus
+### DBeaver
 
-1. **Add connections:** Click "+" to add database connections
-2. **Keyboard shortcuts:** Cmd+Enter to run query, Cmd+S to save
-3. **Theme:** Preferences > Appearance > Dark mode
-4. **Export:** Right-click table > Export (CSV, JSON, SQL)
+1. **Add connections:** Database > New Database Connection > pick your driver (DBeaver downloads it on first use)
+2. **Keyboard shortcuts:** Ctrl+Enter to run query, Cmd+S to save SQL scripts
+3. **Theme:** Preferences > User Interface > Appearance > Dark theme
+4. **Export:** Right-click a table/result > Export Data (CSV, JSON, SQL, XLSX)
 
-### Postman (API Client)
+### Bruno (API Client)
 
-1. **Sign in:** Sign in with your Postman account to sync collections across devices
-2. **Create a collection:** New > Collection > organize requests by service or feature
-3. **Environments:** Environments tab > add dev/staging/prod with variables
-4. **Tests:** Each request supports pre-request and test scripts (Tests tab)
-5. **Import:** File > Import supports OpenAPI, cURL, and other Postman exports
+1. **Pick a collection location:** Create a collection and point it at a folder in your repo — requests are saved as plain-text `.bru` files you commit alongside your code (no account or cloud sync).
+2. **Create a collection:** New Collection > organize requests by service or feature.
+3. **Environments:** Add dev/staging/prod environments with variables; keep secrets in `.env` (Bruno reads process env), not in committed files.
+4. **Tests:** Each request supports pre-request and post-response scripts plus assertions.
+5. **Import:** File > Import supports OpenAPI, cURL, Insomnia, and **Postman collections** — export your Postman collections and import them here before uninstalling Postman.
+6. **CI:** Use the `bru` CLI (`npm i -g @usebruno/cli`) to run collections in GitHub Actions.
 
 ### Notion
 
@@ -920,13 +914,6 @@ Kiro is the IDE-native agent (UI surface, specs, hooks, inline edit). Claude Cod
 2. **Templates:** Explore template gallery for project management, docs, wikis
 3. **Integrations:** Settings > Integrations > connect Slack, GitHub
 4. **Web clipper:** Install Notion Web Clipper browser extension
-
-### Slack
-
-1. **Workspaces:** Add all your team workspaces
-2. **Keyboard shortcuts:** Cmd+K (quick switch), Cmd+Shift+M (mentions)
-3. **Notifications:** Preferences > Notifications > customize per-channel
-4. **Sidebar:** Organize channels with sections
 
 ### Mullvad VPN
 
@@ -936,12 +923,12 @@ Kiro is the IDE-native agent (UI surface, specs, hooks, inline edit). Claude Cod
 4. **DNS:** Settings > VPN settings > Use custom DNS if needed
 5. **Server:** Choose server location close to you for best performance
 
-### Snagit
+### Shottr
 
-1. **Capture hotkey:** Preferences > Capture > set to `Ctrl+Shift+4` (or your preference)
-2. **Output folder:** Preferences > Share > set default save location to `~/Screenshots`
-3. **Editor:** Configure annotation defaults (font, colors, arrow style)
-4. **Video:** Enable system audio recording if needed
+1. **Capture hotkey:** Preferences > Shortcuts > set area/scrolling capture keys (or remap the macOS `Cmd+Shift` defaults)
+2. **Output folder:** Preferences > General > set default save location to `~/Screenshots`
+3. **Annotations:** Built-in editor for arrows, blur/pixelate, and measurements after each capture
+4. **OCR:** Use "Copy text" on any capture to pull text straight out of the image
 
 ### UniFi Identity Endpoint
 
