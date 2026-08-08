@@ -26,6 +26,14 @@ SCRIPT_VERSION="6.0.0"
 SCRIPT_START=$(date +%s)
 PYTHON_VERSION="3.12"
 
+# Where `go install` writes binaries. The generated login shell adds
+# $GOPATH/bin (== ~/.local/share/go/bin) to PATH, but `go install` defaults to
+# ~/go/bin unless GOBIN is set — so pin GOBIN here to the dir the shell expects,
+# and put it on THIS run's PATH so freshly-installed Go tools resolve immediately.
+export GOBIN="$HOME/.local/share/go/bin"
+export PATH="$GOBIN:$PATH"
+mkdir -p "$GOBIN"
+
 # -- Colors & Formatting ------------------------------------------------------
 RED=$'\033[0;31m'
 GREEN=$'\033[0;32m'
@@ -111,7 +119,7 @@ FAILED_ITEMS=()
 # Count all install calls + standalone progress calls for accurate progress bar
 # Note: `grep -c` prints "0" AND exits 1 on zero matches, so `|| echo 0` would append
 # a SECOND "0" ("0\n0") and break the arithmetic. Use `|| true` + a default instead.
-_INSTALL_CALLS=$(grep -cE '^\s*(brew_install|brew_cask_install|npm_global_install) ' "$0" 2>/dev/null || true)
+_INSTALL_CALLS=$(grep -cE '^\s*(brew_install|brew_cask_install|npm_global_install|go_install|uv_tool_install) ' "$0" 2>/dev/null || true)
 _PROGRESS_CALLS=$(grep -cE '^\s*progress\s*$' "$0" 2>/dev/null || true)
 INSTALL_TOTAL=$(( ${_INSTALL_CALLS:-0} + ${_PROGRESS_CALLS:-0} ))
 [[ "$INSTALL_TOTAL" -eq 0 ]] && INSTALL_TOTAL=200
@@ -718,6 +726,52 @@ npm_global_install() {
             error "Failed to install $name"
         fi
     fi
+}
+
+# go_install <import-path@ver> <cmd-name> <description>
+# Installs a Go tool into $GOBIN (the dir the login shell puts on PATH), so it's
+# reachable both during this run and in new shells. Skips if already present,
+# honors DRY_RUN, and advances the progress bar in every branch.
+go_install() {
+    local path="$1" name="$2" desc="${3:-$2}"
+    if command -v "$name" &>/dev/null; then
+        warn "$name already installed"; progress; return 0
+    fi
+    if ! installed go; then
+        warn "Skipping $name — Go not installed (run: brew install go)"; progress; return 0
+    fi
+    info "Installing $desc via go..."
+    if [[ "$DRY_RUN" == "true" ]]; then
+        info "[DRY RUN] Would: go install $path"
+    elif go install "$path" >> "$LOG_FILE" 2>&1; then
+        success "$name installed"
+    else
+        error "Failed to install $name via go"
+    fi
+    progress
+}
+
+# uv_tool_install <pkg-spec> <cmd-name> <description> <success-msg> [extra uv args...]
+# Installs a PyPI tool via `uv tool install` (isolated venv, binary on PATH via
+# ~/.local/bin). Skips if present, honors DRY_RUN, advances the progress bar.
+# Pass all four positional args; any trailing args are forwarded to uv.
+uv_tool_install() {
+    local spec="$1" name="$2" desc="$3" done_msg="$4"; shift 4
+    if command -v "$name" &>/dev/null; then
+        warn "$name already installed"; progress; return 0
+    fi
+    if ! installed uv; then
+        warn "Skipping $name — uv not installed"; progress; return 0
+    fi
+    info "Installing $desc via uv..."
+    if [[ "$DRY_RUN" == "true" ]]; then
+        info "[DRY RUN] Would: uv tool install $* ${spec}"
+    elif uv tool install "$@" "$spec" >> "$LOG_FILE" 2>&1; then
+        success "$done_msg"
+    else
+        error "Failed to install $name via uv"
+    fi
+    progress
 }
 
 # -- Pre-flight checks --------------------------------------------------------
@@ -1352,22 +1406,7 @@ fi
 brew_install "e1s" "e1s (ECS TUI — clusters/services/tasks, exec, logs, port-forward)"
 brew_install "stu" "stu (S3 TUI — browse/preview/download buckets)"
 # e2c (EC2 TUI) — young project; not on Homebrew, install via Go.
-if command -v e2c &>/dev/null; then
-    warn "e2c already installed"
-    progress
-elif installed go; then
-    info "Installing e2c (EC2 TUI) via go..."
-    if [[ "$DRY_RUN" != "true" ]]; then
-        go install github.com/nlamirault/e2c/cmd/e2c@latest >> "$LOG_FILE" 2>&1 \
-            && success "e2c installed" || warn "Could not install e2c (needs Go)"
-    else
-        info "[DRY RUN] Would: go install github.com/nlamirault/e2c/cmd/e2c@latest"
-    fi
-    progress
-else
-    warn "Skipping e2c — Go not installed"
-    progress
-fi
+go_install github.com/nlamirault/e2c/cmd/e2c@latest e2c "e2c (EC2 TUI)"
 # claws — broad all-AWS TUI (young); cask from the clawscli tap.
 brew tap clawscli/tap >> "$LOG_FILE" 2>&1 || true
 brew_cask_install "claws" "claws (all-AWS TUI — ~70 services, k9s-style; young project)"
@@ -1568,25 +1607,8 @@ brew_install "just" "just (replaces make — simpler task runner, no tab issues)
 # file manager -> rovr: mouse-first, VS Code-Explorer-style TUI file manager (Textual).
 # nnn is kept (below) as a fast, minimal fallback. rovr is not on Homebrew — install
 # via uv (needs Python 3.13, which uv fetches automatically).
-if command -v rovr &>/dev/null; then
-    warn "rovr already installed"
-    progress
-elif installed uv; then
-    info "Installing rovr via uv (Python 3.13 fetched by uv if needed)..."
-    if [[ "$DRY_RUN" != "true" ]]; then
-        if uv tool install --python 3.13 rovr >> "$LOG_FILE" 2>&1; then
-            success "rovr installed (mouse-first TUI file manager)"
-        else
-            error "Failed to install rovr via uv"
-        fi
-    else
-        info "[DRY RUN] Would: uv tool install --python 3.13 rovr"
-    fi
-    progress
-else
-    warn "Skipping rovr — uv not installed"
-    progress
-fi
+uv_tool_install rovr rovr "rovr (mouse-first TUI file manager; uv fetches Python 3.13)" \
+    "rovr installed (mouse-first TUI file manager)" --python 3.13
 
 # jq (interactive) -> fx: interactive JSON viewer/processor
 brew_install "fx" "fx (interactive JSON viewer — better than jq for exploring)"
@@ -1720,25 +1742,8 @@ brew tap ikebastuz/wiper >> "$LOG_FILE" 2>&1 || true
 brew_install "wiper" "wiper (interactive disk usage + cleanup — Trash-safe, ncdu-like)"
 
 # starlit (weather CLI) — PyPI package 'starlit-cli', installed via uv.
-if command -v starlit &>/dev/null; then
-    warn "starlit already installed"
-    progress
-elif installed uv; then
-    info "Installing starlit (weather CLI) via uv..."
-    if [[ "$DRY_RUN" != "true" ]]; then
-        if uv tool install starlit-cli >> "$LOG_FILE" 2>&1; then
-            success "starlit installed (run 'starlit --setup' to add an OpenWeatherMap key)"
-        else
-            error "Failed to install starlit via uv"
-        fi
-    else
-        info "[DRY RUN] Would: uv tool install starlit-cli"
-    fi
-    progress
-else
-    warn "Skipping starlit — uv not installed"
-    progress
-fi
+uv_tool_install starlit-cli starlit "starlit (weather CLI)" \
+    "starlit installed (run 'starlit --setup' to add an OpenWeatherMap key)"
 
 fi  # terminal-productivity
 
@@ -1774,25 +1779,9 @@ brew_install "mycli" "mycli (auto-completing MySQL CLI)"
 brew_install "lazysql" "lazysql (TUI for databases — interactive SQL in terminal)"
 
 # harlequin (terminal SQL IDE — DuckDB/Postgres/MySQL, multi-tab, autocomplete)
-if installed harlequin; then
-    warn "harlequin already installed"
-    progress
-elif installed uv; then
-    info "Installing harlequin via uv (with postgres,mysql,s3 adapters)..."
-    if [[ "$DRY_RUN" != "true" ]]; then
-        if uv tool install 'harlequin[postgres,mysql,s3]' >> "$LOG_FILE" 2>&1; then
-            success "harlequin installed (DuckDB + Postgres + MySQL + S3 adapters)"
-        else
-            error "Failed to install harlequin via uv"
-        fi
-    else
-        info "[DRY RUN] Would: uv tool install 'harlequin[postgres,mysql,s3]'"
-    fi
-    progress
-else
-    warn "Skipping harlequin — uv not installed"
-    progress
-fi
+uv_tool_install 'harlequin[postgres,mysql,s3]' harlequin \
+    "harlequin (terminal SQL IDE; postgres,mysql,s3 adapters)" \
+    "harlequin installed (DuckDB + Postgres + MySQL + S3 adapters)"
 # usql — not in Homebrew, install via Go
 progress
 if installed go; then
@@ -1944,25 +1933,7 @@ brew_install "sketchybar" "SketchyBar (customizable macOS status bar)"
 brew_cask_install "font-sketchybar-app-font" "sketchybar-app-font (app glyphs for SketchyBar)"
 brew_install "blueutil" "blueutil (Bluetooth control from CLI — SketchyBar widget)"
 # clipse — TUI clipboard manager (replaces Raycast clipboard history). Not on Homebrew.
-if command -v clipse &>/dev/null; then
-    warn "clipse already installed"
-    progress
-elif installed go; then
-    info "Installing clipse (TUI clipboard manager) via go..."
-    if [[ "$DRY_RUN" != "true" ]]; then
-        if go install github.com/savedra1/clipse@latest >> "$LOG_FILE" 2>&1; then
-            success "clipse installed"
-        else
-            error "Failed to install clipse via go"
-        fi
-    else
-        info "[DRY RUN] Would: go install github.com/savedra1/clipse@latest"
-    fi
-    progress
-else
-    warn "Skipping clipse — Go not installed (run: brew install go)"
-    progress
-fi
+go_install github.com/savedra1/clipse@latest clipse "clipse (TUI clipboard manager)"
 
 # Dotfile management
 brew_install "chezmoi" "chezmoi (dotfile manager — backup/restore configs across machines)"
@@ -5339,7 +5310,7 @@ P_VPNT
 # ---- clipse clipboard listener (launchd agent) ----
 # clipse runs a background listener to capture clipboard history. Register a
 # LaunchAgent so it starts at login.
-CLIPSE_BIN="$(command -v clipse || echo "$HOME/go/bin/clipse")"
+CLIPSE_BIN="$(command -v clipse || echo "$GOBIN/clipse")"
 CLIPSE_PLIST="$HOME/Library/LaunchAgents/com.clipse.listener.plist"
 if ! is_done "config:clipse"; then
 if [[ ! -x "$CLIPSE_BIN" ]]; then
