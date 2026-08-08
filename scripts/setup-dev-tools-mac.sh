@@ -214,7 +214,7 @@ declare -A CATEGORY_DESC=(
     [code-quality]="shellcheck, shfmt, act, hadolint, ruff, commitizen"
     [perf-testing]="hyperfine, oha"
     [dev-servers]="ngrok, miniserve, caddy"
-    [terminal-productivity]="glow, watchexec, gum, nushell, topgrade, fastfetch"
+    [terminal-productivity]="glow, watchexec, gum, nushell, topgrade, fastfetch, doxx, taproom, qalc, vhs, lazyssh, wiper, jolt"
     [k8s-github]="stern, gh-dash"
     [database]="pgcli, mycli, lazysql, harlequin, usql, sq"
     [containers]="lazydocker, dive, kubectl, k9s"
@@ -382,7 +382,7 @@ list_categories() {
     printf "  %-25s %s\n" "code-quality"        "shellcheck, shfmt, act, act3, hadolint, ruff, commitizen, ni"
     printf "  %-25s %s\n" "perf-testing"        "hyperfine, oha"
     printf "  %-25s %s\n" "dev-servers"         "ngrok, miniserve, caddy"
-    printf "  %-25s %s\n" "terminal-productivity" "glow, watchexec, pv, parallel, gum, nushell, topgrade, fastfetch, nnn, progress"
+    printf "  %-25s %s\n" "terminal-productivity" "glow, watchexec, gum, nushell, topgrade, fastfetch, nnn, doxx, taproom, qalc, vhs, lazyssh/rsync/npm, cheznav, apw, has, jolt, wiper, starlit"
     printf "  %-25s %s\n" "k8s-github"          "stern, gh-dash"
     printf "  %-25s %s\n" "database"            "pgcli, mycli, lazysql, harlequin, usql, sq"
     printf "  %-25s %s\n" "containers"          "lazydocker, dive, kubectl, k9s"
@@ -1538,6 +1538,49 @@ brew_install "nano" "nano (latest — better than macOS built-in)"
 brew_install "lnav" "lnav (advanced log file viewer — auto-format, SQL queries on logs)"
 brew_install "nnn" "nnn (tiny, fast terminal file manager)"
 brew_install "progress" "progress (coreutils progress viewer — cp, mv, dd, tar)"
+
+# -- Additional TUI/CLI tools (homebrew-core) --
+brew_install "doxx" "doxx (.docx viewer in the terminal)"
+brew_install "taproom" "taproom (interactive Homebrew TUI — browse formulae & casks)"
+brew_install "lazyssh" "lazyssh (SSH connection manager TUI)"
+brew_install "lazyrsync" "lazyrsync (rsync TUI with reusable profiles)"
+brew_install "libqalculate" "qalc (powerful CLI calculator — units, live currency, variables)"
+brew_install "vhs" "vhs (scripted terminal GIF/MP4 recorder — pairs with asciinema)"
+
+# -- Additional TUI/CLI tools (third-party taps) --
+brew tap jesseduffield/lazynpm >> "$LOG_FILE" 2>&1 || true
+brew_install "lazynpm" "lazynpm (npm TUI — joins lazygit/lazydocker/lazysql)"
+brew tap djetelina/tap >> "$LOG_FILE" 2>&1 || true
+brew_install "cheznav" "cheznav (chezmoi dotfiles TUI — dual-pane add/apply/diff)"
+brew tap bendews/tap >> "$LOG_FILE" 2>&1 || true
+brew_install "apw" "apw (Apple Passwords + OTP from the CLI)"
+brew tap kdabir/tap >> "$LOG_FILE" 2>&1 || true
+brew_install "has" "has (checks presence & versions of CLI tools)"
+brew tap jordond/tap >> "$LOG_FILE" 2>&1 || true
+brew_install "jolt" "jolt (battery / energy monitor TUI)"
+brew tap ikebastuz/wiper >> "$LOG_FILE" 2>&1 || true
+brew_install "wiper" "wiper (interactive disk usage + cleanup — Trash-safe, ncdu-like)"
+
+# starlit (weather CLI) — PyPI package 'starlit-cli', installed via uv.
+if command -v starlit &>/dev/null; then
+    warn "starlit already installed"
+    progress
+elif installed uv; then
+    info "Installing starlit (weather CLI) via uv..."
+    if [[ "$DRY_RUN" != "true" ]]; then
+        if uv tool install starlit-cli >> "$LOG_FILE" 2>&1; then
+            success "starlit installed (run 'starlit --setup' to add an OpenWeatherMap key)"
+        else
+            error "Failed to install starlit via uv"
+        fi
+    else
+        info "[DRY RUN] Would: uv tool install starlit-cli"
+    fi
+    progress
+else
+    warn "Skipping starlit — uv not installed"
+    progress
+fi
 
 fi  # terminal-productivity
 
