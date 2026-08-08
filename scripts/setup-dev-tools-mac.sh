@@ -214,7 +214,7 @@ declare -A CATEGORY_DESC=(
     [code-quality]="shellcheck, shfmt, act, hadolint, ruff, commitizen"
     [perf-testing]="hyperfine, oha"
     [dev-servers]="ngrok, miniserve, caddy"
-    [terminal-productivity]="glow, watchexec, gum, nushell, topgrade, fastfetch, doxx, taproom, qalc, vhs, lazyssh, wiper, jolt"
+    [terminal-productivity]="leaf, watchexec, gum, nushell, topgrade, fastfetch, doxx, taproom, qalc, vhs, lazyssh, wiper, jolt"
     [k8s-github]="stern, gh-dash"
     [database]="pgcli, mycli, lazysql, harlequin, usql, sq"
     [containers]="lazydocker, dive, kubectl, k9s"
@@ -382,7 +382,7 @@ list_categories() {
     printf "  %-25s %s\n" "code-quality"        "shellcheck, shfmt, act, act3, hadolint, ruff, commitizen, ni"
     printf "  %-25s %s\n" "perf-testing"        "hyperfine, oha"
     printf "  %-25s %s\n" "dev-servers"         "ngrok, miniserve, caddy"
-    printf "  %-25s %s\n" "terminal-productivity" "glow, watchexec, gum, nushell, topgrade, fastfetch, nnn, doxx, taproom, qalc, vhs, lazyssh/rsync/npm, cheznav, apw, has, jolt, wiper, starlit"
+    printf "  %-25s %s\n" "terminal-productivity" "leaf, watchexec, gum, nushell, topgrade, fastfetch, nnn, doxx, taproom, qalc, vhs, lazyssh/rsync/npm, cheznav, apw, has, jolt, wiper, starlit"
     printf "  %-25s %s\n" "k8s-github"          "stern, gh-dash"
     printf "  %-25s %s\n" "database"            "pgcli, mycli, lazysql, harlequin, usql, sq"
     printf "  %-25s %s\n" "containers"          "lazydocker, dive, kubectl, k9s"
@@ -749,7 +749,7 @@ if [[ "$UNINSTALL" == "true" ]]; then
     echo "  rm -f ~/.shellcheckrc ~/.editorconfig ~/.prettierrc"
     echo "  rm -f ~/.curlrc ~/.npmrc ~/.ripgreprc ~/.fdignore ~/.nanorc ~/.vimrc"
     echo "  rm -f ~/.hushlogin ~/.gitmessage ~/.myclirc ~/.gemrc ~/.actrc ~/.mlrrc"
-    echo "  rm -rf ~/.aria2 ~/.config/atuin ~/.config/glow ~/.config/ngrok"
+    echo "  rm -rf ~/.aria2 ~/.config/atuin ~/.config/ngrok"
     echo "  rm -rf ~/.config/yt-dlp ~/.config/gh-dash ~/.config/stern"
     echo "  rm -rf ~/.config/btop ~/.config/lazydocker ~/.config/mise"
     echo "  rm -rf ~/.config/topgrade.toml ~/.config/fastfetch ~/.config/pgcli"
@@ -813,6 +813,7 @@ if [[ "$CLEANUP" == "true" ]]; then
         "cask:notion-calendar:Notion Calendar:khal + vdirsyncer:Notion Calendar"
         "brew:yazi:yazi:rovr"
         "brew:cmus:cmus:kew"
+        "brew:glow:glow:leaf"
         "cask:raycast:Raycast:Ghostty quick-terminal + clipse:Raycast"
         "cask:unifi-identity-endpoint:UniFi Identity Endpoint:removed:UniFi Identity Endpoint"
         "cask:cleanshot:CleanShot X:removed"
@@ -1525,7 +1526,7 @@ fi  # dev-servers
 if should_run "terminal-productivity"; then
 banner "Terminal Productivity"
 
-brew_install "glow" "glow (render Markdown in terminal)"
+brew_install "leaf-markdown-viewer" "leaf (terminal Markdown previewer — live watch, fuzzy picker, Mermaid/LaTeX, inline mode)"
 brew_install "watchexec" "watchexec (run commands on file changes — better entr)"
 brew_install "pv" "pv (pipe viewer — progress bars for pipes)"
 brew_install "parallel" "parallel (GNU parallel — run commands in parallel)"
@@ -2932,27 +2933,7 @@ fi
 mark_done "config:shellcheck"
 fi
 
-# ---- glow config (Dracula) ----
-GLOW_CONFIG_DIR="$HOME/.config/glow"
-GLOW_CONFIG="$GLOW_CONFIG_DIR/glow.yml"
-if ! is_done "config:glow"; then
-if [[ -f "$GLOW_CONFIG" ]]; then
-    warn "glow config already exists"
-else
-    info "Creating glow configuration..."
-    mkdir -p "$GLOW_CONFIG_DIR"
-    cat > "$GLOW_CONFIG" <<'GLOW_CONF'
-# glow configuration
-style: "dracula"
-local: false
-mouse: true
-pager: true
-width: 120
-GLOW_CONF
-    success "glow configured (Dracula style, mouse, pager)"
-fi
-mark_done "config:glow"
-fi
+# leaf (Markdown previewer) runs on sensible defaults; no config block generated.
 
 # ---- ngrok config ----
 NGROK_CONFIG_DIR="$HOME/.config/ngrok"
@@ -6921,7 +6902,7 @@ else
       "Bash(aria2c *)",
       "Bash(parallel *)",
       "Bash(lnav *)",
-      "Bash(glow *)",
+      "Bash(leaf *)",
       "Bash(fastfetch *)",
       "Read",
       "Edit",
@@ -7050,7 +7031,7 @@ else
 - **AI / agentic**: `claude` (Claude Code) for in-terminal pair programming, `aider` for git-aware AI edit loops, `llm` for one-shot prompts and embeddings, `repomix` to pack a repo into a single LLM-friendly file
 - **HTTP**: `xh` for colorized requests, `curlie` for curl with httpie output, `grpcurl` for gRPC
 - **Network**: `trip` (trippy) for traceroute TUI, `sudo mtr` (requires root, lives in sbin), `bandwhich` for bandwidth, `nmap` for scanning, `mkcert` for local TLS certs
-- **Docs**: `d2` for diagrams, `pandoc` for conversion, `glow` for Markdown preview
+- **Docs**: `d2` for diagrams, `pandoc` for conversion, `leaf` for Markdown preview
 - **Database**: `pgcli`/`mycli` for auto-completing SQL, `lazysql` for TUI, `sq` for cross-database queries, `dbmate` for migrations
 - **File management**: `rovr` for the TUI file manager (`nnn` as a minimal fallback), `watchexec` for running commands on file changes, `rclone` for cloud storage sync
 - **Kubernetes**: `k9s` for TUI, `stern` for log tailing (kubectl via OrbStack)
@@ -8044,7 +8025,7 @@ alias k="kubectl"
 alias klog="stern"
 
 # -- File Tools ---------------------------------------------------------------
-alias md="glow"
+alias md="leaf"
 alias serve="miniserve --color-scheme-dark dracula -qr ."
 alias csvp="csvlook"
 
@@ -8215,7 +8196,7 @@ echo "  [~/.docker/daemon.json] BuildKit, log rotation"
 echo "  [~/.aria2/aria2.conf]   16 connections, auto-resume"
 echo "  [~/.config/starship]    Dracula prompt"
 echo "  [~/.config/atuin]       Fuzzy search, local-only"
-echo "  [~/.config/glow]        Dracula Markdown renderer"
+echo "  [leaf]                  Terminal Markdown previewer (live watch, fuzzy picker, Mermaid)"
 echo "  [~/.config/yt-dlp]      Best quality, aria2c downloader"
 echo "  [~/.config/gh-dash]     GitHub dashboard, Dracula theme"
 echo "  [~/.config/stern]       K8s log tailing"
