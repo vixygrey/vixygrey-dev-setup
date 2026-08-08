@@ -276,7 +276,7 @@ Faster, prettier, smarter replacements for standard Unix utilities.
 
 | Tool | Description |
 |------|-------------|
-| **glow** | Render Markdown beautifully in the terminal |
+| **leaf** | Terminal Markdown previewer -- live watch, fuzzy picker, Mermaid/LaTeX, inline mode |
 | **watchexec** | Run commands on file changes -- supports globs, debouncing, process groups |
 | **pv** | Pipe viewer -- add progress bars to any piped command |
 | **parallel** | GNU parallel -- run commands in parallel across multiple cores |
@@ -523,7 +523,7 @@ Applied consistently across all tools:
 | **Starship** | Dracula color palette in `starship.toml` |
 | **lazygit** | Full Dracula color scheme in config |
 | **k9s** | Dracula skin with all view colors |
-| **glow** | Dracula Markdown rendering style |
+| **leaf** | Terminal Markdown previewer (runs on defaults) |
 | **gh-dash** | Dracula border and highlight colors |
 | **SketchyBar** | Dracula status bar (palette in `colors.sh`) |
 | **btop** | Full Dracula theme with custom color palette |
@@ -744,7 +744,6 @@ The script generates config files with sensible defaults:
 | `~/.aria2/aria2.conf` | aria2 | 16 connections, auto-resume, BitTorrent, 64MB cache |
 | `~/.config/atuin/config.toml` | atuin | Fuzzy search, local-only, compact style, enter=paste (not execute), history filter (ls/cd/clear/exit), secrets filter |
 | `~/.config/starship.toml` | Starship | Rich two-line prompt with Dracula palette, OS icon, git status with counts, Node/Python/Rust/Go/Docker/AWS/Terraform versions, battery warning, time, Nerd Font icons |
-| `~/.config/glow/glow.yml` | glow | Dracula style, mouse, pager |
 | `~/.config/yt-dlp/config` | yt-dlp | Best quality mp4, aria2c downloader, metadata, subtitles |
 | `~/.config/gh-dash/config.yml` | gh-dash | PR/issue sections, Dracula theme |
 | `~/.config/stern/config.yaml` | stern | 50 tail lines, 5m lookback, timestamps |
@@ -858,7 +857,7 @@ All aliases are auto-written to `~/.zshrc`:
 | `lzd` | `lazydocker` | Docker UI |
 | `k` | `kubectl` | Kubernetes |
 | `klog` | `stern` | K8s pod logs |
-| `md` | `glow` | Markdown viewer |
+| `md` | `leaf` | Markdown viewer |
 | `serve` | `miniserve ...` | Quick file server |
 | `ghd` | `gh dash` | GitHub dashboard |
 | `gdft` | `git dft` | Syntax-aware git diff |
