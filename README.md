@@ -213,7 +213,7 @@ Faster, prettier, smarter replacements for standard Unix utilities.
 | `rsync` | **rsync** (latest) | Updated rsync with better progress and Apple metadata |
 | `tree` | **tree** | Directory listing in tree format |
 | `make` | **just** | Modern task runner -- simpler syntax, no tab weirdness |
-| file manager | **yazi** | Terminal file manager with image preview, vim keys, bulk ops |
+| file manager | **rovr** | Mouse-first, VS Code-Explorer-style TUI file manager (Textual); `nnn` kept as a fast fallback |
 | `jq` (interactive) | **fx** | Interactive JSON viewer/processor for exploring large JSON |
 | `jq` (interactive) | **jnv** | Interactive JSON navigator with jq filtering |
 | `LS_COLORS` | **vivid** | LS_COLORS generator -- colorize file listings by type (Dracula themed) |
@@ -310,7 +310,7 @@ Faster, prettier, smarter replacements for standard Unix utilities.
 | **usql** | Universal SQL CLI -- connects to Postgres, MySQL, SQLite, and more |
 | **sq** | jq for databases -- query SQLite, Postgres, CSV from one tool |
 | **dbmate** | Lightweight, framework-agnostic database migration tool |
-| **DBeaver** | Free, open-source universal database GUI -- supports nearly every database and driver |
+| **harlequin / lazysql** | Terminal SQL IDE + DB TUI (replaced the DBeaver GUI); plus pgcli, mycli, usql, sq |
 
 ---
 
@@ -329,7 +329,7 @@ Faster, prettier, smarter replacements for standard Unix utilities.
 
 | Tool | Description |
 |------|-------------|
-| **Bruno** | Local-first, git-friendly API client -- collections stored as plain-text files |
+| **ATAC** | Terminal API client (TUI + scriptable CLI) -- Postman import, git-friendly JSON/YAML collections; replaced the Bruno GUI |
 | **grpcurl** | curl for gRPC services |
 
 ---
@@ -355,8 +355,8 @@ Faster, prettier, smarter replacements for standard Unix utilities.
 | **zsh-syntax-highlighting** | Command coloring in the terminal -- red for errors |
 | **atuin** | Replaces shell history with SQLite-backed, fuzzy-searchable database |
 | **mise** | Universal version manager -- Node, Python, Go, Ruby all in one (replaces nvm + pyenv + rbenv) |
-| **Kiro** | Primary code editor and IDE — VS Code fork with built-in Claude agent (specs, steering, hooks, MCP) |
-| **Visual Studio Code** | Secondary editor — installed with the same extension set as Kiro (from the Microsoft Marketplace) |
+| **Helix (`hx`)** | Sole editor — post-modern modal terminal editor with built-in LSP + tree-sitter, auto-format on save, Dracula theme. Also the `EDITOR` for git/gh/lazygit |
+| **Claude Code (`claude`)** | Agentic coding in the terminal; hosts the migrated MCP servers |
 | **Claude Code** | AI-assisted coding in the terminal (Anthropic, agentic) |
 | **GitHub Copilot CLI** | AI suggestions in the terminal (via `gh copilot suggest`) |
 | **aider** | Terminal AI pair programmer -- git-aware edit loops, complementary to Claude Code |
@@ -366,7 +366,7 @@ Faster, prettier, smarter replacements for standard Unix utilities.
 | **mitmproxy** | Free HTTP debugging proxy -- inspect and modify API calls from any app |
 | **Ghostty** | Fast GPU-accelerated terminal -- daily driver, native macOS feel |
 | **zellij** | Modern terminal multiplexer -- discoverable UI, layouts, Rust-based |
-| **Raycast** | Spotlight replacement with extensions, snippets, and workflows |
+| **Ghostty quick terminal + `a`/`ff`/`rgf`/`s`** | Terminal launcher & search (global cmd+space dropdown) replacing Raycast/Spotlight; **clipse** for clipboard history; **AeroSpace** tiling WM + **SketchyBar** status bar |
 | **TypeScript** | Typed JavaScript -- installed globally for scripts and tooling |
 | **tsx** | Run TypeScript files directly without a build step |
 | **Turborepo** | High-performance monorepo build system |
@@ -387,7 +387,7 @@ Faster, prettier, smarter replacements for standard Unix utilities.
 |------|-------------|
 | **d2** | Code-to-diagram scripting language -- declarative diagrams as code |
 | **Mermaid CLI** | Render Mermaid diagrams (flowcharts, sequences, ERDs) from CLI |
-| **draw.io** | Open-source desktop diagram editor -- architecture & system diagrams (offline) |
+| **d2 / Mermaid** | Diagrams as code in the terminal (replaced the draw.io GUI) |
 
 ---
 
@@ -421,7 +421,6 @@ Preview files in Finder by pressing spacebar.
 | App | Description |
 |-----|-------------|
 | **Pearcleaner** | Open-source deep app uninstaller -- finds leftover files and preferences |
-| **UniFi Identity Endpoint** | Wi-Fi, VPN, and device management for UniFi NAS |
 | **LuLu** | Free open-source outbound firewall -- see what phones home |
 | **Mullvad VPN** | Privacy-focused VPN -- no account required, anonymous payment accepted |
 | **mas** | Mac App Store CLI -- script MAS installs and updates |
@@ -434,12 +433,13 @@ Preview files in Finder by pressing spacebar.
 
 | App | Description |
 |-----|-------------|
-| **Notion** | All-in-one workspace -- docs, wikis, databases, project tracking |
-| **Notion Calendar** | Calendar app with Notion integration |
+| **tiki** | Terminal Markdown workspace -- tasks, docs, kanban, wiki (git-backed); replaced the Notion GUI |
+| **khal + vdirsyncer** | Unified terminal calendar -- syncs Google (work) + iCloud (personal) CalDAV; replaced Notion Calendar |
+| **aerc** | Terminal email -- Gmail (work) + iCloud (personal) in one client |
 | **Shottr** | Fast native screenshots -- scrolling capture, OCR, annotations (local-only, no account) |
 | **Claude** | AI assistant |
 | **Skim** | Lightweight PDF reader with annotations -- faster than Preview |
-| **Cyberduck** | Free, open-source SFTP/S3/cloud file transfer |
+| **rclone** | SFTP/S3/cloud file transfer from the terminal (replaced the Cyberduck GUI) |
 
 ---
 
@@ -466,8 +466,7 @@ Preview files in Finder by pressing spacebar.
 
 | App | Description |
 |-----|-------------|
-| **Google Drive** | Cloud storage with Docs, Sheets, and Slides integration |
-| **rclone** | Sync files to any cloud -- Google Drive, S3, Dropbox, etc. |
+| **rclone** | Sync files to any cloud -- Google Drive, S3, Dropbox, etc. (replaced the Google Drive desktop app) |
 | **borg** | Deduplicated encrypted backups -- better than Time Machine for offsite |
 | **borgmatic** | Automated borg backup scheduling and configuration |
 
@@ -516,7 +515,7 @@ Applied consistently across all tools:
 
 | Tool | How |
 |------|-----|
-| **Kiro** | Extension auto-installed, set as default theme |
+| **Helix** | Dracula theme bundled and set in `config.toml` |
 | **bat** | Dracula syntax theme in config |
 | **delta** | Dracula syntax theme for git diffs |
 | **Ghostty** | Full 16-color Dracula palette in config |
@@ -526,13 +525,13 @@ Applied consistently across all tools:
 | **k9s** | Dracula skin with all view colors |
 | **glow** | Dracula Markdown rendering style |
 | **gh-dash** | Dracula border and highlight colors |
-| **yazi** | Dracula file type colors and borders |
+| **SketchyBar** | Dracula status bar (palette in `colors.sh`) |
 | **btop** | Full Dracula theme with custom color palette |
 | **lazydocker** | Dracula borders and options colors |
 | **harlequin** | Dracula theme set in config.toml |
 | **vivid** | Dracula-themed LS_COLORS for file type coloring |
 | **vim** | Dracula-ish color scheme (no plugin needed) |
-| **Kiro brackets** | Dracula-colored bracket pair colorization |
+| **AeroSpace** | Dracula-aware gaps + workspace pills via SketchyBar |
 | **macOS** | System highlight color set to Dracula purple |
 
 ---
@@ -752,7 +751,12 @@ The script generates config files with sensible defaults:
 | `~/.config/ngrok/ngrok.yml` | ngrok | Base config (add authtoken) |
 | `~/.config/caddy/Caddyfile` | Caddy | Development server template |
 | `~/.config/asciinema/config` | asciinema | 2s idle limit, no keystroke recording |
-| `~/.config/yazi/yazi.toml` | yazi | Hidden files, Kiro opener, Dracula theme |
+| `~/.config/helix/config.toml` + `languages.toml` | Helix | Dracula theme, relative line numbers, LSP inlay hints, auto-format on save (ruff for Python, taplo/marksman/TS/CSS/bash/yaml servers, rust-analyzer, gopls) |
+| `~/.config/aerospace/aerospace.toml` | AeroSpace | Option+hjkl focus, workspaces 1-9, gaps, SketchyBar hook |
+| `~/.config/sketchybar/` | SketchyBar | Dracula bar: workspace pills, app, clock, battery, wifi, volume, cpu, mem, bluetooth, VPN |
+| `~/Library/Preferences/kew/kewrc` | kew | Music library `~/Media/music`, spectrum visualizer, cover art |
+| `~/.config/aerc/` | aerc | Gmail + iCloud accounts skeleton, threading, plain-text-first viewer |
+| `~/.config/khal/config` + `~/.config/vdirsyncer/config` | khal/vdirsyncer | Unified Google + iCloud calendar |
 | `~/.config/zellij/config.kdl` | zellij | Dracula theme, compact layout, mouse, Ctrl-a prefix |
 | `~/.config/mpv/mpv.conf` | mpv | Hardware accel, save position, screenshots to ~/Screenshots |
 | `~/.config/git-cliff/cliff.toml` | git-cliff | Conventional commits changelog template |
@@ -769,7 +773,7 @@ The script generates config files with sensible defaults:
 | `~/.config/pip/pip.conf` | pip | Require virtualenv, no telemetry |
 | `~/.config/pgcli/config` | pgcli | Multi-line, auto-expand, destructive warnings, bat pager |
 | `~/.config/harlequin/config.toml` | harlequin | Dracula theme, vscode keymap, file tree on |
-| `~/.config/gh/config.yml` | GitHub CLI | SSH protocol, Kiro editor, delta pager, aliases (co, pv, pc, pl, il, pm, rel) |
+| `~/.config/gh/config.yml` | GitHub CLI | SSH protocol, Helix editor, delta pager, aliases (co, pv, pc, pl, il, pm, rel) |
 | `~/.aws/config` | AWS CLI | Default region, json output, bat pager, auto-prompt, SSO template |
 | `~/.config/git/hooks/` | git | Global pre-commit hooks (debug statements, large files >5MB, conflict markers) |
 | `~/.config/brewfile/Brewfile` | Homebrew | Snapshot of all installed packages with descriptions |
@@ -784,10 +788,8 @@ The script generates config files with sensible defaults:
 | `~/.nanorc` | nano | Line numbers, auto-indent, mouse, syntax highlighting |
 | `~/.myclirc` | mycli | Multi-line, auto-expand, destructive warnings |
 | `~/.gemrc` | Ruby | No docs on gem install |
-| `~/Library/.../Kiro/User/settings.json` | Kiro | Dracula, JetBrains Mono, format on save, file nesting, bracket pair colorization, per-language formatters (ruff for Python, go for Go, rust-analyzer for Rust), agent + MCP toggles |
-| `~/Library/.../Kiro/User/keybindings.json` | Kiro | Custom keyboard shortcuts (incl. ⌘I open agent, ⌘⇧I inline edit, ⌘⇧S create spec) |
-| `~/.kiro/settings/mcp.json` | Kiro MCP | Global MCP servers — enabled: filesystem, github, git, fetch, context7, notion, aws-docs, aws-pricing, aws-iac, aws-knowledge, cloudwatch, iam. Disabled (opt-in): playwright, postgres, aws-ccapi, aws-serverless, aws-lambda-tool, aws-eks, aws-ecs, aws-dynamodb |
-| `~/Library/.../lazygit/config.yml` | lazygit | Dracula theme, delta pager, nerd fonts, auto-fetch, Kiro editor (`kiro --goto`), rounded borders |
+| `~/.claude.json` (mcpServers) | Claude Code MCP | User-scope MCP servers (migrated from Kiro via `claude mcp add`) — filesystem, github, git, fetch, context7, aws-docs, aws-pricing, aws-iac, aws-knowledge, cloudwatch, iam. Opt-in per project: playwright, postgres, several AWS servers. (Notion server dropped.) |
+| `~/Library/.../lazygit/config.yml` | lazygit | Dracula theme, delta pager, nerd fonts, auto-fetch, Helix editor (`hx`), rounded borders |
 | `~/Library/.../k9s/skins/dracula.yaml` | k9s | Full Dracula skin |
 
 ---
@@ -840,7 +842,9 @@ All aliases are auto-written to `~/.zshrc`:
 | `hexdump` | `hexyl` | Hex viewer |
 | `rm` | `trash` | Safe delete (Trash) |
 | `make` | `just` | Task runner |
-| `y` | `yazi` | File manager |
+| `y` | `rovr` | File manager (`n` → nnn fallback) |
+| `a` / `ff` / `rgf` / `s` | launcher / find / grep / mdfind | Terminal launcher & search (replaces Raycast/Spotlight) |
+| `clip` | `clipse` | Clipboard-history TUI |
 | `jx` | `fx` | Interactive JSON viewer |
 | `f` | `fd` | Fast find |
 | `dft` | `difft` | Syntax-aware diff |
@@ -895,109 +899,56 @@ All aliases are auto-written to `~/.zshrc`:
 | **vivid LS_COLORS** | Dracula-themed file type coloring via `vivid generate dracula` |
 | **fzf config** | Dracula colors, fd for file finding, bat for preview, eza tree for directory preview, keybindings (ctrl-/ toggle preview, ctrl-y copy) |
 | **Plugin guards** | Zsh plugin sources have defensive `[[ -f ]]` guards |
-| **Terminal welcome** | fastfetch + date + random dev tip on new terminal sessions (not in Kiro/VS Code integrated terminal) |
+| **Terminal welcome** | fastfetch + date + random dev tip on new terminal sessions |
 
 ---
 
-## Kiro Extensions
+## Helix Language Servers
 
-Extensions are resolved from **OpenVSX** (the open-source registry — Kiro is a VS Code fork that does not use the Microsoft Marketplace). Closed-source extensions like `github.copilot` and `ms-vscode.*` are unavailable; Kiro's built-in Claude agent replaces Copilot anyway.
+Helix has **built-in LSP** — no editor extensions. The script installs the language
+servers Helix auto-detects on `PATH`, so `hx` has completion, diagnostics, go-to-def,
+and format-on-save out of the box:
 
-Auto-installed by the script:
+| Language | Server | Install |
+|----------|--------|---------|
+| Python | ruff (`ruff server`) | already installed |
+| TypeScript / JS | typescript-language-server | npm |
+| HTML / CSS / JSON / ESLint | vscode-langservers-extracted | npm |
+| YAML | yaml-language-server | npm |
+| Bash | bash-language-server | npm |
+| TOML | taplo | brew |
+| Markdown | marksman | brew |
+| Rust | rust-analyzer | rustup component |
+| Go | gopls | go install |
 
-| Extension | Purpose |
-|-----------|---------|
-| **Dracula Official** | Color theme |
-| **Prettier** | Code formatter (default for JS/TS/CSS/JSON/MD) |
-| **ESLint** | JavaScript/TypeScript linter |
-| **Ruff** | Python linter/formatter (set as default formatter for `.py`) |
-| **Tailwind CSS IntelliSense** | Tailwind class autocomplete |
-| **Python** | Python language support |
-| **Go** | Go language support (also used as formatter for Go files) |
-| **rust-analyzer** | Rust language support (also used as formatter for Rust files) |
-| **Astro** | Astro component support |
-| **Svelte** | Svelte component support |
-| **Auto Rename Tag** | Rename paired HTML/JSX tags |
-| **Path Intellisense** | Autocomplete file paths |
-| **Error Lens** | Inline error/warning highlights |
-| **Better Comments** | Colorized comment annotations (TODO, FIXME, etc.) |
-| **Code Spell Checker** | Spell checking for code and comments |
-| **npm Intellisense** | Autocomplete npm module imports |
-| **Color Highlight** | Highlight color codes in the editor |
-| **Rainbow CSV** | Colorize CSV columns for readability |
-| **EditorConfig** | Honour `.editorconfig` per-project rules |
-| **GitLens** | Git blame, history, and annotations |
-| **Git Graph** | Visual git history graph |
-| **Todo Tree** | Find and highlight TODO/FIXME comments across the project |
-| **Import Cost** | Show size of imported JS/TS packages inline |
-| **Docker** | Dockerfile and docker-compose support |
-| **DotENV** | .env file syntax highlighting |
-| **Markdown All in One** | Markdown shortcuts, preview, table of contents |
-| **markdownlint** | Lint Markdown for style/consistency |
-| **YAML** | YAML language support with validation |
-| **Even Better TOML** | TOML language support |
-| **Terraform (HashiCorp)** | Terraform / OpenTofu language support |
-| **AWS Toolkit** | Local Lambda debugging via SAM, CloudFormation/SAM YAML schemas, ECS exec terminal, AWS resource explorer (S3/Lambda/CloudWatch), credential/SSO management ([OpenVSX](https://open-vsx.org/extension/amazonwebservices/aws-toolkit-vscode)) |
-| **cfn-lint** | CloudFormation/SAM template linter — pairs with the `cfn-lint` CLI |
+Run `hx --health` to see what Helix detects. Config lives in `~/.config/helix/config.toml`
+(Dracula theme, relative line numbers, inlay hints, auto-format, `Ctrl-s` to save) and
+`languages.toml` (per-language formatters).
 
-### Kiro Settings Highlights
+### AI agent — Claude Code
 
-- File nesting enabled (test files, lockfiles, config files grouped under parent)
-- Bracket pair colorization with Dracula colors
-- Per-language formatters: Ruff for Python, Go extension for Go, rust-analyzer for Rust
-- Sticky scroll (3 lines max)
-- Inlay hints on unless pressed
-- Terminal uses JetBrains Mono NF
-- VS Code-style telemetry disabled (`telemetry.telemetryLevel: off`); Kiro agent settings (steering, specs, hooks, MCP) are configured through Kiro's own UI / `Cmd+,`, not via `settings.json`
+Agentic coding is handled by **Claude Code** (`claude`) in the terminal, which reuses
+the MCP servers below. (Kiro's agent/specs/steering/hooks are gone with Kiro; Claude
+Code plus your `~/.claude/CLAUDE.md` rules cover the same ground.)
 
-### Kiro AI Agent (built-in Claude)
+### Claude Code MCP Servers
 
-Kiro ships with a Claude-powered agent and four primitives — no extension required:
-
-| Primitive | What it is | Where it lives |
-|-----------|------------|----------------|
-| **Steering** | Project-wide rules and conventions the agent always reads | `.kiro/steering/*.md` |
-| **Specs** | Structured plan + design docs for a feature, generated from a one-line ask | `.kiro/specs/<feature>/` |
-| **Hooks** | Triggers that run an agent action on file events (save, create, etc.) | `.kiro/hooks/*.json` |
-| **MCP servers** | External tools (filesystem, GitHub, docs, browsers, DBs) the agent can call | `~/.kiro/settings/mcp.json` (global), `.kiro/settings/mcp.json` (workspace) |
-
-Workspace-scoped `.kiro/steering`, `.kiro/specs`, `.kiro/hooks`, and `.kiro/settings/mcp.json` should be **committed** so teammates and CI agents share the same context. Local-only state (`.kiro/.cache`, `.kiro/.tmp`, `.kiro/local`) is gitignored by the script.
-
-### Kiro MCP Servers
-
-The script writes a sensible default `~/.kiro/settings/mcp.json` with these enabled:
+The script registers user-scope MCP servers with `claude mcp add --scope user` (stored
+in `~/.claude.json` — never hand-edited). Enabled everywhere:
 
 | Server | Purpose | Notes |
 |--------|---------|-------|
 | **filesystem** | Read/list/search files in `~/Code` | `@modelcontextprotocol/server-filesystem` (npx) |
 | **github** | Search repos, read files, list issues/PRs | needs `GITHUB_TOKEN` env var |
-| **git** | `git status/diff/log/show` for the current repo | `mcp-server-git` (uvx) |
-| **fetch** | HTTP fetch with HTML→Markdown conversion | `mcp-server-fetch` (uvx) |
-| **context7** | Fetch up-to-date library docs by package name | `@upstash/context7-mcp` (npx) |
-| **aws-docs** | Search and read AWS documentation | `awslabs.aws-documentation-mcp-server` (uvx) |
-| **aws-pricing** | Pre-deployment cost estimation ("what would this CDK stack cost?") | `awslabs.aws-pricing-mcp-server` (uvx) — no AWS credentials needed |
-| **aws-iac** | CDK + Terraform + CloudFormation patterns, security guidance, cdk-nag | `awslabs.aws-iac-mcp-server` (uvx) — replaces deprecated cdk-mcp-server |
-| **aws-knowledge** | Broader AWS knowledge base — services overview, best practices, FAQs | `awslabs.aws-knowledge-mcp-server` (uvx) |
-| **cloudwatch** | Query CloudWatch Logs + metrics, inspect alarm state | `awslabs.cloudwatch-mcp-server` (uvx); needs AWS creds; only read-only ops auto-approved |
-| **iam** | Read IAM users, roles, groups, policies; simulate principal policies | `awslabs.iam-mcp-server` (uvx); needs AWS creds; **only `list_*` / `get_*` / `simulate_*` auto-approved — every mutation prompts** |
-| **notion** | Search Notion pages/databases, read blocks, retrieve users | `@notionhq/notion-mcp-server` (npx); needs `NOTION_TOKEN` from an internal integration |
+| **git** | `git status/diff/log/show` | `mcp-server-git` (uvx) |
+| **fetch** | HTTP fetch with HTML->Markdown | `mcp-server-fetch` (uvx) |
+| **context7** | Up-to-date library docs by package name | `@upstash/context7-mcp` (npx) |
+| **aws-docs / aws-pricing / aws-iac / aws-knowledge** | AWS docs, cost estimation, IaC patterns, knowledge base | `awslabs.*` (uvx) |
+| **cloudwatch / iam** | CloudWatch logs + metrics; read IAM | `awslabs.*` (uvx); need AWS creds |
 
-And these are written **disabled** — flip `"disabled": false` to opt in per-workspace:
-
-| Server | Why disabled by default |
-|--------|-------------------------|
-| **playwright** | Spawns a real browser; only enable when doing E2E work |
-| **postgres** | Needs a running database and connection string |
-| **aws-ccapi** | AWS Cloud Control API — full CRUD on any supported resource. Extreme blast radius; enable per-workspace when actively doing infra work |
-| **aws-serverless** | Full SAM application lifecycle (build, deploy, invoke). Mutates Lambda/API GW/etc. |
-| **aws-lambda-tool** | Calls your *already-deployed* Lambdas as MCP tools. Different shape — for using Lambdas as agent tools, not deploying them |
-| **aws-eks** | EKS cluster + Kubernetes resource management |
-| **aws-ecs** | ECS task / service deployment |
-| **aws-dynamodb** | DynamoDB table operations and data access |
-
-Edit `~/.kiro/settings/mcp.json` to add more (Linear, Slack, Sentry, Stripe, etc.) or override per-project at `<repo>/.kiro/settings/mcp.json` — workspace config wins.
-
-**Notion setup:** create an internal integration at <https://www.notion.so/profile/integrations>, copy the `secret_...` token, export it (`echo 'export NOTION_TOKEN=secret_...' >> ~/.zshrc.local`), then share the specific Notion pages/databases you want the agent to reach via the page's `…` menu → "Connect to" → your integration. Without page access the integration sees nothing; this is the intended Notion permission model.
+Opt-in per project with `claude mcp add --scope project <name> ...`: playwright,
+postgres, aws-ccapi, aws-serverless, aws-lambda-tool, aws-eks, aws-ecs, aws-dynamodb.
+(The Notion MCP server was dropped along with Notion.)
 
 **AWS setup:** the AWS servers use the standard AWS credential chain — anything that works for `aws sts get-caller-identity` works here. Three common setups:
 
@@ -1013,7 +964,7 @@ export AWS_REGION=us-east-1
 export AWS_PROFILE=my-dev-account
 ```
 
-Kiro reads `${AWS_REGION}` and `${AWS_PROFILE}` from the shell that launched it at startup. If you change profile mid-session, restart Kiro (or use `Kiro: Reload Window`). The pre-approved `autoApprove` list for `iam` covers only read/simulate operations — every IAM mutation (`create_role`, `attach_role_policy`, etc.) will still prompt for confirmation.
+Claude Code reads `${AWS_REGION}` and `${AWS_PROFILE}` from your shell environment. The AWS MCP servers are read-leaning, and Claude Code prompts before any tool call that mutates state (e.g. IAM `create_role`, `attach_role_policy`).
 
 ---
 
@@ -1028,18 +979,17 @@ Kiro reads `${AWS_REGION}` and `${AWS_PROFILE}` from the shell that launched it 
 
 ---
 
-## Raycast Extensions (manual install via Raycast Store)
+## Terminal Launcher & Window Management (replaces Raycast/Spotlight)
 
-| Extension | Purpose |
-|-----------|---------|
-| **Clipboard History** | Built-in clipboard manager with search |
-| **GitHub** | Search repos, PRs, and issues from Raycast |
-| **AWS** | Quick access to AWS console services |
-| **Docker** | Manage containers from Raycast |
-| **Notion** | Search Notion pages and databases |
-| **Brew** | Search and install Homebrew packages |
-| **Kill Process** | Fast process killer |
-| **Color Picker** | System-wide color picker |
+| Key / command | Action |
+|---------------|--------|
+| `cmd + space` | Ghostty quick terminal (global dropdown) — after disabling Spotlight's shortcut |
+| `a` | Fuzzy-launch an app · `ff` find a file · `rgf <q>` search contents · `s <q>` mdfind |
+| `clip` | Clipboard history (clipse) |
+| `Option + hjkl` | AeroSpace: focus windows · `Option + 1..9` switch workspace |
+| `taproom` · `k9s` · `lazydocker` | Homebrew · Kubernetes · Docker TUIs |
+
+See `~/Desktop/KEYBOARD_SHORTCUTS.md` (generated on setup) for the full list.
 
 ---
 

@@ -1854,7 +1854,8 @@ banner "Mac Apps — System & Utilities"
 
 # UniFi Identity Endpoint removed (dropped from setup).
 brew_cask_install "lulu" "LuLu (outbound firewall)"
-brew_cask_install "mullvadvpn" "Mullvad VPN (privacy-focused, no account email required)"
+# Bundles the `mullvad` CLI at /usr/local/bin/mullvad (no separate install needed).
+brew_cask_install "mullvad-vpn" "Mullvad VPN (privacy-focused; bundles the mullvad CLI)"
 
 # Utilities
 brew_cask_install "pearcleaner" "Pearcleaner (open-source deep app uninstaller)"
@@ -6603,6 +6604,17 @@ defaults write com.apple.driver.AppleBluetoothMultitouch.trackpad TrackpadThreeF
 defaults write com.apple.AppleMultitouchTrackpad Dragging -bool false 2>/dev/null || true
 success "Three-finger drag disabled"
 
+# ---- Trackpad/mouse: disable natural scrolling and force click ----
+defaults write NSGlobalDomain com.apple.swipescrolldirection -bool false 2>/dev/null || true
+defaults write NSGlobalDomain com.apple.trackpad.forceClick -bool false 2>/dev/null || true
+defaults write com.apple.AppleMultitouchTrackpad ForceSuppressed -bool true 2>/dev/null || true
+success "Natural scrolling and force click disabled"
+
+# ---- Spaces: one space spans all displays (AeroSpace needs this) ----
+# Equivalent to "Displays have separate Spaces = OFF". Takes effect after logout.
+defaults write com.apple.spaces spans-displays -bool true 2>/dev/null || true
+success "Displays set to share one Space (for AeroSpace) — takes effect after logout"
+
 # ---- Screen dim when idle: 30 minutes ----
 sudo pmset -a halfdim 1 2>/dev/null || true
 sudo pmset -c dim 30 2>/dev/null || true
@@ -8178,15 +8190,181 @@ echo "  - oha: load test with 'oha -n 1000 -c 50 http://localhost:3000'"
 echo "  - watchexec: watch files with 'watchexec --exts ts,tsx -- npm test'"
 echo "  - pv: add progress bars with 'pv largefile.tar.gz | tar xz'"
 echo ""
+# =============================================================================
+# GENERATE DESKTOP DOCS (checklist, shortcuts, toolkit summary)
+# Regenerated fresh each run so they always match the current toolset.
+# =============================================================================
+if [[ "$DRY_RUN" != "true" ]]; then
+    DESKTOP="$HOME/Desktop"
+    mkdir -p "$DESKTOP"
+    info "Writing setup docs to ~/Desktop..."
+
+    # ---- 1. POST_SETUP_CHECKLIST.md ----
+    cat > "$DESKTOP/POST_SETUP_CHECKLIST.md" <<'CHECKLIST_EOF'
+# Post-Setup Checklist
+
+Everything the setup script could **not** do for you — credentials, external
+accounts, and macOS permissions that are (deliberately) unscriptable. Work down
+the list, then delete this file.
+
+## macOS permissions & settings
+- [ ] **Accessibility** — grant to **Ghostty** and **AeroSpace**: System Settings -> Privacy & Security -> Accessibility. (Required for the global launcher hotkey and window management.)
+- [ ] **Disable Spotlight's cmd+space** so the Ghostty quick terminal can use it: System Settings -> Keyboard -> Keyboard Shortcuts -> Spotlight -> uncheck "Show Spotlight search". (Or change the Ghostty bind to `global:cmd+backquote` in `~/.config/ghostty/config`.)
+- [ ] **Auto-hide the menu bar** (so SketchyBar is the bar): System Settings -> Control Center -> "Automatically hide and show the menu bar" -> Always.
+- [ ] **Displays have separate Spaces = OFF** — already set by the script (`spans-displays`), but it needs a **logout/login** to take effect.
+- [ ] Log out and back in once so AeroSpace + the Spaces setting apply cleanly.
+
+## Email — aerc (`~/.config/aerc/accounts.conf`)
+- [ ] **iCloud (personal):** create an **app-specific password** at appleid.apple.com -> Sign-In & Security -> App-Specific Passwords. Put your address in the `Personal (iCloud)` source/outgoing/from lines.
+- [ ] **Gmail (work):** create a Google Cloud OAuth **Desktop app** (console.cloud.google.com -> APIs & Services -> Credentials), enable the Gmail API, then obtain a refresh token. Fill `oauth2_client_id` / `oauth2_client_secret` in the `Work (Gmail)` account.
+- [ ] Launch `aerc` and confirm both accounts connect.
+
+## Calendar — khal + vdirsyncer (`~/.config/vdirsyncer/config`)
+- [ ] **iCloud:** set `username` + the app-specific password in `storage icloud_remote`.
+- [ ] **Google:** set `client_id` / `client_secret` in `storage google_remote` (reuse or make another Google OAuth client).
+- [ ] Run `vdirsyncer discover` then `vdirsyncer sync`. Launch `khal` (or `ikhal`) to see the unified calendar.
+- [ ] Optional: add `vdirsyncer sync` to a cron/launchd job for periodic refresh.
+
+## Accounts, keys & first-run
+- [ ] **Apple Passwords CLI (`apw`):** run `brew services start apw`, then `apw auth`, and install the **iCloud Passwords browser extension**.
+- [ ] **Mullvad:** `mullvad account login <ACCOUNT_NUMBER>` (CLI is bundled with the app at `/usr/local/bin/mullvad`).
+- [ ] **starlit** (weather): `starlit --setup` and paste a free OpenWeatherMap API key.
+- [ ] **MCP servers:** export tokens your Claude Code MCP servers need, e.g. `export GITHUB_TOKEN=...` (and `AWS_REGION` / `AWS_PROFILE` for the AWS servers). Requires `claude auth login` at least once.
+- [ ] **chezmoi:** `chezmoi init <your-dotfiles-repo>` to bring these configs under version control across the MacBook + Mac mini.
+- [ ] **tiki** (notes): run `tiki` once and point it at (or init) your notes git repo.
+- [ ] **kew** (music): drop music into `~/Media/music` (the configured library path).
+
+## Standard machine setup
+- [ ] Generate an SSH key if needed: `ssh-keygen -t ed25519 -C "you@example.com"` and `gh ssh-key add ~/.ssh/id_ed25519.pub`.
+- [ ] Enable **FileVault** and the **macOS Firewall** (System Settings -> Privacy & Security / Network).
+- [ ] Open **OrbStack** once to finish Docker setup.
+- [ ] `ngrok config add-authtoken <TOKEN>`.
+CHECKLIST_EOF
+
+    # ---- 2. KEYBOARD_SHORTCUTS.md ----
+    cat > "$DESKTOP/KEYBOARD_SHORTCUTS.md" <<'SHORTCUTS_EOF'
+# Keyboard Shortcuts
+
+## AeroSpace (tiling window manager) — Option (alt) based
+| Keys | Action |
+|------|--------|
+| `Option + h/j/k/l` | Focus window left/down/up/right |
+| `Option + Shift + h/j/k/l` | Move window |
+| `Option + 1..9` | Switch to workspace 1-9 |
+| `Option + Shift + 1..9` | Move focused window to workspace |
+| `Option + Tab` | Back-and-forth between workspaces |
+| `Option + /` | Tiles layout (horizontal/vertical) |
+| `Option + ,` | Accordion layout |
+| `Option + f` | Fullscreen |
+| `Option + - / =` | Resize smaller / larger |
+| `Option + Shift + c` | Reload AeroSpace config |
+| `Option + Shift + ;` | Enter service mode (then `esc`/`r`/`f`/`backspace`) |
+
+## Launcher & search (Ghostty quick terminal)
+| Keys / command | Action |
+|------|--------|
+| `cmd + space` | Toggle the Ghostty quick terminal (global dropdown) |
+| `a` | Fuzzy-launch an installed app |
+| `ff` | Find a file by name and open it |
+| `rgf <pattern>` | Live content search (ripgrep + fzf) |
+| `s <query>` | Spotlight-index search (mdfind) |
+| `clip` | Clipboard history (clipse) |
+
+## Helix (`hx`) — modal editor
+| Keys | Action |
+|------|--------|
+| `Space` | Open the command menu (leader) |
+| `Space + f` | File picker · `Space + b` buffer picker |
+| `Space + /` | Global search (ripgrep) |
+| `Space + k` | Hover docs · `g d` go to definition · `g r` references |
+| `Ctrl + s` | Save (added binding) |
+| `:w` `:q` | Write / quit |
+
+## Terminal multiplexer & tools
+| Keys | Action |
+|------|--------|
+| `Ctrl + r` | atuin history search (fuzzy, across machines) |
+| `Ctrl + t` | fzf file finder · `Alt + c` fzf cd |
+| zellij `Ctrl + p` then `n` | New pane (see zellij status bar for modes) |
+| lazygit / lazydocker / lazysql / lazynpm / lazyssh / lazyrsync | Full-screen TUIs (arrows + on-screen keys) |
+| `y` rovr · `n` nnn | File managers |
+| `kew <search>` | Play matching tracks; in-app `Space` play/pause, `v` visualizer |
+| `atac` | API client TUI (or `atac request send <coll>/<req>` headless) |
+
+## SketchyBar (click actions)
+| Item | Click |
+|------|-------|
+| Clock | Opens khal in a Ghostty quick terminal |
+| VPN pill | Toggles `mullvad connect` / `disconnect` |
+| Bluetooth | Toggles Bluetooth power |
+| Workspace pill | Switches to that AeroSpace workspace |
+SHORTCUTS_EOF
+
+    # ---- 3. TOOLKIT_SUMMARY.md ----
+    cat > "$DESKTOP/TOOLKIT_SUMMARY.md" <<'SUMMARY_EOF'
+# Toolkit Summary
+
+A terminal-first macOS setup: GUI apps replaced with TUI/CLI equivalents wherever
+it doesn't cost real capability. Below: what each tool is for, then how it fits
+together.
+
+## Editor & AI
+- **Helix (`hx`)** — modal terminal editor, built-in LSP + tree-sitter, auto-format on save. The sole editor (`EDITOR`).
+- **Claude Code (`claude`)** — agentic coding in the terminal; hosts the MCP servers.
+
+## Window management, bar & launcher
+- **AeroSpace** — keyboard-driven tiling WM (no SIP disable). Option+hjkl, workspaces 1-9.
+- **SketchyBar** — Dracula status bar: workspace pills, app, clock, battery, wifi, volume, cpu, mem, bluetooth, VPN.
+- **Ghostty quick terminal** — global cmd+space dropdown that hosts the launcher.
+- **Launcher functions** — `a` (apps), `ff` (files), `rgf` (contents), `s` (Spotlight index), `clip` (clipboard via clipse).
+
+## Files, data & shell
+- **rovr** (file manager, nnn fallback), **eza/bat/fd/ripgrep/zoxide/dust/duf/sd** (modern coreutils), **fzf** (fuzzy), **atuin** (history), **starship** (prompt), **zellij** (multiplexer), **yazi**->rovr.
+- **wiper** — interactive disk cleanup (Trash-safe). **taproom** — Homebrew TUI. **has** — tool/version checker.
+
+## Dev workflow
+- **lazygit / lazydocker / lazysql / lazynpm / lazyssh / lazyrsync** — full-screen TUIs for git, containers, SQL, npm, SSH, rsync.
+- **ATAC** — terminal API client (TUI + scriptable CLI) replacing Bruno; **hurl/xh/curlie/grpcurl** for one-shot + tests.
+- **harlequin / pgcli / mycli / usql / sq** — database CLIs/TUIs (replaced DBeaver).
+- **d2 / mermaid** — diagrams as code (replaced draw.io). **qalc** — calculator. **vhs** — scripted terminal recordings. **doxx** — .docx viewer.
+
+## Communication & knowledge
+- **aerc** — terminal email (Gmail work + iCloud personal, one client).
+- **khal + vdirsyncer** — unified terminal calendar (Google + iCloud).
+- **tiki** — Markdown workspace (tasks/docs/kanban/wiki) replacing Notion.
+- **newsboat** — RSS. **kew** — music. **starlit** — weather.
+
+## Infra, cloud & security
+- **rclone** — cloud sync (replaced Cyberduck + Google Drive). **borg** — backups.
+- **kubectl/k9s/stern/dive**, **awscli/granted**, **opentofu/terraform-docs/checkov/trivy**, **gitleaks/detect-secrets/sops/age**.
+- **apw** — Apple Passwords from the CLI. **mullvad** CLI. **LuLu** firewall (GUI).
+
+## How it fits together
+The whole thing is one keyboard-driven loop. **cmd+space** drops the Ghostty quick
+terminal from anywhere; `a`/`ff`/`rgf`/`s` make it a launcher and search bar, so
+Spotlight/Raycast aren't needed. **AeroSpace** tiles windows and **SketchyBar** shows
+state (workspaces, VPN, battery) — the bar's clock even opens **khal**, and its VPN
+pill drives the **mullvad** CLI. Editing is **Helix**; the agent is **Claude Code**,
+which reuses the same **MCP servers** the setup migrated over. Config lives in
+dotfiles managed by **chezmoi** (with **cheznav** as its TUI), so the MacBook and the
+Mac mini stay identical. Because almost everything is a CLI/TUI, the same tools work
+locally, over SSH, and — where it matters — can be driven by Claude Code
+(`atac`, `hurl`, `xh` are on its allowlist). GUI survivors are only the irreducible
+ones: Ghostty, Chrome, the container runtime (OrbStack), security tools that need a
+GUI (LuLu, Mullvad), and inherently-visual apps (Shottr, Skim), plus the Claude app.
+SUMMARY_EOF
+
+    success "Desktop docs written: POST_SETUP_CHECKLIST.md, KEYBOARD_SHORTCUTS.md, TOOLKIT_SUMMARY.md"
+fi
+
 info "Next steps:"
 echo "  1. Restart your terminal or run: source ~/.zshrc"
-echo "  2. Generate SSH key: ssh-keygen -t ed25519 -C \"your_email@example.com\""
-echo "  3. Add SSH key to GitHub: gh ssh-key add ~/.ssh/id_ed25519.pub"
-echo "  4. Set up ngrok: ngrok config add-authtoken <TOKEN>"
-echo "  5. Set up chezmoi: chezmoi init && chezmoi add ~/.zshrc"
-echo "  6. Enable FileVault: System Settings > Privacy & Security > FileVault"
-echo "  7. Enable macOS Firewall: System Settings > Network > Firewall"
-echo "  8. Open OrbStack and complete Docker setup"
+echo "  2. >>> Work through ~/Desktop/POST_SETUP_CHECKLIST.md <<< (email/calendar creds,"
+echo "        macOS permissions, apw/mullvad/starlit setup — the manual bits)."
+echo "        Also on the Desktop: KEYBOARD_SHORTCUTS.md and TOOLKIT_SUMMARY.md."
+echo "  3. Log out/in once so AeroSpace + the Spaces setting take effect."
+echo "  4. Enable FileVault + macOS Firewall (System Settings > Privacy & Security / Network)."
+echo "  5. Open OrbStack and complete Docker setup."
 
 # =============================================================================
 # FIRST-RUN SETUP (interactive — only runs if not already configured)
