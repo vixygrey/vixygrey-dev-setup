@@ -15,11 +15,11 @@ fi
 # =============================================================================
 # Development Environment Setup Script (macOS)
 # =============================================================================
-# Version:  3.1.0
-# Updated:  2026-04-05
-# Platform: macOS (Apple Silicon + Intel)
-# Run:      chmod +x setup-dev-tools.sh && ./setup-dev-tools.sh
-# Flags:    --dry-run, --list, --skip <cats>, --only <cats>, --interactive, --cleanup, --help
+# Version:  see SCRIPT_VERSION below (source of truth)
+# Platform: macOS (Apple Silicon + Intel), requires bash 4+
+# Run:      chmod +x setup-dev-tools-mac.sh && ./setup-dev-tools-mac.sh
+# Flags:    --dry-run, --list, --list-categories, --only <cats>, --skip <cats>,
+#           --interactive/-i, --resume, --cleanup, --uninstall, --version, --help
 # =============================================================================
 
 SCRIPT_VERSION="6.0.0"
@@ -109,9 +109,11 @@ FAILED_ITEMS=()
 # when tools are added or removed. Counts brew_install, brew_cask_install, npm_global_install,
 # including those inside conditionals.
 # Count all install calls + standalone progress calls for accurate progress bar
-_INSTALL_CALLS=$(grep -cE '^\s*(brew_install|brew_cask_install|npm_global_install) ' "$0" 2>/dev/null || echo 0)
-_PROGRESS_CALLS=$(grep -cE '^\s*progress\s*$' "$0" 2>/dev/null || echo 0)
-INSTALL_TOTAL=$((_INSTALL_CALLS + _PROGRESS_CALLS))
+# Note: `grep -c` prints "0" AND exits 1 on zero matches, so `|| echo 0` would append
+# a SECOND "0" ("0\n0") and break the arithmetic. Use `|| true` + a default instead.
+_INSTALL_CALLS=$(grep -cE '^\s*(brew_install|brew_cask_install|npm_global_install) ' "$0" 2>/dev/null || true)
+_PROGRESS_CALLS=$(grep -cE '^\s*progress\s*$' "$0" 2>/dev/null || true)
+INSTALL_TOTAL=$(( ${_INSTALL_CALLS:-0} + ${_PROGRESS_CALLS:-0} ))
 [[ "$INSTALL_TOTAL" -eq 0 ]] && INSTALL_TOTAL=200
 
 progress() {
@@ -351,7 +353,7 @@ show_help() {
     echo ""
     echo -e "${BOLD}macOS Development Environment Setup v${SCRIPT_VERSION}${NC}"
     echo ""
-    echo "Usage: ./setup-dev-tools.sh [OPTIONS]"
+    echo "Usage: ./setup-dev-tools-mac.sh [OPTIONS]"
     echo ""
     echo "Options:"
     echo "  --help              Show this help message"
@@ -367,15 +369,15 @@ show_help() {
     echo "  --version           Show script version"
     echo ""
     echo "Examples:"
-    echo "  ./setup-dev-tools.sh                          # Install everything"
-    echo "  ./setup-dev-tools.sh -i                       # Interactive category picker"
-    echo "  ./setup-dev-tools.sh --dry-run                # Preview only"
-    echo "  ./setup-dev-tools.sh --list                   # List all tools"
-    echo "  ./setup-dev-tools.sh --resume                 # Continue after a failure"
-    echo "  ./setup-dev-tools.sh --uninstall              # Show removal commands"
-    echo "  ./setup-dev-tools.sh --cleanup                # Remove dropped tools from previous versions"
-    echo "  ./setup-dev-tools.sh --skip mac-media,mac-cloud"
-    echo "  ./setup-dev-tools.sh --only core,git,aws,dx"
+    echo "  ./setup-dev-tools-mac.sh                          # Install everything"
+    echo "  ./setup-dev-tools-mac.sh -i                       # Interactive category picker"
+    echo "  ./setup-dev-tools-mac.sh --dry-run                # Preview only"
+    echo "  ./setup-dev-tools-mac.sh --list                   # List all tools"
+    echo "  ./setup-dev-tools-mac.sh --resume                 # Continue after a failure"
+    echo "  ./setup-dev-tools-mac.sh --uninstall              # Show removal commands"
+    echo "  ./setup-dev-tools-mac.sh --cleanup                # Remove dropped tools from previous versions"
+    echo "  ./setup-dev-tools-mac.sh --skip mac-media,mac-cloud"
+    echo "  ./setup-dev-tools-mac.sh --only core,git,aws,dx"
     echo ""
 }
 
@@ -425,7 +427,7 @@ while [[ $# -gt 0 ]]; do
             exit 0
             ;;
         --version|-v)
-            echo "setup-dev-tools.sh v${SCRIPT_VERSION}"
+            echo "setup-dev-tools-mac.sh v${SCRIPT_VERSION}"
             exit 0
             ;;
         --dry-run)
@@ -4640,18 +4642,18 @@ if [ -x ".git/hooks/pre-commit" ]; then
     exec .git/hooks/pre-commit "$@"
 fi
 
-# Check for debug statements
-if git diff --cached --name-only | xargs grep -l 'console\.log\|debugger\|binding\.pry\|import pdb' 2>/dev/null; then
+# Check for debug statements (-z/-0/-r: handle spaces in names + empty staged set)
+if git diff --cached --name-only -z | xargs -0 -r grep -l 'console\.log\|debugger\|binding\.pry\|import pdb' 2>/dev/null; then
     echo ""
     echo "WARNING: Debug statements found in staged files:"
-    git diff --cached --name-only | xargs grep -n 'console\.log\|debugger\|binding\.pry\|import pdb' 2>/dev/null
+    git diff --cached --name-only -z | xargs -0 -r grep -n 'console\.log\|debugger\|binding\.pry\|import pdb' 2>/dev/null
     echo ""
     echo "Remove them or commit with --no-verify to bypass."
     exit 1
 fi
 
 # Check for large files (> 5MB)
-large_files=$(git diff --cached --name-only --diff-filter=d | while read f; do
+large_files=$(git diff --cached --name-only --diff-filter=d -z | while IFS= read -r -d '' f; do
     size=$(wc -c < "$f" 2>/dev/null | tr -d ' ')
     if [[ "$size" -gt 5242880 ]]; then
         echo "  $f ($(( size / 1048576 ))MB)"
@@ -4667,7 +4669,7 @@ if [[ -n "$large_files" ]]; then
 fi
 
 # Check for merge conflict markers
-if git diff --cached --name-only | xargs grep -l '<<<<<<<\|=======\|>>>>>>>' 2>/dev/null; then
+if git diff --cached --name-only -z | xargs -0 -r grep -l '<<<<<<<\|=======\|>>>>>>>' 2>/dev/null; then
     echo ""
     echo "ERROR: Merge conflict markers found in staged files."
     exit 1
@@ -5646,7 +5648,7 @@ echo "Found $count files to delete:"
 find "$DIR" -maxdepth 1 -type f -mtime +"$DAYS" -exec basename {} \;
 echo ""
 
-read -p "Delete these $count files? [y/N] " confirm
+read -r -p "Delete these $count files? [y/N] " confirm
 if [[ "$confirm" =~ ^[Yy]$ ]]; then
     find "$DIR" -maxdepth 1 -type f -mtime +"$DAYS" -exec trash {} \;
     echo "Moved $count files to Trash."
@@ -5928,7 +5930,7 @@ echo "Changes detected:"
 git status --short
 
 echo ""
-read -p "Commit and push? [y/N] " confirm
+read -r -p "Commit and push? [y/N] " confirm
 if [[ "$confirm" =~ ^[Yy]$ ]]; then
     git add -A
     git commit -m "Update dotfiles — $(date +%Y-%m-%d)"
@@ -7686,7 +7688,7 @@ ZSHRC_MANAGED_END="# <<< dev-setup managed block <<<"
 # Define the managed block content
 MANAGED_BLOCK=$(cat <<'MANAGED_ZSHRC'
 # >>> dev-setup managed block >>>
-# This block is managed by setup-dev-tools.sh — edits may be overwritten on re-run.
+# This block is managed by setup-dev-tools-mac.sh — edits may be overwritten on re-run.
 # Add personal customizations OUTSIDE this block (above or below).
 
 # -- PATH additions -----------------------------------------------------------
@@ -7970,7 +7972,7 @@ else
     info "Creating ~/.zshrc..."
     cat > "$ZSHRC" <<'ZSHRC_HEADER'
 # =============================================================================
-# ~/.zshrc — generated by setup-dev-tools.sh
+# ~/.zshrc — generated by setup-dev-tools-mac.sh
 # =============================================================================
 # Add personal customizations OUTSIDE the managed block below.
 
