@@ -562,6 +562,37 @@ write_managed() {
     rm -f "$tmp"
 }
 
+# write_managed_script <file>   (script body on stdin, may start with a #! shebang)
+# Like write_managed, but for EXECUTABLES: the shebang stays on line 1 (outside the
+# markers) and only the body is wrapped in a managed block, so re-runs refresh the
+# body while the shebang (and any edits outside the block) survive. chmod +x on write.
+write_managed_script() {
+    local file="$1"
+    local body shebang="#!/usr/bin/env bash"
+    body="$(cat)"
+    if [[ "$body" == '#!'* ]]; then          # split off an existing shebang
+        shebang="${body%%$'\n'*}"
+        body="${body#*$'\n'}"
+    fi
+    local mb="# >>> dev-setup managed block (do not edit between the markers) >>>"
+    local me="# <<< dev-setup managed block <<<"
+    if [[ "$DRY_RUN" == "true" ]]; then return 0; fi
+    mkdir -p "$(dirname "$file")"
+    local bt; bt="$(mktemp)"; printf '%s\n' "$body" > "$bt"
+    if [[ ! -f "$file" ]] || ! grep -qF "$mb" "$file" 2>/dev/null; then
+        { printf '%s\n' "$shebang"; printf '%s\n' "$mb"; cat "$bt"; printf '%s\n' "$me"; } > "$file"
+    else
+        local out; out="$(mktemp)"
+        awk -v mb="$mb" -v me="$me" -v blk="$bt" '
+            index($0, mb) { print; while ((getline line < blk) > 0) print line; close(blk); inb=1; next }
+            index($0, me) { inb=0; print; next }
+            !inb { print }
+        ' "$file" > "$out" && mv "$out" "$file"
+    fi
+    rm -f "$bt"
+    chmod +x "$file"
+}
+
 brew_install() {
     local formula="$1"
     local name="${2:-$1}"
@@ -3705,13 +3736,12 @@ CURLRC_CONF
 # ---- Docker daemon config ----
 DOCKER_CONFIG_DIR="$HOME/.docker"
 DOCKER_DAEMON="$DOCKER_CONFIG_DIR/daemon.json"
-if ! is_done "config:docker-daemon"; then
-if [[ -f "$DOCKER_DAEMON" ]]; then
-    warn "Docker daemon.json already exists"
-else
-    info "Creating Docker daemon configuration..."
-    mkdir -p "$DOCKER_CONFIG_DIR"
-    cat > "$DOCKER_DAEMON" <<'DOCKER_CONF'
+# Docker daemon.json is strict JSON (no comment markers), so we jq deep-merge our
+# keys into any existing file — adding/updating ours while preserving the user's.
+info "Configuring Docker daemon.json..."
+mkdir -p "$DOCKER_CONFIG_DIR"
+DOCKER_TMP="$(mktemp)"
+cat > "$DOCKER_TMP" <<'DOCKER_CONF'
 {
   "builder": {
     "gc": {
@@ -3730,9 +3760,21 @@ else
   "dns": ["1.1.1.1", "8.8.8.8"]
 }
 DOCKER_CONF
+if [[ "$DRY_RUN" == "true" ]]; then
+    info "[DRY RUN] Would merge Docker daemon.json (BuildKit, log rotation, GC)"
+    rm -f "$DOCKER_TMP"
+elif [[ -f "$DOCKER_DAEMON" ]] && command -v jq &>/dev/null; then
+    DOCKER_MERGED="$(mktemp)"
+    if jq -s '.[0] * .[1]' "$DOCKER_DAEMON" "$DOCKER_TMP" > "$DOCKER_MERGED" 2>/dev/null; then
+        mv "$DOCKER_MERGED" "$DOCKER_DAEMON"
+        success "Docker daemon.json updated (merged; your other keys preserved)"
+    else
+        rm -f "$DOCKER_MERGED"; warn "Could not merge Docker daemon.json — left as-is"
+    fi
+    rm -f "$DOCKER_TMP"
+else
+    mv "$DOCKER_TMP" "$DOCKER_DAEMON"
     success "Docker configured (BuildKit, log rotation 10m x 3, garbage collection)"
-fi
-mark_done "config:docker-daemon"
 fi
 
 # ---- Docker buildx as default builder ----
@@ -4536,15 +4578,10 @@ GIT_TEMPLATE
 
 # ---- Global git hooks directory ----
 GIT_HOOKS_DIR="$HOME/.config/git/hooks"
-if ! is_done "config:git-hooks"; then
-if [[ -d "$GIT_HOOKS_DIR" ]]; then
-    warn "Global git hooks directory already exists"
-else
-    info "Creating global git hooks..."
-    mkdir -p "$GIT_HOOKS_DIR"
+info "Configuring global git hooks..."
 
-    # Pre-commit hook: check for common issues
-    cat > "$GIT_HOOKS_DIR/pre-commit" <<'HOOK_PRECOMMIT'
+# Pre-commit hook: check for common issues
+write_managed_script "$GIT_HOOKS_DIR/pre-commit" <<'HOOK_PRECOMMIT'
 #!/usr/bin/env bash
 # Global pre-commit hook — runs on ALL repos
 # Note: core.hooksPath overrides per-repo .git/hooks — this hook delegates to per-repo hooks if they exist
@@ -4589,15 +4626,11 @@ fi
 
 exit 0
 HOOK_PRECOMMIT
-    chmod +x "$GIT_HOOKS_DIR/pre-commit"
 
-    # Register global hooks directory
-    git config --global core.hooksPath "$GIT_HOOKS_DIR"
+# Register global hooks directory
+git config --global core.hooksPath "$GIT_HOOKS_DIR"
 
-    success "Global git hooks created (debug check, large file check, conflict markers)"
-fi
-mark_done "config:git-hooks"
-fi
+success "Global git hooks created (debug check, large file check, conflict markers)"
 
 # ---- AWS config ----
 AWS_CONFIG="$HOME/.aws/config"
@@ -5061,15 +5094,10 @@ success "AeroSpace configured (Option+hjkl focus, workspaces 1-9, SketchyBar hoo
 # they render without depending on specific Nerd Font glyphs; tune styling later.
 SBAR_DIR="$HOME/.config/sketchybar"
 SBAR_PLUGINS="$SBAR_DIR/plugins"
-if ! is_done "config:sketchybar"; then
-if [[ -f "$SBAR_DIR/sketchybarrc" ]]; then
-    warn "SketchyBar config already exists"
-else
     info "Creating SketchyBar configuration (Dracula, AeroSpace pills, system widgets)..."
-    mkdir -p "$SBAR_PLUGINS"
 
     # Shared Dracula palette (sourced by plugins)
-    cat > "$SBAR_DIR/colors.sh" <<'SBAR_COLORS'
+    write_managed_script "$SBAR_DIR/colors.sh" <<'SBAR_COLORS'
 #!/usr/bin/env bash
 export BG=0xff282a36
 export FG=0xfff8f8f2
@@ -5084,7 +5112,7 @@ export RED=0xffff5555
 export YELLOW=0xfff1fa8c
 SBAR_COLORS
 
-    cat > "$SBAR_DIR/sketchybarrc" <<'SBAR_RC'
+    write_managed_script "$SBAR_DIR/sketchybarrc" <<'SBAR_RC'
 #!/usr/bin/env bash
 # SketchyBar — Dracula. Docs: https://felixkratz.github.io/SketchyBar
 source "$HOME/.config/sketchybar/colors.sh"
@@ -5158,7 +5186,7 @@ sketchybar --update
 SBAR_RC
 
     # -- plugins --
-    cat > "$SBAR_PLUGINS/aerospace.sh" <<'P_AERO'
+    write_managed_script "$SBAR_PLUGINS/aerospace.sh" <<'P_AERO'
 #!/usr/bin/env bash
 source "$HOME/.config/sketchybar/colors.sh"
 if [ "$1" = "$FOCUSED_WORKSPACE" ]; then
@@ -5168,17 +5196,17 @@ else
 fi
 P_AERO
 
-    cat > "$SBAR_PLUGINS/front_app.sh" <<'P_FRONT'
+    write_managed_script "$SBAR_PLUGINS/front_app.sh" <<'P_FRONT'
 #!/usr/bin/env bash
 [ "$SENDER" = "front_app_switched" ] && sketchybar --set "$NAME" label="$INFO"
 P_FRONT
 
-    cat > "$SBAR_PLUGINS/clock.sh" <<'P_CLOCK'
+    write_managed_script "$SBAR_PLUGINS/clock.sh" <<'P_CLOCK'
 #!/usr/bin/env bash
 sketchybar --set "$NAME" label="$(date '+%a %d %b  %H:%M')"
 P_CLOCK
 
-    cat > "$SBAR_PLUGINS/battery.sh" <<'P_BATT'
+    write_managed_script "$SBAR_PLUGINS/battery.sh" <<'P_BATT'
 #!/usr/bin/env bash
 source "$HOME/.config/sketchybar/colors.sh"
 PCT=$(pmset -g batt | grep -Eo '[0-9]+%' | head -1 | tr -d '%')
@@ -5193,7 +5221,7 @@ LABEL="${PCT}%"
 sketchybar --set "$NAME" drawing=on icon.drawing=off label="$LABEL" label.color=$COLOR
 P_BATT
 
-    cat > "$SBAR_PLUGINS/bluetooth.sh" <<'P_BT'
+    write_managed_script "$SBAR_PLUGINS/bluetooth.sh" <<'P_BT'
 #!/usr/bin/env bash
 source "$HOME/.config/sketchybar/colors.sh"
 if command -v blueutil >/dev/null 2>&1 && [ "$(blueutil --power)" = "1" ]; then
@@ -5203,7 +5231,7 @@ else
 fi
 P_BT
 
-    cat > "$SBAR_PLUGINS/wifi.sh" <<'P_WIFI'
+    write_managed_script "$SBAR_PLUGINS/wifi.sh" <<'P_WIFI'
 #!/usr/bin/env bash
 source "$HOME/.config/sketchybar/colors.sh"
 SSID=$(ipconfig getsummary en0 2>/dev/null | awk -F ' SSID : ' '/ SSID : / {print $2; exit}')
@@ -5214,21 +5242,21 @@ else
 fi
 P_WIFI
 
-    cat > "$SBAR_PLUGINS/volume.sh" <<'P_VOL'
+    write_managed_script "$SBAR_PLUGINS/volume.sh" <<'P_VOL'
 #!/usr/bin/env bash
 source "$HOME/.config/sketchybar/colors.sh"
 VOL="${INFO:-$(osascript -e 'output volume of (get volume settings)')}"
 sketchybar --set "$NAME" label="vol ${VOL}%" label.color=$CYAN
 P_VOL
 
-    cat > "$SBAR_PLUGINS/cpu.sh" <<'P_CPU'
+    write_managed_script "$SBAR_PLUGINS/cpu.sh" <<'P_CPU'
 #!/usr/bin/env bash
 source "$HOME/.config/sketchybar/colors.sh"
 CPU=$(ps -A -o %cpu | awk '{s+=$1} END {printf "%d", s/'"$(sysctl -n hw.ncpu)"'}')
 sketchybar --set "$NAME" label="cpu ${CPU}%" label.color=$ORANGE
 P_CPU
 
-    cat > "$SBAR_PLUGINS/mem.sh" <<'P_MEM'
+    write_managed_script "$SBAR_PLUGINS/mem.sh" <<'P_MEM'
 #!/usr/bin/env bash
 source "$HOME/.config/sketchybar/colors.sh"
 USED=$(memory_pressure 2>/dev/null | awk -F ': ' '/System-wide memory free percentage/ {print 100-$2}' | tr -d '%')
@@ -5236,7 +5264,7 @@ USED=$(memory_pressure 2>/dev/null | awk -F ': ' '/System-wide memory free perce
 sketchybar --set "$NAME" label="mem ${USED}%" label.color=$YELLOW
 P_MEM
 
-    cat > "$SBAR_PLUGINS/vpn.sh" <<'P_VPN'
+    write_managed_script "$SBAR_PLUGINS/vpn.sh" <<'P_VPN'
 #!/usr/bin/env bash
 source "$HOME/.config/sketchybar/colors.sh"
 if command -v mullvad >/dev/null 2>&1 && mullvad status 2>/dev/null | grep -qi 'Connected'; then
@@ -5246,20 +5274,16 @@ else
 fi
 P_VPN
 
-    cat > "$SBAR_PLUGINS/vpn_toggle.sh" <<'P_VPNT'
+    write_managed_script "$SBAR_PLUGINS/vpn_toggle.sh" <<'P_VPNT'
 #!/usr/bin/env bash
 command -v mullvad >/dev/null 2>&1 || exit 0
 if mullvad status 2>/dev/null | grep -qi 'Connected'; then mullvad disconnect; else mullvad connect; fi
 P_VPNT
 
-    chmod +x "$SBAR_DIR/sketchybarrc" "$SBAR_PLUGINS"/*.sh
     if [[ "$DRY_RUN" != "true" ]] && installed sketchybar; then
         brew services restart sketchybar >> "$LOG_FILE" 2>&1 || warn "Could not start sketchybar service (grant it Accessibility if needed)"
     fi
     success "SketchyBar configured (Dracula, AeroSpace pills, system widgets)"
-fi
-mark_done "config:sketchybar"
-fi
 
 # ---- clipse clipboard listener (launchd agent) ----
 # clipse runs a background listener to capture clipboard history. Register a
@@ -7044,14 +7068,10 @@ fi
 
 # ---- Claude Code hooks ----
 CLAUDE_HOOKS_DIR="$HOME/.claude/hooks"
-if [[ -d "$CLAUDE_HOOKS_DIR" ]]; then
-    warn "Claude Code hooks directory already exists"
-else
     info "Creating Claude Code hooks..."
-    mkdir -p "$CLAUDE_HOOKS_DIR"
 
     # Post-edit hook: auto-format with prettier
-    cat > "$CLAUDE_HOOKS_DIR/format-on-edit.sh" <<'HOOK_FORMAT'
+    write_managed_script "$CLAUDE_HOOKS_DIR/format-on-edit.sh" <<'HOOK_FORMAT'
 #!/usr/bin/env bash
 # Auto-format TypeScript/JavaScript files after Claude edits them
 # Used by PostToolUse hook
@@ -7075,10 +7095,9 @@ fi
 
 exit 0
 HOOK_FORMAT
-    chmod +x "$CLAUDE_HOOKS_DIR/format-on-edit.sh"
 
     # Post-edit hook: auto-lint Python files with ruff
-    cat > "$CLAUDE_HOOKS_DIR/lint-python.sh" <<'HOOK_RUFF'
+    write_managed_script "$CLAUDE_HOOKS_DIR/lint-python.sh" <<'HOOK_RUFF'
 #!/usr/bin/env bash
 # Auto-lint and fix Python files after Claude edits them
 
@@ -7094,10 +7113,9 @@ fi
 
 exit 0
 HOOK_RUFF
-    chmod +x "$CLAUDE_HOOKS_DIR/lint-python.sh"
 
     # Post-edit hook: lint Dockerfiles with hadolint
-    cat > "$CLAUDE_HOOKS_DIR/lint-dockerfile.sh" <<'HOOK_HADOLINT'
+    write_managed_script "$CLAUDE_HOOKS_DIR/lint-dockerfile.sh" <<'HOOK_HADOLINT'
 #!/usr/bin/env bash
 # Lint Dockerfiles after Claude edits them
 
@@ -7115,18 +7133,13 @@ fi
 
 exit 0
 HOOK_HADOLINT
-    chmod +x "$CLAUDE_HOOKS_DIR/lint-dockerfile.sh"
 
     success "Claude Code hooks created (auto-format JS/TS, auto-lint Python, lint Dockerfiles)"
-fi
 
 # ---- Claude Code statusline (Dracula) ----
 CLAUDE_STATUSLINE="$HOME/.claude/statusline.sh"
-if [[ -f "$CLAUDE_STATUSLINE" ]]; then
-    warn "Claude Code statusline already exists"
-else
-    info "Creating Claude Code Dracula statusline..."
-    cat > "$CLAUDE_STATUSLINE" <<'STATUSLINE'
+info "Configuring Claude Code Dracula statusline..."
+write_managed_script "$CLAUDE_STATUSLINE" <<'STATUSLINE'
 #!/usr/bin/env bash
 # Claude Code statusline — Dracula. Reads session JSON on stdin.
 input=$(cat)
@@ -7143,9 +7156,7 @@ out="${P}${model}${R} ${D}in${R} ${C}${dir}${R}"
 [ -n "$branch" ] && out="${out} ${D}on${R} ${G}${branch}${R}"
 printf '%b' "$out"
 STATUSLINE
-    chmod +x "$CLAUDE_STATUSLINE"
-    success "Claude Code Dracula statusline created (model, dir, git branch)"
-fi
+success "Claude Code Dracula statusline created (model, dir, git branch)"
 
 # ---- Claude Code subagents ----
 CLAUDE_AGENTS_DIR="$HOME/.claude/agents"
