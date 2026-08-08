@@ -1088,7 +1088,7 @@ brew_install "jq" "jq (JSON processor)"
 brew_install "direnv" "direnv (per-project env vars)"
 brew_install "watchman" "Watchman (file watcher)"
 brew_install "cmake" "CMake"
-brew_install "pkg-config" "pkg-config"
+brew_install "pkgconf" "pkgconf (provides pkg-config; pkg-config was renamed to pkgconf in homebrew-core)"
 
 # Rust (rustup manages the toolchain — installs rustc, cargo, etc.)
 progress
@@ -1285,7 +1285,8 @@ if should_run "iac"; then
 banner "Infrastructure as Code"
 
 brew_install "opentofu" "OpenTofu (open-source Terraform — multi-cloud IaC)"
-brew_install "tflint" "tflint (Terraform linter)"
+brew tap terraform-linters/tap >> "$LOG_FILE" 2>&1 || true
+brew_install "tflint" "tflint (Terraform linter — terraform-linters tap, not homebrew-core)"
 brew_install "terraform-docs" "terraform-docs (auto-generate module docs from variables/outputs)"
 brew_install "checkov" "checkov (IaC static analysis — Terraform, CloudFormation, Kubernetes, Dockerfile)"
 brew_install "infracost" "infracost (cost estimation for Terraform changes before apply)"
@@ -1520,7 +1521,8 @@ brew_install "shellcheck" "shellcheck (shell script linter)"
 brew_install "shfmt" "shfmt (shell script formatter)"
 brew_install "act" "act (run GitHub Actions locally)"
 brew tap dhth/tap >> "$LOG_FILE" 2>&1 || true
-brew_install "act3" "act3 (glance at last 3 GitHub Actions runs)"
+brew tap dhth/tap >> "$LOG_FILE" 2>&1 || true
+brew_install "act3" "act3 (glance at last 3 GitHub Actions runs — dhth tap, not homebrew-core)"
 brew_install "hadolint" "hadolint (Dockerfile linter — catches bad practices)"
 
 # Python linting (ruff — extremely fast, replaces flake8+black+isort)
@@ -1860,7 +1862,7 @@ brew_install "chezmoi" "chezmoi (dotfile manager — backup/restore configs acro
 
 # HTTP debugging
 # HTTP debugging (mitmproxy — free, open-source)
-brew_install "mitmproxy" "mitmproxy (HTTP/HTTPS debugging proxy — free Proxyman alternative)"
+brew_cask_install "mitmproxy" "mitmproxy (HTTP/HTTPS debugging proxy — free Proxyman alternative)"
 
 # Node/JS tooling (via npm)
 if installed npm; then
@@ -8463,9 +8465,10 @@ terminal from anywhere; `a`/`ff`/`rgf`/`s` make it a launcher and search bar, so
 Spotlight/Raycast aren't needed. **AeroSpace** tiles windows and **SketchyBar** shows
 state (workspaces, VPN, battery) — the bar's clock even opens **khal**, and its VPN
 pill drives the **mullvad** CLI. Editing is **Helix**; the agent is **Claude Code**,
-which reuses the same **MCP servers** the setup migrated over. Config lives in
-dotfiles managed by **chezmoi** (with **cheznav** as its TUI), so the MacBook and the
-Mac mini stay identical. Because almost everything is a CLI/TUI, the same tools work
+which reuses the same **MCP servers** the setup migrated over. The script writes
+these configs to `~/.config`; use **chezmoi** (`chezmoi add`, with **cheznav** as its
+TUI) to track them in git and keep the MacBook and Mac mini in sync — that step is
+yours, the script doesn't auto-add them. Because almost everything is a CLI/TUI, the same tools work
 locally, over SSH, and — where it matters — can be driven by Claude Code
 (`atac`, `hurl`, `xh` are on its allowlist). GUI survivors are only the irreducible
 ones: Ghostty, Chrome, the container runtime (OrbStack), security tools that need a
