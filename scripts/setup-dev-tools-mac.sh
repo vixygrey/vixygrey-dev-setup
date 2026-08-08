@@ -1759,6 +1759,23 @@ brew_install "aider" "aider (terminal AI pair programmer — git-aware edit loop
 brew_install "llm" "llm (Simon Willison's CLI — one-shot prompts, plugins, SQLite logs, embeddings)"
 brew_install "repomix" "repomix (pack a repo into a single LLM-friendly file with token counts)"
 
+# Claude via the llm CLI: install the Anthropic plugin (used by the Helix/aerc :pipe binds).
+if [[ "$DRY_RUN" != "true" ]] && installed llm; then
+    llm install llm-anthropic >> "$LOG_FILE" 2>&1 && success "llm-anthropic plugin installed" \
+        || warn "Could not install llm-anthropic plugin (run: llm install llm-anthropic)"
+fi
+# helix-assist: Claude-as-an-LSP for Helix (ghost-text completions + Space A code-actions).
+# Successor to the archived helix-gpt; supports Anthropic natively. Needs ANTHROPIC_API_KEY.
+if [[ "$DRY_RUN" != "true" ]] && installed go; then
+    if command -v helix-assist &>/dev/null; then
+        warn "helix-assist already installed"
+    else
+        info "Installing helix-assist (Claude AI LSP for Helix) via go..."
+        go install github.com/leona/helix-assist/cmd/helix-assist@latest >> "$LOG_FILE" 2>&1 \
+            && success "helix-assist installed" || warn "Could not install helix-assist (needs Go)"
+    fi
+fi
+
 # Window management, status bar & clipboard (replaces Raycast + Spotlight)
 # AeroSpace — tiling window manager. No SIP disable required (emulated workspaces).
 brew tap nikitabobko/tap >> "$LOG_FILE" 2>&1 || true
@@ -2759,6 +2776,10 @@ enable = true
 
 [keys.normal]
 "C-s" = ":w"
+# Claude via llm: pipe the selection to Claude and replace it with the result.
+# Set your default model to Claude first:  llm models default claude-sonnet-4-5
+# (For "explain"/chat, use the Claude Code pane — see the 'dev' zellij layout.)
+"A-a" = ":pipe llm 'Improve the selection. Output only the replacement text, no explanation.'"
 HELIX_CONF
     cat > "$HELIX_CONFIG_DIR/languages.toml" <<'HELIX_LANG'
 # Ruff as the Python language server (matches the project's ruff-first Python rule)
@@ -2766,33 +2787,45 @@ HELIX_CONF
 command = "ruff"
 args = ["server"]
 
+# helix-assist: Claude AI as an LSP (ghost-text completions + `Space A` code-actions).
+# Needs ANTHROPIC_API_KEY in the environment; if unset it simply provides nothing.
+[language-server.helix-assist]
+command = "helix-assist"
+args = ["--handler", "anthropic", "--num-suggestions", "2"]
+
 [[language]]
 name = "python"
-language-servers = ["ruff"]
+language-servers = ["ruff", "helix-assist"]
 auto-format = true
 
 [[language]]
 name = "typescript"
+language-servers = ["typescript-language-server", "helix-assist"]
 auto-format = true
 
 [[language]]
 name = "tsx"
+language-servers = ["typescript-language-server", "helix-assist"]
 auto-format = true
 
 [[language]]
 name = "javascript"
+language-servers = ["typescript-language-server", "helix-assist"]
 auto-format = true
 
 [[language]]
 name = "jsx"
+language-servers = ["typescript-language-server", "helix-assist"]
 auto-format = true
 
 [[language]]
 name = "rust"
+language-servers = ["rust-analyzer", "helix-assist"]
 auto-format = true
 
 [[language]]
 name = "go"
+language-servers = ["gopls", "helix-assist"]
 auto-format = true
 
 [[language]]
@@ -3218,6 +3251,34 @@ ZELLIJ_CONF
     success "zellij configured (Dracula theme, compact layout, mouse)"
 fi
 mark_done "config:zellij"
+
+# 'dev' layout: editor pane + a Claude Code pane side-by-side (AI integration tier 1).
+# Launch with:  zellij --layout dev
+if ! is_done "config:zellij-dev-layout"; then
+ZELLIJ_LAYOUTS="$ZELLIJ_CONFIG_DIR/layouts"
+if [[ -f "$ZELLIJ_LAYOUTS/dev.kdl" ]]; then
+    warn "zellij 'dev' layout already exists"
+else
+    mkdir -p "$ZELLIJ_LAYOUTS"
+    cat > "$ZELLIJ_LAYOUTS/dev.kdl" <<'ZELLIJ_DEV'
+// Editor + Claude Code side-by-side. Run:  zellij --layout dev
+layout {
+    pane split_direction="vertical" {
+        pane {
+            name "editor"
+            command "hx"
+        }
+        pane size="38%" {
+            name "claude"
+            command "claude"
+        }
+    }
+}
+ZELLIJ_DEV
+    success "zellij 'dev' layout created (editor + Claude pane: zellij --layout dev)"
+fi
+mark_done "config:zellij-dev-layout"
+fi
 fi
 fi  # installed zellij
 
@@ -5612,6 +5673,21 @@ html = false
 text/plain = colorize
 text/html = pandoc -f html -t plain 2>/dev/null || cat
 AERC_CONF
+    # binds.conf: start from aerc's shipped defaults so we don't clobber them,
+    # then append an AI summarize/triage bind (Claude via llm + llm-anthropic).
+    AERC_SHARE="$(brew --prefix 2>/dev/null)/share/aerc"
+    if [[ -f "$AERC_SHARE/binds.conf" ]]; then
+        cp "$AERC_SHARE/binds.conf" "$AERC_DIR/binds.conf"
+    else
+        : > "$AERC_DIR/binds.conf"
+    fi
+    cat >> "$AERC_DIR/binds.conf" <<'AERC_BINDS'
+
+# AI: summarize/triage the selected message with Claude (llm + llm-anthropic).
+# Set your default llm model to Claude first: llm models default claude-sonnet-4-5
+[messages]
+S = :pipe -m llm "Summarize this email in 3 concise bullets and suggest a triage label"<Enter>
+AERC_BINDS
     success "aerc config skeleton created (edit accounts.conf with your credentials)"
 fi
 mark_done "config:aerc"
@@ -8230,6 +8306,8 @@ the list, then delete this file.
 - [ ] **Mullvad:** `mullvad account login <ACCOUNT_NUMBER>` (CLI is bundled with the app at `/usr/local/bin/mullvad`).
 - [ ] **starlit** (weather): `starlit --setup` and paste a free OpenWeatherMap API key.
 - [ ] **MCP servers:** export tokens your Claude Code MCP servers need, e.g. `export GITHUB_TOKEN=...` (and `AWS_REGION` / `AWS_PROFILE` for the AWS servers). Requires `claude auth login` at least once.
+- [ ] **Claude AI in Helix/aerc:** set an Anthropic key — `export ANTHROPIC_API_KEY=sk-ant-...` in `~/.zshrc.local` (used by **helix-assist**, the in-editor AI LSP). For the `llm` pipe binds (`A-a` in Helix, `S` in aerc): `llm keys set anthropic` then `llm models default claude-sonnet-4-5`.
+- [ ] **AI side-pane:** `zellij --layout dev` opens your editor + a Claude Code pane side by side (the strongest AI workflow).
 - [ ] **chezmoi:** `chezmoi init <your-dotfiles-repo>` to bring these configs under version control across the MacBook + Mac mini.
 - [ ] **tiki** (notes): run `tiki` once and point it at (or init) your notes git repo.
 - [ ] **kew** (music): drop music into `~/Media/music` (the configured library path).
@@ -8278,7 +8356,16 @@ CHECKLIST_EOF
 | `Space + /` | Global search (ripgrep) |
 | `Space + k` | Hover docs · `g d` go to definition · `g r` references |
 | `Ctrl + s` | Save (added binding) |
+| `Alt + a` | Send selection to Claude (via `llm`), replace with the result |
+| `Space + a` | helix-assist code-action (fix/improve/refactor via Claude, if `ANTHROPIC_API_KEY` set) |
 | `:w` `:q` | Write / quit |
+
+## Claude AI
+| Where | How |
+|-------|-----|
+| Side-pane (best) | `zellij --layout dev` — editor + Claude Code panes |
+| Helix inline | `Alt + a` on a selection (llm pipe); `Space + a` (helix-assist LSP) |
+| aerc | `S` on a message — summarize/triage via Claude |
 
 ## Terminal multiplexer & tools
 | Keys | Action |
@@ -8310,7 +8397,8 @@ together.
 
 ## Editor & AI
 - **Helix (`hx`)** — modal terminal editor, built-in LSP + tree-sitter, auto-format on save. The sole editor (`EDITOR`).
-- **Claude Code (`claude`)** — agentic coding in the terminal; hosts the MCP servers.
+- **Claude Code (`claude`)** — agentic coding in the terminal; hosts the MCP servers. Best via `zellij --layout dev` (editor + Claude pane).
+- **Claude in Helix/aerc** — `Alt+a` pipes a selection to Claude (via `llm`); **helix-assist** adds Claude as an LSP (`Space A`); aerc `S` summarizes an email. All powered by `llm-anthropic` / `ANTHROPIC_API_KEY`.
 
 ## Window management, bar & launcher
 - **AeroSpace** — keyboard-driven tiling WM (no SIP disable). Option+hjkl, workspaces 1-9.
