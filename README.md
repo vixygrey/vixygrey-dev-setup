@@ -146,6 +146,14 @@ chmod +x scripts/setup-dev-tools-mac.sh
 | **cfn-lint** | CloudFormation template linter |
 | **session-manager-plugin** | SSH-less access to EC2 instances via AWS SSM |
 | **granted** | Fast multi-account AWS SSO credential switching |
+| **e1s** | ECS TUI -- clusters/services/tasks, exec, logs, port-forward ("k9s for ECS") |
+| **e2c** | EC2 TUI -- start/stop/reboot/terminate, metrics, SSH (young project; via `go install`) |
+| **stu** | S3 TUI -- browse/preview/download buckets |
+| **claws** | Broad all-AWS TUI (~70 services, k9s-style; young; cask from `clawscli/tap`) |
+| **s5cmd** | Massively parallel S3 CLI -- 10-30x faster than `aws s3` for bulk |
+| **steampipe** | Query live AWS with SQL (inventory & posture); `steampipe plugin install aws` |
+| **dynein** | Ergonomic DynamoDB CLI (awslabs) -- shorthand ops, import/export |
+| **iamlive** | Generate least-privilege IAM policies from observed API calls (tap) |
 
 ---
 
