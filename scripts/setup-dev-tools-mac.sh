@@ -3008,6 +3008,9 @@ version: "3"
 agent:
   metadata: "dev-machine"
 NGROK_CONF
+    # Lock down: ngrok.yml will hold your authtoken.
+    chmod 700 "$NGROK_CONFIG_DIR" 2>/dev/null || true
+    chmod 600 "$NGROK_CONFIG_DIR/ngrok.yml" 2>/dev/null || true
     success "ngrok config created (add authtoken: ngrok config add-authtoken <TOKEN>)"
 else
     warn "ngrok config directory already exists"
@@ -5408,6 +5411,10 @@ AERC_CONF
 [messages]
 S = :pipe -m llm "Summarize this email in 3 concise bullets and suggest a triage label"<Enter>
 AERC_BINDS
+    # Lock down: accounts.conf holds the iCloud app-password + Gmail OAuth secret.
+    # aerc also requires 0600 here (unsafe-accounts-conf = false) to use the password.
+    chmod 700 "$AERC_DIR" 2>/dev/null || true
+    chmod 600 "$AERC_DIR/accounts.conf" "$AERC_DIR/aerc.conf" 2>/dev/null || true
     success "aerc config skeleton created (edit accounts.conf with your credentials)"
 fi
 mark_done "config:aerc"
@@ -5469,6 +5476,9 @@ token_file = "~/.local/share/vdirsyncer/google_token"
 client_id = "YOUR_GOOGLE_CLIENT_ID"
 client_secret = "YOUR_GOOGLE_CLIENT_SECRET"
 VDIR_CONF
+    # Lock down: vdirsyncer config holds the iCloud app-password + Google client_secret.
+    chmod 700 "$VDIR_DIR" 2>/dev/null || true
+    chmod 600 "$VDIR_DIR/config" 2>/dev/null || true
     cat > "$KHAL_DIR/config" <<'KHAL_CONF'
 [calendars]
 
@@ -6469,20 +6479,25 @@ banner "Claude Code Configuration"
 # ---- Claude Code global settings ----
 CLAUDE_SETTINGS="$HOME/.claude/settings.json"
 if [[ -f "$CLAUDE_SETTINGS" ]]; then
-    # Non-destructive MERGE into an existing settings.json (preserves your own edits):
-    # add any missing allowlist entries and set statusLine if absent. Requires jq.
-    CLAUDE_NEW_ALLOW='["Bash(qalc *)","Bash(has *)","Bash(doxx *)","Bash(mdfind *)","Bash(grpcurl *)","Bash(steampipe *)","Bash(s5cmd *)","Bash(dynein *)","Bash(iamlive *)","Bash(atac *)","Bash(leaf *)"]'
+    # MERGE into an existing settings.json (preserves your own keys), and SECURITY-HARDEN
+    # the allowlist: add safe read-only entries + scoped git reads, and STRIP the
+    # dangerous auto-approvals (interpreters, network, cloud/infra mutation, secret
+    # reveal, broad git/gh, file destruction, unrestricted Write) so old machines get
+    # cleaned too. Note: re-runs re-strip these — re-add any you truly want by editing
+    # the CLAUDE_DENY_ALLOW list below, not settings.json.
+    CLAUDE_ADD_ALLOW='["Bash(qalc *)","Bash(has *)","Bash(doxx *)","Bash(mdfind *)","Bash(atac *)","Bash(leaf *)","Bash(git status *)","Bash(git diff *)","Bash(git log *)","Bash(git show *)","Bash(git branch *)","Bash(git remote -v)","Bash(git stash list)"]'
+    CLAUDE_DENY_ALLOW='["Bash(npm *)","Bash(npx *)","Bash(pnpm *)","Bash(bun *)","Bash(node *)","Bash(tsx *)","Bash(ts-node *)","Bash(python3 *)","Bash(pip *)","Bash(uv *)","Bash(uvx *)","Bash(cargo *)","Bash(go *)","Bash(just *)","Bash(make *)","Bash(nu *)","Bash(nushell *)","Bash(aider *)","Bash(topgrade *)","Bash(watchexec *)","Bash(viddy *)","Bash(parallel *)","Bash(act *)","Bash(curl *)","Bash(xh *)","Bash(wget *)","Bash(curlie *)","Bash(aria2c *)","Bash(grpcurl *)","Bash(yt-dlp *)","Bash(aws *)","Bash(cdk *)","Bash(sam *)","Bash(docker *)","Bash(docker-compose *)","Bash(docker compose *)","Bash(kubectl *)","Bash(tofu *)","Bash(s5cmd *)","Bash(dynein *)","Bash(steampipe *)","Bash(iamlive *)","Bash(granted *)","Bash(assume *)","Bash(mitmproxy *)","Bash(mitmdump *)","Bash(nmap *)","Bash(chezmoi *)","Bash(dbmate *)","Bash(env *)","Bash(export *)","Bash(git *)","Bash(git-*)","Bash(gh *)","Bash(cp *)","Bash(mv *)","Bash(trash *)","Bash(sd *)","Bash(sed *)","Bash(awk *)","Bash(find *)","Bash(npkill *)","Bash(ouch *)","Bash(7z *)","Write"]'
     if [[ "$DRY_RUN" == "true" ]]; then
-        info "[DRY RUN] Would merge new allowlist entries + statusline into existing settings.json"
+        info "[DRY RUN] Would merge settings.json: add safe allow entries + statusline, strip dangerous ones"
     elif command -v jq &>/dev/null; then
-        info "Merging new permissions + statusline into existing Claude settings.json..."
+        info "Merging + hardening Claude settings.json permissions..."
         CLAUDE_TMP=$(mktemp)
-        if jq --argjson add "$CLAUDE_NEW_ALLOW" \
-            '.permissions.allow = ((.permissions.allow // []) + $add | unique)
+        if jq --argjson add "$CLAUDE_ADD_ALLOW" --argjson deny "$CLAUDE_DENY_ALLOW" \
+            '.permissions.allow = (((.permissions.allow // []) + $add) - $deny | unique)
              | .statusLine = (.statusLine // {"type":"command","command":"~/.claude/statusline.sh"})' \
             "$CLAUDE_SETTINGS" > "$CLAUDE_TMP" 2>/dev/null; then
             mv "$CLAUDE_TMP" "$CLAUDE_SETTINGS"
-            success "Claude settings.json updated (new allowlist + statusline; existing config preserved)"
+            success "Claude settings.json hardened (safe allowlist + statusline; dangerous auto-approvals stripped)"
         else
             rm -f "$CLAUDE_TMP"
             warn "Could not merge settings.json — add the new Bash(...) allow entries + statusLine manually"
@@ -6499,37 +6514,19 @@ else
       "Bash(npm run *)",
       "Bash(npm install *)",
       "Bash(npm test *)",
-      "Bash(npm *)",
-      "Bash(npx *)",
-      "Bash(pnpm *)",
-      "Bash(bun *)",
-      "Bash(node *)",
-      "Bash(tsx *)",
-      "Bash(ts-node *)",
-      "Bash(git *)",
-      "Bash(git-*)",
-      "Bash(gh *)",
-      "Bash(aws *)",
-      "Bash(cdk *)",
-      "Bash(sam *)",
-      "Bash(docker *)",
-      "Bash(docker-compose *)",
-      "Bash(docker compose *)",
-      "Bash(kubectl *)",
+      "Bash(git status *)",
+      "Bash(git diff *)",
+      "Bash(git log *)",
+      "Bash(git show *)",
+      "Bash(git branch *)",
+      "Bash(git remote -v)",
+      "Bash(git stash list)",
       "Bash(k9s *)",
       "Bash(stern *)",
-      "Bash(python3 *)",
-      "Bash(pip *)",
-      "Bash(uv *)",
-      "Bash(cargo *)",
-      "Bash(go *)",
-      "Bash(just *)",
-      "Bash(make *)",
       "Bash(cat *)",
       "Bash(bat *)",
       "Bash(ls *)",
       "Bash(eza *)",
-      "Bash(find *)",
       "Bash(grep *)",
       "Bash(rg *)",
       "Bash(fd *)",
@@ -6541,28 +6538,18 @@ else
       "Bash(sort *)",
       "Bash(uniq *)",
       "Bash(cut *)",
-      "Bash(awk *)",
-      "Bash(sed *)",
-      "Bash(sd *)",
       "Bash(jq *)",
       "Bash(yq *)",
       "Bash(fx *)",
       "Bash(mlr *)",
       "Bash(csvlook *)",
-      "Bash(curl *)",
-      "Bash(xh *)",
-      "Bash(wget *)",
       "Bash(which *)",
       "Bash(type *)",
       "Bash(echo *)",
       "Bash(printf *)",
-      "Bash(env *)",
-      "Bash(export *)",
       "Bash(cd *)",
       "Bash(mkdir -p *)",
       "Bash(touch *)",
-      "Bash(cp *)",
-      "Bash(mv *)",
       "Bash(diff *)",
       "Bash(difft *)",
       "Bash(delta *)",
@@ -6581,8 +6568,6 @@ else
       "Bash(tsc *)",
       "Bash(jest *)",
       "Bash(vitest *)",
-      "Bash(act *)",
-      "Bash(tofu *)",
       "Bash(tflint *)",
       "Bash(terraform-docs *)",
       "Bash(checkov *)",
@@ -6605,7 +6590,6 @@ else
       "Bash(pgcli *)",
       "Bash(mycli *)",
       "Bash(sq *)",
-      "Bash(dbmate *)",
       "Bash(commitizen *)",
       "Bash(commitlint *)",
       "Bash(typos *)",
@@ -6614,49 +6598,28 @@ else
       "Bash(hurl *)",
       "Bash(atac *)",
       "Bash(jnv *)",
-      "Bash(watchexec *)",
-      "Bash(curlie *)",
       "Bash(lazysql *)",
       "Bash(trippy *)",
-      "Bash(nushell *)",
-      "Bash(nu *)",
       "Bash(oxipng *)",
       "Bash(jpegoptim *)",
-      "Bash(7z *)",
       "Bash(mpv *)",
       "Bash(newsboat *)",
       "Bash(zellij *)",
       "Bash(gum *)",
-      "Bash(uvx *)",
-      "Bash(aider *)",
       "Bash(llm *)",
       "Bash(repomix *)",
-      "Bash(chezmoi *)",
       "Bash(dockutil *)",
       "Bash(terminal-notifier *)",
-      "Bash(ouch *)",
       "Bash(harlequin *)",
       "Bash(hq *)",
-      "Bash(granted *)",
-      "Bash(assume *)",
-      "Bash(topgrade *)",
       "Bash(git-absorb *)",
       "Bash(act3 *)",
-      "Bash(npkill *)",
       "Bash(mkcert *)",
-      "Bash(mitmproxy *)",
-      "Bash(mitmdump *)",
       "Bash(bandwhich *)",
-      "Bash(nmap *)",
       "Bash(gping *)",
       "Bash(doggo *)",
       "Bash(procs *)",
       "Bash(btop *)",
-      "Bash(viddy *)",
-      "Bash(trash *)",
-      "Bash(yt-dlp *)",
-      "Bash(aria2c *)",
-      "Bash(parallel *)",
       "Bash(lnav *)",
       "Bash(leaf *)",
       "Bash(fastfetch *)",
@@ -6664,14 +6627,8 @@ else
       "Bash(has *)",
       "Bash(doxx *)",
       "Bash(mdfind *)",
-      "Bash(grpcurl *)",
-      "Bash(steampipe *)",
-      "Bash(s5cmd *)",
-      "Bash(dynein *)",
-      "Bash(iamlive *)",
       "Read",
       "Edit",
-      "Write",
       "WebFetch"
     ],
     "deny": [
