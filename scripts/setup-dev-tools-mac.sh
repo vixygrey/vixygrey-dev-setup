@@ -220,7 +220,7 @@ declare -A CATEGORY_DESC=(
     [containers]="lazydocker, dive, kubectl, k9s"
     [api]="Bruno, grpcurl"
     [networking]="mtr, bandwhich, nmap"
-    [dx]="fzf, starship, atuin, Kiro, VS Code, Ghostty, zellij, Raycast, aider, llm"
+    [dx]="fzf, starship, atuin, Helix, Ghostty, zellij, aider, llm"
     [ux]="Lighthouse"
     [docs]="d2, Mermaid CLI, draw.io"
     [mac-system]="Pearcleaner, Quick Look plugins, dockutil"
@@ -388,7 +388,7 @@ list_categories() {
     printf "  %-25s %s\n" "containers"          "lazydocker, dive, kubectl, k9s"
     printf "  %-25s %s\n" "api"                 "Bruno, grpcurl"
     printf "  %-25s %s\n" "networking"          "mtr, bandwhich, nmap"
-    printf "  %-25s %s\n" "dx"                  "fzf, starship, atuin, Kiro, VS Code, Ghostty, zellij, Raycast, aider, llm, repomix"
+    printf "  %-25s %s\n" "dx"                  "fzf, starship, atuin, Helix, Ghostty, zellij, aider, llm, repomix"
     printf "  %-25s %s\n" "ux"                  "Lighthouse"
     printf "  %-25s %s\n" "docs"                "d2, Mermaid CLI, draw.io"
     printf "  %-25s %s\n" "mac-system"          "Pearcleaner, Quick Look plugins, dockutil, terminal-notifier"
@@ -762,10 +762,8 @@ if [[ "$UNINSTALL" == "true" ]]; then
     echo "# Remove Claude Code config (CAREFUL — contains your custom rules):"
     echo "  rm -rf ~/.claude/settings.json ~/.claude/CLAUDE.md ~/.claude/rules ~/.claude/hooks ~/.claude/commands"
     echo ""
-    echo "# Remove Kiro settings:"
-    echo "  rm -f ~/Library/Application\\ Support/Kiro/User/settings.json"
-    echo "  rm -f ~/Library/Application\\ Support/Kiro/User/keybindings.json"
-    echo "  rm -f ~/.kiro/settings/mcp.json"
+    echo "# Remove Helix config:"
+    echo "  rm -rf ~/.config/helix"
     echo ""
     echo "# Remove helper scripts:"
     echo "  rm -rf ~/Scripts/bin"
@@ -803,7 +801,9 @@ if [[ "$CLEANUP" == "true" ]]; then
         "cask:docker:Docker Desktop:OrbStack:Docker"
         "cask:warp:Warp terminal:Ghostty:Warp"
         "cask:iterm2:iTerm2:Ghostty:iTerm"
-        "cask:cursor:Cursor (AI editor):Kiro + Claude Code:Cursor"
+        "cask:cursor:Cursor (AI editor):Helix + Claude Code:Cursor"
+        "cask:kiro:Kiro:Helix + Claude Code:Kiro"
+        "cask:visual-studio-code:Visual Studio Code:Helix:Visual Studio Code"
         "cask:cleanshot:CleanShot X:removed"
         "cask:soulver:Soulver 3:removed:Soulver 3"
         "cask:numi:Numi:removed"
@@ -864,7 +864,7 @@ if [[ "$CLEANUP" == "true" ]]; then
         "cask:imageoptim:ImageOptim:oxipng + jpegoptim (CLI)"
         "cask:keka:Keka:p7zip (CLI)"
         "formula:entr:entr:watchexec"
-        "cask:zed:Zed:Kiro + VS Code:Zed"
+        "cask:zed:Zed:Helix:Zed"
         "cask:slack:Slack:removed"
         "cask:telegram:Telegram:removed"
         "cask:notion-mail:Notion Mail:removed (retired by Notion):Notion Mail"
@@ -1628,22 +1628,32 @@ brew_install "atuin" "atuin (replaces shell history — SQLite-backed, searchabl
 # mise already installed in core section
 
 # Editors & terminals
-brew_cask_install "kiro" "Kiro (AWS agentic IDE — VS Code fork with built-in Claude agent, specs, steering, hooks)"
-# Ensure Kiro 'kiro' CLI is in PATH (brew cask installs the app but not the CLI symlink).
-# Symlink into Homebrew's bin dir so the CLI is on PATH on both Apple Silicon
-# (/opt/homebrew/bin) and Intel (/usr/local/bin) without depending on /usr/local being writable.
-KIRO_CLI="/Applications/Kiro.app/Contents/Resources/app/bin/kiro"
-if [[ -f "$KIRO_CLI" ]] && ! installed kiro; then
-    info "Adding Kiro 'kiro' CLI to PATH..."
-    KIRO_LINK_DIR="$(brew --prefix 2>/dev/null)/bin"
-    [[ -d "$KIRO_LINK_DIR" ]] || KIRO_LINK_DIR="/usr/local/bin"
-    ln -sf "$KIRO_CLI" "$KIRO_LINK_DIR/kiro" 2>/dev/null || \
-    sudo ln -sf "$KIRO_CLI" "$KIRO_LINK_DIR/kiro" 2>/dev/null || true
-    hash -r 2>/dev/null || true
-fi
-brew_cask_install "visual-studio-code" "Visual Studio Code (same extensions as Kiro)"
+brew_install "helix" "Helix (post-modern modal editor — built-in LSP, tree-sitter, multiple selections, zero-config)"
 brew_cask_install "ghostty" "Ghostty (fast GPU-accelerated terminal)"
 brew_install "zellij" "zellij (modern terminal multiplexer — discoverable UI, layouts)"
+
+# Language servers for Helix (so `hx` has LSP for the main languages out of the box).
+# Python uses ruff's built-in server (already installed). TOML/Markdown via brew:
+brew_install "taplo" "taplo (TOML language server + formatter — used by Helix)"
+brew_install "marksman" "marksman (Markdown language server — used by Helix)"
+if installed npm; then
+    npm_global_install "typescript-language-server" "TypeScript/JavaScript language server (Helix LSP)"
+    npm_global_install "vscode-langservers-extracted" "HTML/CSS/JSON/ESLint language servers (Helix LSP)"
+    npm_global_install "bash-language-server" "Bash language server (Helix LSP)"
+    npm_global_install "yaml-language-server" "YAML language server (Helix LSP)"
+else
+    progress; progress; progress; progress  # keep progress bar accurate when npm unavailable
+fi
+if [[ "$DRY_RUN" != "true" ]]; then
+    # rust-analyzer (Rust LSP) via rustup component; gopls (Go LSP) via go install.
+    if installed rustup; then
+        rustup component add rust-analyzer >> "$LOG_FILE" 2>&1 || warn "Could not add rust-analyzer component (Rust LSP for Helix)"
+    fi
+    if installed go; then
+        info "Installing gopls (Go LSP for Helix) — compiles, may take a moment..."
+        go install golang.org/x/tools/gopls@latest >> "$LOG_FILE" 2>&1 || warn "Could not install gopls (Go LSP for Helix)"
+    fi
+fi
 
 # AI tools
 # Claude Code (installed via npm, not brew)
@@ -1669,7 +1679,7 @@ if installed gh; then
     fi
 fi
 
-# Additional agentic / LLM CLIs that pair with Claude Code + Kiro
+# Additional agentic / LLM CLIs that pair with Claude Code + Helix
 brew_install "aider" "aider (terminal AI pair programmer — git-aware edit loops)"
 brew_install "llm" "llm (Simon Willison's CLI — one-shot prompts, plugins, SQLite logs, embeddings)"
 brew_install "repomix" "repomix (pack a repo into a single LLM-friendly file with token counts)"
@@ -1873,19 +1883,8 @@ fi  # mac-bloat
 if should_run "dracula"; then
 banner "Dracula Theme"
 
-# Kiro - Dracula theme (extensions resolved via OpenVSX)
-if installed kiro; then
-    if ! is_done "config:kiro-dracula"; then
-    if kiro --list-extensions 2>/dev/null | grep -qi "dracula-theme.theme-dracula"; then
-        warn "Kiro Dracula theme already installed"
-    else
-        info "Installing Dracula theme for Kiro..."
-        kiro --install-extension dracula-theme.theme-dracula
-        success "Kiro Dracula theme installed"
-    fi
-    mark_done "config:kiro-dracula"
-    fi
-fi
+# Helix - Dracula theme is bundled with Helix and set via ~/.config/helix/config.toml
+# (see the Helix config block below). No extension install needed.
 
 # bat (Dracula is built-in, just needs to be set)
 if installed bat; then
@@ -2475,16 +2474,16 @@ git:
   autoRefresh: true
   branchLogCmd: "git log --graph --color=always --abbrev-commit --decorate --date=relative --pretty=medium {{branchName}} --"
 os:
-  edit: 'kiro -- {{filename}}'
-  editAtLine: 'kiro --goto -- {{filename}}:{{line}}'
-  editAtLineAndWait: 'kiro --goto --wait -- {{filename}}:{{line}}'
-  editInTerminal: false
+  edit: 'hx {{filename}}'
+  editAtLine: 'hx {{filename}}:{{line}}'
+  editAtLineAndWait: 'hx {{filename}}:{{line}}'
+  editInTerminal: true
   open: "open {{filename}}"
   openLink: "open {{link}}"
 notARepository: skip
 promptToReturnFromSubprocess: false
 LAZYGIT_CONF
-    success "lazygit configured (Dracula theme, delta pager, auto-fetch, Kiro editor)"
+    success "lazygit configured (Dracula theme, delta pager, auto-fetch, Helix editor)"
 fi
 mark_done "config:lazygit"
 fi
@@ -2602,415 +2601,160 @@ fi
 mark_done "config:k9s-dracula"
 fi
 
-# ---- Kiro settings ----
-KIRO_SETTINGS_DIR="$HOME/Library/Application Support/Kiro/User"
-KIRO_SETTINGS="$KIRO_SETTINGS_DIR/settings.json"
-if ! is_done "config:kiro-settings"; then
-if [[ -f "$KIRO_SETTINGS" ]]; then
-    warn "Kiro settings.json already exists — not overwriting"
-    info "  To use Dracula, add: \"workbench.colorTheme\": \"Dracula\""
+# ---- Helix editor config ----
+HELIX_CONFIG_DIR="$HOME/.config/helix"
+if ! is_done "config:helix"; then
+if [[ -f "$HELIX_CONFIG_DIR/config.toml" ]]; then
+    warn "Helix config already exists — not overwriting"
 else
-    info "Creating Kiro settings..."
-    mkdir -p "$KIRO_SETTINGS_DIR"
-    cat > "$KIRO_SETTINGS" <<'KIRO_CONF'
-{
-    "workbench.colorTheme": "Dracula",
-    "workbench.iconTheme": "vs-seti",
-    "workbench.startupEditor": "none",
-    "workbench.tree.indent": 16,
+    info "Creating Helix configuration (Dracula theme, LSP, auto-format)..."
+    mkdir -p "$HELIX_CONFIG_DIR"
+    cat > "$HELIX_CONFIG_DIR/config.toml" <<'HELIX_CONF'
+theme = "dracula"
 
-    "editor.fontFamily": "'JetBrains Mono', 'Fira Code', Menlo, monospace",
-    "editor.fontSize": 14,
-    "editor.lineHeight": 1.6,
-    "editor.fontLigatures": true,
-    "editor.minimap.enabled": false,
-    "editor.renderWhitespace": "boundary",
-    "editor.smoothScrolling": true,
-    "editor.cursorBlinking": "smooth",
-    "editor.cursorSmoothCaretAnimation": "on",
-    "editor.formatOnSave": true,
-    "editor.defaultFormatter": "esbenp.prettier-vscode",
-    "editor.tabSize": 2,
-    "editor.wordWrap": "on",
-    "editor.linkedEditing": true,
-    "editor.stickyScroll.enabled": true,
-    "editor.stickyScroll.maxLineCount": 3,
-    "editor.inlayHints.enabled": "onUnlessPressed",
-    "editor.suggest.preview": true,
-    "editor.suggest.showStatusBar": true,
+[editor]
+line-number = "relative"
+mouse = true
+cursorline = true
+color-modes = true
+true-color = true
+bufferline = "multiple"
+rulers = [100]
+scrolloff = 8
+completion-trigger-len = 1
+auto-format = true
+auto-save = true
 
-    "editor.bracketPairColorization.enabled": true,
-    "editor.guides.bracketPairs": "active",
-    "workbench.colorCustomizations": {
-        "editorBracketHighlight.foreground1": "#bd93f9",
-        "editorBracketHighlight.foreground2": "#50fa7b",
-        "editorBracketHighlight.foreground3": "#ffb86c",
-        "editorBracketHighlight.foreground4": "#ff79c6",
-        "editorBracketHighlight.foreground5": "#8be9fd",
-        "editorBracketHighlight.foreground6": "#f1fa8c"
-    },
+[editor.cursor-shape]
+insert = "bar"
+normal = "block"
+select = "underline"
 
-    "files.autoSave": "onFocusChange",
-    "files.trimTrailingWhitespace": true,
-    "files.insertFinalNewline": true,
+[editor.file-picker]
+hidden = false
 
-    "explorer.fileNesting.enabled": true,
-    "explorer.fileNesting.expand": false,
-    "explorer.fileNesting.patterns": {
-        "*.ts": "${capture}.js, ${capture}.d.ts, ${capture}.js.map, ${capture}.test.ts, ${capture}.spec.ts",
-        "*.tsx": "${capture}.test.tsx, ${capture}.spec.tsx, ${capture}.stories.tsx",
-        "*.js": "${capture}.js.map, ${capture}.test.js, ${capture}.spec.js",
-        "package.json": "package-lock.json, pnpm-lock.yaml, yarn.lock, .npmrc, .nvmrc, .node-version, .eslintrc*, .prettierrc*, tsconfig*.json, vite.config.*, vitest.config.*, jest.config.*, tailwind.config.*, postcss.config.*",
-        "README.md": "LICENSE, CHANGELOG.md, CONTRIBUTING.md, CODE_OF_CONDUCT.md",
-        ".env": ".env.*, .env.local, .env.development, .env.production, .env.test",
-        "Dockerfile": "docker-compose*.yml, .dockerignore",
-        "Cargo.toml": "Cargo.lock, rust-toolchain.toml",
-        "go.mod": "go.sum"
-    },
-    "explorer.confirmDragAndDrop": false,
-    "explorer.confirmDelete": false,
+[editor.lsp]
+display-messages = true
+display-inlay-hints = true
 
-    "terminal.integrated.fontFamily": "'JetBrains Mono NF', 'MesloLGS NF', monospace",
-    "terminal.integrated.fontSize": 13,
-    "terminal.integrated.cursorStyle": "line",
-    "terminal.integrated.cursorBlinking": true,
-    "terminal.integrated.defaultProfile.osx": "zsh",
+[editor.statusline]
+left = ["mode", "spinner", "file-name", "file-modification-indicator"]
+center = []
+right = ["diagnostics", "selections", "position", "file-encoding", "file-type"]
 
-    "breadcrumbs.enabled": true,
-    "telemetry.telemetryLevel": "off",
+[editor.indent-guides]
+render = true
+character = "▏"
 
-    "todo-tree.general.tags": ["TODO", "FIXME", "HACK", "BUG", "XXX"],
-    "todo-tree.highlights.defaultHighlight": {
-        "foreground": "#282a36",
-        "background": "#ffb86c",
-        "iconColour": "#ffb86c"
-    },
+[editor.soft-wrap]
+enable = true
 
-    "errorLens.gutterIconsEnabled": true,
-    "errorLens.messageMaxChars": 80,
+[keys.normal]
+"C-s" = ":w"
+HELIX_CONF
+    cat > "$HELIX_CONFIG_DIR/languages.toml" <<'HELIX_LANG'
+# Ruff as the Python language server (matches the project's ruff-first Python rule)
+[language-server.ruff]
+command = "ruff"
+args = ["server"]
 
-    "[python]": {
-        "editor.defaultFormatter": "charliermarsh.ruff",
-        "editor.tabSize": 4
-    },
-    "[go]": {
-        "editor.defaultFormatter": "golang.go",
-        "editor.tabSize": 4,
-        "editor.insertSpaces": false
-    },
-    "[rust]": {
-        "editor.defaultFormatter": "rust-lang.rust-analyzer",
-        "editor.tabSize": 4
-    },
-    "[markdown]": {
-        "editor.wordWrap": "on",
-        "editor.quickSuggestions": {
-            "comments": "off",
-            "strings": "off",
-            "other": "off"
-        }
-    }
-}
-KIRO_CONF
-    success "Kiro settings configured with Dracula theme"
+[[language]]
+name = "python"
+language-servers = ["ruff"]
+auto-format = true
+
+[[language]]
+name = "typescript"
+auto-format = true
+
+[[language]]
+name = "tsx"
+auto-format = true
+
+[[language]]
+name = "javascript"
+auto-format = true
+
+[[language]]
+name = "jsx"
+auto-format = true
+
+[[language]]
+name = "rust"
+auto-format = true
+
+[[language]]
+name = "go"
+auto-format = true
+
+[[language]]
+name = "json"
+auto-format = true
+
+[[language]]
+name = "yaml"
+auto-format = true
+
+[[language]]
+name = "toml"
+auto-format = true
+HELIX_LANG
+    success "Helix configured (Dracula theme, ruff LSP, auto-format on save)"
 fi
-mark_done "config:kiro-settings"
+mark_done "config:helix"
 fi
 
-# ---- Editor extensions (shared by Kiro and VS Code) ----
-# Kiro is a VS Code fork, so both editors use identical extension IDs — Kiro
-# resolves them from OpenVSX, VS Code from the Microsoft Marketplace.
-# Closed-source extensions like github.copilot and ms-vscode.* are unavailable
-# on OpenVSX; Kiro ships its own AI agent (Claude Sonnet), so Copilot is redundant.
-EDITOR_EXTENSIONS=(
-    # Theme
-    "dracula-theme.theme-dracula"
-    # Formatting & linting
-    "esbenp.prettier-vscode"
-    "dbaeumer.vscode-eslint"
-    "charliermarsh.ruff"
-    # Language support
-    "bradlc.vscode-tailwindcss"
-    "ms-python.python"
-    "golang.go"
-    "rust-lang.rust-analyzer"
-    "astro-build.astro-vscode"
-    "svelte.svelte-vscode"
-    # Editor enhancements
-    "formulahendry.auto-rename-tag"
-    "christian-kohler.path-intellisense"
-    "usernamehw.errorlens"
-    "aaron-bond.better-comments"
-    "streetsidesoftware.code-spell-checker"
-    "christian-kohler.npm-intellisense"
-    "naumovs.color-highlight"
-    "mechatroner.rainbow-csv"
-    "editorconfig.editorconfig"
-    # Git
-    "eamodio.gitlens"
-    "mhutchie.git-graph"
-    # Productivity
-    "gruntfuggly.todo-tree"
-    "wix.vscode-import-cost"
-    "ms-azuretools.vscode-docker"
-    "mikestead.dotenv"
-    "yzhang.markdown-all-in-one"
-    "davidanson.vscode-markdownlint"
-    "redhat.vscode-yaml"
-    "tamasfe.even-better-toml"
-    "hashicorp.terraform"
-    # AWS development
-    "amazonwebservices.aws-toolkit-vscode"
-    "kddejong.vscode-cfn-lint"
-)
-
-# install_editor_extensions <cli> <source-label>
-# Installs EDITOR_EXTENSIONS into an editor via its CLI, skipping any already present.
-install_editor_extensions() {
-    local editor_cli="$1" source="$2" ext
-    info "Installing extensions for $editor_cli (from $source)..."
-    for ext in "${EDITOR_EXTENSIONS[@]}"; do
-        if "$editor_cli" --list-extensions 2>/dev/null | grep -qi "$ext"; then
-            warn "$editor_cli extension $ext already installed"
-        else
-            if ! "$editor_cli" --install-extension "$ext" >> "$LOG_FILE" 2>&1; then
-                warn "Failed to install $editor_cli extension: $ext (may not be on $source)"
+# ---- MCP servers -> Claude Code (migrated from Kiro) ----
+# Claude Code stores user-scoped MCP servers in ~/.claude.json. We use the
+# `claude mcp add` CLI (never hand-edit that live state file) to register the
+# everyday servers at user scope. `claude mcp add` is NOT idempotent, so we
+# remove-then-add. Heavier/opt-in servers are intentionally NOT added globally --
+# add them per project with `claude mcp add --scope project <name> ...`.
+# The Notion server is dropped (Notion is no longer part of this setup).
+if ! is_done "config:claude-mcp"; then
+if installed claude; then
+    if [[ "$DRY_RUN" == "true" ]]; then
+        info "[DRY RUN] Would configure Claude Code MCP servers (user scope, minus Notion)"
+    else
+        info "Configuring Claude Code MCP servers (user scope)..."
+        # add_mcp <name-for-removal> <full args to `claude mcp add` incl. name> -- <command...>
+        add_mcp() {
+            local name="$1"; shift
+            claude mcp remove --scope user "$name" >> "$LOG_FILE" 2>&1 || true
+            if claude mcp add --scope user "$@" >> "$LOG_FILE" 2>&1; then
+                success "MCP: $name"
+            else
+                warn "MCP: failed to add $name (see $LOG_FILE)"
             fi
-        fi
-    done
-    success "$editor_cli extensions installed"
-}
+        }
 
-if installed kiro; then
-    install_editor_extensions kiro "OpenVSX"
-fi
+        add_mcp filesystem --transport stdio filesystem -- npx -y @modelcontextprotocol/server-filesystem "$HOME/Code"
+        add_mcp github --transport stdio --env "GITHUB_PERSONAL_ACCESS_TOKEN=\${GITHUB_TOKEN}" github -- npx -y @modelcontextprotocol/server-github
+        add_mcp git --transport stdio git -- uvx mcp-server-git
+        add_mcp fetch --transport stdio fetch -- uvx mcp-server-fetch
+        add_mcp context7 --transport stdio context7 -- npx -y @upstash/context7-mcp
+        add_mcp aws-docs --transport stdio aws-docs -- uvx awslabs.aws-documentation-mcp-server
+        add_mcp aws-pricing --transport stdio aws-pricing -- uvx awslabs.aws-pricing-mcp-server@latest
+        add_mcp aws-iac --transport stdio aws-iac -- uvx awslabs.aws-iac-mcp-server@latest
+        add_mcp aws-knowledge --transport stdio aws-knowledge -- uvx awslabs.aws-knowledge-mcp-server@latest
+        add_mcp cloudwatch --transport stdio --env "AWS_REGION=\${AWS_REGION}" --env "AWS_PROFILE=\${AWS_PROFILE}" cloudwatch -- uvx awslabs.cloudwatch-mcp-server@latest
+        add_mcp iam --transport stdio --env "AWS_REGION=\${AWS_REGION}" --env "AWS_PROFILE=\${AWS_PROFILE}" iam -- uvx awslabs.iam-mcp-server@latest
+        unset -f add_mcp
 
-if installed code; then
-    install_editor_extensions code "the Microsoft Marketplace"
-fi
-
-# ---- Kiro MCP servers (global config) ----
-# MCP (Model Context Protocol) servers extend Kiro's built-in agent with extra tools.
-# Workspace overrides live in <repo>/.kiro/settings/mcp.json (precedence over global).
-KIRO_MCP_DIR="$HOME/.kiro/settings"
-KIRO_MCP="$KIRO_MCP_DIR/mcp.json"
-if ! is_done "config:kiro-mcp"; then
-if [[ -f "$KIRO_MCP" ]]; then
-    warn "Kiro MCP config already exists — not overwriting ($KIRO_MCP)"
+        success "Claude Code MCP servers configured (user scope)"
+        info "  Added: filesystem, github, git, fetch, context7, aws-docs, aws-pricing,"
+        info "         aws-iac, aws-knowledge, cloudwatch, iam"
+        info "  Opt-in per project (claude mcp add --scope project <name> ...):"
+        info "         playwright, postgres, aws-ccapi, aws-serverless, aws-lambda-tool,"
+        info "         aws-eks, aws-ecs, aws-dynamodb"
+        info "  github: export GITHUB_TOKEN=...   AWS servers use the standard AWS"
+        info "          credential chain (AWS_REGION / AWS_PROFILE / 'assume <profile>')."
+    fi
 else
-    info "Creating Kiro MCP server config..."
-    mkdir -p "$KIRO_MCP_DIR"
-    # Resolve absolute paths for npx and uvx. Required because Kiro is a GUI
-    # app — when launched from Finder/Spotlight/Raycast it inherits launchd's
-    # PATH (/usr/bin:/bin:/usr/sbin:/sbin), not the user's interactive shell
-    # PATH. Bare "command": "npx" would silently fail to spawn MCP servers
-    # unless the user launches Kiro from a terminal. Same well-known issue as
-    # Claude Desktop. Pre-expand to absolute paths in the JSON.
-    BREW_BIN="$(brew --prefix 2>/dev/null)/bin"
-    [[ -x "$BREW_BIN/npx" ]] || BREW_BIN="/opt/homebrew/bin"
-    [[ -x "$BREW_BIN/npx" ]] || BREW_BIN="/usr/local/bin"
-    KIRO_NPX="$BREW_BIN/npx"
-    KIRO_UVX="$BREW_BIN/uvx"
-    if [[ ! -x "$KIRO_NPX" ]]; then
-        warn "  npx not found at $KIRO_NPX — MCP servers using npx may fail when Kiro is launched from Finder"
-    fi
-    if [[ ! -x "$KIRO_UVX" ]]; then
-        warn "  uvx not found at $KIRO_UVX — MCP servers using uvx may fail when Kiro is launched from Finder"
-    fi
-    # Unquoted heredoc: $HOME, $KIRO_NPX, $KIRO_UVX pre-expand at install time
-    # so processes spawned by Kiro under launchd's restricted PATH still
-    # resolve. \${TOKEN} stays literal so Kiro substitutes from shell env at
-    # runtime (matches Kiro's documented pattern).
-    cat > "$KIRO_MCP" <<KIRO_MCP_CONF
-{
-  "mcpServers": {
-    "filesystem": {
-      "command": "$KIRO_NPX",
-      "args": ["-y", "@modelcontextprotocol/server-filesystem", "$HOME/Code"],
-      "disabled": false,
-      "autoApprove": ["read_file", "list_directory", "search_files"]
-    },
-    "github": {
-      "command": "$KIRO_NPX",
-      "args": ["-y", "@modelcontextprotocol/server-github"],
-      "env": {
-        "GITHUB_PERSONAL_ACCESS_TOKEN": "\${GITHUB_TOKEN}"
-      },
-      "disabled": false,
-      "autoApprove": ["search_repositories", "get_file_contents", "list_issues", "list_pull_requests"]
-    },
-    "git": {
-      "command": "$KIRO_UVX",
-      "args": ["mcp-server-git"],
-      "disabled": false,
-      "autoApprove": ["git_status", "git_diff", "git_log", "git_show"]
-    },
-    "fetch": {
-      "command": "$KIRO_UVX",
-      "args": ["mcp-server-fetch"],
-      "disabled": false,
-      "autoApprove": ["fetch"]
-    },
-    "context7": {
-      "command": "$KIRO_NPX",
-      "args": ["-y", "@upstash/context7-mcp"],
-      "disabled": false,
-      "autoApprove": ["resolve-library-id", "get-library-docs"]
-    },
-    "aws-docs": {
-      "command": "$KIRO_UVX",
-      "args": ["awslabs.aws-documentation-mcp-server"],
-      "disabled": false,
-      "autoApprove": ["search_documentation", "read_documentation"]
-    },
-    "aws-pricing": {
-      "command": "$KIRO_UVX",
-      "args": ["awslabs.aws-pricing-mcp-server@latest"],
-      "disabled": false,
-      "autoApprove": ["*"]
-    },
-    "aws-iac": {
-      "command": "$KIRO_UVX",
-      "args": ["awslabs.aws-iac-mcp-server@latest"],
-      "disabled": false,
-      "autoApprove": ["*"]
-    },
-    "aws-knowledge": {
-      "command": "$KIRO_UVX",
-      "args": ["awslabs.aws-knowledge-mcp-server@latest"],
-      "disabled": false,
-      "autoApprove": ["*"]
-    },
-    "cloudwatch": {
-      "command": "$KIRO_UVX",
-      "args": ["awslabs.cloudwatch-mcp-server@latest"],
-      "env": {
-        "AWS_REGION": "\${AWS_REGION}",
-        "AWS_PROFILE": "\${AWS_PROFILE}"
-      },
-      "disabled": false,
-      "autoApprove": [
-        "describe_alarms", "describe_alarm_history", "list_metrics",
-        "get_metric_data", "get_metric_statistics",
-        "describe_log_groups", "describe_log_streams", "get_log_events",
-        "start_query", "get_query_results", "describe_queries",
-        "describe_metric_filters"
-      ]
-    },
-    "iam": {
-      "command": "$KIRO_UVX",
-      "args": ["awslabs.iam-mcp-server@latest"],
-      "env": {
-        "AWS_REGION": "\${AWS_REGION}",
-        "AWS_PROFILE": "\${AWS_PROFILE}"
-      },
-      "disabled": false,
-      "autoApprove": [
-        "list_users", "list_roles", "list_groups", "list_policies",
-        "list_attached_role_policies", "list_role_policies",
-        "list_attached_user_policies", "list_attached_group_policies",
-        "get_user", "get_role", "get_group", "get_policy",
-        "get_role_policy", "get_user_policy", "get_policy_version",
-        "get_account_summary", "get_account_authorization_details",
-        "simulate_principal_policy", "simulate_custom_policy"
-      ]
-    },
-    "notion": {
-      "command": "$KIRO_NPX",
-      "args": ["-y", "@notionhq/notion-mcp-server"],
-      "env": {
-        "NOTION_TOKEN": "\${NOTION_TOKEN}"
-      },
-      "disabled": false,
-      "autoApprove": ["API-get-self", "API-get-user", "API-get-users", "API-retrieve-a-page", "API-retrieve-a-database", "API-post-search", "API-get-block-children"]
-    },
-    "playwright": {
-      "command": "$KIRO_NPX",
-      "args": ["-y", "@playwright/mcp"],
-      "disabled": true,
-      "autoApprove": []
-    },
-    "postgres": {
-      "command": "$KIRO_NPX",
-      "args": ["-y", "@modelcontextprotocol/server-postgres", "postgresql://localhost:5432/postgres"],
-      "disabled": true,
-      "autoApprove": []
-    },
-    "aws-ccapi": {
-      "command": "$KIRO_UVX",
-      "args": ["awslabs.ccapi-mcp-server@latest"],
-      "env": {
-        "AWS_REGION": "\${AWS_REGION}",
-        "AWS_PROFILE": "\${AWS_PROFILE}"
-      },
-      "disabled": true,
-      "autoApprove": []
-    },
-    "aws-serverless": {
-      "command": "$KIRO_UVX",
-      "args": ["awslabs.aws-serverless-mcp-server@latest"],
-      "env": {
-        "AWS_REGION": "\${AWS_REGION}",
-        "AWS_PROFILE": "\${AWS_PROFILE}"
-      },
-      "disabled": true,
-      "autoApprove": []
-    },
-    "aws-lambda-tool": {
-      "command": "$KIRO_UVX",
-      "args": ["awslabs.lambda-tool-mcp-server@latest"],
-      "env": {
-        "AWS_REGION": "\${AWS_REGION}",
-        "AWS_PROFILE": "\${AWS_PROFILE}"
-      },
-      "disabled": true,
-      "autoApprove": []
-    },
-    "aws-eks": {
-      "command": "$KIRO_UVX",
-      "args": ["awslabs.eks-mcp-server@latest"],
-      "env": {
-        "AWS_REGION": "\${AWS_REGION}",
-        "AWS_PROFILE": "\${AWS_PROFILE}"
-      },
-      "disabled": true,
-      "autoApprove": []
-    },
-    "aws-ecs": {
-      "command": "$KIRO_UVX",
-      "args": ["awslabs.ecs-mcp-server@latest"],
-      "env": {
-        "AWS_REGION": "\${AWS_REGION}",
-        "AWS_PROFILE": "\${AWS_PROFILE}"
-      },
-      "disabled": true,
-      "autoApprove": []
-    },
-    "aws-dynamodb": {
-      "command": "$KIRO_UVX",
-      "args": ["awslabs.dynamodb-mcp-server@latest"],
-      "env": {
-        "AWS_REGION": "\${AWS_REGION}",
-        "AWS_PROFILE": "\${AWS_PROFILE}"
-      },
-      "disabled": true,
-      "autoApprove": []
-    }
-  }
-}
-KIRO_MCP_CONF
-    success "Kiro MCP config created"
-    info "  Enabled: filesystem, github, git, fetch, context7, notion, aws-docs,"
-    info "           aws-pricing, aws-iac, aws-knowledge, cloudwatch, iam"
-    info "  Disabled (opt-in per project): playwright, postgres, aws-ccapi,"
-    info "           aws-serverless, aws-lambda-tool, aws-eks, aws-ecs, aws-dynamodb"
-    info "  Edit $KIRO_MCP to enable more servers or change scope"
-    info "  Notion: export NOTION_TOKEN=secret_... (https://www.notion.so/profile/integrations)"
-    info "  AWS:    AWS servers use the standard AWS credential chain — works with"
-    info "           ~/.aws/credentials, AWS SSO, or 'assume <profile>' (granted)."
-    info "           Set AWS_REGION and AWS_PROFILE in your shell to scope requests."
+    warn "Claude Code CLI not found -- skipping MCP server setup"
+    info "  After installing Claude Code + 'claude auth login', re-run:  $0 --only dracula"
 fi
-mark_done "config:kiro-mcp"
+mark_done "config:claude-mcp"
 fi
 
 # ---- Fonts (required for icons in eza, starship, lazygit, etc.) ----
@@ -3754,15 +3498,11 @@ else
 Icon?
 
 # -- Editors ------------------------------------------------------------------
-# Kiro / VS Code (Kiro is a VS Code fork, both layouts apply)
+# VS Code layout (still common in shared repos even though local editor is Helix)
 .vscode/settings.json
 .vscode/launch.json
 *.code-workspace
-# Kiro per-workspace user state — keep .kiro/steering, .kiro/specs, .kiro/hooks
-# and .kiro/settings/mcp.json under version control; ignore local agent state.
-.kiro/.cache/
-.kiro/.tmp/
-.kiro/local/
+# Helix keeps no per-repo state by default (config lives in ~/.config/helix).
 
 # JetBrains
 .idea/
@@ -4185,8 +3925,8 @@ if [[ -f /opt/homebrew/bin/brew ]]; then
 fi
 
 # Default editor
-export EDITOR="kiro --wait"
-export VISUAL="kiro --wait"
+export EDITOR="hx"
+export VISUAL="hx"
 
 # Default pager
 export PAGER="bat --style=plain --paging=always"
@@ -5002,7 +4742,7 @@ else
     cat > "$GH_CONFIG" <<'GH_CONF'
 # GitHub CLI configuration
 git_protocol: ssh
-editor: kiro --wait
+editor: hx
 prompt: enabled
 pager: delta
 
@@ -5023,7 +4763,7 @@ aliases:
     pm: pr merge --squash --delete-branch
     rel: release create --generate-notes
 GH_CONF
-    success "GitHub CLI configured (SSH protocol, Kiro editor, delta pager, aliases)"
+    success "GitHub CLI configured (SSH protocol, Helix editor, delta pager, aliases)"
 fi
 mark_done "config:gh-cli"
 fi
@@ -5218,7 +4958,7 @@ max_height = 1000
 
 [opener]
 edit = [
-    { run = 'kiro "$@"', desc = "Open in Kiro", block = true, for = "unix" },
+    { run = 'hx "$@"', desc = "Open in Helix", block = true, for = "unix" },
 ]
 YAZI_CONF
 
@@ -5252,7 +4992,7 @@ rules = [
     { name = "*.go", fg = "#8be9fd" },
 ]
 YAZI_THEME
-    success "yazi configured (hidden files, Kiro opener, Dracula theme)"
+    success "yazi configured (hidden files, Helix opener, Dracula theme)"
 fi
 mark_done "config:yazi"
 fi
@@ -5482,154 +5222,6 @@ fi
 mark_done "config:direnv"
 fi
 
-# ---- Kiro keybindings ----
-KIRO_KEYBINDINGS_DIR="$HOME/Library/Application Support/Kiro/User"
-KIRO_KEYBINDINGS="$KIRO_KEYBINDINGS_DIR/keybindings.json"
-if ! is_done "config:kiro-keybindings"; then
-if [[ -f "$KIRO_KEYBINDINGS" ]]; then
-    warn "Kiro keybindings already exist"
-else
-    info "Creating Kiro keybindings..."
-    mkdir -p "$KIRO_KEYBINDINGS_DIR"
-    cat > "$KIRO_KEYBINDINGS" <<'KIRO_KEYS'
-[
-    // Toggle terminal
-    {
-        "key": "cmd+`",
-        "command": "workbench.action.terminal.toggleTerminal"
-    },
-    // New terminal
-    {
-        "key": "cmd+shift+`",
-        "command": "workbench.action.terminal.new"
-    },
-    // Split editor
-    {
-        "key": "cmd+\\",
-        "command": "workbench.action.splitEditor"
-    },
-    // Navigate between editor groups
-    {
-        "key": "cmd+1",
-        "command": "workbench.action.focusFirstEditorGroup"
-    },
-    {
-        "key": "cmd+2",
-        "command": "workbench.action.focusSecondEditorGroup"
-    },
-    {
-        "key": "cmd+3",
-        "command": "workbench.action.focusThirdEditorGroup"
-    },
-    // Go to file (quick open)
-    {
-        "key": "cmd+p",
-        "command": "workbench.action.quickOpen"
-    },
-    // Go to symbol in file
-    {
-        "key": "cmd+shift+o",
-        "command": "workbench.action.gotoSymbol"
-    },
-    // Go to symbol in workspace
-    {
-        "key": "cmd+t",
-        "command": "workbench.action.showAllSymbols"
-    },
-    // Toggle sidebar
-    {
-        "key": "cmd+b",
-        "command": "workbench.action.toggleSidebarVisibility"
-    },
-    // Toggle minimap
-    {
-        "key": "cmd+shift+m",
-        "command": "editor.action.toggleMinimap"
-    },
-    // Fold/unfold code
-    {
-        "key": "cmd+shift+[",
-        "command": "editor.fold"
-    },
-    {
-        "key": "cmd+shift+]",
-        "command": "editor.unfold"
-    },
-    // Move line up/down
-    {
-        "key": "alt+up",
-        "command": "editor.action.moveLinesUpAction"
-    },
-    {
-        "key": "alt+down",
-        "command": "editor.action.moveLinesDownAction"
-    },
-    // Duplicate line
-    {
-        "key": "cmd+shift+d",
-        "command": "editor.action.copyLinesDownAction"
-    },
-    // Delete line
-    {
-        "key": "cmd+shift+k",
-        "command": "editor.action.deleteLines"
-    },
-    // Multi-cursor
-    {
-        "key": "cmd+d",
-        "command": "editor.action.addSelectionToNextFindMatch"
-    },
-    // Select all occurrences
-    {
-        "key": "cmd+shift+l",
-        "command": "editor.action.selectHighlights"
-    },
-    // Format document
-    {
-        "key": "cmd+shift+f",
-        "command": "editor.action.formatDocument"
-    },
-    // Rename symbol
-    {
-        "key": "f2",
-        "command": "editor.action.rename"
-    },
-    // Quick fix
-    {
-        "key": "cmd+.",
-        "command": "editor.action.quickFix"
-    },
-    // Close tab
-    {
-        "key": "cmd+w",
-        "command": "workbench.action.closeActiveEditor"
-    },
-    // Reopen closed tab
-    {
-        "key": "cmd+shift+t",
-        "command": "workbench.action.reopenClosedEditor"
-    },
-    // Kiro AI agent (built-in Claude)
-    {
-        "key": "cmd+i",
-        "command": "kiro.agent.openChat"
-    },
-    {
-        "key": "cmd+shift+i",
-        "command": "kiro.agent.inlineEdit",
-        "when": "editorTextFocus"
-    },
-    {
-        "key": "cmd+shift+s",
-        "command": "kiro.specs.create"
-    }
-]
-KIRO_KEYS
-    success "Kiro keybindings created"
-fi
-mark_done "config:kiro-keybindings"
-fi
-
 # Set RIPGREP_CONFIG_PATH in zshrc (needed for ripgrep to read config)
 # This will be in the managed block below
 
@@ -5786,9 +5378,6 @@ out/
 
 # IDE
 .vscode/settings.json
-.kiro/.cache/
-.kiro/.tmp/
-.kiro/local/
 .idea/
 
 # OS
@@ -6705,8 +6294,6 @@ else
       "Bash(zellij *)",
       "Bash(gum *)",
       "Bash(uvx *)",
-      "Bash(kiro *)",
-      "Bash(code *)",
       "Bash(aider *)",
       "Bash(llm *)",
       "Bash(repomix *)",
@@ -6823,7 +6410,7 @@ else
 
 ## Environment
 - Shell: zsh with starship prompt, atuin history, fzf fuzzy finder, zsh-autosuggestions, zsh-syntax-highlighting
-- Editors: Kiro (primary — VS Code fork with built-in Claude agent) and VS Code (same extension set); both Dracula theme, JetBrains Mono. CLIs available: `kiro`, `code`
+- Editor: Helix (`hx`) — modal terminal editor with built-in LSP, tree-sitter, Dracula theme; also the `EDITOR` for git/gh/lazygit. Agentic coding via Claude Code (`claude`).
 - Terminal: Ghostty (Dracula theme)
 - Package managers: pnpm (preferred), npm, bun
 - Python: uv for packages (not pip), ruff for linting (not flake8/black)
@@ -7916,8 +7503,8 @@ alias update="topgrade"
 alias sysinfo="fastfetch"
 
 # -- Terminal Welcome Screen --------------------------------------------------
-# Colorful greeting on new terminal sessions (skip in Kiro/VS Code integrated terminal)
-if [[ "$TERM_PROGRAM" != "vscode" ]] && [[ "$TERM_PROGRAM" != "kiro" ]] && [[ -z "$INSIDE_EMACS" ]]; then
+# Colorful greeting on new terminal sessions (skip inside editor-integrated terminals)
+if [[ "$TERM_PROGRAM" != "vscode" ]] && [[ -z "$INSIDE_EMACS" ]]; then
     if command -v fastfetch &>/dev/null; then
         fastfetch --logo small 2>/dev/null
     fi
@@ -8013,7 +7600,7 @@ echo "  [~/.newsboat]           RSS reader (vim keys, Dracula colors, starter UR
 echo "  [~/.config/ghostty]     GPU-accelerated terminal with Dracula theme"
 echo "  [~/.justfile]           Global task runner recipes"
 echo "  [~/.config/brewfile]    Brewfile snapshot for reproducibility"
-echo "  [Kiro]                  Dracula, extensions (OpenVSX), JetBrains Mono, MCP servers configured"
+echo "  [~/.config/helix]       Helix — Dracula theme, ruff LSP, auto-format; MCP servers migrated to Claude Code"
 echo "  [lazygit]               Dracula theme, delta pager"
 echo "  [k9s]                   Dracula skin"
 echo "  [Finder]                Hidden files, path bar, list view"
@@ -8168,7 +7755,7 @@ if [[ "$DRY_RUN" == "false" ]]; then
         "bun:bun --version"
         "uv:uv --version"
         "brew:brew --version"
-        "kiro:kiro --version"
+        "helix:hx --version"
         "docker/orbstack:docker --version || orbstack version"
         "starship:starship --version"
         "fzf:fzf --version"
