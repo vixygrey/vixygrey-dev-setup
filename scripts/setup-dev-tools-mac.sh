@@ -812,6 +812,8 @@ if [[ "$CLEANUP" == "true" ]]; then
         "cask:notion:Notion:tiki:Notion"
         "brew:yazi:yazi:rovr"
         "brew:cmus:cmus:kew"
+        "cask:raycast:Raycast:Ghostty quick-terminal + clipse:Raycast"
+        "cask:unifi-identity-endpoint:UniFi Identity Endpoint:removed:UniFi Identity Endpoint"
         "cask:cleanshot:CleanShot X:removed"
         "cask:soulver:Soulver 3:removed:Soulver 3"
         "cask:numi:Numi:removed"
@@ -845,7 +847,7 @@ if [[ "$CLEANUP" == "true" ]]; then
         "mas:1470584107:Dato:removed"
         "mas:1607635845:Velja:removed"
         "mas:1423210932:Flow:removed"
-        "cask:maccy:Maccy:Raycast Clipboard History"
+        "cask:maccy:Maccy:clipse"
         "formula:nvm:nvm:mise"
         "formula:pyenv:pyenv:mise"
         "formula:httpie:HTTPie:xh"
@@ -1713,8 +1715,35 @@ brew_install "aider" "aider (terminal AI pair programmer — git-aware edit loop
 brew_install "llm" "llm (Simon Willison's CLI — one-shot prompts, plugins, SQLite logs, embeddings)"
 brew_install "repomix" "repomix (pack a repo into a single LLM-friendly file with token counts)"
 
-# Productivity apps
-brew_cask_install "raycast" "Raycast (Spotlight replacement with extensions)"
+# Window management, status bar & clipboard (replaces Raycast + Spotlight)
+# AeroSpace — tiling window manager. No SIP disable required (emulated workspaces).
+brew tap nikitabobko/tap >> "$LOG_FILE" 2>&1 || true
+brew_cask_install "aerospace" "AeroSpace (tiling window manager — keyboard-driven, no SIP)"
+# SketchyBar — status bar / menu-bar replacement (Dracula), + app-icon font + bluetooth helper.
+brew tap FelixKratz/formulae >> "$LOG_FILE" 2>&1 || true
+brew_install "sketchybar" "SketchyBar (customizable macOS status bar)"
+brew_cask_install "font-sketchybar-app-font" "sketchybar-app-font (app glyphs for SketchyBar)"
+brew_install "blueutil" "blueutil (Bluetooth control from CLI — SketchyBar widget)"
+# clipse — TUI clipboard manager (replaces Raycast clipboard history). Not on Homebrew.
+if command -v clipse &>/dev/null; then
+    warn "clipse already installed"
+    progress
+elif installed go; then
+    info "Installing clipse (TUI clipboard manager) via go..."
+    if [[ "$DRY_RUN" != "true" ]]; then
+        if go install github.com/savedra1/clipse@latest >> "$LOG_FILE" 2>&1; then
+            success "clipse installed"
+        else
+            error "Failed to install clipse via go"
+        fi
+    else
+        info "[DRY RUN] Would: go install github.com/savedra1/clipse@latest"
+    fi
+    progress
+else
+    warn "Skipping clipse — Go not installed (run: brew install go)"
+    progress
+fi
 
 # Dotfile management
 brew_install "chezmoi" "chezmoi (dotfile manager — backup/restore configs across machines)"
@@ -1779,7 +1808,7 @@ fi  # docs
 if should_run "mac-system"; then
 banner "Mac Apps — System & Utilities"
 
-brew_cask_install "unifi-identity-endpoint" "UniFi Identity Endpoint (Wi-Fi, VPN, device management for UniFi NAS)"
+# UniFi Identity Endpoint removed (dropped from setup).
 brew_cask_install "lulu" "LuLu (outbound firewall)"
 brew_cask_install "mullvadvpn" "Mullvad VPN (privacy-focused, no account email required)"
 
@@ -3776,7 +3805,12 @@ defaults write com.apple.dock show-recents -bool false
 defaults write com.apple.dock mineffect -string "scale"
 # Minimize windows into their application icon
 defaults write com.apple.dock minimize-to-application -bool true
-success "Dock configured (small icons, no recents, scale effect)"
+# Clear all pinned apps from the Dock (Finder + Trash are permanent fixtures and remain).
+if [[ "$DRY_RUN" != "true" ]] && installed dockutil; then
+    dockutil --remove all --no-restart >> "$LOG_FILE" 2>&1 || true
+    killall Dock >/dev/null 2>&1 || true
+fi
+success "Dock configured (cleared to Finder + Trash, small icons, auto-hide, scale effect)"
 
 # -- Screenshots --
 # Save screenshots as PNG
@@ -5127,10 +5161,353 @@ macos-titlebar-style = transparent
 copy-on-select = clipboard
 confirm-close-surface = false
 mouse-hide-while-typing = true
+
+# Quick terminal — global dropdown launcher (Spotlight/Raycast replacement).
+# Requires Accessibility permission for Ghostty and disabling Spotlight's
+# cmd+space first (see ~/Desktop/POST_SETUP_CHECKLIST.md). In the dropdown,
+# type `a` to fuzzy-launch an app, `ff` to find files, `s <q>` for Spotlight search.
+keybind = global:cmd+space=toggle_quick_terminal
+quick-terminal-position = top
+quick-terminal-screen = main
+quick-terminal-animation-duration = 0.15
+quick-terminal-autohide = true
 GHOSTTY_CONF
     success "Ghostty configured (JetBrains Mono, Dracula theme, transparent titlebar)"
 fi
 mark_done "config:ghostty"
+fi
+
+# ---- AeroSpace config (tiling window manager) ----
+AEROSPACE_DIR="$HOME/.config/aerospace"
+if ! is_done "config:aerospace"; then
+if [[ -f "$AEROSPACE_DIR/aerospace.toml" ]]; then
+    warn "AeroSpace config already exists"
+else
+    info "Creating AeroSpace configuration (i3-style keys, gaps, SketchyBar hook)..."
+    mkdir -p "$AEROSPACE_DIR"
+    cat > "$AEROSPACE_DIR/aerospace.toml" <<'AEROSPACE_CONF'
+# AeroSpace — tiling window manager. Docs: https://nikitabobko.github.io/AeroSpace/guide
+# No SIP disable required. Set macOS "Displays have separate Spaces" = OFF.
+start-at-login = true
+
+enable-normalization-flatten-containers = true
+enable-normalization-opposite-orientation-for-nested-containers = true
+
+accordion-padding = 30
+default-root-container-layout = 'tiles'
+default-root-container-orientation = 'auto'
+
+# Notify SketchyBar when the focused workspace changes (updates the bar pills).
+exec-on-workspace-change = ['/bin/bash', '-c', 'sketchybar --trigger aerospace_workspace_change FOCUSED_WORKSPACE=$AEROSPACE_FOCUSED_WORKSPACE']
+
+[gaps]
+inner.horizontal = 8
+inner.vertical = 8
+outer.left = 8
+outer.bottom = 8
+outer.top = 8
+outer.right = 8
+
+[mode.main.binding]
+# Focus (Option + hjkl)
+alt-h = 'focus left'
+alt-j = 'focus down'
+alt-k = 'focus up'
+alt-l = 'focus right'
+
+# Move window (Option + Shift + hjkl)
+alt-shift-h = 'move left'
+alt-shift-j = 'move down'
+alt-shift-k = 'move up'
+alt-shift-l = 'move right'
+
+# Layout + fullscreen
+alt-slash = 'layout tiles horizontal vertical'
+alt-comma = 'layout accordion horizontal vertical'
+alt-f = 'fullscreen'
+
+# Resize
+alt-minus = 'resize smart -50'
+alt-equal = 'resize smart +50'
+
+# Workspaces
+alt-1 = 'workspace 1'
+alt-2 = 'workspace 2'
+alt-3 = 'workspace 3'
+alt-4 = 'workspace 4'
+alt-5 = 'workspace 5'
+alt-6 = 'workspace 6'
+alt-7 = 'workspace 7'
+alt-8 = 'workspace 8'
+alt-9 = 'workspace 9'
+
+# Move focused window to workspace
+alt-shift-1 = 'move-node-to-workspace 1'
+alt-shift-2 = 'move-node-to-workspace 2'
+alt-shift-3 = 'move-node-to-workspace 3'
+alt-shift-4 = 'move-node-to-workspace 4'
+alt-shift-5 = 'move-node-to-workspace 5'
+alt-shift-6 = 'move-node-to-workspace 6'
+alt-shift-7 = 'move-node-to-workspace 7'
+alt-shift-8 = 'move-node-to-workspace 8'
+alt-shift-9 = 'move-node-to-workspace 9'
+
+alt-tab = 'workspace-back-and-forth'
+alt-shift-c = 'reload-config'
+alt-shift-semicolon = 'mode service'
+
+[mode.service.binding]
+esc = ['reload-config', 'mode main']
+r = ['flatten-workspace-tree', 'mode main']
+f = ['layout floating tiling', 'mode main']
+backspace = ['close-all-windows-but-current', 'mode main']
+AEROSPACE_CONF
+    success "AeroSpace configured (Option+hjkl focus, workspaces 1-9, SketchyBar hook)"
+fi
+mark_done "config:aerospace"
+fi
+
+# ---- SketchyBar config (Dracula status bar + AeroSpace workspaces) ----
+# Shell-based config (no SbarLua build step). Plugins are simple + label-based so
+# they render without depending on specific Nerd Font glyphs; tune styling later.
+SBAR_DIR="$HOME/.config/sketchybar"
+SBAR_PLUGINS="$SBAR_DIR/plugins"
+if ! is_done "config:sketchybar"; then
+if [[ -f "$SBAR_DIR/sketchybarrc" ]]; then
+    warn "SketchyBar config already exists"
+else
+    info "Creating SketchyBar configuration (Dracula, AeroSpace pills, system widgets)..."
+    mkdir -p "$SBAR_PLUGINS"
+
+    # Shared Dracula palette (sourced by plugins)
+    cat > "$SBAR_DIR/colors.sh" <<'SBAR_COLORS'
+#!/usr/bin/env bash
+export BG=0xff282a36
+export FG=0xfff8f8f2
+export LINE=0xff44475a
+export COMMENT=0xff6272a4
+export CYAN=0xff8be9fd
+export GREEN=0xff50fa7b
+export ORANGE=0xffffb86c
+export PINK=0xffff79c6
+export PURPLE=0xffbd93f9
+export RED=0xffff5555
+export YELLOW=0xfff1fa8c
+SBAR_COLORS
+
+    cat > "$SBAR_DIR/sketchybarrc" <<'SBAR_RC'
+#!/usr/bin/env bash
+# SketchyBar — Dracula. Docs: https://felixkratz.github.io/SketchyBar
+source "$HOME/.config/sketchybar/colors.sh"
+PLUGIN_DIR="$HOME/.config/sketchybar/plugins"
+FONT="JetBrainsMono Nerd Font"
+
+sketchybar --bar height=32 position=top blur_radius=30 color=$BG \
+                 padding_left=8 padding_right=8 sticky=on
+
+sketchybar --default updates=when_shown \
+                     icon.font="$FONT:Bold:13.0" icon.color=$FG \
+                     label.font="$FONT:Semibold:13.0" label.color=$FG \
+                     padding_left=5 padding_right=5 \
+                     background.color=$LINE background.corner_radius=6 background.height=22
+
+# --- Left: AeroSpace workspaces ---
+sketchybar --add event aerospace_workspace_change
+for sid in $(aerospace list-workspaces --all 2>/dev/null); do
+  sketchybar --add item space.$sid left \
+             --subscribe space.$sid aerospace_workspace_change \
+             --set space.$sid label="$sid" icon.drawing=off \
+                   background.color=$LINE \
+                   click_script="aerospace workspace $sid" \
+                   script="$PLUGIN_DIR/aerospace.sh $sid"
+done
+
+# --- Left: focused app ---
+sketchybar --add item front_app left \
+           --subscribe front_app front_app_switched \
+           --set front_app icon.drawing=off label.color=$PURPLE label.font="$FONT:Bold:13.0" \
+                 script="$PLUGIN_DIR/front_app.sh"
+
+# --- Center: clock (click opens khal in a Ghostty quick terminal) ---
+sketchybar --add item clock center \
+           --set clock update_freq=10 icon.drawing=off \
+                 click_script="open -a Ghostty; sleep 0.2; osascript -e 'tell application \"System Events\" to keystroke \"khal\" & return' >/dev/null 2>&1" \
+                 script="$PLUGIN_DIR/clock.sh"
+
+# --- Right (added right-to-left visually) ---
+sketchybar --add item battery right \
+           --subscribe battery system_woke power_source_change \
+           --set battery update_freq=120 script="$PLUGIN_DIR/battery.sh"
+
+sketchybar --add item bluetooth right \
+           --set bluetooth update_freq=30 icon.drawing=off label.color=$PURPLE \
+                 click_script="blueutil --power toggle" \
+                 script="$PLUGIN_DIR/bluetooth.sh"
+
+sketchybar --add item wifi right \
+           --set wifi update_freq=30 icon.drawing=off label.color=$GREEN \
+                 script="$PLUGIN_DIR/wifi.sh"
+
+sketchybar --add item volume right \
+           --subscribe volume volume_change \
+           --set volume icon.drawing=off script="$PLUGIN_DIR/volume.sh"
+
+sketchybar --add item cpu right \
+           --set cpu update_freq=5 icon.drawing=off label.color=$ORANGE \
+                 script="$PLUGIN_DIR/cpu.sh"
+
+sketchybar --add item mem right \
+           --set mem update_freq=10 icon.drawing=off label.color=$YELLOW \
+                 script="$PLUGIN_DIR/mem.sh"
+
+sketchybar --add item vpn right \
+           --set vpn update_freq=15 icon.drawing=off \
+                 click_script="$PLUGIN_DIR/vpn_toggle.sh" \
+                 script="$PLUGIN_DIR/vpn.sh"
+
+sketchybar --update
+SBAR_RC
+
+    # -- plugins --
+    cat > "$SBAR_PLUGINS/aerospace.sh" <<'P_AERO'
+#!/usr/bin/env bash
+source "$HOME/.config/sketchybar/colors.sh"
+if [ "$1" = "$FOCUSED_WORKSPACE" ]; then
+    sketchybar --set "$NAME" background.color=$PURPLE label.color=$BG
+else
+    sketchybar --set "$NAME" background.color=$LINE label.color=$FG
+fi
+P_AERO
+
+    cat > "$SBAR_PLUGINS/front_app.sh" <<'P_FRONT'
+#!/usr/bin/env bash
+[ "$SENDER" = "front_app_switched" ] && sketchybar --set "$NAME" label="$INFO"
+P_FRONT
+
+    cat > "$SBAR_PLUGINS/clock.sh" <<'P_CLOCK'
+#!/usr/bin/env bash
+sketchybar --set "$NAME" label="$(date '+%a %d %b  %H:%M')"
+P_CLOCK
+
+    cat > "$SBAR_PLUGINS/battery.sh" <<'P_BATT'
+#!/usr/bin/env bash
+source "$HOME/.config/sketchybar/colors.sh"
+PCT=$(pmset -g batt | grep -Eo '[0-9]+%' | head -1 | tr -d '%')
+# Mac mini / no battery: hide the item entirely.
+if [ -z "$PCT" ]; then sketchybar --set "$NAME" drawing=off; exit 0; fi
+CHARGING=$(pmset -g batt | grep -c 'AC Power')
+COLOR=$GREEN
+[ "$PCT" -lt 40 ] && COLOR=$YELLOW
+[ "$PCT" -lt 20 ] && COLOR=$RED
+LABEL="${PCT}%"
+[ "$CHARGING" -gt 0 ] && LABEL="${PCT}%+"
+sketchybar --set "$NAME" drawing=on icon.drawing=off label="$LABEL" label.color=$COLOR
+P_BATT
+
+    cat > "$SBAR_PLUGINS/bluetooth.sh" <<'P_BT'
+#!/usr/bin/env bash
+source "$HOME/.config/sketchybar/colors.sh"
+if command -v blueutil >/dev/null 2>&1 && [ "$(blueutil --power)" = "1" ]; then
+    sketchybar --set "$NAME" label="BT" label.color=$PURPLE
+else
+    sketchybar --set "$NAME" label="BT" label.color=$COMMENT
+fi
+P_BT
+
+    cat > "$SBAR_PLUGINS/wifi.sh" <<'P_WIFI'
+#!/usr/bin/env bash
+source "$HOME/.config/sketchybar/colors.sh"
+SSID=$(ipconfig getsummary en0 2>/dev/null | awk -F ' SSID : ' '/ SSID : / {print $2; exit}')
+if [ -n "$SSID" ]; then
+    sketchybar --set "$NAME" label="$SSID" label.color=$GREEN
+else
+    sketchybar --set "$NAME" label="off" label.color=$COMMENT
+fi
+P_WIFI
+
+    cat > "$SBAR_PLUGINS/volume.sh" <<'P_VOL'
+#!/usr/bin/env bash
+source "$HOME/.config/sketchybar/colors.sh"
+VOL="${INFO:-$(osascript -e 'output volume of (get volume settings)')}"
+sketchybar --set "$NAME" label="vol ${VOL}%" label.color=$CYAN
+P_VOL
+
+    cat > "$SBAR_PLUGINS/cpu.sh" <<'P_CPU'
+#!/usr/bin/env bash
+source "$HOME/.config/sketchybar/colors.sh"
+CPU=$(ps -A -o %cpu | awk '{s+=$1} END {printf "%d", s/'"$(sysctl -n hw.ncpu)"'}')
+sketchybar --set "$NAME" label="cpu ${CPU}%" label.color=$ORANGE
+P_CPU
+
+    cat > "$SBAR_PLUGINS/mem.sh" <<'P_MEM'
+#!/usr/bin/env bash
+source "$HOME/.config/sketchybar/colors.sh"
+USED=$(memory_pressure 2>/dev/null | awk -F ': ' '/System-wide memory free percentage/ {print 100-$2}' | tr -d '%')
+[ -z "$USED" ] && USED="?"
+sketchybar --set "$NAME" label="mem ${USED}%" label.color=$YELLOW
+P_MEM
+
+    cat > "$SBAR_PLUGINS/vpn.sh" <<'P_VPN'
+#!/usr/bin/env bash
+source "$HOME/.config/sketchybar/colors.sh"
+if command -v mullvad >/dev/null 2>&1 && mullvad status 2>/dev/null | grep -qi 'Connected'; then
+    sketchybar --set "$NAME" label="VPN" label.color=$GREEN
+else
+    sketchybar --set "$NAME" label="VPN" label.color=$RED
+fi
+P_VPN
+
+    cat > "$SBAR_PLUGINS/vpn_toggle.sh" <<'P_VPNT'
+#!/usr/bin/env bash
+command -v mullvad >/dev/null 2>&1 || exit 0
+if mullvad status 2>/dev/null | grep -qi 'Connected'; then mullvad disconnect; else mullvad connect; fi
+P_VPNT
+
+    chmod +x "$SBAR_DIR/sketchybarrc" "$SBAR_PLUGINS"/*.sh
+    if [[ "$DRY_RUN" != "true" ]] && installed sketchybar; then
+        brew services restart sketchybar >> "$LOG_FILE" 2>&1 || warn "Could not start sketchybar service (grant it Accessibility if needed)"
+    fi
+    success "SketchyBar configured (Dracula, AeroSpace pills, system widgets)"
+fi
+mark_done "config:sketchybar"
+fi
+
+# ---- clipse clipboard listener (launchd agent) ----
+# clipse runs a background listener to capture clipboard history. Register a
+# LaunchAgent so it starts at login.
+CLIPSE_BIN="$(command -v clipse || echo "$HOME/go/bin/clipse")"
+CLIPSE_PLIST="$HOME/Library/LaunchAgents/com.clipse.listener.plist"
+if ! is_done "config:clipse"; then
+if [[ ! -x "$CLIPSE_BIN" ]]; then
+    warn "clipse not installed — skipping clipboard listener agent"
+elif [[ -f "$CLIPSE_PLIST" ]]; then
+    warn "clipse launch agent already exists"
+else
+    info "Creating clipse clipboard-listener launch agent..."
+    mkdir -p "$HOME/Library/LaunchAgents"
+    cat > "$CLIPSE_PLIST" <<CLIPSE_PLIST_EOF
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key><string>com.clipse.listener</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>$CLIPSE_BIN</string>
+        <string>-listen</string>
+    </array>
+    <key>RunAtLoad</key><true/>
+    <key>KeepAlive</key><true/>
+</dict>
+</plist>
+CLIPSE_PLIST_EOF
+    if [[ "$DRY_RUN" != "true" ]]; then
+        launchctl unload "$CLIPSE_PLIST" >> "$LOG_FILE" 2>&1 || true
+        launchctl load "$CLIPSE_PLIST" >> "$LOG_FILE" 2>&1 || warn "Could not load clipse launch agent"
+    fi
+    success "clipse clipboard listener registered (starts at login)"
+fi
+mark_done "config:clipse"
 fi
 
 # ---- direnv config ----
@@ -6361,7 +6738,7 @@ else
 - Task runner: just (prefer over make for project-level tasks)
 - Shell note: `bat` is aliased to `cat`; use `/bin/cat` only inside heredoc subshells where bat breaks syntax
 - Dotfiles: chezmoi
-- Launcher: Raycast
+- Launcher: Ghostty quick terminal (global cmd+space) + shell functions `a` (app launcher), `ff`/`rgf`/`s` (file/content/Spotlight search). Window mgmt: AeroSpace (Option+hjkl). Bar: SketchyBar. Clipboard: clipse (`clip`)
 - API client: ATAC (terminal — TUI + scriptable CLI; JSON/YAML collections, Postman import). Plus hurl / xh / curlie / grpcurl
 - Database: pgcli, mycli, lazysql, harlequin (SQL IDE TUI), usql, sq; migrations via dbmate
 - Diagrams: d2 / Mermaid (code-based, in the terminal)
@@ -7418,6 +7795,32 @@ alias fmt-sh="shfmt -w -i 4"
 # -- Terminal Apps ------------------------------------------------------------
 alias n="nnn -de"
 alias prog="progress -m"
+alias clip="clipse"    # clipboard-history TUI (replaces Raycast clipboard)
+
+# -- Terminal launcher & search (replaces Raycast / Spotlight) ----------------
+# Run these in the Ghostty quick terminal (global cmd+space) for a launcher feel.
+# a: fuzzy-launch an installed macOS app
+a() {
+  local app
+  app=$(mdfind "kMDItemContentType == 'com.apple.application-bundle'" 2>/dev/null \
+        | sort -u | fzf --prompt='launch ❯ ' --with-nth=-1 --delimiter=/) \
+    && [[ -n "$app" ]] && open "$app"
+}
+# ff: find a file by name and open it
+ff() {
+  local file
+  file=$(fd --type f --hidden --exclude .git 2>/dev/null \
+         | fzf --prompt='files ❯ ' --preview 'bat --color=always {} 2>/dev/null | head -100') \
+    && [[ -n "$file" ]] && open "$file"
+}
+# rgf: live content search (ripgrep + fzf with a bat preview)
+rgf() {
+  rg --line-number --no-heading --color=always "${1:-}" 2>/dev/null \
+    | fzf --ansi --delimiter=: \
+          --preview 'bat --color=always {1} --highlight-line {2} 2>/dev/null'
+}
+# s: Spotlight-index search from the terminal
+s() { mdfind "$@"; }
 
 # -- Database -----------------------------------------------------------------
 alias hq="harlequin"
@@ -7540,7 +7943,9 @@ echo "  [~/.config/mpv]         Video player (hardware accel, save position)"
 echo "  [~/Library/Preferences/kew]  Music player (library ~/Media/music, spectrum visualizer)"
 echo "  [~/.config/git-cliff]   Changelog generator (conventional commits)"
 echo "  [~/.newsboat]           RSS reader (vim keys, Dracula colors, starter URLs)"
-echo "  [~/.config/ghostty]     GPU-accelerated terminal with Dracula theme"
+echo "  [~/.config/ghostty]     GPU-accelerated terminal + quick-terminal launcher (cmd+space)"
+echo "  [~/.config/aerospace]   Tiling window manager (Option+hjkl, workspaces 1-9)"
+echo "  [~/.config/sketchybar]  Dracula status bar (AeroSpace pills, battery/wifi/vpn/cpu/mem)"
 echo "  [~/.justfile]           Global task runner recipes"
 echo "  [~/.config/brewfile]    Brewfile snapshot for reproducibility"
 echo "  [~/.config/helix]       Helix — Dracula theme, ruff LSP, auto-format; MCP servers migrated to Claude Code"
@@ -7556,15 +7961,13 @@ echo "  - React Developer Tools"
 echo "  - Lighthouse"
 echo "  - JSON Formatter"
 echo ""
-info "Recommended Raycast extensions (install via Raycast Store):"
-echo "  - Clipboard History (built-in)"
-echo "  - GitHub (search repos, PRs, issues)"
-echo "  - AWS (quick access to console services)"
-echo "  - Docker (manage containers)"
-echo "  - Notion (search Notion pages)"
-echo "  - Brew (search & install packages)"
-echo "  - Kill Process (fast process killer)"
-echo "  - Color Picker (system-wide color picker)"
+info "Terminal launcher & window management (replaces Raycast/Spotlight):"
+echo "  - cmd+space           Ghostty quick terminal (after disabling Spotlight's cmd+space)"
+echo "  - a                   fuzzy-launch an app        ff   find & open a file"
+echo "  - rgf <pattern>       search file contents        s <q>  Spotlight-index search"
+echo "  - clip                clipboard history (clipse)"
+echo "  - Option + hjkl       AeroSpace: focus windows;   Option+1..9  switch workspace"
+echo "  - taproom             browse/install Homebrew;    k9s / lazydocker  containers"
 echo ""
 info "Chezmoi quickstart (dotfile backup):"
 echo "  chezmoi init                          # Initialize"
@@ -7573,7 +7976,7 @@ echo "  chezmoi cd && git remote add origin <repo>  # Link to git repo"
 echo "  chezmoi update                        # Pull on new machine"
 echo ""
 info "Tips:"
-echo "  - Keep ~/Desktop empty — use Raycast/Spotlight to find files"
+echo "  - Keep ~/Desktop empty — use 'ff' / 's' (mdfind) to find files from the terminal"
 echo "  - Disable iCloud Desktop & Documents: System Settings > Apple ID > iCloud > iCloud Drive > Options"
 echo "  - hyperfine: benchmark commands with 'hyperfine \"command1\" \"command2\"'"
 echo "  - oha: load test with 'oha -n 1000 -c 50 http://localhost:3000'"
