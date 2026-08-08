@@ -206,7 +206,7 @@ declare -A CATEGORY_DESC=(
     [prerequisites]="Xcode CLI Tools, Homebrew, GNU coreutils"
     [core]="mise (Node, Python), Go, Rust, OrbStack, bun, uv, pnpm"
     [git]="Git, GitHub CLI, delta, lazygit, pre-commit"
-    [aws]="AWS CLI, CDK, SAM, Granted, cfn-lint"
+    [aws]="AWS CLI, CDK, SAM, Granted, cfn-lint, e1s/e2c/stu/claws (TUIs), s5cmd, steampipe, dynein, iamlive"
     [iac]="OpenTofu (Terraform), tflint, terraform-docs, checkov, infracost"
     [security]="detect-secrets, gitleaks, trivy, semgrep, Snyk, ClamAV"
     [replacements]="eza, bat, fd, ripgrep, zoxide, btop, sd, dust, just, rovr"
@@ -374,7 +374,7 @@ list_categories() {
     printf "  %-25s %s\n" "prerequisites"       "Xcode CLI Tools, Homebrew, GNU coreutils"
     printf "  %-25s %s\n" "core"                "mise (Node, Python), Go, Rust, OrbStack, bun, uv, pnpm"
     printf "  %-25s %s\n" "git"                 "Git, GitHub CLI, delta, lazygit, pre-commit"
-    printf "  %-25s %s\n" "aws"                 "AWS CLI, CDK, SAM, Granted, cfn-lint"
+    printf "  %-25s %s\n" "aws"                 "AWS CLI, CDK, SAM, Granted, cfn-lint, e1s/e2c/stu/claws (TUIs), s5cmd, steampipe, dynein, iamlive"
     printf "  %-25s %s\n" "iac"                 "OpenTofu (Terraform), tflint, terraform-docs, checkov, infracost"
     printf "  %-25s %s\n" "security"            "detect-secrets, gitleaks, trivy, semgrep, Snyk, ClamAV, Objective-See"
     printf "  %-25s %s\n" "replacements"        "eza, bat, fd, ripgrep, zoxide, btop, sd, dust, just, rovr, fx, etc."
@@ -1239,6 +1239,44 @@ if installed npm; then
 else
     progress; progress  # keep progress bar accurate when npm unavailable
 fi
+
+# -- AWS TUIs (k9s-style, per service) --
+brew_install "e1s" "e1s (ECS TUI — clusters/services/tasks, exec, logs, port-forward)"
+brew_install "stu" "stu (S3 TUI — browse/preview/download buckets)"
+# e2c (EC2 TUI) — young project; not on Homebrew, install via Go.
+if command -v e2c &>/dev/null; then
+    warn "e2c already installed"
+    progress
+elif installed go; then
+    info "Installing e2c (EC2 TUI) via go..."
+    if [[ "$DRY_RUN" != "true" ]]; then
+        go install github.com/nlamirault/e2c/cmd/e2c@latest >> "$LOG_FILE" 2>&1 \
+            && success "e2c installed" || warn "Could not install e2c (needs Go)"
+    else
+        info "[DRY RUN] Would: go install github.com/nlamirault/e2c/cmd/e2c@latest"
+    fi
+    progress
+else
+    warn "Skipping e2c — Go not installed"
+    progress
+fi
+# claws — broad all-AWS TUI (young); cask from the clawscli tap.
+brew tap clawscli/tap >> "$LOG_FILE" 2>&1 || true
+brew_cask_install "claws" "claws (all-AWS TUI — ~70 services, k9s-style; young project)"
+
+# -- AWS CLIs --
+brew_install "s5cmd" "s5cmd (massively parallel S3 CLI — 10-30x faster than 'aws s3' for bulk)"
+brew_install "dynein" "dynein (ergonomic DynamoDB CLI — awslabs; shorthand ops, import/export)"
+brew_install "steampipe" "steampipe (query live AWS with SQL — inventory & posture)"
+# steampipe AWS plugin (one-time)
+if [[ "$DRY_RUN" != "true" ]] && installed steampipe && ! is_done "config:steampipe-aws"; then
+    steampipe plugin install aws >> "$LOG_FILE" 2>&1 \
+        && success "steampipe AWS plugin installed" || warn "Could not install steampipe aws plugin (run: steampipe plugin install aws)"
+    mark_done "config:steampipe-aws"
+fi
+# iamlive — generate least-privilege IAM policies from observed API calls (tap).
+brew tap iann0036/iamlive >> "$LOG_FILE" 2>&1 || true
+brew_install "iamlive" "iamlive (generate least-privilege IAM policies from observed API calls)"
 
 fi  # aws
 
