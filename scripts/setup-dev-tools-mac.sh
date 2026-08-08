@@ -1527,6 +1527,16 @@ if should_run "terminal-productivity"; then
 banner "Terminal Productivity"
 
 brew_install "leaf-markdown-viewer" "leaf (terminal Markdown previewer — live watch, fuzzy picker, Mermaid/LaTeX, inline mode)"
+# leaf shell completions: `leaf --auto-complete` auto-detects the login shell
+# (from $SHELL) and installs completions; a shell restart activates them. One-time.
+if [[ "$DRY_RUN" != "true" ]] && command -v leaf &>/dev/null && ! is_done "config:leaf-completions"; then
+    if leaf --auto-complete >> "$LOG_FILE" 2>&1; then
+        success "leaf shell completions installed (restart shell to activate)"
+    else
+        warn "Could not install leaf completions (run manually: leaf --auto-complete)"
+    fi
+    mark_done "config:leaf-completions"
+fi
 brew_install "watchexec" "watchexec (run commands on file changes — better entr)"
 brew_install "pv" "pv (pipe viewer — progress bars for pipes)"
 brew_install "parallel" "parallel (GNU parallel — run commands in parallel)"
@@ -8292,6 +8302,7 @@ the list, then delete this file.
 - [ ] **chezmoi:** `chezmoi init <your-dotfiles-repo>` to bring these configs under version control across the MacBook + Mac mini.
 - [ ] **tiki** (notes): run `tiki` once and point it at (or init) your notes git repo.
 - [ ] **kew** (music): drop music into `~/Media/music` (the configured library path).
+- [ ] **leaf** (Markdown): if tab-completion isn't working, run `leaf --auto-complete` and restart your shell (the script attempts this automatically).
 
 ## Standard machine setup
 - [ ] Generate an SSH key if needed: `ssh-keygen -t ed25519 -C "you@example.com"` and `gh ssh-key add ~/.ssh/id_ed25519.pub`.
