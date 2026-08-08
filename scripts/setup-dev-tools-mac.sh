@@ -1,5 +1,17 @@
 #!/usr/bin/env bash
 
+# Require bash 4+ (this script uses associative arrays). macOS ships bash 3.2 as
+# /bin/bash, so on a clean Mac re-exec under a newer bash if one is installed;
+# otherwise tell the user how to get one. (This guard is itself 3.2-compatible.)
+if ((BASH_VERSINFO[0] < 4)); then
+    for _newbash in /opt/homebrew/bin/bash /usr/local/bin/bash; do
+        [[ -x "$_newbash" ]] && exec "$_newbash" "$0" "$@"
+    done
+    echo "This setup script needs bash 4+ (macOS ships bash 3.2)." >&2
+    echo "Install a newer bash and re-run:  brew install bash" >&2
+    exit 1
+fi
+
 # =============================================================================
 # Development Environment Setup Script (macOS)
 # =============================================================================
@@ -1069,7 +1081,7 @@ if ! installed brew; then
     if [[ ! -s "$installer" ]]; then
         error "Failed to download Homebrew installer"
         rm -f "$installer"
-        return 1
+        exit 1
     fi
     /bin/bash "$installer"
     rm -f "$installer"
@@ -1582,7 +1594,6 @@ banner "Code Quality"
 brew_install "shellcheck" "shellcheck (shell script linter)"
 brew_install "shfmt" "shfmt (shell script formatter)"
 brew_install "act" "act (run GitHub Actions locally)"
-brew tap dhth/tap >> "$LOG_FILE" 2>&1 || true
 brew tap dhth/tap >> "$LOG_FILE" 2>&1 || true
 brew_install "act3" "act3 (glance at last 3 GitHub Actions runs — dhth tap, not homebrew-core)"
 brew_install "hadolint" "hadolint (Dockerfile linter — catches bad practices)"
@@ -3520,8 +3531,9 @@ Host github.com
 #     Port 22
 #     IdentityFile ~/.ssh/id_ed25519
 SSH_CONF
-    # Create sockets directory for multiplexing
-    chmod 700 "$HOME/.ssh/sockets"
+    # Create the multiplexing sockets dir, then lock down perms (dirs must exist first)
+    mkdir -p "$HOME/.ssh/sockets"
+    chmod 700 "$HOME/.ssh" "$HOME/.ssh/sockets"
     chmod 600 "$SSH_CONFIG"
     success "SSH configured (multiplexing, keychain, keep-alive, strong algorithms)"
 
@@ -3786,7 +3798,10 @@ if installed docker; then
     fi
 fi
 
+fi  # configs (end of first configs segment)
+
 # ---- macOS System Defaults ----
+# Top-level category (NOT nested in configs) so --only macos-defaults works.
 if should_run "macos-defaults"; then
 info "Configuring macOS system defaults..."
 
@@ -3932,6 +3947,8 @@ else
 fi  # DRY_RUN
 
 fi  # macos-defaults
+
+if should_run "configs"; then  # resume configs (second segment)
 
 # ---- ~/.hushlogin (suppress "Last login" message) ----
 if ! is_done "config:hushlogin"; then
@@ -5506,9 +5523,15 @@ DIRENV_CONF
 # This will be in the managed block below
 
 
+fi  # configs (end of second configs segment)
+
 # ---- Filesystem Structure ----
+# Top-level category (NOT nested in configs) so --only filesystem works.
 if should_run "filesystem"; then
 info "Setting up filesystem structure..."
+if [[ "$DRY_RUN" == "true" ]]; then
+    info "[DRY RUN] Would create the ~ directory tree, helper scripts, and Brewfile"
+else
 
 # ADD-friendly layout: few top-level roots, shallow nesting, no overlapping
 # categories, and an ~/Inbox dump zone so nothing needs to be filed in the moment.
@@ -6092,6 +6115,7 @@ else
     warn "git includeIf for ~/Code/personal/ already set"
 fi
 
+fi  # end DRY_RUN (filesystem)
 fi  # filesystem
 
 if should_run "macos-defaults"; then
@@ -6435,8 +6459,6 @@ else
 fi  # DRY_RUN
 
 fi  # macos-defaults (Finder, Touch ID, DNS, Spotlight, TM, Siri, app defaults)
-
-fi  # configs
 
 # =============================================================================
 if should_run "configs"; then
@@ -7938,7 +7960,9 @@ fi
 MANAGED_ZSHRC
 )
 
-if [[ -f "$ZSHRC" ]]; then
+if [[ "$DRY_RUN" == "true" ]]; then
+    info "[DRY RUN] Would write the ~/.zshrc managed block (backing up first)"
+elif [[ -f "$ZSHRC" ]]; then
     if grep -q "$ZSHRC_MANAGED_MARKER" "$ZSHRC" 2>/dev/null; then
         info "Updating managed block in existing ~/.zshrc..."
         # Back up first
@@ -8378,7 +8402,7 @@ if [[ "$DRY_RUN" == "false" ]]; then
     for entry in "${VERIFY_TOOLS[@]}"; do
         tool="${entry%%:*}"
         cmd="${entry##*:}"
-        if version=$($cmd 2>/dev/null | head -1); then
+        if version=$(bash -c "$cmd" 2>/dev/null | head -1); then
             echo -e "  ${GREEN}✓${NC} $tool: $version"
             ((VERIFY_PASS++))
         else
