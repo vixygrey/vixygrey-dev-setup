@@ -2126,13 +2126,8 @@ fi
 
 # Starship prompt (rich config with Dracula palette)
 STARSHIP_CONFIG="$HOME/.config/starship.toml"
-if ! is_done "config:starship"; then
-if [[ -f "$STARSHIP_CONFIG" ]] && grep -q "dracula" "$STARSHIP_CONFIG" 2>/dev/null; then
-    warn "Starship config already configured"
-else
     info "Creating rich Starship prompt config..."
-    mkdir -p "$(dirname "$STARSHIP_CONFIG")"
-    cat > "$STARSHIP_CONFIG" <<'STARSHIP_CONF'
+    write_managed "$STARSHIP_CONFIG" "#" <<'STARSHIP_CONF'
 # =============================================================================
 # Starship Prompt — Dracula themed, info-rich
 # =============================================================================
@@ -2356,9 +2351,6 @@ red = "#ff5555"
 yellow = "#f1fa8c"
 STARSHIP_CONF
     success "Starship prompt configured (rich two-line prompt, Dracula theme)"
-fi
-mark_done "config:starship"
-fi
 
 fi  # dracula
 
@@ -2448,18 +2440,13 @@ success "  git aliases configured (30+ shortcuts for status, log, branch, diff, 
 
 # ---- GPG + pinentry-mac ----
 GPG_AGENT_CONF="$HOME/.gnupg/gpg-agent.conf"
-if ! is_done "config:gpg-pinentry"; then
-if [[ -f "$GPG_AGENT_CONF" ]] && grep -q "pinentry-mac" "$GPG_AGENT_CONF" 2>/dev/null; then
-    warn "GPG pinentry-mac already configured"
-else
     info "Configuring GPG to use pinentry-mac..."
-    mkdir -p "$HOME/.gnupg"
     chmod 700 "$HOME/.gnupg"
     PINENTRY_PATH="$(brew --prefix 2>/dev/null)/bin/pinentry-mac"
     if [[ ! -x "$PINENTRY_PATH" ]]; then
         warn "pinentry-mac not found at $PINENTRY_PATH — skipping GPG agent config"
     else
-        cat > "$GPG_AGENT_CONF" <<GPG_CONFIG
+        write_managed "$GPG_AGENT_CONF" "#" <<GPG_CONFIG
 # Use macOS keychain for passphrase
 pinentry-program $PINENTRY_PATH
 
@@ -2471,9 +2458,6 @@ GPG_CONFIG
         gpgconf --kill gpg-agent 2>/dev/null || true
         success "GPG pinentry-mac configured (passphrases cached 8 hours)"
     fi
-fi
-mark_done "config:gpg-pinentry"
-fi
 
 # ---- aria2 ----
 ARIA2_CONFIG_DIR="$HOME/.aria2"
@@ -2631,13 +2615,8 @@ ATUIN_CONF
 if installed lazygit; then
 LAZYGIT_CONFIG_DIR="$HOME/Library/Application Support/lazygit"
 LAZYGIT_CONFIG="$LAZYGIT_CONFIG_DIR/config.yml"
-if ! is_done "config:lazygit"; then
-if [[ -f "$LAZYGIT_CONFIG" ]] && grep -q "activeBorderColor" "$LAZYGIT_CONFIG" 2>/dev/null; then
-    warn "lazygit theme already configured"
-else
     info "Creating lazygit Dracula config..."
-    mkdir -p "$LAZYGIT_CONFIG_DIR"
-    cat > "$LAZYGIT_CONFIG" <<'LAZYGIT_CONF'
+    write_managed "$LAZYGIT_CONFIG" "#" <<'LAZYGIT_CONF'
 gui:
   nerdFontsVersion: "3"
   showBottomLine: false
@@ -2683,9 +2662,6 @@ notARepository: skip
 promptToReturnFromSubprocess: false
 LAZYGIT_CONF
     success "lazygit configured (Dracula theme, delta pager, auto-fetch, Helix editor)"
-fi
-mark_done "config:lazygit"
-fi
 fi  # installed lazygit
 
 # ---- k9s Dracula skin ----
