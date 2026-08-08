@@ -760,7 +760,7 @@ if [[ "$UNINSTALL" == "true" ]]; then
     echo "  rustup self uninstall"
     echo ""
     echo "# Remove Claude Code config (CAREFUL — contains your custom rules):"
-    echo "  rm -rf ~/.claude/settings.json ~/.claude/CLAUDE.md ~/.claude/rules ~/.claude/hooks ~/.claude/commands"
+    echo "  rm -rf ~/.claude/settings.json ~/.claude/CLAUDE.md ~/.claude/rules ~/.claude/hooks ~/.claude/commands ~/.claude/agents ~/.claude/statusline.sh"
     echo ""
     echo "# Remove Helix config:"
     echo "  rm -rf ~/.config/helix"
@@ -6783,7 +6783,27 @@ banner "Claude Code Configuration"
 # ---- Claude Code global settings ----
 CLAUDE_SETTINGS="$HOME/.claude/settings.json"
 if [[ -f "$CLAUDE_SETTINGS" ]]; then
-    warn "Claude Code settings.json already exists"
+    # Non-destructive MERGE into an existing settings.json (preserves your own edits):
+    # add any missing allowlist entries and set statusLine if absent. Requires jq.
+    CLAUDE_NEW_ALLOW='["Bash(qalc *)","Bash(has *)","Bash(doxx *)","Bash(mdfind *)","Bash(grpcurl *)","Bash(steampipe *)","Bash(s5cmd *)","Bash(dynein *)","Bash(iamlive *)","Bash(atac *)","Bash(leaf *)"]'
+    if [[ "$DRY_RUN" == "true" ]]; then
+        info "[DRY RUN] Would merge new allowlist entries + statusline into existing settings.json"
+    elif command -v jq &>/dev/null; then
+        info "Merging new permissions + statusline into existing Claude settings.json..."
+        CLAUDE_TMP=$(mktemp)
+        if jq --argjson add "$CLAUDE_NEW_ALLOW" \
+            '.permissions.allow = ((.permissions.allow // []) + $add | unique)
+             | .statusLine = (.statusLine // {"type":"command","command":"~/.claude/statusline.sh"})' \
+            "$CLAUDE_SETTINGS" > "$CLAUDE_TMP" 2>/dev/null; then
+            mv "$CLAUDE_TMP" "$CLAUDE_SETTINGS"
+            success "Claude settings.json updated (new allowlist + statusline; existing config preserved)"
+        else
+            rm -f "$CLAUDE_TMP"
+            warn "Could not merge settings.json — add the new Bash(...) allow entries + statusLine manually"
+        fi
+    else
+        warn "Claude settings.json exists but jq is missing — can't auto-merge the new entries"
+    fi
 else
     info "Creating Claude Code global settings..."
     cat > "$CLAUDE_SETTINGS" <<'CLAUDE_SETTINGS_CONF'
@@ -6954,6 +6974,15 @@ else
       "Bash(lnav *)",
       "Bash(leaf *)",
       "Bash(fastfetch *)",
+      "Bash(qalc *)",
+      "Bash(has *)",
+      "Bash(doxx *)",
+      "Bash(mdfind *)",
+      "Bash(grpcurl *)",
+      "Bash(steampipe *)",
+      "Bash(s5cmd *)",
+      "Bash(dynein *)",
+      "Bash(iamlive *)",
       "Read",
       "Edit",
       "Write",
@@ -7014,10 +7043,15 @@ else
       "Cargo.lock",
       "go.sum"
     ]
+  },
+
+  "statusLine": {
+    "type": "command",
+    "command": "~/.claude/statusline.sh"
   }
 }
 CLAUDE_SETTINGS_CONF
-    success "Claude Code settings.json created (permissions, file ignore patterns)"
+    success "Claude Code settings.json created (permissions, file ignore patterns, statusline)"
 fi
 
 # ---- Claude Code global CLAUDE.md (memory/instructions) ----
@@ -7444,6 +7478,84 @@ HOOK_HADOLINT
     chmod +x "$CLAUDE_HOOKS_DIR/lint-dockerfile.sh"
 
     success "Claude Code hooks created (auto-format JS/TS, auto-lint Python, lint Dockerfiles)"
+fi
+
+# ---- Claude Code statusline (Dracula) ----
+CLAUDE_STATUSLINE="$HOME/.claude/statusline.sh"
+if [[ -f "$CLAUDE_STATUSLINE" ]]; then
+    warn "Claude Code statusline already exists"
+else
+    info "Creating Claude Code Dracula statusline..."
+    cat > "$CLAUDE_STATUSLINE" <<'STATUSLINE'
+#!/usr/bin/env bash
+# Claude Code statusline — Dracula. Reads session JSON on stdin.
+input=$(cat)
+model=$(printf '%s' "$input" | jq -r '.model.display_name // "Claude"' 2>/dev/null)
+cwd=$(printf '%s' "$input" | jq -r '.workspace.current_dir // .cwd // "."' 2>/dev/null)
+dir=$(basename "$cwd")
+branch=$(git -C "$cwd" branch --show-current 2>/dev/null)
+P='\033[38;2;189;147;249m'   # purple
+C='\033[38;2;139;233;253m'   # cyan
+G='\033[38;2;80;250;123m'    # green
+D='\033[38;2;98;114;164m'    # comment
+R='\033[0m'
+out="${P}${model}${R} ${D}in${R} ${C}${dir}${R}"
+[ -n "$branch" ] && out="${out} ${D}on${R} ${G}${branch}${R}"
+printf '%b' "$out"
+STATUSLINE
+    chmod +x "$CLAUDE_STATUSLINE"
+    success "Claude Code Dracula statusline created (model, dir, git branch)"
+fi
+
+# ---- Claude Code subagents ----
+CLAUDE_AGENTS_DIR="$HOME/.claude/agents"
+if [[ -d "$CLAUDE_AGENTS_DIR" ]] && [[ -n "$(ls -A "$CLAUDE_AGENTS_DIR" 2>/dev/null)" ]]; then
+    warn "Claude Code agents directory already has agents"
+else
+    info "Creating Claude Code subagents (code-reviewer, aws-helper)..."
+    mkdir -p "$CLAUDE_AGENTS_DIR"
+    cat > "$CLAUDE_AGENTS_DIR/code-reviewer.md" <<'AGENT_REVIEWER'
+---
+name: code-reviewer
+description: Reviews changed code for bugs, security issues, and adherence to this setup's conventions (ruff, strict TypeScript, conventional commits, parameterized SQL, no hardcoded secrets). Use after writing or modifying code, or when asked for a review.
+tools: Read, Grep, Glob, Bash
+---
+You are a precise, senior code reviewer for this developer's projects.
+
+Review priorities (most important first):
+1. Correctness — logic bugs, edge cases, error handling, race conditions.
+2. Security — no hardcoded secrets/keys/tokens; validate & sanitize input; parameterized queries (never string-concatenated SQL); never log PII/secrets.
+3. Conventions:
+   - Python: ruff for lint/format; type hints on public functions; pydantic for validation, dataclasses for simple data; pathlib over os.path; async for I/O.
+   - TypeScript: strict mode; no `any` (use `unknown`); zod schemas; interfaces for object shapes.
+   - Git: conventional commits (type(scope): description); atomic commits; never commit .env/secrets.
+4. Simplicity — dead code, needless complexity, duplication.
+
+Method: read the diff/files, then report findings ranked most-severe first. For each: file:line, the concrete problem, and a specific fix. Cite exact lines. If unsure a finding is real, say so. End with a one-line verdict. Point precisely; don't rewrite large sections unasked.
+AGENT_REVIEWER
+    cat > "$CLAUDE_AGENTS_DIR/aws-helper.md" <<'AGENT_AWS'
+---
+name: aws-helper
+description: AWS specialist for this setup — knows the installed AWS tooling and prefers read-only, least-privilege, cost-aware operations. Use for AWS resource inspection, IaC (CDK/SAM/Terraform), IAM, and cost questions.
+tools: Read, Grep, Glob, Bash, WebFetch
+---
+You are an AWS specialist working in this developer's terminal-first setup.
+
+Credentials: this machine uses `granted` — assume a profile with `assume <profile>` (exports AWS_PROFILE), or rely on AWS_REGION/AWS_PROFILE in the environment. Never print or store credentials.
+
+Installed tooling to prefer (don't reinvent):
+- Inspect (interactive TUIs): e1s (ECS), e2c (EC2), stu (S3), claws (broad), k9s (EKS).
+- Query/inventory: `steampipe query` (SQL over AWS), `aws` CLI, `aws logs tail --follow`.
+- S3 bulk: `s5cmd`. DynamoDB: `dynein`. IAM least-privilege: `iamlive`.
+- IaC: CDK (+ cdk-nag), SAM, OpenTofu/Terraform (+ tflint, checkov, `trivy config`, infracost).
+
+Operating rules:
+1. Default to READ-ONLY (describe/list/get/query). Before any mutating or costly action, state exactly what will change and its blast radius, then ask for confirmation.
+2. Right-size IAM — least privilege; suggest `iamlive` to generate policies from observed calls.
+3. Be cost-aware — mention `infracost` for IaC changes and pricing implications for new resources.
+4. Prefer the installed TUIs/CLIs over manual console steps; give exact commands.
+AGENT_AWS
+    success "Claude Code subagents created (code-reviewer, aws-helper)"
 fi
 
 # ---- Claude Code custom slash commands ----
