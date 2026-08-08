@@ -2565,13 +2565,8 @@ fi
 # ---- atuin ----
 ATUIN_CONFIG_DIR="$HOME/.config/atuin"
 ATUIN_CONFIG="$ATUIN_CONFIG_DIR/config.toml"
-if ! is_done "config:atuin"; then
-if [[ -f "$ATUIN_CONFIG" ]]; then
-    warn "atuin config already exists"
-else
     info "Creating atuin configuration..."
-    mkdir -p "$ATUIN_CONFIG_DIR"
-    cat > "$ATUIN_CONFIG" <<'ATUIN_CONF'
+    write_managed "$ATUIN_CONFIG" "#" <<'ATUIN_CONF'
 ## atuin configuration
 
 # -- Search -------------------------------------------------------------------
@@ -2631,9 +2626,6 @@ secrets_filter = true
 stats.show_in_footer = true
 ATUIN_CONF
     success "atuin configured (fuzzy search, local-only, history filter, enter=paste)"
-fi
-mark_done "config:atuin"
-fi
 
 # ---- lazygit Dracula theme ----
 if installed lazygit; then
@@ -2700,13 +2692,8 @@ fi  # installed lazygit
 K9S_SKINS_DIR="$HOME/Library/Application Support/k9s/skins"
 K9S_CONFIG_DIR="$HOME/Library/Application Support/k9s"
 K9S_SKIN="$K9S_SKINS_DIR/dracula.yaml"
-if ! is_done "config:k9s-dracula"; then
-if [[ -f "$K9S_SKIN" ]]; then
-    warn "k9s Dracula skin already exists"
-else
     info "Creating k9s Dracula skin..."
-    mkdir -p "$K9S_SKINS_DIR"
-    cat > "$K9S_SKIN" <<'K9S_DRACULA'
+    write_managed "$K9S_SKIN" "#" <<'K9S_DRACULA'
 k9s:
   body:
     fgColor: "#f8f8f2"
@@ -2797,16 +2784,13 @@ K9S_DRACULA
             echo "  skin: dracula" >> "$K9S_MAIN_CONFIG"
         fi
     else
-        cat > "$K9S_MAIN_CONFIG" <<'K9S_CFG'
+        write_managed "$K9S_MAIN_CONFIG" "#" <<'K9S_CFG'
 k9s:
   ui:
     skin: dracula
 K9S_CFG
     fi
     success "k9s Dracula skin configured"
-fi
-mark_done "config:k9s-dracula"
-fi
 
 # ---- Helix editor config ----
 HELIX_CONFIG_DIR="$HOME/.config/helix"
@@ -2987,12 +2971,8 @@ success "Development fonts installed"
 
 # ---- shellcheck config ----
 SHELLCHECK_RC="$HOME/.shellcheckrc"
-if ! is_done "config:shellcheck"; then
-if [[ -f "$SHELLCHECK_RC" ]]; then
-    warn "shellcheck config already exists"
-else
     info "Creating shellcheck configuration..."
-    cat > "$SHELLCHECK_RC" <<'SHELLCHECK_CONF'
+    write_managed "$SHELLCHECK_RC" "#" <<'SHELLCHECK_CONF'
 # Follow sourced files
 external-sources=true
 
@@ -3002,9 +2982,6 @@ external-sources=true
 disable=SC1091,SC2034
 SHELLCHECK_CONF
     success "shellcheck configured"
-fi
-mark_done "config:shellcheck"
-fi
 
 # leaf (Markdown previewer) runs on sensible defaults; no config block generated.
 
@@ -3031,13 +3008,8 @@ fi
 # ---- yt-dlp config ----
 YT_DLP_CONFIG_DIR="$HOME/.config/yt-dlp"
 YT_DLP_CONFIG="$YT_DLP_CONFIG_DIR/config"
-if ! is_done "config:yt-dlp"; then
-if [[ -f "$YT_DLP_CONFIG" ]]; then
-    warn "yt-dlp config already exists"
-else
     info "Creating yt-dlp configuration..."
-    mkdir -p "$YT_DLP_CONFIG_DIR"
-    cat > "$YT_DLP_CONFIG" <<'YTDLP_CONF'
+    write_managed "$YT_DLP_CONFIG" "#" <<'YTDLP_CONF'
 # yt-dlp configuration
 
 # Best quality video + audio, merge to mp4
@@ -3065,9 +3037,6 @@ else
 --restrict-filenames
 YTDLP_CONF
     success "yt-dlp configured (best quality, aria2c downloader, metadata)"
-fi
-mark_done "config:yt-dlp"
-fi
 
 # difftastic aliases already configured in git global settings above
 
@@ -3102,12 +3071,8 @@ fi
 
 # ---- act config (GitHub Actions local runner) ----
 ACT_CONFIG="$HOME/.actrc"
-if ! is_done "config:act"; then
-if [[ -f "$ACT_CONFIG" ]]; then
-    warn "act config already exists"
-else
     info "Creating act configuration..."
-    cat > "$ACT_CONFIG" <<'ACT_CONF'
+    write_managed "$ACT_CONFIG" "#" <<'ACT_CONF'
 # act configuration (run GitHub Actions locally)
 
 # Use medium-sized Ubuntu image (good balance of speed vs compatibility)
@@ -3119,18 +3084,11 @@ else
 --reuse
 ACT_CONF
     success "act configured (medium Ubuntu images, container reuse)"
-fi
-mark_done "config:act"
-fi
 
 # ---- miller config ----
 MLR_CONFIG="$HOME/.mlrrc"
-if ! is_done "config:miller"; then
-if [[ -f "$MLR_CONFIG" ]]; then
-    warn "miller config already exists"
-else
     info "Creating miller configuration..."
-    cat > "$MLR_CONFIG" <<'MLR_CONF'
+    write_managed "$MLR_CONFIG" "#" <<'MLR_CONF'
 # miller (mlr) configuration
 # Default output format: pretty-printed table
 --opprint
@@ -3140,20 +3098,12 @@ else
 --skip-trivial-records
 MLR_CONF
     success "miller configured (CSV input, pretty table output)"
-fi
-mark_done "config:miller"
-fi
 
 # ---- asciinema config ----
 ASCIINEMA_CONFIG_DIR="$HOME/.config/asciinema"
 ASCIINEMA_CONFIG="$ASCIINEMA_CONFIG_DIR/config"
-if ! is_done "config:asciinema"; then
-if [[ -f "$ASCIINEMA_CONFIG" ]]; then
-    warn "asciinema config already exists"
-else
     info "Creating asciinema configuration..."
-    mkdir -p "$ASCIINEMA_CONFIG_DIR"
-    cat > "$ASCIINEMA_CONFIG" <<'ASCIINEMA_CONF'
+    write_managed "$ASCIINEMA_CONFIG" "#" <<'ASCIINEMA_CONF'
 [record]
 # Idle time limit (seconds) — trims long pauses
 idle_time_limit = 2
@@ -3168,21 +3118,13 @@ command = /bin/zsh -l
 overwrite = yes
 ASCIINEMA_CONF
     success "asciinema configured (2s idle limit, no keystroke recording)"
-fi
-mark_done "config:asciinema"
-fi
 
 # ---- gh-dash config ----
 GH_DASH_CONFIG_DIR="$HOME/.config/gh-dash"
 GH_DASH_CONFIG="$GH_DASH_CONFIG_DIR/config.yml"
-if ! is_done "config:gh-dash"; then
-if [[ -f "$GH_DASH_CONFIG" ]]; then
-    warn "gh-dash config already exists"
-else
     if installed gh && gh extension list 2>/dev/null | grep -q "gh-dash"; then
         info "Creating gh-dash configuration..."
-        mkdir -p "$GH_DASH_CONFIG_DIR"
-        cat > "$GH_DASH_CONFIG" <<'GHDASH_CONF'
+        write_managed "$GH_DASH_CONFIG" "#" <<'GHDASH_CONF'
 # gh-dash configuration
 prSections:
   - title: My PRs
@@ -3216,20 +3158,12 @@ theme:
 GHDASH_CONF
         success "gh-dash configured (Dracula theme, PR/issue sections)"
     fi
-fi
-mark_done "config:gh-dash"
-fi
 
 # ---- stern config ----
 if installed stern; then
 STERN_CONFIG="$HOME/.config/stern/config.yaml"
-if ! is_done "config:stern"; then
-if [[ -f "$STERN_CONFIG" ]]; then
-    warn "stern config already exists"
-else
     info "Creating stern configuration..."
-    mkdir -p "$(dirname "$STERN_CONFIG")"
-    cat > "$STERN_CONFIG" <<'STERN_CONF'
+    write_managed "$STERN_CONFIG" "#" <<'STERN_CONF'
 # stern configuration (multi-pod log tailing)
 
 # Output format: default, json, or custom template
@@ -3245,9 +3179,6 @@ timestamps: short
 since: 5m
 STERN_CONF
     success "stern configured (50 tail lines, 5m lookback, timestamps)"
-fi
-mark_done "config:stern"
-fi
 fi  # installed stern
 
 # ---- zellij config ----
@@ -3340,13 +3271,8 @@ fi  # installed zellij
 NEWSBOAT_DIR="$HOME/.newsboat"
 NEWSBOAT_CONFIG="$NEWSBOAT_DIR/config"
 NEWSBOAT_URLS="$NEWSBOAT_DIR/urls"
-if ! is_done "config:newsboat"; then
-if [[ -f "$NEWSBOAT_CONFIG" ]]; then
-    warn "newsboat config already exists"
-else
     info "Creating newsboat config (vim keys, Dracula colors)..."
-    mkdir -p "$NEWSBOAT_DIR"
-    cat > "$NEWSBOAT_CONFIG" <<'NEWSBOAT_CONF'
+    write_managed "$NEWSBOAT_CONFIG" "#" <<'NEWSBOAT_CONF'
 # Newsboat configuration — vim keys, Dracula colors
 
 # General
@@ -3385,7 +3311,7 @@ datetime-format "%Y-%m-%d"
 NEWSBOAT_CONF
 
     # Starter URLs file
-    cat > "$NEWSBOAT_URLS" <<'NEWSBOAT_URLS_CONF'
+    write_managed "$NEWSBOAT_URLS" "#" <<'NEWSBOAT_URLS_CONF'
 # Dev blogs and release feeds — add your own below
 https://github.com/anthropics/claude-code/releases.atom "~Claude Code Releases"
 https://nodejs.org/en/feed/blog.xml "~Node.js Blog"
@@ -3393,20 +3319,12 @@ https://blog.rust-lang.org/feed.xml "~Rust Blog"
 https://github.blog/feed/ "~GitHub Blog"
 NEWSBOAT_URLS_CONF
     success "newsboat configured (vim keys, Dracula colors, starter URLs)"
-fi
-mark_done "config:newsboat"
-fi
 
 # ---- mpv config ----
 MPV_CONFIG_DIR="$HOME/.config/mpv"
 MPV_CONFIG="$MPV_CONFIG_DIR/mpv.conf"
-if ! is_done "config:mpv"; then
-if [[ -f "$MPV_CONFIG" ]]; then
-    warn "mpv config already exists"
-else
     info "Creating mpv config (hardware accel, sensible defaults)..."
-    mkdir -p "$MPV_CONFIG_DIR"
-    cat > "$MPV_CONFIG" <<'MPV_CONF'
+    write_managed "$MPV_CONFIG" "#" <<'MPV_CONF'
 # mpv configuration — hardware accel, quality defaults
 
 # Hardware decoding (VideoToolbox on macOS)
@@ -3439,9 +3357,6 @@ screenshot-directory=~/Screenshots
 screenshot-format=png
 MPV_CONF
     success "mpv configured (hardware accel, save position, screenshots)"
-fi
-mark_done "config:mpv"
-fi
 
 # ---- kew config ----
 # kew stores its config at ~/Library/Preferences/kew/kewrc on macOS. Format is
@@ -3468,13 +3383,8 @@ success "kew configured (music library ~/Media/music, party visualizer)"
 # ---- w3m config ----
 W3M_CONFIG_DIR="$HOME/.w3m"
 W3M_CONFIG="$W3M_CONFIG_DIR/config"
-if ! is_done "config:w3m"; then
-if [[ -f "$W3M_CONFIG" ]]; then
-    warn "w3m config already exists"
-else
     info "Creating w3m config (UTF-8, cookies off, colors)..."
-    mkdir -p "$W3M_CONFIG_DIR"
-    cat > "$W3M_CONFIG" <<'W3M_CONF'
+    write_managed "$W3M_CONFIG" "#" <<'W3M_CONF'
 # w3m configuration — sensible privacy + display defaults
 display_charset UTF-8
 document_charset UTF-8
@@ -3511,20 +3421,12 @@ bookmark bookmark.html
 keep_cache_in_memory 0
 W3M_CONF
     success "w3m configured (UTF-8, cookies off)"
-fi
-mark_done "config:w3m"
-fi
 
 # ---- nushell config ----
 NUSHELL_CONFIG_DIR="$HOME/Library/Application Support/nushell"
 NUSHELL_ENV="$NUSHELL_CONFIG_DIR/env.nu"
-if ! is_done "config:nushell"; then
-if [[ -f "$NUSHELL_ENV" ]]; then
-    warn "nushell config already exists"
-else
     info "Creating nushell env config..."
-    mkdir -p "$NUSHELL_CONFIG_DIR"
-    cat > "$NUSHELL_ENV" <<'NUSHELL_ENV_CONF'
+    write_managed "$NUSHELL_ENV" "#" <<'NUSHELL_ENV_CONF'
 # Nushell environment config
 
 # Use starship prompt if available
@@ -3538,20 +3440,12 @@ if (which starship | is-not-empty) {
 $env.PATH = ($env.PATH | prepend "/opt/homebrew/bin" | prepend ($env.HOME + "/.local/bin"))
 NUSHELL_ENV_CONF
     success "nushell env configured (starship prompt, Homebrew paths)"
-fi
-mark_done "config:nushell"
-fi
 
 # ---- git-cliff config ----
 GIT_CLIFF_CONFIG_DIR="$HOME/.config/git-cliff"
 GIT_CLIFF_CONFIG="$GIT_CLIFF_CONFIG_DIR/cliff.toml"
-if ! is_done "config:git-cliff"; then
-if [[ -f "$GIT_CLIFF_CONFIG" ]]; then
-    warn "git-cliff config already exists"
-else
     info "Creating git-cliff config (conventional commits template)..."
-    mkdir -p "$GIT_CLIFF_CONFIG_DIR"
-    cat > "$GIT_CLIFF_CONFIG" <<'GIT_CLIFF_CONF'
+    write_managed "$GIT_CLIFF_CONFIG" "#" <<'GIT_CLIFF_CONF'
 # git-cliff configuration — conventional commits changelog
 
 [changelog]
@@ -3596,20 +3490,12 @@ tag_pattern = "v[0-9].*"
 sort_commits = "newest"
 GIT_CLIFF_CONF
     success "git-cliff configured (conventional commits, grouped changelog)"
-fi
-mark_done "config:git-cliff"
-fi
 
 # ---- SSH config ----
 SSH_CONFIG="$HOME/.ssh/config"
-if ! is_done "config:ssh"; then
-if [[ -f "$SSH_CONFIG" ]]; then
-    warn "SSH config already exists"
-else
     info "Creating SSH configuration..."
-    mkdir -p "$HOME/.ssh"
     chmod 700 "$HOME/.ssh"
-    cat > "$SSH_CONFIG" <<'SSH_CONF'
+    write_managed "$SSH_CONFIG" "#" <<'SSH_CONF'
 # =============================================================================
 # SSH Configuration
 # =============================================================================
@@ -3651,13 +3537,9 @@ Host github.com
 #     IdentityFile ~/.ssh/id_ed25519
 SSH_CONF
     # Create sockets directory for multiplexing
-    mkdir -p "$HOME/.ssh/sockets"
     chmod 700 "$HOME/.ssh/sockets"
     chmod 600 "$SSH_CONFIG"
     success "SSH configured (multiplexing, keychain, keep-alive, strong algorithms)"
-fi
-mark_done "config:ssh"
-fi
 
 # Generate SSH key if none exists
 if [[ ! -f "$HOME/.ssh/id_ed25519" ]]; then
@@ -3669,12 +3551,8 @@ fi
 
 # ---- Global .gitignore ----
 GLOBAL_GITIGNORE="$HOME/.gitignore_global"
-if ! is_done "config:gitignore-global"; then
-if [[ -f "$GLOBAL_GITIGNORE" ]]; then
-    warn "Global .gitignore already exists"
-else
     info "Creating global .gitignore..."
-    cat > "$GLOBAL_GITIGNORE" <<'GITIGNORE_GLOBAL'
+    write_managed "$GLOBAL_GITIGNORE" "#" <<'GITIGNORE_GLOBAL'
 # =============================================================================
 # Global .gitignore — applied to ALL repositories
 # =============================================================================
@@ -3756,18 +3634,11 @@ Desktop.ini
 GITIGNORE_GLOBAL
     git config --global core.excludesfile "$GLOBAL_GITIGNORE"
     success "Global .gitignore created and registered with git"
-fi
-mark_done "config:gitignore-global"
-fi
 
 # ---- .npmrc ----
 NPMRC="$HOME/.npmrc"
-if ! is_done "config:npmrc"; then
-if [[ -f "$NPMRC" ]]; then
-    warn ".npmrc already exists"
-else
     info "Creating .npmrc..."
-    cat > "$NPMRC" <<'NPMRC_CONF'
+    write_managed "$NPMRC" "#" <<'NPMRC_CONF'
 # Save exact versions (no ^ or ~ prefix)
 save-exact=true
 
@@ -3788,18 +3659,11 @@ prefer-offline=true
 engine-strict=true
 NPMRC_CONF
     success ".npmrc configured (save-exact, no telemetry, prefer-offline)"
-fi
-mark_done "config:npmrc"
-fi
 
 # ---- .editorconfig ----
 EDITORCONFIG="$HOME/.editorconfig"
-if ! is_done "config:editorconfig"; then
-if [[ -f "$EDITORCONFIG" ]]; then
-    warn ".editorconfig already exists"
-else
     info "Creating global .editorconfig..."
-    cat > "$EDITORCONFIG" <<'EDITORCONFIG_CONF'
+    write_managed "$EDITORCONFIG" "#" <<'EDITORCONFIG_CONF'
 # EditorConfig — cross-editor consistency
 # https://editorconfig.org
 root = true
@@ -3835,18 +3699,11 @@ indent_size = 2
 indent_size = 4
 EDITORCONFIG_CONF
     success ".editorconfig created (utf-8, lf, 2-space indent, trim whitespace)"
-fi
-mark_done "config:editorconfig"
-fi
 
 # ---- .prettierrc ----
 PRETTIERRC="$HOME/.prettierrc"
-if ! is_done "config:prettierrc"; then
-if [[ -f "$PRETTIERRC" ]]; then
-    warn ".prettierrc already exists"
-else
     info "Creating global .prettierrc..."
-    cat > "$PRETTIERRC" <<'PRETTIER_CONF'
+    write_managed "$PRETTIERRC" "#" <<'PRETTIER_CONF'
 {
   "semi": true,
   "singleQuote": true,
@@ -3860,18 +3717,11 @@ else
 }
 PRETTIER_CONF
     success ".prettierrc created (single quotes, trailing commas, 100 width)"
-fi
-mark_done "config:prettierrc"
-fi
 
 # ---- .curlrc ----
 CURLRC="$HOME/.curlrc"
-if ! is_done "config:curlrc"; then
-if [[ -f "$CURLRC" ]]; then
-    warn ".curlrc already exists"
-else
     info "Creating .curlrc..."
-    cat > "$CURLRC" <<'CURLRC_CONF'
+    write_managed "$CURLRC" "#" <<'CURLRC_CONF'
 # Follow redirects automatically
 --location
 
@@ -3898,9 +3748,6 @@ else
 --user-agent "curl/dev"
 CURLRC_CONF
     success ".curlrc configured (follow redirects, retry, compression, timeouts)"
-fi
-mark_done "config:curlrc"
-fi
 
 # ---- Docker daemon config ----
 DOCKER_CONFIG_DIR="$HOME/.docker"
@@ -4104,12 +3951,8 @@ fi
 
 # ---- ~/.zprofile (login shell — PATH set once, not on every subshell) ----
 ZPROFILE="$HOME/.zprofile"
-if ! is_done "config:zprofile"; then
-if [[ -f "$ZPROFILE" ]]; then
-    warn "$HOME/.zprofile already exists"
-else
     info "Creating ~/.zprofile..."
-    cat > "$ZPROFILE" <<'ZPROFILE_CONF'
+    write_managed "$ZPROFILE" "#" <<'ZPROFILE_CONF'
 # =============================================================================
 # ~/.zprofile — login shell configuration
 # =============================================================================
@@ -4209,36 +4052,22 @@ typeset -U PATH path
 source ~/.orbstack/shell/init.zsh 2>/dev/null || :
 ZPROFILE_CONF
     success "$HOME/.zprofile created (editor, pager, XDG, Go, Rust, bun, pnpm, mise, direnv, OrbStack)"
-fi
-mark_done "config:zprofile"
-fi
 
 # ---- ~/.zshenv (every zsh invocation — interactive or not) ----
 ZSHENV="$HOME/.zshenv"
-if ! is_done "config:zshenv"; then
-if [[ -f "$ZSHENV" ]]; then
-    warn "$HOME/.zshenv already exists"
-else
     info "Creating ~/.zshenv..."
-    cat > "$ZSHENV" <<'ZSHENV_CONF'
+    write_managed "$ZSHENV" "#" <<'ZSHENV_CONF'
 # mise (version manager) — sourced by every zsh invocation (interactive,
 # non-interactive, login or not). This ensures tools like node/npx are
 # available in Claude Code, IDE terminals, and scripted shells.
 command -v mise &>/dev/null && eval "$(mise activate zsh)"
 ZSHENV_CONF
     success "$HOME/.zshenv created (mise activation for all shell types)"
-fi
-mark_done "config:zshenv"
-fi
 
 # ---- ~/.vimrc (basic vim config for server editing) ----
 VIMRC="$HOME/.vimrc"
-if ! is_done "config:vimrc"; then
-if [[ -f "$VIMRC" ]]; then
-    warn "$HOME/.vimrc already exists"
-else
     info "Creating basic ~/.vimrc..."
-    cat > "$VIMRC" <<'VIM_CONF'
+    write_managed "$VIMRC" "#" <<'VIM_CONF'
 " =============================================================================
 " ~/.vimrc — minimal but comfortable vim config for server editing
 " =============================================================================
@@ -4339,11 +4168,7 @@ if !isdirectory($HOME . "/.vim/undodir")
     call mkdir($HOME . "/.vim/undodir", "p")
 endif
 VIM_CONF
-    mkdir -p "$HOME/.vim/undodir"
     success "$HOME/.vimrc created (line numbers, clipboard, mouse, Dracula colors, space leader)"
-fi
-mark_done "config:vimrc"
-fi
 
 # ---- ~/.nanorc (better nano for quick edits) ----
 NANORC="$HOME/.nanorc"
@@ -4445,13 +4270,8 @@ fi
 
 # ---- mise global config (default tool versions) ----
 MISE_CONFIG="$HOME/.config/mise/config.toml"
-if ! is_done "config:mise-global"; then
-if [[ -f "$MISE_CONFIG" ]]; then
-    warn "mise global config already exists"
-else
     info "Creating mise global configuration..."
-    mkdir -p "$HOME/.config/mise"
-    cat > "$MISE_CONFIG" <<'MISE_CONF'
+    write_managed "$MISE_CONFIG" "#" <<'MISE_CONF'
 # mise global tool versions
 # Docs: https://mise.jdx.dev/
 # These are defaults — per-project .mise.toml takes precedence
@@ -4476,19 +4296,11 @@ quiet = false
 verbose = false
 MISE_CONF
     success "mise configured (auto-install, trust ~/Code)"
-fi
-mark_done "config:mise-global"
-fi
 
 # ---- topgrade config ----
 TOPGRADE_CONFIG="$HOME/.config/topgrade.toml"
-if ! is_done "config:topgrade"; then
-if [[ -f "$TOPGRADE_CONFIG" ]]; then
-    warn "topgrade config already exists"
-else
     info "Creating topgrade configuration..."
-    mkdir -p "$HOME/.config"
-    cat > "$TOPGRADE_CONFIG" <<'TOPGRADE_CONF'
+    write_managed "$TOPGRADE_CONFIG" "#" <<'TOPGRADE_CONF'
 # topgrade configuration — update everything with one command
 # Run: topgrade
 
@@ -4509,19 +4321,11 @@ greedy_cask = true
 [linux]
 TOPGRADE_CONF
     success "topgrade configured (cleanup, greedy cask updates)"
-fi
-mark_done "config:topgrade"
-fi
 
 # ---- fastfetch config ----
 FASTFETCH_CONFIG="$HOME/.config/fastfetch/config.jsonc"
-if ! is_done "config:fastfetch"; then
-if [[ -f "$FASTFETCH_CONFIG" ]]; then
-    warn "fastfetch config already exists"
-else
     info "Creating fastfetch configuration..."
-    mkdir -p "$HOME/.config/fastfetch"
-    cat > "$FASTFETCH_CONFIG" <<'FASTFETCH_CONF'
+    write_managed "$FASTFETCH_CONFIG" "#" <<'FASTFETCH_CONF'
 {
     "$schema": "https://github.com/fastfetch-cli/fastfetch/raw/dev/doc/json_schema.json",
     "logo": {
@@ -4594,18 +4398,11 @@ else
 }
 FASTFETCH_CONF
     success "fastfetch configured (themed layout, Nerd Font icons, dev tool versions)"
-fi
-mark_done "config:fastfetch"
-fi
 
 # ---- ripgrep config ----
 RIPGREPRC="$HOME/.ripgreprc"
-if ! is_done "config:ripgreprc"; then
-if [[ -f "$RIPGREPRC" ]]; then
-    warn "$HOME/.ripgreprc already exists"
-else
     info "Creating ripgrep configuration..."
-    cat > "$RIPGREPRC" <<'RG_CONF'
+    write_managed "$RIPGREPRC" "#" <<'RG_CONF'
 # Smart case (case-insensitive unless uppercase is used)
 --smart-case
 
@@ -4642,18 +4439,11 @@ else
 --type-add=style:*.{css,scss,sass,less}
 RG_CONF
     success "$HOME/.ripgreprc configured (smart-case, hidden files, custom types)"
-fi
-mark_done "config:ripgreprc"
-fi
 
 # ---- fd ignore ----
 FDIGNORE="$HOME/.fdignore"
-if ! is_done "config:fdignore"; then
-if [[ -f "$FDIGNORE" ]]; then
-    warn "$HOME/.fdignore already exists"
-else
     info "Creating fd ignore patterns..."
-    cat > "$FDIGNORE" <<'FD_CONF'
+    write_managed "$FDIGNORE" "#" <<'FD_CONF'
 # fd global ignore patterns
 .git/
 node_modules/
@@ -4672,20 +4462,12 @@ __pycache__/
 .Trash/
 FD_CONF
     success "$HOME/.fdignore created"
-fi
-mark_done "config:fdignore"
-fi
 
 # ---- btop Dracula theme ----
 BTOP_CONFIG_DIR="$HOME/.config/btop"
 BTOP_CONFIG="$BTOP_CONFIG_DIR/btop.conf"
-if ! is_done "config:btop"; then
-if [[ -f "$BTOP_CONFIG" ]]; then
-    warn "btop config already exists"
-else
     info "Creating btop configuration..."
-    mkdir -p "$BTOP_CONFIG_DIR/themes"
-    cat > "$BTOP_CONFIG" <<'BTOP_CONF'
+    write_managed "$BTOP_CONFIG" "#" <<'BTOP_CONF'
 #? Config file for btop
 
 # Color theme
@@ -4713,7 +4495,7 @@ truecolor = true
 rounded_corners = true
 BTOP_CONF
     # Download Dracula theme for btop
-    cat > "$BTOP_CONFIG_DIR/themes/dracula.theme" <<'BTOP_DRACULA'
+    write_managed "$BTOP_CONFIG_DIR/themes/dracula.theme" "#" <<'BTOP_DRACULA'
 # Dracula theme for btop
 theme[main_bg]="#282a36"
 theme[main_fg]="#f8f8f2"
@@ -4759,20 +4541,12 @@ theme[process_mid]="#bd93f9"
 theme[process_end]="#ff79c6"
 BTOP_DRACULA
     success "btop configured with Dracula theme"
-fi
-mark_done "config:btop"
-fi
 
 # ---- lazydocker Dracula config ----
 LAZYDOCKER_CONFIG_DIR="$HOME/.config/lazydocker"
 LAZYDOCKER_CONFIG="$LAZYDOCKER_CONFIG_DIR/config.yml"
-if ! is_done "config:lazydocker"; then
-if [[ -f "$LAZYDOCKER_CONFIG" ]]; then
-    warn "lazydocker config already exists"
-else
     info "Creating lazydocker configuration..."
-    mkdir -p "$LAZYDOCKER_CONFIG_DIR"
-    cat > "$LAZYDOCKER_CONFIG" <<'LAZYDOCKER_CONF'
+    write_managed "$LAZYDOCKER_CONFIG" "#" <<'LAZYDOCKER_CONF'
 gui:
   theme:
     activeBorderColor:
@@ -4794,18 +4568,11 @@ logs:
   since: "60m"
 LAZYDOCKER_CONF
     success "lazydocker configured with Dracula theme"
-fi
-mark_done "config:lazydocker"
-fi
 
 # ---- Git commit template ----
 GIT_COMMIT_TEMPLATE="$HOME/.gitmessage"
-if ! is_done "config:git-commit-template"; then
-if [[ -f "$GIT_COMMIT_TEMPLATE" ]]; then
-    warn "Git commit template already exists"
-else
     info "Creating git commit template..."
-    cat > "$GIT_COMMIT_TEMPLATE" <<'GIT_TEMPLATE'
+    write_managed "$GIT_COMMIT_TEMPLATE" "#" <<'GIT_TEMPLATE'
 # <type>(<scope>): <short summary>
 #
 # Types: feat, fix, docs, style, refactor, perf, test, build, ci, chore
@@ -4820,9 +4587,6 @@ else
 GIT_TEMPLATE
     git config --global commit.template "$GIT_COMMIT_TEMPLATE"
     success "Git commit template created and registered"
-fi
-mark_done "config:git-commit-template"
-fi
 
 # ---- Global git hooks directory ----
 GIT_HOOKS_DIR="$HOME/.config/git/hooks"
@@ -4891,14 +4655,9 @@ fi
 
 # ---- AWS config ----
 AWS_CONFIG="$HOME/.aws/config"
-if ! is_done "config:aws"; then
-if [[ -f "$AWS_CONFIG" ]]; then
-    warn "AWS config already exists"
-else
     info "Creating AWS CLI configuration..."
-    mkdir -p "$HOME/.aws"
     chmod 700 "$HOME/.aws"
-    cat > "$AWS_CONFIG" <<'AWS_CONF'
+    write_managed "$AWS_CONFIG" "#" <<'AWS_CONF'
 # AWS CLI configuration
 # Docs: https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-files.html
 
@@ -4923,20 +4682,12 @@ max_attempts = 3
 AWS_CONF
     chmod 600 "$AWS_CONFIG"
     success "AWS CLI configured (us-east-1, json, bat pager, auto-prompt)"
-fi
-mark_done "config:aws"
-fi
 
 # ---- GitHub CLI config ----
 GH_CONFIG_DIR="$HOME/.config/gh"
 GH_CONFIG="$GH_CONFIG_DIR/config.yml"
-if ! is_done "config:gh-cli"; then
-if [[ -f "$GH_CONFIG" ]]; then
-    warn "GitHub CLI config already exists"
-else
     info "Creating GitHub CLI configuration..."
-    mkdir -p "$GH_CONFIG_DIR"
-    cat > "$GH_CONFIG" <<'GH_CONF'
+    write_managed "$GH_CONFIG" "#" <<'GH_CONF'
 # GitHub CLI configuration
 git_protocol: ssh
 editor: hx
@@ -4961,20 +4712,12 @@ aliases:
     rel: release create --generate-notes
 GH_CONF
     success "GitHub CLI configured (SSH protocol, Helix editor, delta pager, aliases)"
-fi
-mark_done "config:gh-cli"
-fi
 
 # ---- pip config ----
 PIP_CONFIG_DIR="$HOME/.config/pip"
 PIP_CONFIG="$PIP_CONFIG_DIR/pip.conf"
-if ! is_done "config:pip"; then
-if [[ -f "$PIP_CONFIG" ]]; then
-    warn "pip config already exists"
-else
     info "Creating pip configuration..."
-    mkdir -p "$PIP_CONFIG_DIR"
-    cat > "$PIP_CONFIG" <<'PIP_CONF'
+    write_managed "$PIP_CONFIG" "#" <<'PIP_CONF'
 [global]
 # Require a virtualenv to install packages (prevents global pollution)
 require-virtualenv = true
@@ -4993,36 +4736,21 @@ timeout = 30
 compile = true
 PIP_CONF
     success "pip configured (require virtualenv, no telemetry)"
-fi
-mark_done "config:pip"
-fi
 
 # ---- gemrc (Ruby) ----
 GEMRC="$HOME/.gemrc"
-if ! is_done "config:gemrc"; then
-if [[ -f "$GEMRC" ]]; then
-    warn "$HOME/.gemrc already exists"
-else
     info "Creating gemrc..."
-    cat > "$GEMRC" <<'GEM_CONF'
+    write_managed "$GEMRC" "#" <<'GEM_CONF'
 # Skip documentation when installing gems (saves time and disk)
 gem: --no-document
 GEM_CONF
     success "$HOME/.gemrc created (no docs on gem install)"
-fi
-mark_done "config:gemrc"
-fi
 
 # ---- pgcli config ----
 PGCLI_CONFIG_DIR="$HOME/.config/pgcli"
 PGCLI_CONFIG="$PGCLI_CONFIG_DIR/config"
-if ! is_done "config:pgcli"; then
-if [[ -f "$PGCLI_CONFIG" ]]; then
-    warn "pgcli config already exists"
-else
     info "Creating pgcli configuration..."
-    mkdir -p "$PGCLI_CONFIG_DIR"
-    cat > "$PGCLI_CONFIG" <<'PGCLI_CONF'
+    write_managed "$PGCLI_CONFIG" "#" <<'PGCLI_CONF'
 [main]
 # Multi-line mode (enter doesn't execute, use F5 or ctrl+enter)
 multi_line = True
@@ -5056,20 +4784,12 @@ keyword_casing = upper
 smart_completion = True
 PGCLI_CONF
     success "pgcli configured (multi-line, auto-expand, destructive warnings, bat pager)"
-fi
-mark_done "config:pgcli"
-fi
 
 # ---- harlequin config ----
 HARLEQUIN_CONFIG_DIR="$HOME/.config/harlequin"
 HARLEQUIN_CONFIG="$HARLEQUIN_CONFIG_DIR/config.toml"
-if ! is_done "config:harlequin"; then
-if [[ -f "$HARLEQUIN_CONFIG" ]]; then
-    warn "harlequin config already exists"
-else
     info "Creating harlequin configuration..."
-    mkdir -p "$HARLEQUIN_CONFIG_DIR"
-    cat > "$HARLEQUIN_CONFIG" <<'HARLEQUIN_CONF'
+    write_managed "$HARLEQUIN_CONFIG" "#" <<'HARLEQUIN_CONF'
 # Harlequin SQL IDE — https://harlequin.sql/docs/config-file/
 [defaults]
 theme = "dracula"
@@ -5078,18 +4798,11 @@ show_files = true
 locale = "en_US.UTF-8"
 HARLEQUIN_CONF
     success "harlequin configured (Dracula theme, vscode keymap)"
-fi
-mark_done "config:harlequin"
-fi
 
 # ---- mycli config ----
 MYCLIRC="$HOME/.myclirc"
-if ! is_done "config:mycli"; then
-if [[ -f "$MYCLIRC" ]]; then
-    warn "$HOME/.myclirc already exists"
-else
     info "Creating mycli configuration..."
-    cat > "$MYCLIRC" <<'MYCLI_CONF'
+    write_managed "$MYCLIRC" "#" <<'MYCLI_CONF'
 [main]
 # Multi-line mode
 multi_line = True
@@ -5123,18 +4836,11 @@ history_file = ~/.mycli-history
 wider_completion_menu = True
 MYCLI_CONF
     success "$HOME/.myclirc configured (multi-line, auto-expand, destructive warnings)"
-fi
-mark_done "config:mycli"
-fi
 
 # ---- just config (global justfile with common recipes) ----
 JUSTFILE_GLOBAL="$HOME/.justfile"
-if ! is_done "config:justfile"; then
-if [[ -f "$JUSTFILE_GLOBAL" ]]; then
-    warn "Global justfile already exists"
-else
     info "Creating global justfile with common recipes..."
-    cat > "$JUSTFILE_GLOBAL" <<'JUSTFILE_CONF'
+    write_managed "$JUSTFILE_GLOBAL" "#" <<'JUSTFILE_CONF'
 # =============================================================================
 # Global Justfile — available from any directory via: just --justfile ~/.justfile
 # =============================================================================
@@ -5264,9 +4970,6 @@ loc:
     @tokei . 2>/dev/null || find . -name '*.ts' -o -name '*.tsx' -o -name '*.js' -o -name '*.py' -o -name '*.go' -o -name '*.rs' | xargs wc -l | tail -1
 JUSTFILE_CONF
     success "Global justfile created (~/.justfile — system, git, docker, network, cleanup, info recipes)"
-fi
-mark_done "config:justfile"
-fi
 
 # ---- Ghostty config ----
 GHOSTTY_CONFIG_DIR="$HOME/.config/ghostty"
@@ -5811,13 +5514,8 @@ fi
 # ---- direnv config ----
 DIRENV_CONFIG_DIR="$HOME/.config/direnv"
 DIRENV_CONFIG="$DIRENV_CONFIG_DIR/direnv.toml"
-if ! is_done "config:direnv"; then
-if [[ -f "$DIRENV_CONFIG" ]]; then
-    warn "direnv config already exists"
-else
     info "Creating direnv configuration..."
-    mkdir -p "$DIRENV_CONFIG_DIR"
-    cat > "$DIRENV_CONFIG" <<'DIRENV_CONF'
+    write_managed "$DIRENV_CONFIG" "#" <<'DIRENV_CONF'
 # direnv configuration
 
 # Hide the direnv loading/unloading messages
@@ -5833,9 +5531,6 @@ prefix = [
 ]
 DIRENV_CONF
     success "direnv configured (hidden env diff, auto-trust ~/Code)"
-fi
-mark_done "config:direnv"
-fi
 
 # Set RIPGREP_CONFIG_PATH in zshrc (needed for ripgrep to read config)
 # This will be in the managed block below
