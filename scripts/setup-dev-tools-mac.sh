@@ -605,26 +605,42 @@ write_managed_script() {
     chmod +x "$file"
 }
 
+# Membership checks against a ONE-TIME snapshot of installed formulae/casks, instead
+# of booting Ruby via `brew list <name>` ~200 times (that cost ~80-150s per re-run).
+# The snapshot is populated lazily on first use (after Homebrew is installed) and
+# kept in sync as we install. `brew list -1` prints short names, so normalize tap
+# paths (a/b/c -> c) with ${x##*/}.
+_brew_snapshot_ready=""
+_ensure_brew_snapshot() {
+    [[ -n "$_brew_snapshot_ready" ]] && return 0
+    _BREW_FORMULAE=" $(brew list --formula -1 2>/dev/null | tr '\n' ' ') "
+    _BREW_CASKS=" $(brew list --cask -1 2>/dev/null | tr '\n' ' ') "
+    _brew_snapshot_ready=1
+}
+_brew_has_formula() { _ensure_brew_snapshot; [[ "$_BREW_FORMULAE" == *" ${1##*/} "* ]]; }
+_brew_has_cask()    { _ensure_brew_snapshot; [[ "$_BREW_CASKS"    == *" ${1##*/} "* ]]; }
+
 brew_install() {
     local formula="$1"
     local name="${2:-$1}"
     progress
     is_done "brew:$formula" && { warn "$name already completed (resume)"; return 0; }
     if [[ "$DRY_RUN" == "true" ]]; then
-        if brew list "$formula" &>/dev/null; then
+        if _brew_has_formula "$formula"; then
             warn "[DRY RUN] $name — already installed"
         else
             info "[DRY RUN] Would install: $name"
         fi
         return 0
     fi
-    if brew list "$formula" &>/dev/null; then
+    if _brew_has_formula "$formula"; then
         warn "$name already installed"
         mark_done "brew:$formula"
     else
         info "Installing $name..."
         if brew install "$formula" >> "$LOG_FILE" 2>&1; then
             success "$name installed"
+            _BREW_FORMULAE="$_BREW_FORMULAE${formula##*/} "
             mark_done "brew:$formula"
         else
             error "Failed to install $name"
@@ -638,25 +654,41 @@ brew_cask_install() {
     progress
     is_done "cask:$cask" && { warn "$name already completed (resume)"; return 0; }
     if [[ "$DRY_RUN" == "true" ]]; then
-        if brew list --cask "$cask" &>/dev/null; then
+        if _brew_has_cask "$cask"; then
             warn "[DRY RUN] $name — already installed"
         else
             info "[DRY RUN] Would install: $name"
         fi
         return 0
     fi
-    if brew list --cask "$cask" &>/dev/null; then
+    if _brew_has_cask "$cask"; then
         warn "$name already installed"
         mark_done "cask:$cask"
     else
         info "Installing $name..."
         if brew install --cask --adopt "$cask" >> "$LOG_FILE" 2>&1; then
             success "$name installed"
+            _BREW_CASKS="$_BREW_CASKS${cask##*/} "
             mark_done "cask:$cask"
         else
             error "Failed to install $name (cask may have been renamed)"
         fi
     fi
+}
+
+# One-time snapshot of global npm packages (each `npm list -g` parses the whole tree,
+# ~1s). Matches on the package path so scoped names (@antfu/ni) work.
+_npm_snapshot_ready=""
+_ensure_npm_snapshot() {
+    [[ -n "$_npm_snapshot_ready" ]] && return 0
+    _NPM_GLOBALS="$(npm ls -g --depth=0 --parseable 2>/dev/null)"
+    _npm_snapshot_ready=1
+}
+_npm_has() {
+    _ensure_npm_snapshot
+    local line
+    while IFS= read -r line; do [[ "$line" == */node_modules/"$1" ]] && return 0; done <<< "$_NPM_GLOBALS"
+    return 1
 }
 
 npm_global_install() {
@@ -665,14 +697,14 @@ npm_global_install() {
     progress
     is_done "npm:$pkg" && { warn "$name already completed (resume)"; return 0; }
     if [[ "$DRY_RUN" == "true" ]]; then
-        if npm list -g "$pkg" &>/dev/null; then
+        if _npm_has "$pkg"; then
             warn "[DRY RUN] $name — already installed"
         else
             info "[DRY RUN] Would install: $name"
         fi
         return 0
     fi
-    if npm list -g "$pkg" &>/dev/null; then
+    if _npm_has "$pkg"; then
         warn "$name already installed globally"
         mark_done "npm:$pkg"
     else
@@ -4042,19 +4074,16 @@ export RIPGREP_CONFIG_PATH="$HOME/.ripgreprc"
 # GPG tty (required for commit signing)
 export GPG_TTY=$(tty 2>/dev/null || echo /dev/null)
 
-# GNU coreutils (Linux-compatible versions)
-if [[ -x /opt/homebrew/bin/brew ]]; then
-    for _pkg in coreutils gnu-sed gnu-tar gawk findutils; do
-        _gnubin="$(/opt/homebrew/bin/brew --prefix "$_pkg" 2>/dev/null)/libexec/gnubin"
-        [[ -d "$_gnubin" ]] && export PATH="$_gnubin:$PATH"
-    done
-    unset _pkg _gnubin
-fi
+# GNU coreutils (Linux-compatible versions) — deterministic prefix, no fork per pkg
+: "${HOMEBREW_PREFIX:=/opt/homebrew}"
+for _pkg in coreutils gnu-sed gnu-tar gawk findutils; do
+    _gnubin="$HOMEBREW_PREFIX/opt/$_pkg/libexec/gnubin"
+    [[ -d "$_gnubin" ]] && export PATH="$_gnubin:$PATH"
+done
+unset _pkg _gnubin
 
-# mise (version manager — Node, Python, Go, etc.)
-# Activated here (not just .zshrc) so non-interactive login shells
-# (e.g. Claude Code, IDE terminals) also get managed tool shims.
-command -v mise &>/dev/null && eval "$(mise activate zsh)"
+# mise is activated once in ~/.zshenv (sourced by every shell type), so it is not
+# re-activated here — avoids a redundant `mise activate` subprocess per login shell.
 
 # direnv
 command -v direnv &>/dev/null && eval "$(direnv hook zsh)"
@@ -7681,24 +7710,26 @@ export RIPGREP_CONFIG_PATH="$HOME/.ripgreprc"
 # GPG tty (required for commit signing to work)
 export GPG_TTY=$(tty)
 
-# LS_COLORS via vivid (Dracula theme — colorize file listings by type)
-if command -v vivid &>/dev/null; then
-    export LS_COLORS="$(vivid generate dracula)"
+# Shared per-shell cache dir (delete ~/.cache/dev-setup to regenerate after updates)
+_cachedir="${XDG_CACHE_HOME:-$HOME/.cache}/dev-setup"; mkdir -p "$_cachedir" 2>/dev/null
+
+# LS_COLORS via vivid — cached (regenerating vivid on every shell is slow)
+if [[ ! -r "$_cachedir/ls_colors" ]] && command -v vivid &>/dev/null; then
+    vivid generate dracula > "$_cachedir/ls_colors" 2>/dev/null
 fi
+[[ -r "$_cachedir/ls_colors" ]] && export LS_COLORS="$(< "$_cachedir/ls_colors")"
 
 # -- Tool Initialization ------------------------------------------------------
 
-# GNU coreutils (use Linux-compatible versions by default)
-if type brew &>/dev/null; then
-    for _pkg in coreutils gnu-sed gnu-tar gawk findutils; do
-        _gnubin="$(brew --prefix "$_pkg" 2>/dev/null)/libexec/gnubin"
-        [[ -d "$_gnubin" ]] && export PATH="$_gnubin:$PATH"
-    done
-    unset _pkg _gnubin
-fi
+# GNU coreutils on PATH — deterministic prefix, no per-pkg `brew --prefix` fork
+: "${HOMEBREW_PREFIX:=/opt/homebrew}"
+for _pkg in coreutils gnu-sed gnu-tar gawk findutils; do
+    _gnubin="$HOMEBREW_PREFIX/opt/$_pkg/libexec/gnubin"
+    [[ -d "$_gnubin" ]] && export PATH="$_gnubin:$PATH"
+done
+unset _pkg _gnubin
 
-# mise (universal version manager — Node, Python, Go, Ruby, etc.)
-command -v mise &>/dev/null && eval "$(mise activate zsh)"
+# mise activation lives in ~/.zshenv (runs for all shell types) — not duplicated here.
 
 # direnv
 command -v direnv &>/dev/null && eval "$(direnv hook zsh)"
@@ -7747,30 +7778,24 @@ export NNN_COLORS="2136"
 export NNN_FCOLORS="c1e2272e006033f7c6d6abc4"
 export NNN_PLUG="f:fzcd;o:fzopen;p:preview-tui"
 
-# zsh plugins
-if type brew &>/dev/null; then
-    _brew_prefix="$(brew --prefix)"
-    [[ -f "$_brew_prefix/share/zsh-autosuggestions/zsh-autosuggestions.zsh" ]] && source "$_brew_prefix/share/zsh-autosuggestions/zsh-autosuggestions.zsh"
-    [[ -f "$_brew_prefix/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh" ]] && source "$_brew_prefix/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh"
-    unset _brew_prefix
-fi
+# zsh plugins (deterministic prefix — no `brew --prefix` fork)
+: "${HOMEBREW_PREFIX:=/opt/homebrew}"
+[[ -f "$HOMEBREW_PREFIX/share/zsh-autosuggestions/zsh-autosuggestions.zsh" ]] && source "$HOMEBREW_PREFIX/share/zsh-autosuggestions/zsh-autosuggestions.zsh"
+[[ -f "$HOMEBREW_PREFIX/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh" ]] && source "$HOMEBREW_PREFIX/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh"
 
-# -- Completions (docker, kubectl, aws, gh) -----------------------------------
-# Load brew-installed completions
-if type brew &>/dev/null; then
-    FPATH="$(brew --prefix)/share/zsh/site-functions:${FPATH}"
-fi
+# -- Completions --------------------------------------------------------------
+FPATH="$HOMEBREW_PREFIX/share/zsh/site-functions:${FPATH}"
 autoload -Uz compinit && compinit -C
-# Enable bash completion compatibility (needed for aws_completer)
-autoload -Uz bashcompinit && bashcompinit
-# kubectl completion
-[[ -x "$(command -v kubectl)" ]] && source <(kubectl completion zsh)
-# gh completion
-[[ -x "$(command -v gh)" ]] && source <(gh completion -s zsh)
-# atac (terminal API client) completion
-[[ -x "$(command -v atac)" ]] && source <(atac completions zsh)
-# aws completion (uses bash-style complete, needs bashcompinit above)
-[[ -x "$(command -v aws_completer)" ]] && complete -C "$(which aws_completer)" aws
+autoload -Uz bashcompinit && bashcompinit   # bash-style complete (aws_completer)
+# Tool completions cached to files — live-generating each per shell was the
+# dominant startup cost. Delete ~/.cache/dev-setup to refresh after tool updates.
+_compcache() { local f="$_cachedir/comp_$1"; shift; [[ -r "$f" ]] || "$@" > "$f" 2>/dev/null; [[ -r "$f" ]] && source "$f"; }
+command -v kubectl       &>/dev/null && _compcache kubectl kubectl completion zsh
+command -v gh            &>/dev/null && _compcache gh gh completion -s zsh
+command -v atac          &>/dev/null && _compcache atac atac completions zsh
+command -v aws_completer &>/dev/null && complete -C aws_completer aws
+unset -f _compcache
+unset _cachedir
 
 # -- Modern Tool Aliases (replacements for built-in commands) -----------------
 # Note: we avoid aliasing cd, sed, find, grep, diff globally since they have
