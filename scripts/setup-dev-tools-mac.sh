@@ -2462,13 +2462,8 @@ GPG_CONFIG
 # ---- aria2 ----
 ARIA2_CONFIG_DIR="$HOME/.aria2"
 ARIA2_CONFIG="$ARIA2_CONFIG_DIR/aria2.conf"
-if ! is_done "config:aria2"; then
-if [[ -f "$ARIA2_CONFIG" ]]; then
-    warn "aria2 config already exists"
-else
     info "Creating aria2 configuration..."
-    mkdir -p "$ARIA2_CONFIG_DIR"
-    cat > "$ARIA2_CONFIG" <<'ARIA2_CONF'
+    write_managed "$ARIA2_CONFIG" "#" <<'ARIA2_CONF'
 ## aria2 configuration
 
 # -- Connections & Speed ------------------------------------------------------
@@ -2542,9 +2537,6 @@ ARIA2_CONF
     # Replace placeholder with actual home directory
     /usr/bin/sed -i '' "s|PLACEHOLDER_HOME|$HOME|g" "$ARIA2_CONFIG"
     success "aria2 configured (16 connections, auto-resume, BitTorrent)"
-fi
-mark_done "config:aria2"
-fi
 
 # ---- atuin ----
 ATUIN_CONFIG_DIR="$HOME/.config/atuin"
@@ -3161,13 +3153,8 @@ fi  # installed stern
 if installed zellij; then
 ZELLIJ_CONFIG_DIR="$HOME/.config/zellij"
 ZELLIJ_CONFIG="$ZELLIJ_CONFIG_DIR/config.kdl"
-if ! is_done "config:zellij"; then
-if [[ -f "$ZELLIJ_CONFIG" ]]; then
-    warn "zellij config already exists"
-else
-    info "Creating zellij config (Dracula theme, tmux-like keybindings)..."
-    mkdir -p "$ZELLIJ_CONFIG_DIR"
-    cat > "$ZELLIJ_CONFIG" <<'ZELLIJ_CONF'
+info "Configuring zellij (Dracula theme, tmux-like keybindings)..."
+write_managed "$ZELLIJ_CONFIG" "//" <<'ZELLIJ_CONF'
 // Zellij configuration — Dracula theme, tmux-like prefix
 
 // Use Ctrl-a as prefix (matches tmux config)
@@ -3209,19 +3196,13 @@ mouse_mode true
 // Scroll buffer
 scroll_buffer_size 50000
 ZELLIJ_CONF
-    success "zellij configured (Dracula theme, compact layout, mouse)"
-fi
-mark_done "config:zellij"
+success "zellij configured (Dracula theme, compact layout, mouse)"
 
 # 'dev' layout: editor pane + a Claude Code pane side-by-side (AI integration tier 1).
 # Launch with:  zellij --layout dev
-if ! is_done "config:zellij-dev-layout"; then
 ZELLIJ_LAYOUTS="$ZELLIJ_CONFIG_DIR/layouts"
-if [[ -f "$ZELLIJ_LAYOUTS/dev.kdl" ]]; then
-    warn "zellij 'dev' layout already exists"
-else
-    mkdir -p "$ZELLIJ_LAYOUTS"
-    cat > "$ZELLIJ_LAYOUTS/dev.kdl" <<'ZELLIJ_DEV'
+info "Creating zellij 'dev' layout..."
+write_managed "$ZELLIJ_LAYOUTS/dev.kdl" "//" <<'ZELLIJ_DEV'
 // Editor + Claude Code side-by-side. Run:  zellij --layout dev
 layout {
     pane split_direction="vertical" {
@@ -3236,11 +3217,7 @@ layout {
     }
 }
 ZELLIJ_DEV
-    success "zellij 'dev' layout created (editor + Claude pane: zellij --layout dev)"
-fi
-mark_done "config:zellij-dev-layout"
-fi
-fi
+success "zellij 'dev' layout created (editor + Claude pane: zellij --layout dev)"
 fi  # installed zellij
 
 # ---- newsboat config ----
@@ -4148,12 +4125,8 @@ VIM_CONF
 
 # ---- ~/.nanorc (better nano for quick edits) ----
 NANORC="$HOME/.nanorc"
-if ! is_done "config:nanorc"; then
-if [[ -f "$NANORC" ]]; then
-    warn "$HOME/.nanorc already exists"
-else
     info "Creating ~/.nanorc..."
-    cat > "$NANORC" <<'NANO_CONF'
+    write_managed "$NANORC" "#" <<'NANO_CONF'
 # =============================================================================
 # ~/.nanorc — comfortable nano config for quick edits
 # =============================================================================
@@ -4198,9 +4171,6 @@ NANO_CONF
     # Replace placeholder with actual brew prefix
     /usr/bin/sed -i '' "s|PLACEHOLDER_BREW_PREFIX|$(brew --prefix)|g" "$NANORC"
     success "$HOME/.nanorc created (line numbers, auto-indent, mouse, syntax highlighting)"
-fi
-mark_done "config:nanorc"
-fi
 
 # ---- bat extended config (file type mappings) ----
 if ! is_done "config:bat-mappings"; then
