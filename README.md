@@ -925,11 +925,23 @@ Run `hx --health` to see what Helix detects. Config lives in `~/.config/helix/co
 (Dracula theme, relative line numbers, inlay hints, auto-format, `Ctrl-s` to save) and
 `languages.toml` (per-language formatters).
 
-### AI agent — Claude Code
+### AI agent — Claude Code (+ Helix/aerc integration)
 
 Agentic coding is handled by **Claude Code** (`claude`) in the terminal, which reuses
 the MCP servers below. (Kiro's agent/specs/steering/hooks are gone with Kiro; Claude
 Code plus your `~/.claude/CLAUDE.md` rules cover the same ground.)
+
+Claude is wired into the terminal tools in three tiers:
+
+| Tier | How | Best for |
+|------|-----|----------|
+| **1. Side-pane** | `zellij --layout dev` — editor + a `claude` pane | Real, multi-file, agentic work (strongest) |
+| **2. `llm` pipe** | Helix `Alt+a` on a selection; aerc `S` to summarize a message | Quick in-place edits / email triage |
+| **3. AI-as-LSP** | **helix-assist** (`--handler anthropic`) — ghost-text completions + `Space A` | Inline completions inside Helix |
+
+Set `ANTHROPIC_API_KEY` (for helix-assist) and `llm keys set anthropic` + `llm models
+default claude-sonnet-4-5` (for the `llm` pipe binds). The `llm-anthropic` plugin and
+`helix-assist` are installed by the script.
 
 ### Claude Code MCP Servers
 
