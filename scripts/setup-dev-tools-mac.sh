@@ -810,6 +810,7 @@ if [[ "$CLEANUP" == "true" ]]; then
         "cask:google-drive:Google Drive:rclone:Google Drive"
         "cask:drawio:draw.io:d2 + mermaid-cli:draw.io"
         "cask:notion:Notion:tiki:Notion"
+        "cask:notion-calendar:Notion Calendar:khal + vdirsyncer:Notion Calendar"
         "brew:yazi:yazi:rovr"
         "brew:cmus:cmus:kew"
         "cask:raycast:Raycast:Ghostty quick-terminal + clipse:Raycast"
@@ -1834,7 +1835,11 @@ brew_cask_install "claude" "Claude (AI assistant)"
 # Notion (GUI) replaced by tiki — terminal Markdown workspace (tasks/docs/kanban/wiki, git-backed).
 brew tap boolean-maybe/tap >> "$LOG_FILE" 2>&1 || true
 brew_install "tiki" "tiki (terminal Markdown workspace — tasks, docs, kanban, wiki; git-backed)"
-brew_cask_install "notion-calendar" "Notion Calendar"
+# Notion Calendar (GUI) replaced by khal + vdirsyncer (unified Gmail + iCloud, below).
+# Terminal email (Gmail work + iCloud personal):
+brew_install "aerc" "aerc (terminal email — Gmail XOAUTH2 + iCloud IMAP, multi-account)"
+brew_install "khal" "khal (terminal calendar — unified Gmail + iCloud via vdirsyncer)"
+brew_install "vdirsyncer" "vdirsyncer (sync CalDAV to local storage for khal)"
 brew_cask_install "shottr" "Shottr (fast native screenshots — scrolling capture, OCR, annotations)"
 
 # PDF & documents
@@ -5510,6 +5515,149 @@ fi
 mark_done "config:clipse"
 fi
 
+# ---- aerc email config (skeleton — secrets are manual) ----
+# aerc handles Gmail (XOAUTH2) + iCloud (app-specific password) in one client.
+# We write a commented skeleton; fill the placeholders per POST_SETUP_CHECKLIST.md.
+AERC_DIR="$HOME/.config/aerc"
+if ! is_done "config:aerc"; then
+if [[ -f "$AERC_DIR/accounts.conf" ]]; then
+    warn "aerc config already exists"
+else
+    info "Creating aerc config skeleton (Gmail + iCloud accounts)..."
+    mkdir -p "$AERC_DIR"
+    cat > "$AERC_DIR/accounts.conf" <<'AERC_ACCOUNTS'
+# aerc accounts — fill in the placeholders (see ~/Desktop/POST_SETUP_CHECKLIST.md).
+# Personal (iCloud): generate an app-specific password at appleid.apple.com.
+# aerc will prompt for the password on first connect (or use a source-cred-cmd).
+
+[Personal (iCloud)]
+source   = imaps://YOUR_APPLEID%40icloud.com@imap.mail.me.com:993
+outgoing = smtps://YOUR_APPLEID%40icloud.com@smtp.mail.me.com:587
+from     = Your Name <YOUR_APPLEID@icloud.com>
+copy-to  = Sent Messages
+
+# Work (Gmail): create a Google Cloud OAuth "Desktop" app, then obtain a refresh
+# token. Paste client id/secret + token below (aerc refreshes the token itself).
+[Work (Gmail)]
+source   = imaps+xoauth2://YOUR_ADDR%40gmail.com@imap.gmail.com:993
+outgoing = smtps+xoauth2://YOUR_ADDR%40gmail.com@smtp.gmail.com:465
+from     = Your Name <YOUR_ADDR@gmail.com>
+oauth2_client_id     = YOUR_GOOGLE_CLIENT_ID
+oauth2_client_secret = YOUR_GOOGLE_CLIENT_SECRET
+oauth2_token_endpoint = https://accounts.google.com/o/oauth2/token
+outgoing-cred-cmd = # set by aerc after OAuth; leave blank initially
+copy-to  = "[Gmail]/Sent Mail"
+AERC_ACCOUNTS
+    cat > "$AERC_DIR/aerc.conf" <<'AERC_CONF'
+[general]
+unsafe-accounts-conf = false
+
+[ui]
+threading-enabled = true
+sidebar-width = 22
+index-columns = date<20,name<20,flags>4,subject<*
+timestamp-format = 2006-01-02 15:04
+this-day-time-format = 15:04
+
+[viewer]
+pager = less -R
+alternatives = text/plain,text/html
+html = false
+
+[filters]
+text/plain = colorize
+text/html = pandoc -f html -t plain 2>/dev/null || cat
+AERC_CONF
+    success "aerc config skeleton created (edit accounts.conf with your credentials)"
+fi
+mark_done "config:aerc"
+fi
+
+# ---- khal + vdirsyncer config (unified Gmail + iCloud calendar) ----
+# vdirsyncer syncs both CalDAV sources to local .ics; khal reads them.
+# Credentials (iCloud app-password, Google OAuth client) are filled in manually.
+if ! is_done "config:khal-vdirsyncer"; then
+VDIR_DIR="$HOME/.config/vdirsyncer"
+KHAL_DIR="$HOME/.config/khal"
+if [[ -f "$VDIR_DIR/config" ]]; then
+    warn "vdirsyncer/khal config already exists"
+else
+    info "Creating khal + vdirsyncer config skeletons..."
+    mkdir -p "$VDIR_DIR" "$KHAL_DIR" \
+             "$HOME/.local/share/calendars/personal" \
+             "$HOME/.local/share/calendars/work" \
+             "$HOME/.local/share/vdirsyncer/status"
+    cat > "$VDIR_DIR/config" <<'VDIR_CONF'
+# vdirsyncer — fill in usernames + credentials (see POST_SETUP_CHECKLIST.md).
+[general]
+status_path = "~/.local/share/vdirsyncer/status/"
+
+# --- iCloud (personal) via CalDAV + app-specific password ---
+[pair icloud]
+a = "icloud_local"
+b = "icloud_remote"
+collections = ["from a", "from b"]
+metadata = ["color", "displayname"]
+
+[storage icloud_local]
+type = "filesystem"
+path = "~/.local/share/calendars/personal/"
+fileext = ".ics"
+
+[storage icloud_remote]
+type = "caldav"
+url = "https://caldav.icloud.com/"
+username = "YOUR_APPLEID@icloud.com"
+# App-specific password from appleid.apple.com:
+password = "YOUR_ICLOUD_APP_SPECIFIC_PASSWORD"
+
+# --- Google (work) via the native google_calendar storage (OAuth) ---
+[pair google]
+a = "google_local"
+b = "google_remote"
+collections = ["from a", "from b"]
+metadata = ["color", "displayname"]
+
+[storage google_local]
+type = "filesystem"
+path = "~/.local/share/calendars/work/"
+fileext = ".ics"
+
+[storage google_remote]
+type = "google_calendar"
+token_file = "~/.local/share/vdirsyncer/google_token"
+client_id = "YOUR_GOOGLE_CLIENT_ID"
+client_secret = "YOUR_GOOGLE_CLIENT_SECRET"
+VDIR_CONF
+    cat > "$KHAL_DIR/config" <<'KHAL_CONF'
+[calendars]
+
+[[personal]]
+path = ~/.local/share/calendars/personal/*
+type = discover
+color = light magenta
+
+[[work]]
+path = ~/.local/share/calendars/work/*
+type = discover
+color = light cyan
+
+[locale]
+timeformat = %H:%M
+dateformat = %Y-%m-%d
+longdateformat = %Y-%m-%d %a
+datetimeformat = %Y-%m-%d %H:%M
+weeknumbers = left
+
+[default]
+default_calendar = personal
+highlight_event_days = True
+KHAL_CONF
+    success "khal + vdirsyncer skeletons created (run 'vdirsyncer discover' after adding creds)"
+fi
+mark_done "config:khal-vdirsyncer"
+fi
+
 # ---- direnv config ----
 DIRENV_CONFIG_DIR="$HOME/.config/direnv"
 DIRENV_CONFIG="$DIRENV_CONFIG_DIR/direnv.toml"
@@ -6746,7 +6894,9 @@ else
 - File transfer: rclone (CLI — SFTP/S3/cloud)
 - Proxy/debugger: mitmproxy
 - Tunneling: ngrok
-- Docs / PM: tiki (terminal Markdown workspace — tasks/docs/kanban/wiki, git-backed) + Notion Calendar
+- Docs / PM: tiki (terminal Markdown workspace — tasks/docs/kanban/wiki, git-backed)
+- Email: aerc (terminal — Gmail work + iCloud personal, multi-account)
+- Calendar: khal + vdirsyncer (terminal — unified Google + iCloud CalDAV)
 - Cloud storage: rclone (Google Drive, S3, Dropbox, etc.); borg for versioned backups
 - Browser: Google Chrome (primary); Carbonyl / w3m in the terminal
 - Password manager: Apple Passwords (iCloud Keychain) — no third-party manager installed
@@ -7946,6 +8096,8 @@ echo "  [~/.newsboat]           RSS reader (vim keys, Dracula colors, starter UR
 echo "  [~/.config/ghostty]     GPU-accelerated terminal + quick-terminal launcher (cmd+space)"
 echo "  [~/.config/aerospace]   Tiling window manager (Option+hjkl, workspaces 1-9)"
 echo "  [~/.config/sketchybar]  Dracula status bar (AeroSpace pills, battery/wifi/vpn/cpu/mem)"
+echo "  [~/.config/aerc]        Terminal email skeleton (Gmail + iCloud — add credentials)"
+echo "  [~/.config/khal]        Terminal calendar (unified Gmail + iCloud via vdirsyncer)"
 echo "  [~/.justfile]           Global task runner recipes"
 echo "  [~/.config/brewfile]    Brewfile snapshot for reproducibility"
 echo "  [~/.config/helix]       Helix — Dracula theme, ruff LSP, auto-format; MCP servers migrated to Claude Code"
