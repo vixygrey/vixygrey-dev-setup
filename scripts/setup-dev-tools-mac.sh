@@ -209,25 +209,25 @@ declare -A CATEGORY_DESC=(
     [aws]="AWS CLI, CDK, SAM, Granted, cfn-lint"
     [iac]="OpenTofu (Terraform), tflint, terraform-docs, checkov, infracost"
     [security]="detect-secrets, gitleaks, trivy, semgrep, Snyk, ClamAV"
-    [replacements]="eza, bat, fd, ripgrep, zoxide, btop, sd, dust, just, yazi"
+    [replacements]="eza, bat, fd, ripgrep, zoxide, btop, sd, dust, just, rovr"
     [data-processing]="yq, miller, csvkit, pandoc, ffmpeg, ImageMagick"
     [code-quality]="shellcheck, shfmt, act, hadolint, ruff, commitizen"
     [perf-testing]="hyperfine, oha"
     [dev-servers]="ngrok, miniserve, caddy"
     [terminal-productivity]="glow, watchexec, gum, nushell, topgrade, fastfetch"
     [k8s-github]="stern, gh-dash"
-    [database]="pgcli, mycli, lazysql, harlequin, usql, sq, DBeaver"
+    [database]="pgcli, mycli, lazysql, harlequin, usql, sq"
     [containers]="lazydocker, dive, kubectl, k9s"
-    [api]="Bruno, grpcurl"
+    [api]="ATAC, grpcurl"
     [networking]="mtr, bandwhich, nmap"
     [dx]="fzf, starship, atuin, Helix, Ghostty, zellij, aider, llm"
     [ux]="Lighthouse"
-    [docs]="d2, Mermaid CLI, draw.io"
+    [docs]="d2, Mermaid CLI"
     [mac-system]="Pearcleaner, Quick Look plugins, dockutil"
-    [mac-productivity]="Notion, Skim, Cyberduck"
+    [mac-productivity]="tiki, Skim"
     [mac-browsers]="Carbonyl, w3m"
-    [mac-media]="mpv, oxipng, jpegoptim, 7zip, cmus"
-    [mac-cloud]="Google Drive, rclone, borg"
+    [mac-media]="mpv, oxipng, jpegoptim, 7zip, kew"
+    [mac-cloud]="rclone, borg"
     [mac-focus]="newsboat"
     [mac-bloat]="Remove pre-installed Apple apps (GarageBand)"
     [dracula]="Dracula theme for all tools"
@@ -377,25 +377,25 @@ list_categories() {
     printf "  %-25s %s\n" "aws"                 "AWS CLI, CDK, SAM, Granted, cfn-lint"
     printf "  %-25s %s\n" "iac"                 "OpenTofu (Terraform), tflint, terraform-docs, checkov, infracost"
     printf "  %-25s %s\n" "security"            "detect-secrets, gitleaks, trivy, semgrep, Snyk, ClamAV, Objective-See"
-    printf "  %-25s %s\n" "replacements"        "eza, bat, fd, ripgrep, zoxide, btop, sd, dust, just, yazi, fx, etc."
+    printf "  %-25s %s\n" "replacements"        "eza, bat, fd, ripgrep, zoxide, btop, sd, dust, just, rovr, fx, etc."
     printf "  %-25s %s\n" "data-processing"     "yq, miller, csvkit, pandoc, ffmpeg, ImageMagick"
     printf "  %-25s %s\n" "code-quality"        "shellcheck, shfmt, act, act3, hadolint, ruff, commitizen, ni"
     printf "  %-25s %s\n" "perf-testing"        "hyperfine, oha"
     printf "  %-25s %s\n" "dev-servers"         "ngrok, miniserve, caddy"
     printf "  %-25s %s\n" "terminal-productivity" "glow, watchexec, pv, parallel, gum, nushell, topgrade, fastfetch, nnn, progress"
     printf "  %-25s %s\n" "k8s-github"          "stern, gh-dash"
-    printf "  %-25s %s\n" "database"            "pgcli, mycli, lazysql, harlequin, usql, sq, DBeaver"
+    printf "  %-25s %s\n" "database"            "pgcli, mycli, lazysql, harlequin, usql, sq"
     printf "  %-25s %s\n" "containers"          "lazydocker, dive, kubectl, k9s"
-    printf "  %-25s %s\n" "api"                 "Bruno, grpcurl"
+    printf "  %-25s %s\n" "api"                 "ATAC, grpcurl"
     printf "  %-25s %s\n" "networking"          "mtr, bandwhich, nmap"
     printf "  %-25s %s\n" "dx"                  "fzf, starship, atuin, Helix, Ghostty, zellij, aider, llm, repomix"
     printf "  %-25s %s\n" "ux"                  "Lighthouse"
-    printf "  %-25s %s\n" "docs"                "d2, Mermaid CLI, draw.io"
+    printf "  %-25s %s\n" "docs"                "d2, Mermaid CLI"
     printf "  %-25s %s\n" "mac-system"          "Pearcleaner, Quick Look plugins, dockutil, terminal-notifier"
-    printf "  %-25s %s\n" "mac-productivity"    "Notion, Skim, Cyberduck"
+    printf "  %-25s %s\n" "mac-productivity"    "tiki, Skim"
     printf "  %-25s %s\n" "mac-browsers"        "Carbonyl, w3m, monolith"
-    printf "  %-25s %s\n" "mac-media"           "mpv, oxipng, jpegoptim, 7zip, cmus"
-    printf "  %-25s %s\n" "mac-cloud"           "Google Drive, rclone, borg"
+    printf "  %-25s %s\n" "mac-media"           "mpv, oxipng, jpegoptim, 7zip, kew"
+    printf "  %-25s %s\n" "mac-cloud"           "rclone, borg"
     printf "  %-25s %s\n" "mac-focus"           "newsboat"
     printf "  %-25s %s\n" "mac-bloat"           "Remove pre-installed Apple apps (GarageBand)"
     printf "  %-25s %s\n" "dracula"             "Dracula theme for all tools"
@@ -753,7 +753,7 @@ if [[ "$UNINSTALL" == "true" ]]; then
     echo "  rm -rf ~/.config/yt-dlp ~/.config/gh-dash ~/.config/stern"
     echo "  rm -rf ~/.config/btop ~/.config/lazydocker ~/.config/mise"
     echo "  rm -rf ~/.config/topgrade.toml ~/.config/fastfetch ~/.config/pgcli"
-    echo "  rm -rf ~/.config/direnv ~/.config/caddy ~/.config/yazi ~/.config/ghostty"
+    echo "  rm -rf ~/.config/direnv ~/.config/caddy ~/.config/ghostty"
     echo "  rm -f ~/.justfile"
     echo ""
     echo "# Remove Rust (installed via rustup):"
@@ -804,6 +804,14 @@ if [[ "$CLEANUP" == "true" ]]; then
         "cask:cursor:Cursor (AI editor):Helix + Claude Code:Cursor"
         "cask:kiro:Kiro:Helix + Claude Code:Kiro"
         "cask:visual-studio-code:Visual Studio Code:Helix:Visual Studio Code"
+        "cask:bruno:Bruno:ATAC:Bruno"
+        "cask:dbeaver-community:DBeaver Community:harlequin + lazysql:DBeaver"
+        "cask:cyberduck:Cyberduck:rclone:Cyberduck"
+        "cask:google-drive:Google Drive:rclone:Google Drive"
+        "cask:drawio:draw.io:d2 + mermaid-cli:draw.io"
+        "cask:notion:Notion:tiki:Notion"
+        "brew:yazi:yazi:rovr"
+        "brew:cmus:cmus:kew"
         "cask:cleanshot:CleanShot X:removed"
         "cask:soulver:Soulver 3:removed:Soulver 3"
         "cask:numi:Numi:removed"
@@ -1406,8 +1414,28 @@ brew_install "vivid" "vivid (LS_COLORS generator — colorize file listings by t
 # make -> just: modern command runner, simpler syntax, no tab weirdness
 brew_install "just" "just (replaces make — simpler task runner, no tab issues)"
 
-# file manager -> yazi: terminal file manager with image preview, vim keys, bulk rename
-brew_install "yazi" "yazi (terminal file manager — image preview, vim keys, bulk ops)"
+# file manager -> rovr: mouse-first, VS Code-Explorer-style TUI file manager (Textual).
+# nnn is kept (below) as a fast, minimal fallback. rovr is not on Homebrew — install
+# via uv (needs Python 3.13, which uv fetches automatically).
+if command -v rovr &>/dev/null; then
+    warn "rovr already installed"
+    progress
+elif installed uv; then
+    info "Installing rovr via uv (Python 3.13 fetched by uv if needed)..."
+    if [[ "$DRY_RUN" != "true" ]]; then
+        if uv tool install --python 3.13 rovr >> "$LOG_FILE" 2>&1; then
+            success "rovr installed (mouse-first TUI file manager)"
+        else
+            error "Failed to install rovr via uv"
+        fi
+    else
+        info "[DRY RUN] Would: uv tool install --python 3.13 rovr"
+    fi
+    progress
+else
+    warn "Skipping rovr — uv not installed"
+    progress
+fi
 
 # jq (interactive) -> fx: interactive JSON viewer/processor
 brew_install "fx" "fx (interactive JSON viewer — better than jq for exploring)"
@@ -1576,7 +1604,8 @@ else
 fi
 brew_install "neilotoole/sq/sq" "sq (jq for databases — query SQLite, Postgres, CSV from one tool)"
 brew_install "dbmate" "dbmate (lightweight DB migrations)"
-brew_cask_install "dbeaver-community" "DBeaver Community (free, open-source universal DB GUI)"
+# DBeaver (GUI) removed — TUI/CLI coverage: harlequin (SQL IDE), lazysql,
+# pgcli, mycli, usql, sq (all installed above).
 
 fi  # database
 
@@ -1595,7 +1624,7 @@ fi  # containers
 if should_run "api"; then
 banner "API Development"
 
-brew_cask_install "bruno" "Bruno (local-first, git-friendly API client)"
+brew_install "atac" "ATAC (terminal API client — TUI + scriptable CLI, Postman import, git-friendly collections)"
 brew_install "grpcurl" "grpcurl (curl for gRPC)"
 
 fi  # api
@@ -1742,7 +1771,7 @@ else
     progress  # keep progress bar accurate when npm unavailable
 fi
 
-brew_cask_install "drawio" "draw.io (open-source desktop diagram editor — architecture & system diagrams)"
+# draw.io (GUI) removed — diagrams via d2 + mermaid-cli (installed above).
 
 fi  # docs
 
@@ -1773,15 +1802,16 @@ if should_run "mac-productivity"; then
 banner "Mac Apps — Productivity"
 
 brew_cask_install "claude" "Claude (AI assistant)"
-brew_cask_install "notion" "Notion (docs, wikis, project tracking)"
+# Notion (GUI) replaced by tiki — terminal Markdown workspace (tasks/docs/kanban/wiki, git-backed).
+brew tap boolean-maybe/tap >> "$LOG_FILE" 2>&1 || true
+brew_install "tiki" "tiki (terminal Markdown workspace — tasks, docs, kanban, wiki; git-backed)"
 brew_cask_install "notion-calendar" "Notion Calendar"
 brew_cask_install "shottr" "Shottr (fast native screenshots — scrolling capture, OCR, annotations)"
 
 # PDF & documents
 brew_cask_install "skim" "Skim (lightweight PDF reader with annotations — faster than Preview)"
 
-# File transfer
-brew_cask_install "cyberduck" "Cyberduck (free, open-source SFTP/S3/cloud transfer)"
+# File transfer — Cyberduck (GUI) removed; rclone (installed below) covers SFTP/S3/cloud.
 
 fi  # mac-productivity
 
@@ -1805,7 +1835,7 @@ brew_install "mpv" "mpv (terminal video player)"
 brew_install "oxipng" "oxipng (lossless PNG compression)"
 brew_install "jpegoptim" "jpegoptim (lossless JPEG compression)"
 brew_install "p7zip" "7zip (archive tool — zip, 7z, rar, tar)"
-brew_install "cmus" "cmus (ncurses terminal music player)"
+brew_install "kew" "kew (terminal music player — search-to-play, gapless, spectrum visualizer)"
 
 fi  # mac-media
 
@@ -1813,7 +1843,7 @@ fi  # mac-media
 if should_run "mac-cloud"; then
 banner "Mac Apps — Cloud Storage"
 
-brew_cask_install "google-drive" "Google Drive (cloud storage with Docs/Sheets)"
+# Google Drive (GUI) removed — rclone handles Google Drive (and S3/Dropbox/etc.) from the terminal.
 
 # Backup & sync
 brew_install "rclone" "rclone (sync files to any cloud — Google Drive, S3, Dropbox, etc.)"
@@ -3220,57 +3250,34 @@ fi
 mark_done "config:mpv"
 fi
 
-# ---- cmus config ----
-CMUS_CONFIG_DIR="$HOME/.config/cmus"
-CMUS_CONFIG="$CMUS_CONFIG_DIR/rc"
-if ! is_done "config:cmus"; then
-if [[ -f "$CMUS_CONFIG" ]]; then
-    warn "cmus config already exists"
+# ---- kew config ----
+# kew stores its config at ~/Library/Preferences/kew/kewrc on macOS. It generates
+# a default on first run and does NOT overwrite an existing file, so we only write
+# ours when absent. Format is key=value (no spaces); keys verified against kew source.
+KEW_CONFIG_DIR="$HOME/Library/Preferences/kew"
+KEW_CONFIG="$KEW_CONFIG_DIR/kewrc"
+if ! is_done "config:kew"; then
+if [[ -f "$KEW_CONFIG" ]]; then
+    warn "kew config already exists"
 else
-    info "Creating cmus config (Dracula-inspired colors, sensible defaults)..."
-    mkdir -p "$CMUS_CONFIG_DIR"
-    cat > "$CMUS_CONFIG" <<'CMUS_CONF'
-# cmus configuration — Dracula-inspired colors
-# Apply inside cmus with:  :source ~/.config/cmus/rc
+    info "Creating kew config (music library, visualizer)..."
+    mkdir -p "$KEW_CONFIG_DIR"
+    cat > "$KEW_CONFIG" <<'KEW_CONF'
+[miscellaneous]
+path=~/Media/music
+allowNotifications=1
 
-# Replay gain (consistent volume across tracks)
-set replaygain=track
-set replaygain_limit=true
+[track cover]
+coverEnabled=1
+coverStyle=auto
 
-# Display formats
-set format_current= %a — %t
-set format_playlist= %-20%a %t (%l)
-set format_trackwin= %-20%a %t (%l)
-
-# Colors (Dracula palette, 256-color)
-set color_bg=-1
-set color_cmdline_bg=-1
-set color_cmdline_fg=253
-set color_info=141
-set color_error=203
-set color_separator=61
-set color_statusline_bg=61
-set color_statusline_fg=253
-set color_titleline_bg=61
-set color_titleline_fg=253
-set color_win_bg=-1
-set color_win_cur=141
-set color_win_cur_sel_bg=61
-set color_win_cur_sel_fg=253
-set color_win_dir=117
-set color_win_fg=253
-set color_win_inactive_cur_sel_bg=61
-set color_win_inactive_cur_sel_fg=253
-set color_win_inactive_sel_bg=-1
-set color_win_inactive_sel_fg=141
-set color_win_sel_bg=61
-set color_win_sel_fg=253
-set color_win_title_bg=61
-set color_win_title_fg=253
-CMUS_CONF
-    success "cmus configured (Dracula colors, replaygain)"
+[visualizer]
+visualizerColorType=3
+visualizerHeight=6
+KEW_CONF
+    success "kew configured (music library ~/Media/music, party visualizer)"
 fi
-mark_done "config:cmus"
+mark_done "config:kew"
 fi
 
 # ---- w3m config ----
@@ -4930,73 +4937,6 @@ fi
 mark_done "config:mycli"
 fi
 
-# ---- yazi config ----
-YAZI_CONFIG_DIR="$HOME/.config/yazi"
-YAZI_CONFIG="$YAZI_CONFIG_DIR/yazi.toml"
-if ! is_done "config:yazi"; then
-if [[ -f "$YAZI_CONFIG" ]]; then
-    warn "yazi config already exists"
-else
-    info "Creating yazi configuration..."
-    mkdir -p "$YAZI_CONFIG_DIR"
-    cat > "$YAZI_CONFIG" <<'YAZI_CONF'
-# yazi configuration
-# Docs: https://yazi-rs.github.io/docs/configuration/yazi
-
-[manager]
-# Show hidden files by default
-show_hidden = true
-# Sort directories first
-sort_dir_first = true
-# Line mode: show size and modification time
-linemode = "size"
-
-[preview]
-# Max file size for previews (5MB)
-max_width = 1000
-max_height = 1000
-
-[opener]
-edit = [
-    { run = 'hx "$@"', desc = "Open in Helix", block = true, for = "unix" },
-]
-YAZI_CONF
-
-    # Dracula theme for yazi
-    cat > "$YAZI_CONFIG_DIR/theme.toml" <<'YAZI_THEME'
-# Dracula color palette for yazi
-[manager]
-cwd = { fg = "#bd93f9" }
-
-[status]
-separator_open = ""
-separator_close = ""
-separator_style = { fg = "#44475a", bg = "#44475a" }
-
-[filetype]
-rules = [
-    { mime = "image/*", fg = "#ff79c6" },
-    { mime = "video/*", fg = "#ffb86c" },
-    { mime = "audio/*", fg = "#8be9fd" },
-    { name = "*.md", fg = "#50fa7b" },
-    { name = "*.json", fg = "#f1fa8c" },
-    { name = "*.toml", fg = "#f1fa8c" },
-    { name = "*.yaml", fg = "#f1fa8c" },
-    { name = "*.yml", fg = "#f1fa8c" },
-    { name = "*.ts", fg = "#8be9fd" },
-    { name = "*.tsx", fg = "#8be9fd" },
-    { name = "*.js", fg = "#f1fa8c" },
-    { name = "*.jsx", fg = "#f1fa8c" },
-    { name = "*.py", fg = "#50fa7b" },
-    { name = "*.rs", fg = "#ffb86c" },
-    { name = "*.go", fg = "#8be9fd" },
-]
-YAZI_THEME
-    success "yazi configured (hidden files, Helix opener, Dracula theme)"
-fi
-mark_done "config:yazi"
-fi
-
 # ---- just config (global justfile with common recipes) ----
 JUSTFILE_GLOBAL="$HOME/.justfile"
 if ! is_done "config:justfile"; then
@@ -6279,6 +6219,7 @@ else
       "Bash(ast-grep *)",
       "Bash(git-cliff *)",
       "Bash(hurl *)",
+      "Bash(atac *)",
       "Bash(jnv *)",
       "Bash(watchexec *)",
       "Bash(curlie *)",
@@ -6421,15 +6362,15 @@ else
 - Shell note: `bat` is aliased to `cat`; use `/bin/cat` only inside heredoc subshells where bat breaks syntax
 - Dotfiles: chezmoi
 - Launcher: Raycast
-- API client: Bruno (local-first, git-friendly — collections as `.bru` files)
-- Database: DBeaver (GUI) + CLIs pgcli, mycli, lazysql, harlequin, usql, sq; migrations via dbmate
-- Diagrams: draw.io (GUI, architecture/system diagrams) + d2 / Mermaid (code-based)
+- API client: ATAC (terminal — TUI + scriptable CLI; JSON/YAML collections, Postman import). Plus hurl / xh / curlie / grpcurl
+- Database: pgcli, mycli, lazysql, harlequin (SQL IDE TUI), usql, sq; migrations via dbmate
+- Diagrams: d2 / Mermaid (code-based, in the terminal)
 - Screenshots: Shottr (saved to ~/Screenshots)
-- File transfer: Cyberduck (GUI) + rclone (CLI)
+- File transfer: rclone (CLI — SFTP/S3/cloud)
 - Proxy/debugger: mitmproxy
 - Tunneling: ngrok
-- Docs / PM: Notion (+ Notion Calendar)
-- Cloud storage: Google Drive desktop (primary sync) + rclone; borg for versioned backups
+- Docs / PM: tiki (terminal Markdown workspace — tasks/docs/kanban/wiki, git-backed) + Notion Calendar
+- Cloud storage: rclone (Google Drive, S3, Dropbox, etc.); borg for versioned backups
 - Browser: Google Chrome (primary); Carbonyl / w3m in the terminal
 - Password manager: Apple Passwords (iCloud Keychain) — no third-party manager installed
 
@@ -6453,7 +6394,7 @@ else
 - **Network**: `trip` (trippy) for traceroute TUI, `sudo mtr` (requires root, lives in sbin), `bandwhich` for bandwidth, `nmap` for scanning, `mkcert` for local TLS certs
 - **Docs**: `d2` for diagrams, `pandoc` for conversion, `glow` for Markdown preview
 - **Database**: `pgcli`/`mycli` for auto-completing SQL, `lazysql` for TUI, `sq` for cross-database queries, `dbmate` for migrations
-- **File management**: `yazi` for TUI file manager, `watchexec` for running commands on file changes, `rclone` for cloud storage sync
+- **File management**: `rovr` for the TUI file manager (`nnn` as a minimal fallback), `watchexec` for running commands on file changes, `rclone` for cloud storage sync
 - **Kubernetes**: `k9s` for TUI, `stern` for log tailing (kubectl via OrbStack)
 - **AWS**: `granted`/`assume` for role switching
 - **Shell scripting**: `gum` for interactive prompts/spinners, `nushell` for structured data pipelines, `parallel` for parallel execution
@@ -7395,6 +7336,8 @@ autoload -Uz bashcompinit && bashcompinit
 [[ -x "$(command -v kubectl)" ]] && source <(kubectl completion zsh)
 # gh completion
 [[ -x "$(command -v gh)" ]] && source <(gh completion -s zsh)
+# atac (terminal API client) completion
+[[ -x "$(command -v atac)" ]] && source <(atac completions zsh)
 # aws completion (uses bash-style complete, needs bashcompinit above)
 [[ -x "$(command -v aws_completer)" ]] && complete -C "$(which aws_completer)" aws
 
@@ -7423,7 +7366,7 @@ alias rg="rg"          # ripgrep (already the command name)
 alias f="fd"           # fd (fast find)
 alias sd="sd"          # sd (fast sed)
 alias dft="difft"      # difftastic
-alias y="yazi"         # yazi file manager
+alias y="rovr"         # rovr file manager (mouse-first TUI; nnn 'n' is the minimal fallback)
 alias jx="fx"          # fx interactive JSON viewer
 
 # -- Download & Transfer ------------------------------------------------------
@@ -7592,9 +7535,9 @@ echo "  [~/.config/glow]        Dracula Markdown renderer"
 echo "  [~/.config/yt-dlp]      Best quality, aria2c downloader"
 echo "  [~/.config/gh-dash]     GitHub dashboard, Dracula theme"
 echo "  [~/.config/stern]       K8s log tailing"
-echo "  [~/.config/yazi]        File manager with Dracula theme"
 echo "  [~/.config/zellij]      Modern terminal multiplexer with Dracula theme"
 echo "  [~/.config/mpv]         Video player (hardware accel, save position)"
+echo "  [~/Library/Preferences/kew]  Music player (library ~/Media/music, spectrum visualizer)"
 echo "  [~/.config/git-cliff]   Changelog generator (conventional commits)"
 echo "  [~/.newsboat]           RSS reader (vim keys, Dracula colors, starter URLs)"
 echo "  [~/.config/ghostty]     GPU-accelerated terminal with Dracula theme"
