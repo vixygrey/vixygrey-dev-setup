@@ -531,6 +531,37 @@ should_run() {
 # -- Utility functions --------------------------------------------------------
 installed() { command -v "$1" &>/dev/null; }
 
+# write_managed <file> [comment-prefix]   (config content on stdin)
+# Idempotent config writer that MERGES on re-run instead of overwriting:
+#   - new file            -> create it wrapped in dev-setup markers
+#   - file has our markers -> replace ONLY the block between markers (edits outside survive)
+#   - file exists, no markers -> append our block (preserves the existing file)
+# Comment prefix defaults to '#'. Honors DRY_RUN. This is the .zshrc managed-block
+# pattern generalized so re-running the setup pulls config updates without clobbering
+# personal edits placed outside the markers.
+write_managed() {
+    local file="$1" cp="${2:-#}"
+    local mb="$cp >>> dev-setup managed block (do not edit between the markers) >>>"
+    local me="$cp <<< dev-setup managed block <<<"
+    local tmp; tmp="$(mktemp)"
+    { printf '%s\n' "$mb"; cat; printf '%s\n' "$me"; } > "$tmp"
+    if [[ "$DRY_RUN" == "true" ]]; then rm -f "$tmp"; return 0; fi
+    mkdir -p "$(dirname "$file")"
+    if [[ ! -f "$file" ]]; then
+        cp "$tmp" "$file"
+    elif grep -qF "$mb" "$file" 2>/dev/null; then
+        local out; out="$(mktemp)"
+        awk -v mb="$mb" -v me="$me" -v blk="$tmp" '
+            index($0, mb) { while ((getline line < blk) > 0) print line; close(blk); inb=1; next }
+            index($0, me) { inb=0; next }
+            !inb { print }
+        ' "$file" > "$out" && mv "$out" "$file"
+    else
+        { printf '\n'; cat "$tmp"; } >> "$file"
+    fi
+    rm -f "$tmp"
+}
+
 brew_install() {
     local formula="$1"
     local name="${2:-$1}"
@@ -2779,13 +2810,8 @@ fi
 
 # ---- Helix editor config ----
 HELIX_CONFIG_DIR="$HOME/.config/helix"
-if ! is_done "config:helix"; then
-if [[ -f "$HELIX_CONFIG_DIR/config.toml" ]]; then
-    warn "Helix config already exists — not overwriting"
-else
-    info "Creating Helix configuration (Dracula theme, LSP, auto-format)..."
-    mkdir -p "$HELIX_CONFIG_DIR"
-    cat > "$HELIX_CONFIG_DIR/config.toml" <<'HELIX_CONF'
+info "Configuring Helix (Dracula theme, LSP, auto-format)..."
+write_managed "$HELIX_CONFIG_DIR/config.toml" "#" <<'HELIX_CONF'
 theme = "dracula"
 
 [editor]
@@ -2832,7 +2858,7 @@ enable = true
 # (For "explain"/chat, use the Claude Code pane — see the 'dev' zellij layout.)
 "A-a" = ":pipe llm 'Improve the selection. Output only the replacement text, no explanation.'"
 HELIX_CONF
-    cat > "$HELIX_CONFIG_DIR/languages.toml" <<'HELIX_LANG'
+write_managed "$HELIX_CONFIG_DIR/languages.toml" "#" <<'HELIX_LANG'
 # Ruff as the Python language server (matches the project's ruff-first Python rule)
 [language-server.ruff]
 command = "ruff"
@@ -2891,10 +2917,7 @@ auto-format = true
 name = "toml"
 auto-format = true
 HELIX_LANG
-    success "Helix configured (Dracula theme, ruff LSP, auto-format on save)"
-fi
-mark_done "config:helix"
-fi
+success "Helix configured (Dracula, ruff LSP, auto-format; managed block — edits outside the markers are kept)"
 
 # ---- MCP servers -> Claude Code (migrated from Kiro) ----
 # Claude Code stores user-scoped MCP servers in ~/.claude.json. We use the
@@ -3421,18 +3444,13 @@ mark_done "config:mpv"
 fi
 
 # ---- kew config ----
-# kew stores its config at ~/Library/Preferences/kew/kewrc on macOS. It generates
-# a default on first run and does NOT overwrite an existing file, so we only write
-# ours when absent. Format is key=value (no spaces); keys verified against kew source.
+# kew stores its config at ~/Library/Preferences/kew/kewrc on macOS. Format is
+# key=value (no spaces); keys verified against kew source. Written as a managed
+# block so re-runs refresh our keys while any of your own (outside the markers) stay.
 KEW_CONFIG_DIR="$HOME/Library/Preferences/kew"
 KEW_CONFIG="$KEW_CONFIG_DIR/kewrc"
-if ! is_done "config:kew"; then
-if [[ -f "$KEW_CONFIG" ]]; then
-    warn "kew config already exists"
-else
-    info "Creating kew config (music library, visualizer)..."
-    mkdir -p "$KEW_CONFIG_DIR"
-    cat > "$KEW_CONFIG" <<'KEW_CONF'
+info "Configuring kew (music library, visualizer)..."
+write_managed "$KEW_CONFIG" "#" <<'KEW_CONF'
 [miscellaneous]
 path=~/Media/music
 allowNotifications=1
@@ -3445,10 +3463,7 @@ coverStyle=auto
 visualizerColorType=3
 visualizerHeight=6
 KEW_CONF
-    success "kew configured (music library ~/Media/music, party visualizer)"
-fi
-mark_done "config:kew"
-fi
+success "kew configured (music library ~/Media/music, party visualizer)"
 
 # ---- w3m config ----
 W3M_CONFIG_DIR="$HOME/.w3m"
@@ -5256,13 +5271,8 @@ fi
 # ---- Ghostty config ----
 GHOSTTY_CONFIG_DIR="$HOME/.config/ghostty"
 GHOSTTY_CONFIG="$GHOSTTY_CONFIG_DIR/config"
-if ! is_done "config:ghostty"; then
-if [[ -f "$GHOSTTY_CONFIG" ]]; then
-    warn "Ghostty config already exists"
-else
-    info "Creating Ghostty configuration..."
-    mkdir -p "$GHOSTTY_CONFIG_DIR"
-    cat > "$GHOSTTY_CONFIG" <<'GHOSTTY_CONF'
+info "Configuring Ghostty..."
+write_managed "$GHOSTTY_CONFIG" "#" <<'GHOSTTY_CONF'
 # Ghostty configuration
 # Docs: https://ghostty.org/docs/config
 
@@ -5313,20 +5323,12 @@ quick-terminal-screen = main
 quick-terminal-animation-duration = 0.15
 quick-terminal-autohide = true
 GHOSTTY_CONF
-    success "Ghostty configured (JetBrains Mono, Dracula theme, transparent titlebar)"
-fi
-mark_done "config:ghostty"
-fi
+success "Ghostty configured (JetBrains Mono, Dracula theme, transparent titlebar)"
 
 # ---- AeroSpace config (tiling window manager) ----
 AEROSPACE_DIR="$HOME/.config/aerospace"
-if ! is_done "config:aerospace"; then
-if [[ -f "$AEROSPACE_DIR/aerospace.toml" ]]; then
-    warn "AeroSpace config already exists"
-else
-    info "Creating AeroSpace configuration (i3-style keys, gaps, SketchyBar hook)..."
-    mkdir -p "$AEROSPACE_DIR"
-    cat > "$AEROSPACE_DIR/aerospace.toml" <<'AEROSPACE_CONF'
+info "Configuring AeroSpace (i3-style keys, gaps, SketchyBar hook)..."
+write_managed "$AEROSPACE_DIR/aerospace.toml" "#" <<'AEROSPACE_CONF'
 # AeroSpace — tiling window manager. Docs: https://nikitabobko.github.io/AeroSpace/guide
 # No SIP disable required. Set macOS "Displays have separate Spaces" = OFF.
 start-at-login = true
@@ -5403,10 +5405,7 @@ r = ['flatten-workspace-tree', 'mode main']
 f = ['layout floating tiling', 'mode main']
 backspace = ['close-all-windows-but-current', 'mode main']
 AEROSPACE_CONF
-    success "AeroSpace configured (Option+hjkl focus, workspaces 1-9, SketchyBar hook)"
-fi
-mark_done "config:aerospace"
-fi
+success "AeroSpace configured (Option+hjkl focus, workspaces 1-9, SketchyBar hook)"
 
 # ---- SketchyBar config (Dracula status bar + AeroSpace workspaces) ----
 # Shell-based config (no SbarLua build step). Plugins are simple + label-based so
