@@ -236,7 +236,7 @@ declare -A CATEGORY_DESC=(
     [code-quality]="shellcheck, shfmt, act, hadolint, ruff, commitizen"
     [perf-testing]="hyperfine, oha"
     [dev-servers]="ngrok, miniserve, caddy"
-    [terminal-productivity]="leaf, watchexec, gum, nushell, topgrade, fastfetch, doxx, taproom, qalc, vhs, lazyssh, wiper, jolt"
+    [terminal-productivity]="leaf, watchexec, gum, nushell, topgrade, fastfetch, doxx, taproom, qalc, vhs, lazyssh, lazyenv, keyward, bmm, manly, wiper, jolt"
     [k8s-github]="stern, gh-dash"
     [database]="pgcli, mycli, lazysql, harlequin, usql, sq"
     [containers]="lazydocker, dive, kubectl, k9s"
@@ -404,7 +404,7 @@ list_categories() {
     printf "  %-25s %s\n" "code-quality"        "shellcheck, shfmt, act, act3, hadolint, ruff, commitizen, ni"
     printf "  %-25s %s\n" "perf-testing"        "hyperfine, oha"
     printf "  %-25s %s\n" "dev-servers"         "ngrok, miniserve, caddy"
-    printf "  %-25s %s\n" "terminal-productivity" "leaf, watchexec, gum, nushell, topgrade, fastfetch, nnn, doxx, taproom, qalc, vhs, lazyssh/rsync/npm, cheznav, apw, has, jolt, wiper, starlit"
+    printf "  %-25s %s\n" "terminal-productivity" "leaf, watchexec, gum, nushell, topgrade, fastfetch, nnn, doxx, taproom, qalc, vhs, lazyssh/rsync/npm, lazyenv, keyward, bmm, manly, cheznav, apw, has, jolt, wiper, starlit"
     printf "  %-25s %s\n" "k8s-github"          "stern, gh-dash"
     printf "  %-25s %s\n" "database"            "pgcli, mycli, lazysql, harlequin, usql, sq"
     printf "  %-25s %s\n" "containers"          "lazydocker, dive, kubectl, k9s"
@@ -1003,6 +1003,7 @@ if [[ "$CLEANUP" == "true" ]]; then
         "brew:yazi:yazi:rovr"
         "brew:cmus:cmus:cliamp"
         "brew:kew:kew:cliamp"
+        "brew:tokei:tokei:scc"
         "brew:glow:glow:leaf"
         "cask:raycast:Raycast:Ghostty quick-terminal + clipse:Raycast"
         "cask:unifi-identity-endpoint:UniFi Identity Endpoint:removed:UniFi Identity Endpoint"
@@ -1574,8 +1575,8 @@ brew_install "curlie" "curlie (curl with httpie-like output)"
 # dig -> doggo: colorized DNS, supports DoH/DoT (dog is abandoned, doggo is the maintained successor)
 brew_install "doggo" "doggo (replaces dig — colorized DNS, DoH support)"
 
-# wc -> tokei: count lines of code by language with stats
-brew_install "tokei" "tokei (replaces wc for code — lines of code by language)"
+# wc -> scc: lines of code by language + COCOMO cost/effort + complexity estimates
+brew_install "scc" "scc (replaces wc for code — LOC by language, complexity + COCOMO cost)"
 
 # tree (enhanced built-in) - if not using eza --tree
 brew_install "tree" "tree (directory listing)"
@@ -1765,6 +1766,18 @@ trust_tap jordond/tap
 brew_install "jolt" "jolt (battery / energy monitor TUI)"
 trust_tap ikebastuz/wiper
 brew_install "wiper" "wiper (interactive disk usage + cleanup — Trash-safe, ncdu-like)"
+
+# lazyenv — TUI for managing .env files across projects (diff/sync, secret masking,
+# .gitignore checks). Complements direnv (direnv loads; lazyenv edits/compares).
+trust_tap lazynop/tap
+brew_install "lazyenv" "lazyenv (TUI for .env files — diff/sync across projects, secret masking)"
+# keyward — TUI SSH-key manager + A–F security audit + encrypted key backups.
+trust_tap gateway-of-last-resort/tap
+brew_install "keyward" "keyward (SSH-key manager + security audit — offline, single binary)"
+# bmm — CLI/TUI bookmark manager (local, fzf-friendly). dhth/tap already trusted above.
+brew_install "bmm" "bmm (bookmark manager — CLI + TUI, local, import HTML/JSON/TXT)"
+# manly — explains the flags in a command by pulling the relevant man-page lines.
+uv_tool_install manly manly "manly (man-page explainer — 'manly tar -xzf')" "manly installed"
 
 # starlit (weather CLI) — PyPI package 'starlit-cli', installed via uv.
 uv_tool_install starlit-cli starlit "starlit (weather CLI)" \
@@ -5021,7 +5034,7 @@ standup:
 
 # Count lines of code in current directory
 loc:
-    @tokei . 2>/dev/null || find . -name '*.ts' -o -name '*.tsx' -o -name '*.js' -o -name '*.py' -o -name '*.go' -o -name '*.rs' | xargs wc -l | tail -1
+    @scc . 2>/dev/null || find . -name '*.ts' -o -name '*.tsx' -o -name '*.js' -o -name '*.py' -o -name '*.go' -o -name '*.rs' | xargs wc -l | tail -1
 JUSTFILE_CONF
     success "Global justfile created (~/.justfile — system, git, docker, network, cleanup, info recipes)"
 
@@ -6459,7 +6472,7 @@ else
       "Bash(diff *)",
       "Bash(difft *)",
       "Bash(delta *)",
-      "Bash(tokei *)",
+      "Bash(scc *)",
       "Bash(dust *)",
       "Bash(wc -l *)",
       "Bash(du -sh *)",
