@@ -1501,6 +1501,43 @@ brew_install "ssh-audit" "ssh-audit (audit SSH server/client config)"
 
 # ClamAV (open-source antivirus)
 brew_install "clamav" "ClamAV (open-source antivirus)"
+# ClamAV ships no virus database and only *.conf.sample files, so `clamscan` fails with
+# "No supported database files" until freshclam.conf exists and `freshclam` has run.
+# Seed a minimal freshclam.conf and register a LaunchAgent that fetches the DB on load
+# (in the background, so setup isn't blocked on a ~250 MB download) and refreshes daily.
+# On-demand scanner — no resident clamd daemon.
+if [[ "$DRY_RUN" != "true" ]] && installed clamav; then
+    CLAMAV_ETC="$(brew --prefix)/etc/clamav"
+    mkdir -p "$CLAMAV_ETC"
+    if [[ ! -f "$CLAMAV_ETC/freshclam.conf" ]]; then
+        if [[ -f "$CLAMAV_ETC/freshclam.conf.sample" ]]; then
+            grep -v '^Example' "$CLAMAV_ETC/freshclam.conf.sample" > "$CLAMAV_ETC/freshclam.conf"
+        else
+            printf 'DatabaseMirror database.clamav.net\n' > "$CLAMAV_ETC/freshclam.conf"
+        fi
+    fi
+    FRESHCLAM_PLIST="$HOME/Library/LaunchAgents/com.freshclam.update.plist"
+    if [[ ! -f "$FRESHCLAM_PLIST" ]]; then
+        mkdir -p "$HOME/Library/LaunchAgents"
+        cat > "$FRESHCLAM_PLIST" <<FRESHCLAM_PLIST_EOF
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key><string>com.freshclam.update</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>$(brew --prefix)/bin/freshclam</string>
+    </array>
+    <key>RunAtLoad</key><true/>
+    <key>StartCalendarInterval</key><dict><key>Hour</key><integer>3</integer><key>Minute</key><integer>30</integer></dict>
+</dict>
+</plist>
+FRESHCLAM_PLIST_EOF
+        launchctl load "$FRESHCLAM_PLIST" >> "$LOG_FILE" 2>&1 || true
+        success "ClamAV freshclam.conf seeded + daily DB updater registered (first fetch runs in background)"
+    fi
+fi
 
 # macOS hardening: FileVault
 if fdesetup status 2>/dev/null | grep -q "On"; then
@@ -2219,6 +2256,50 @@ banner "Mac Apps — Cloud Storage"
 brew_install "rclone" "rclone (sync files to any cloud — Google Drive, S3, Dropbox, etc.)"
 brew_install "borgbackup" "borg (deduplicated encrypted backups — better than Time Machine for offsite)"
 brew_install "borgmatic" "borgmatic (automated borg backup scheduling and config)"
+# borgmatic does nothing without a config. Scaffold a commented starter (only if none
+# exists, so user edits are never clobbered): source dirs, retention, and excludes for
+# churny/regenerable data (node_modules/caches/Downloads — same intent as the old Time
+# Machine exclusions). Repo path + passphrase are user/secret-specific — fill them in,
+# init the repo, then enable the daily schedule (see the post-setup checklist).
+if [[ "$DRY_RUN" != "true" ]] && installed borgmatic; then
+    BORGMATIC_CONFIG="$HOME/.config/borgmatic/config.yaml"
+    if [[ ! -f "$BORGMATIC_CONFIG" ]]; then
+        mkdir -p "$(dirname "$BORGMATIC_CONFIG")"
+        cat > "$BORGMATIC_CONFIG" <<'BORGMATIC_CONF'
+# borgmatic configuration — https://torsion.org/borgmatic/
+# TODO: set `repositories`, then run: borgmatic init --encryption repokey-blake2
+source_directories:
+    - ~/Code
+    - ~/Docs
+    - ~/Creative
+
+repositories:
+    # - path: /Volumes/Backup/borg        # local external drive, or
+    # - path: ssh://user@host/./borg-repo  # remote over SSH
+    #   label: primary
+
+# Skip regenerable/churny data (mirrors the old Time Machine exclusions).
+exclude_patterns:
+    - '**/node_modules'
+    - ~/.cache
+    - ~/Library/Caches
+    - ~/.docker
+    - ~/Downloads
+    - ~/.Trash
+
+# Passphrase from the macOS Keychain (no plaintext on disk). Create it once with:
+#   security add-generic-password -a "$USER" -s borg-passphrase -w
+encryption_passcommand: security find-generic-password -a $USER -s borg-passphrase -w
+
+keep_daily: 7
+keep_weekly: 4
+keep_monthly: 6
+BORGMATIC_CONF
+        success "borgmatic starter config scaffolded (~/.config/borgmatic/config.yaml — fill in repositories)"
+    else
+        warn "borgmatic config already exists — leaving it untouched"
+    fi
+fi
 
 fi  # mac-cloud
 
@@ -8213,6 +8294,8 @@ the list, then delete this file.
 - [ ] **surge** (download manager): the daemon service was installed by the script (if it didn't prompt, run `surge service install`). Install the browser extension so browser downloads route to surge: **Firefox** — one-click from the Mozilla Add-ons store; **Chrome** — download `extension-chrome.zip` from the [latest release](https://github.com/SurgeDM/Surge/releases) and load-unpacked at `chrome://extensions` (Developer mode). Then pair it with `surge service token` (or TUI → Settings → Extension).
 - [ ] **glab** (GitLab, only if you use it): `glab auth login` to authenticate against gitlab.com or a self-managed instance. Already configured with SSH + Helix + delta and the same alias names as gh (mapped to merge requests).
 - [ ] **MCP servers:** export tokens your Claude Code MCP servers need, e.g. `export GITHUB_TOKEN=...` (and `AWS_REGION` / `AWS_PROFILE` for the AWS servers). Requires `claude auth login` at least once.
+- [ ] **infracost** (IaC cost estimates): run `infracost auth login` for a free API key — `infracost breakdown` errors with "No INFRACOST_API_KEY" until then.
+- [ ] **borgmatic backups:** the setup scaffolds `~/.config/borgmatic/config.yaml`. Set `repositories`, store the passphrase in Keychain (`security add-generic-password -a "$USER" -s borg-passphrase -w`), run `borgmatic init --encryption repokey-blake2`, check with `borgmatic create --dry-run`, then enable a daily run (e.g. a LaunchAgent calling `borgmatic --verbosity -1`). ClamAV's virus DB downloads itself in the background after setup.
 - [ ] **Claude AI in croft:** set an Anthropic key — `export ANTHROPIC_API_KEY=sk-ant-...` in `~/.zshrc.local`. Used by **croft** (`croft pair` — the AI navigator in your primary IDE). For the Helix `llm` pipe bind (`A-a` on a selection), just run `llm keys set anthropic` — setup already installs the plugin (via uv) and sets the default model to `anthropic/claude-sonnet-4-5`. (Email/calendar AI is built into **herald** — configured separately above.)
 - [ ] **croft** (primary IDE): installed from git `main` via cargo — run `croft` in a project to open the workspace; re-run `cargo install --git https://github.com/vitali87/croft.git --locked` to upgrade.
 - [ ] **AI side-pane:** `zellij --layout dev` opens your editor + a Claude Code pane side by side (the strongest AI workflow).
