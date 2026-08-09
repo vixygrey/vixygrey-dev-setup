@@ -4164,8 +4164,8 @@ unset _pkg _gnubin
 # mise is activated once in ~/.zshenv (sourced by every shell type), so it is not
 # re-activated here — avoids a redundant `mise activate` subprocess per login shell.
 
-# direnv
-command -v direnv &>/dev/null && eval "$(direnv hook zsh)"
+# direnv is hooked in ~/.zshrc (covers non-login interactive shells too); not duplicated here
+# to avoid registering the precmd hook twice (which fires direnv on every prompt redundantly).
 
 # Deduplicate PATH
 typeset -U PATH path
@@ -7796,11 +7796,14 @@ command -v zoxide &>/dev/null && eval "$(zoxide init zsh)"
 # starship prompt
 command -v starship &>/dev/null && eval "$(starship init zsh)"
 
+# fzf (sourced BEFORE atuin so atuin's Ctrl-R bind wins — fzf key-bindings also grab Ctrl-R)
+[ -f ~/.fzf.zsh ] && source ~/.fzf.zsh
+
 # atuin (replaces ctrl-r shell history)
 command -v atuin &>/dev/null && eval "$(atuin init zsh)"
 
-# fzf
-[ -f ~/.fzf.zsh ] && source ~/.fzf.zsh
+# granted — `assume` is a POSIX sh script that must be SOURCED to export AWS creds into the shell
+command -v assume &>/dev/null && alias assume="source assume"
 
 # fzf — Dracula colors + fd for file finding + bat for preview
 export FZF_DEFAULT_OPTS=" \
