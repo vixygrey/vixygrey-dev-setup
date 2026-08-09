@@ -6787,10 +6787,10 @@ else
 - Shell note: `bat` is aliased to `cat`; use `/bin/cat` only inside heredoc subshells where bat breaks syntax
 - Dotfiles: chezmoi
 - Launcher: Ghostty quick terminal (global cmd+space) + shell functions `a` (app launcher), `ff`/`rgf`/`s` (file/content/Spotlight search). Window mgmt: AeroSpace (Option+hjkl). Bar: SketchyBar. Clipboard: clipse (`clip`)
-- API client: ATAC (terminal — TUI + scriptable CLI; JSON/YAML collections, Postman import). Plus hurl / xh / curlie / grpcurl
+- API testing/exploration → **use ATAC** (terminal — scriptable CLI + TUI; JSON/YAML collections, Postman import; allow-listed) for anything collection-based or repeatable; reach for `hurl` / `xh` / `curlie` / `grpcurl` for quick one-offs
 - Database: pgcli, mycli, lazysql, harlequin (SQL IDE TUI), usql, sq; migrations via dbmate
 - Diagrams: d2 / Mermaid (code-based, in the terminal)
-- Screenshots: Shottr (saved to ~/Screenshots)
+- Screenshots → Shottr saves them to **~/Screenshots**. When the user mentions "a screenshot" without a path, read the newest file in ~/Screenshots (`ls -t ~/Screenshots | head`) rather than asking where it is
 - File transfer: rclone (CLI — SFTP/S3/cloud)
 - Proxy/debugger: mitmproxy
 - Tunneling: ngrok
@@ -6799,7 +6799,7 @@ else
 - Calendar: khal + vdirsyncer (terminal — unified Google + iCloud CalDAV)
 - Cloud storage: rclone (Google Drive, S3, Dropbox, etc.); borg for versioned backups
 - Browser: Google Chrome (primary); Carbonyl / w3m in the terminal
-- Password manager: Apple Passwords (iCloud Keychain) — no third-party manager installed
+- Credentials → **never read, type, enter, or exfiltrate passwords, tokens, API keys, or secrets**, and never echo them into a terminal. Auth is handled by Apple Passwords (iCloud Keychain) and the OS credential tools; defer to the user for anything that needs a credential (no third-party password manager is installed)
 
 ## Working Context
 - Independent **fractional CIO/CTO and consultant**; company is **VixenTec LLC**.
