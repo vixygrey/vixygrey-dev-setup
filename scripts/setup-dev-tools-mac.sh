@@ -5279,6 +5279,7 @@ export ICON_VOL=$'\U000F057E'          # nf-md-volume-high
 export ICON_VOL_MUTE=$'\U000F0581'     # nf-md-volume-off
 export ICON_VPN_ON=$'\U000F0565'       # nf-md-shield-check
 export ICON_VPN_OFF=$'\U000F099D'      # nf-md-shield-off-outline
+export ICON_MENU=$'\uf0c9'             # nf-fa-bars (app-menu toggle)
 SBAR_ICONS
 
     write_managed_script "$SBAR_DIR/sketchybarrc" <<'SBAR_RC'
@@ -5286,6 +5287,8 @@ SBAR_ICONS
 # SketchyBar — Dracula. Docs: https://felixkratz.github.io/SketchyBar
 source "$HOME/.config/sketchybar/colors.sh"
 PLUGIN_DIR="$HOME/.config/sketchybar/plugins"
+MENUS="$HOME/.config/sketchybar/helpers/menus/bin/menus"
+MENU_SLOTS=15
 FONT="JetBrainsMono Nerd Font"
 
 sketchybar --bar height=32 position=top blur_radius=30 color=$BG \
@@ -5317,6 +5320,24 @@ sketchybar --add item front_app left \
            --set front_app icon.drawing=off label.color=$PURPLE label.font="$FONT:Bold:13.0" \
                  label.padding_left=6 \
                  script="$PLUGIN_DIR/front_app.sh"
+
+# --- Left: focused-app menu bar (toggle) ---
+# menu_switch flips between the workspace/app view and the focused app's menus
+# (File, Edit, …). The menu.N slots are label-only, hidden until menu mode is on.
+# Requires the compiled `menus` helper + Accessibility permission.
+sketchybar --add item menu_switch left \
+           --subscribe menu_switch front_app_switched \
+           --set menu_switch icon="$ICON_MENU" icon.color=$COMMENT label.drawing=off \
+                 click_script="$PLUGIN_DIR/menu_mode.sh toggle" \
+                 script="$PLUGIN_DIR/menu_mode.sh"
+
+for i in $(seq 0 $((MENU_SLOTS - 1))); do
+  # menus -l prints from AX index 1 (skips the Apple menu), so slot i clicks -s (i+1).
+  sketchybar --add item menu.$i left \
+             --set menu.$i drawing=off icon.drawing=off background.drawing=off \
+                   label.color=$FG label.padding_left=6 label.padding_right=6 \
+                   click_script="$MENUS -s $((i + 1))"
+done
 
 # --- Right (added right-to-left visually) ---
 sketchybar --add item battery right \
@@ -5374,6 +5395,49 @@ P_AERO
 #!/usr/bin/env bash
 [ "$SENDER" = "front_app_switched" ] && sketchybar --set "$NAME" label="$INFO"
 P_FRONT
+
+    write_managed_script "$SBAR_PLUGINS/menu_mode.sh" <<'P_MENU'
+#!/usr/bin/env bash
+# Toggle the left side between workspace/app view and the focused app's menus.
+# Called with "toggle" from a click, or with no arg (on front_app_switched) to
+# re-apply the current mode — which repopulates menus when a new app is focused.
+source "$HOME/.config/sketchybar/colors.sh"
+MENUS="$HOME/.config/sketchybar/helpers/menus/bin/menus"
+SLOTS=15
+STATE="$HOME/.cache/sketchybar/menu_mode"
+mkdir -p "$(dirname "$STATE")"
+
+mode="$(cat "$STATE" 2>/dev/null || echo spaces)"
+if [ "$1" = "toggle" ]; then
+    [ "$mode" = "menu" ] && mode="spaces" || mode="menu"
+    printf '%s' "$mode" > "$STATE"
+fi
+
+if [ "$mode" = "menu" ] && [ -x "$MENUS" ]; then
+    sketchybar --set '/space\..*/' drawing=off --set front_app drawing=off \
+               --set menu_switch icon.color=$PURPLE
+    i=0
+    while IFS= read -r title; do
+        [ "$i" -ge "$SLOTS" ] && break
+        sketchybar --set "menu.$i" label="$title" drawing=on
+        i=$((i + 1))
+    done < <("$MENUS" -l 2>/dev/null)
+    while [ "$i" -lt "$SLOTS" ]; do
+        sketchybar --set "menu.$i" drawing=off
+        i=$((i + 1))
+    done
+else
+    # spaces mode (also the fallback when the helper isn't built/permitted)
+    [ "$mode" = "menu" ] && printf 'spaces' > "$STATE"
+    i=0
+    while [ "$i" -lt "$SLOTS" ]; do
+        sketchybar --set "menu.$i" drawing=off
+        i=$((i + 1))
+    done
+    sketchybar --set '/space\..*/' drawing=on --set front_app drawing=on \
+               --set menu_switch icon.color=$COMMENT
+fi
+P_MENU
 
     write_managed_script "$SBAR_PLUGINS/clock.sh" <<'P_CLOCK'
 #!/usr/bin/env bash
@@ -5455,6 +5519,276 @@ P_VPN
 command -v mullvad >/dev/null 2>&1 || exit 0
 if mullvad status 2>/dev/null | grep -qi 'Connected'; then mullvad disconnect; else mullvad connect; fi
 P_VPNT
+
+    # -- app-menu helper (`menus`): reads the focused app's menu bar via the macOS
+    #    Accessibility API. Vendored from FelixKratz/SketchyBar dotfiles; compiled
+    #    locally against Carbon + the private SkyLight framework.
+    if [[ "$DRY_RUN" != "true" ]]; then
+        mkdir -p "$SBAR_DIR/helpers/menus/bin"
+        /bin/cat > "$SBAR_DIR/helpers/menus/menus.c" <<'MENUS_C'
+#include <Carbon/Carbon.h>
+
+void ax_init() {
+  const void *keys[] = { kAXTrustedCheckOptionPrompt };
+  const void *values[] = { kCFBooleanTrue };
+
+  CFDictionaryRef options;
+  options = CFDictionaryCreate(kCFAllocatorDefault,
+                               keys,
+                               values,
+                               sizeof(keys) / sizeof(*keys),
+                               &kCFCopyStringDictionaryKeyCallBacks,
+                               &kCFTypeDictionaryValueCallBacks     );
+
+  bool trusted = AXIsProcessTrustedWithOptions(options);
+  CFRelease(options);
+  if (!trusted) exit(1);
+}
+
+void ax_perform_click(AXUIElementRef element) {
+  if (!element) return;
+  AXUIElementPerformAction(element, kAXCancelAction);
+  usleep(150000);
+  AXUIElementPerformAction(element, kAXPressAction);
+}
+
+CFStringRef ax_get_title(AXUIElementRef element) {
+  CFTypeRef title = NULL;
+  AXError error = AXUIElementCopyAttributeValue(element,
+                                                kAXTitleAttribute,
+                                                &title            );
+
+  if (error != kAXErrorSuccess) return NULL;
+  return title;
+}
+
+void ax_select_menu_option(AXUIElementRef app, int id) {
+  AXUIElementRef menubars_ref = NULL;
+  CFArrayRef children_ref = NULL;
+
+  AXError error = AXUIElementCopyAttributeValue(app,
+                                                kAXMenuBarAttribute,
+                                                (CFTypeRef*)&menubars_ref);
+  if (error == kAXErrorSuccess) {
+    error = AXUIElementCopyAttributeValue(menubars_ref,
+                                          kAXVisibleChildrenAttribute,
+                                          (CFTypeRef*)&children_ref   );
+
+    if (error == kAXErrorSuccess) {
+      uint32_t count = CFArrayGetCount(children_ref);
+      if (id < count) {
+        AXUIElementRef item = CFArrayGetValueAtIndex(children_ref, id);
+        ax_perform_click(item);
+      }
+      if (children_ref) CFRelease(children_ref);
+    }
+    if (menubars_ref) CFRelease(menubars_ref);
+  }
+}
+
+void ax_print_menu_options(AXUIElementRef app) {
+  AXUIElementRef menubars_ref = NULL;
+  CFTypeRef menubar = NULL;
+  CFArrayRef children_ref = NULL;
+
+  AXError error = AXUIElementCopyAttributeValue(app,
+                                                kAXMenuBarAttribute,
+                                                (CFTypeRef*)&menubars_ref);
+  if (error == kAXErrorSuccess) {
+    error = AXUIElementCopyAttributeValue(menubars_ref,
+                                          kAXVisibleChildrenAttribute,
+                                          (CFTypeRef*)&children_ref   );
+
+    if (error == kAXErrorSuccess) {
+      uint32_t count = CFArrayGetCount(children_ref);
+
+      for (int i = 1; i < count; i++) {
+        AXUIElementRef item = CFArrayGetValueAtIndex(children_ref, i);
+        CFTypeRef title = ax_get_title(item);
+
+        if (title) {
+          uint32_t buffer_len = 2*CFStringGetLength(title);
+          char buffer[2*CFStringGetLength(title)];
+          CFStringGetCString(title, buffer, buffer_len, kCFStringEncodingUTF8);
+          printf("%s\n", buffer);
+          CFRelease(title);
+        }
+      }
+    }
+    if (menubars_ref) CFRelease(menubars_ref);
+    if (children_ref) CFRelease(children_ref);
+  }
+}
+
+AXUIElementRef ax_get_extra_menu_item(char* alias) {
+  pid_t pid = 0;
+  CGRect bounds = CGRectNull;
+  CFArrayRef window_list = CGWindowListCopyWindowInfo(kCGWindowListOptionAll,
+                                                      kCGNullWindowID        );
+  char owner_buffer[256];
+  char name_buffer[256];
+  char buffer[512];
+  int window_count = CFArrayGetCount(window_list);
+  for (int i = 0; i < window_count; ++i) {
+    CFDictionaryRef dictionary = CFArrayGetValueAtIndex(window_list, i);
+    if (!dictionary) continue;
+
+    CFStringRef owner_ref = CFDictionaryGetValue(dictionary,
+                                                 kCGWindowOwnerName);
+
+    CFNumberRef owner_pid_ref = CFDictionaryGetValue(dictionary,
+                                                     kCGWindowOwnerPID);
+
+    CFStringRef name_ref = CFDictionaryGetValue(dictionary, kCGWindowName);
+    CFNumberRef layer_ref = CFDictionaryGetValue(dictionary, kCGWindowLayer);
+    CFDictionaryRef bounds_ref = CFDictionaryGetValue(dictionary,
+                                                      kCGWindowBounds);
+
+    if (!name_ref || !owner_ref || !owner_pid_ref || !layer_ref || !bounds_ref)
+      continue;
+
+    long long int layer = 0;
+    CFNumberGetValue(layer_ref, CFNumberGetType(layer_ref), &layer);
+    uint64_t owner_pid = 0;
+    CFNumberGetValue(owner_pid_ref,
+                     CFNumberGetType(owner_pid_ref),
+                     &owner_pid                     );
+
+    if (layer != 0x19) continue;
+    bounds = CGRectNull;
+    if (!CGRectMakeWithDictionaryRepresentation(bounds_ref, &bounds)) continue;
+    CFStringGetCString(owner_ref,
+                       owner_buffer,
+                       sizeof(owner_buffer),
+                       kCFStringEncodingUTF8);
+
+    CFStringGetCString(name_ref,
+                       name_buffer,
+                       sizeof(name_buffer),
+                       kCFStringEncodingUTF8);
+    snprintf(buffer, sizeof(buffer), "%s,%s", owner_buffer, name_buffer);
+
+    if (strcmp(buffer, alias) == 0) {
+      pid = owner_pid;
+      break;
+    }
+  }
+  CFRelease(window_list);
+  if (!pid) return NULL;
+
+  AXUIElementRef app = AXUIElementCreateApplication(pid);
+  if (!app) return NULL;
+  AXUIElementRef result = NULL;
+  CFTypeRef extras = NULL;
+  CFArrayRef children_ref = NULL;
+  AXError error = AXUIElementCopyAttributeValue(app,
+                                                kAXExtrasMenuBarAttribute,
+                                                &extras                   );
+  if (error == kAXErrorSuccess) {
+    error = AXUIElementCopyAttributeValue(extras,
+                                          kAXVisibleChildrenAttribute,
+                                          (CFTypeRef*)&children_ref   );
+
+    if (error == kAXErrorSuccess) {
+      uint32_t count = CFArrayGetCount(children_ref);
+      for (uint32_t i = 0; i < count; i++) {
+        AXUIElementRef item = CFArrayGetValueAtIndex(children_ref, i);
+        CFTypeRef position_ref = NULL;
+        CFTypeRef size_ref = NULL;
+        AXUIElementCopyAttributeValue(item, kAXPositionAttribute,
+                                            &position_ref        );
+        AXUIElementCopyAttributeValue(item, kAXSizeAttribute,
+                                            &size_ref        );
+        if (!position_ref || !size_ref) continue;
+
+        CGPoint position = CGPointZero;
+        AXValueGetValue(position_ref, kAXValueCGPointType, &position);
+        CGSize size = CGSizeZero;
+        AXValueGetValue(size_ref, kAXValueCGSizeType, &size);
+        CFRelease(position_ref);
+        CFRelease(size_ref);
+        // The offset is exactly 8 on macOS Sonoma...
+        // printf("%f %f\n", position.x, bounds.origin.x);
+        if (error == kAXErrorSuccess
+            && fabs(position.x - bounds.origin.x) <= 10) {
+          result = item;
+          break;
+        }
+      }
+    }
+  }
+
+  CFRelease(app);
+  return result;
+}
+
+extern int SLSMainConnectionID();
+extern void SLSSetMenuBarVisibilityOverrideOnDisplay(int cid, int did, bool enabled);
+extern void SLSSetMenuBarVisibilityOverrideOnDisplay(int cid, int did, bool enabled);
+extern void SLSSetMenuBarInsetAndAlpha(int cid, double u1, double u2, float alpha);
+void ax_select_menu_extra(char* alias) {
+  AXUIElementRef item = ax_get_extra_menu_item(alias);
+  if (!item) return;
+  SLSSetMenuBarInsetAndAlpha(SLSMainConnectionID(), 0, 1, 0.0);
+  SLSSetMenuBarVisibilityOverrideOnDisplay(SLSMainConnectionID(), 0, true);
+  SLSSetMenuBarInsetAndAlpha(SLSMainConnectionID(), 0, 1, 0.0);
+  ax_perform_click(item);
+  SLSSetMenuBarVisibilityOverrideOnDisplay(SLSMainConnectionID(), 0, false);
+  SLSSetMenuBarInsetAndAlpha(SLSMainConnectionID(), 0, 1, 1.0);
+  CFRelease(item);
+}
+
+extern void _SLPSGetFrontProcess(ProcessSerialNumber* psn);
+extern void SLSGetConnectionIDForPSN(int cid, ProcessSerialNumber* psn, int* cid_out);
+extern void SLSConnectionGetPID(int cid, pid_t* pid_out);
+AXUIElementRef ax_get_front_app() {
+  ProcessSerialNumber psn;
+  _SLPSGetFrontProcess(&psn);
+  int target_cid;
+  SLSGetConnectionIDForPSN(SLSMainConnectionID(), &psn, &target_cid);
+
+  pid_t pid;
+  SLSConnectionGetPID(target_cid, &pid);
+  return AXUIElementCreateApplication(pid);
+}
+
+int main (int argc, char **argv) {
+  if (argc == 1) {
+    printf("Usage: %s [-l | -s id/alias ]\n", argv[0]);
+    exit(0);
+  }
+  ax_init();
+  if (strcmp(argv[1], "-l") == 0) {
+    AXUIElementRef app = ax_get_front_app();
+    if (!app) return 1;
+    ax_print_menu_options(app);
+    CFRelease(app);
+  } else if (argc == 3 && strcmp(argv[1], "-s") == 0) {
+    int id = 0;
+    if (sscanf(argv[2], "%d", &id) == 1) {
+      AXUIElementRef app = ax_get_front_app();
+      if (!app) return 1;
+      ax_select_menu_option(app, id);
+      CFRelease(app);
+    } else ax_select_menu_extra(argv[2]);
+  }
+  return 0;
+}
+MENUS_C
+        if command -v clang >/dev/null 2>&1; then
+            if clang -std=c99 -O2 -Wno-implicit-function-declaration \
+                    "$SBAR_DIR/helpers/menus/menus.c" \
+                    -o "$SBAR_DIR/helpers/menus/bin/menus" \
+                    -framework Carbon -F/System/Library/PrivateFrameworks -framework SkyLight \
+                    >> "$LOG_FILE" 2>&1; then
+                success "Compiled SketchyBar 'menus' helper (focused-app menu bar)"
+            else
+                warn "Could not compile SketchyBar 'menus' helper — app-menu toggle will be inert (see $LOG_FILE)"
+            fi
+        else
+            warn "clang not found — skipping 'menus' helper (install Xcode Command Line Tools)"
+        fi
+    fi
 
     if [[ "$DRY_RUN" != "true" ]] && installed sketchybar; then
         brew services restart sketchybar >> "$LOG_FILE" 2>&1 || warn "Could not start sketchybar service (grant it Accessibility if needed)"
@@ -8050,6 +8384,7 @@ the list, then delete this file.
 - [ ] **Accessibility** — grant to **Ghostty** and **AeroSpace**: System Settings -> Privacy & Security -> Accessibility. (Required for the global launcher hotkey and window management.)
 - [ ] **Disable Spotlight's cmd+space** so the Ghostty quick terminal can use it: System Settings -> Keyboard -> Keyboard Shortcuts -> Spotlight -> uncheck "Show Spotlight search". (Or change the Ghostty bind to `global:cmd+backquote` in `~/.config/ghostty/config`.)
 - [ ] **Menu bar auto-hide** is set by the script (`_HIHideMenuBar`) so SketchyBar owns the top — **log out/in (or restart)** for it to take effect. If it doesn't stick, toggle System Settings -> Control Center -> "Automatically hide and show the menu bar" -> Always.
+- [ ] **App-menu toggle** — the ` ` pill on the left flips the bar to the focused app's menus (File, Edit, …); click a menu to open it. It needs Accessibility granted to the `menus` helper: click the pill once, then approve **menus** under System Settings -> Privacy & Security -> Accessibility (until granted, the menu list is empty).
 - [ ] **Displays have separate Spaces = OFF** — already set by the script (`spans-displays`), but it needs a **logout/login** to take effect.
 - [ ] Log out and back in once so AeroSpace + the Spaces setting apply cleanly.
 
@@ -8148,6 +8483,8 @@ CHECKLIST_EOF
 | Item | Click |
 |------|-------|
 | Clock | Opens herald (email + calendar) in a Ghostty quick terminal |
+| ` ` menu toggle | Flips the left side between workspaces and the focused app's menus |
+| App menu (File, Edit, …) | Opens that menu of the focused app (needs Accessibility) |
 | VPN pill | Toggles `mullvad connect` / `disconnect` |
 | Bluetooth | Toggles Bluetooth power |
 | Workspace pill | Switches to that AeroSpace workspace |
@@ -8168,7 +8505,7 @@ together.
 
 ## Window management, bar & launcher
 - **AeroSpace** — keyboard-driven tiling WM (no SIP disable). Option+hjkl, workspaces 1-9.
-- **SketchyBar** — Dracula status bar: workspace pills, app, clock, battery, wifi, volume, cpu, mem, bluetooth, VPN.
+- **SketchyBar** — Dracula status bar: workspace pills, app, a toggleable focused-app menu bar (File, Edit, …), clock, battery, wifi, volume, cpu, mem, bluetooth, VPN.
 - **Ghostty quick terminal** — global cmd+space dropdown that hosts the launcher.
 - **Launcher functions** — `a` (apps), `ff` (files), `rgf` (contents), `s` (Spotlight index), `clip` (clipboard via clipse).
 
