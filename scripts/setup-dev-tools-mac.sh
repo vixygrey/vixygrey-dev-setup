@@ -774,6 +774,23 @@ uv_tool_install() {
     progress
 }
 
+# trust_tap <user/repo>
+# Homebrew 6 refuses to load formulae OR casks from non-official ("untrusted")
+# taps until they're trusted with `brew trust` (HOMEBREW_ALLOWED_TAPS does NOT
+# bypass this — it's a separate gate). Tap and trust in one step so installs from
+# our vetted taps proceed. Trust persists in ~/.homebrew/trust.json, so the user's
+# later manual installs from these taps work too. Honors DRY_RUN.
+trust_tap() {
+    local tap="$1"
+    if [[ "$DRY_RUN" == "true" ]]; then
+        info "[DRY RUN] Would: brew tap $tap && brew trust --tap $tap"
+        return 0
+    fi
+    brew tap "$tap" >> "$LOG_FILE" 2>&1 || true
+    brew trust --tap "$tap" >> "$LOG_FILE" 2>&1 \
+        || warn "Could not trust tap $tap — installs from it may be refused by Homebrew"
+}
+
 # -- Pre-flight checks --------------------------------------------------------
 preflight() {
     banner "Pre-flight Checks"
@@ -1377,21 +1394,14 @@ brew_install "cfn-lint" "CloudFormation Linter"
 # Session Manager Plugin
 brew_cask_install "session-manager-plugin" "AWS SSM Session Manager Plugin"
 
-# Granted (multi-account credential switching)
-progress
-if ! is_done "install:granted"; then
-if ! installed granted && ! installed assume; then
-    info "Installing Granted (AWS SSO credential switching)..."
-    brew tap common-fate/granted >> "$LOG_FILE" 2>&1 || true
-    if brew install granted >> "$LOG_FILE" 2>&1; then
-        success "Granted installed"
-    else
-        error "Failed to install Granted"
-    fi
-else
+# Granted (multi-account credential switching) — provides `granted` + `assume`.
+# Trust its tap, then install via the helper (honors DRY_RUN + existence checks).
+if installed granted || installed assume; then
     warn "Granted already installed"
-fi
-mark_done "install:granted"
+    progress
+else
+    trust_tap common-fate/granted
+    brew_install "granted" "Granted (AWS SSO credential switching — granted + assume)"
 fi
 
 # AWS CDK (via npm)
@@ -1408,7 +1418,7 @@ brew_install "stu" "stu (S3 TUI — browse/preview/download buckets)"
 # e2c (EC2 TUI) — young project; not on Homebrew, install via Go.
 go_install github.com/nlamirault/e2c/cmd/e2c@latest e2c "e2c (EC2 TUI)"
 # claws — broad all-AWS TUI (young); cask from the clawscli tap.
-brew tap clawscli/tap >> "$LOG_FILE" 2>&1 || true
+trust_tap clawscli/tap
 brew_cask_install "claws" "claws (all-AWS TUI — ~70 services, k9s-style; young project)"
 
 # -- AWS CLIs --
@@ -1422,7 +1432,7 @@ if [[ "$DRY_RUN" != "true" ]] && installed steampipe && ! is_done "config:steamp
     mark_done "config:steampipe-aws"
 fi
 # iamlive — generate least-privilege IAM policies from observed API calls (tap).
-brew tap iann0036/iamlive >> "$LOG_FILE" 2>&1 || true
+trust_tap iann0036/iamlive
 brew_install "iamlive" "iamlive (generate least-privilege IAM policies from observed API calls)"
 
 fi  # aws
@@ -1432,7 +1442,7 @@ if should_run "iac"; then
 banner "Infrastructure as Code"
 
 brew_install "opentofu" "OpenTofu (open-source Terraform — multi-cloud IaC)"
-brew tap terraform-linters/tap >> "$LOG_FILE" 2>&1 || true
+trust_tap terraform-linters/tap
 brew_install "tflint" "tflint (Terraform linter — terraform-linters tap, not homebrew-core)"
 brew_install "terraform-docs" "terraform-docs (auto-generate module docs from variables/outputs)"
 brew_install "checkov" "checkov (IaC static analysis — Terraform, CloudFormation, Kubernetes, Dockerfile)"
@@ -1633,7 +1643,7 @@ banner "Code Quality"
 brew_install "shellcheck" "shellcheck (shell script linter)"
 brew_install "shfmt" "shfmt (shell script formatter)"
 brew_install "act" "act (run GitHub Actions locally)"
-brew tap dhth/tap >> "$LOG_FILE" 2>&1 || true
+trust_tap dhth/tap
 brew_install "act3" "act3 (glance at last 3 GitHub Actions runs — dhth tap, not homebrew-core)"
 brew_install "hadolint" "hadolint (Dockerfile linter — catches bad practices)"
 
@@ -1711,17 +1721,17 @@ brew_install "libqalculate" "qalc (powerful CLI calculator — units, live curre
 brew_install "vhs" "vhs (scripted terminal GIF/MP4 recorder — pairs with asciinema)"
 
 # -- Additional TUI/CLI tools (third-party taps) --
-brew tap jesseduffield/lazynpm >> "$LOG_FILE" 2>&1 || true
+trust_tap jesseduffield/lazynpm
 brew_install "lazynpm" "lazynpm (npm TUI — joins lazygit/lazydocker/lazysql)"
-brew tap djetelina/tap >> "$LOG_FILE" 2>&1 || true
+trust_tap djetelina/tap
 brew_install "cheznav" "cheznav (chezmoi dotfiles TUI — dual-pane add/apply/diff)"
-brew tap bendews/tap >> "$LOG_FILE" 2>&1 || true
+trust_tap bendews/tap
 brew_install "apw" "apw (Apple Passwords + OTP from the CLI)"
-brew tap kdabir/tap >> "$LOG_FILE" 2>&1 || true
+trust_tap kdabir/tap
 brew_install "has" "has (checks presence & versions of CLI tools)"
-brew tap jordond/tap >> "$LOG_FILE" 2>&1 || true
+trust_tap jordond/tap
 brew_install "jolt" "jolt (battery / energy monitor TUI)"
-brew tap ikebastuz/wiper >> "$LOG_FILE" 2>&1 || true
+trust_tap ikebastuz/wiper
 brew_install "wiper" "wiper (interactive disk usage + cleanup — Trash-safe, ncdu-like)"
 
 # starlit (weather CLI) — PyPI package 'starlit-cli', installed via uv.
@@ -1908,10 +1918,10 @@ fi
 
 # Window management, status bar & clipboard (replaces Raycast + Spotlight)
 # AeroSpace — tiling window manager. No SIP disable required (emulated workspaces).
-brew tap nikitabobko/tap >> "$LOG_FILE" 2>&1 || true
+trust_tap nikitabobko/tap
 brew_cask_install "aerospace" "AeroSpace (tiling window manager — keyboard-driven, no SIP)"
 # SketchyBar — status bar / menu-bar replacement (Dracula), + app-icon font + bluetooth helper.
-brew tap FelixKratz/formulae >> "$LOG_FILE" 2>&1 || true
+trust_tap FelixKratz/formulae
 brew_install "sketchybar" "SketchyBar (customizable macOS status bar)"
 brew_cask_install "font-sketchybar-app-font" "sketchybar-app-font (app glyphs for SketchyBar)"
 brew_install "blueutil" "blueutil (Bluetooth control from CLI — SketchyBar widget)"
@@ -2006,7 +2016,7 @@ banner "Mac Apps — Productivity"
 
 brew_cask_install "claude" "Claude (AI assistant)"
 # Notion (GUI) replaced by tiki — terminal Markdown workspace (tasks/docs/kanban/wiki, git-backed).
-brew tap boolean-maybe/tap >> "$LOG_FILE" 2>&1 || true
+trust_tap boolean-maybe/tap
 brew_install "tiki" "tiki (terminal Markdown workspace — tasks, docs, kanban, wiki; git-backed)"
 # Notion Calendar (GUI) replaced by khal + vdirsyncer (unified Gmail + iCloud, below).
 # Terminal email (Gmail work + iCloud personal):
