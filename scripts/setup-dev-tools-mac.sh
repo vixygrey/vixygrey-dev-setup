@@ -410,7 +410,7 @@ list_categories() {
     printf "  %-25s %s\n" "containers"          "lazydocker, dive, kubectl, k9s"
     printf "  %-25s %s\n" "api"                 "ATAC, grpcurl"
     printf "  %-25s %s\n" "networking"          "mtr, bandwhich, nmap"
-    printf "  %-25s %s\n" "dx"                  "fzf, starship, atuin, croft, Helix, Ghostty, zellij, llm, repomix"
+    printf "  %-25s %s\n" "dx"                  "fzf, starship, atuin, croft, Helix, Ghostty, zellij, llm"
     printf "  %-25s %s\n" "ux"                  "Lighthouse"
     printf "  %-25s %s\n" "docs"                "d2, Mermaid CLI"
     printf "  %-25s %s\n" "mac-system"          "Pearcleaner, Quick Look plugins, dockutil, terminal-notifier"
@@ -938,6 +938,11 @@ if [[ "$UNINSTALL" == "true" ]]; then
     echo "# Remove Rust (installed via rustup):"
     echo "  rustup self uninstall"
     echo ""
+    echo "# Remove tools not managed by brew (--cleanup can't reach these):"
+    echo "  gh extension remove github/gh-copilot   # if the old Copilot CLI is still installed"
+    echo "  rm -f ~/.local/share/go/bin/helix-assist  # dropped Claude LSP for Helix"
+    echo "  cargo uninstall croft                    # the terminal IDE (if you want it gone)"
+    echo ""
     echo "# Remove Claude Code config (CAREFUL — contains your custom rules):"
     echo "  rm -rf ~/.claude/settings.json ~/.claude/CLAUDE.md ~/.claude/rules ~/.claude/hooks ~/.claude/commands ~/.claude/agents ~/.claude/statusline.sh"
     echo ""
@@ -974,6 +979,7 @@ if [[ "$CLEANUP" == "true" ]]; then
     DEPRECATED_TOOLS=(
         "brew:tmux:tmux:zellij"
         "brew:aider:aider:Claude Code"
+        "brew:repomix:repomix:Claude Code"
         "brew:aerc:aerc:herald"
         "brew:khal:khal:herald"
         "brew:vdirsyncer:vdirsyncer:herald"
@@ -1901,42 +1907,13 @@ if installed npm; then
 else
     progress  # keep progress bar accurate when npm unavailable
 fi
-# GitHub Copilot CLI (built-in on newer gh versions, or installed as gh extension)
-progress
-if installed gh; then
-    if gh copilot --help &>/dev/null; then
-        warn "GitHub Copilot CLI already available (built-in or extension)"
-    elif gh extension list 2>/dev/null | grep -q "gh-copilot"; then
-        warn "GitHub Copilot CLI already installed"
-    else
-        info "Installing GitHub Copilot CLI..."
-        if gh extension install github/gh-copilot >> "$LOG_FILE" 2>&1; then
-            success "GitHub Copilot CLI installed (run: gh copilot suggest)"
-        else
-            error "Failed to install GitHub Copilot CLI extension"
-        fi
-    fi
-fi
-
-# Additional LLM CLIs that pair with Claude Code + Helix
+# Additional LLM CLIs that pair with Claude Code
 brew_install "llm" "llm (Simon Willison's CLI — one-shot prompts, plugins, SQLite logs, embeddings)"
-brew_install "repomix" "repomix (pack a repo into a single LLM-friendly file with token counts)"
 
 # Claude via the llm CLI: install the Anthropic plugin (used by the Helix :pipe bind).
 if [[ "$DRY_RUN" != "true" ]] && installed llm; then
     llm install llm-anthropic >> "$LOG_FILE" 2>&1 && success "llm-anthropic plugin installed" \
         || warn "Could not install llm-anthropic plugin (run: llm install llm-anthropic)"
-fi
-# helix-assist: Claude-as-an-LSP for Helix (ghost-text completions + Space A code-actions).
-# Successor to the archived helix-gpt; supports Anthropic natively. Needs ANTHROPIC_API_KEY.
-if [[ "$DRY_RUN" != "true" ]] && installed go; then
-    if command -v helix-assist &>/dev/null; then
-        warn "helix-assist already installed"
-    else
-        info "Installing helix-assist (Claude AI LSP for Helix) via go..."
-        go install github.com/leona/helix-assist/cmd/helix-assist@latest >> "$LOG_FILE" 2>&1 \
-            && success "helix-assist installed" || warn "Could not install helix-assist (needs Go)"
-    fi
 fi
 
 # Window management, status bar & clipboard (replaces Raycast + Spotlight)
@@ -2939,45 +2916,39 @@ write_managed "$HELIX_CONFIG_DIR/languages.toml" "#" <<'HELIX_LANG'
 command = "ruff"
 args = ["server"]
 
-# helix-assist: Claude AI as an LSP (ghost-text completions + `Space A` code-actions).
-# Needs ANTHROPIC_API_KEY in the environment; if unset it simply provides nothing.
-[language-server.helix-assist]
-command = "helix-assist"
-args = ["--handler", "anthropic", "--num-suggestions", "2"]
-
 [[language]]
 name = "python"
-language-servers = ["ruff", "helix-assist"]
+language-servers = ["ruff"]
 auto-format = true
 
 [[language]]
 name = "typescript"
-language-servers = ["typescript-language-server", "helix-assist"]
+language-servers = ["typescript-language-server"]
 auto-format = true
 
 [[language]]
 name = "tsx"
-language-servers = ["typescript-language-server", "helix-assist"]
+language-servers = ["typescript-language-server"]
 auto-format = true
 
 [[language]]
 name = "javascript"
-language-servers = ["typescript-language-server", "helix-assist"]
+language-servers = ["typescript-language-server"]
 auto-format = true
 
 [[language]]
 name = "jsx"
-language-servers = ["typescript-language-server", "helix-assist"]
+language-servers = ["typescript-language-server"]
 auto-format = true
 
 [[language]]
 name = "rust"
-language-servers = ["rust-analyzer", "helix-assist"]
+language-servers = ["rust-analyzer"]
 auto-format = true
 
 [[language]]
 name = "go"
-language-servers = ["gopls", "helix-assist"]
+language-servers = ["gopls"]
 auto-format = true
 
 [[language]]
@@ -6544,7 +6515,6 @@ else
       "Bash(zellij *)",
       "Bash(gum *)",
       "Bash(llm *)",
-      "Bash(repomix *)",
       "Bash(dockutil *)",
       "Bash(terminal-notifier *)",
       "Bash(harlequin *)",
@@ -6691,7 +6661,7 @@ else
 - **Code quality**: `typos` for spell checking, `ast-grep` for structural search/replace, `shellcheck`/`shfmt` for shell
 - **Security**: `trivy` to scan containers/IaC, `gitleaks` for secrets, `semgrep` for static analysis, `detect-secrets` for pre-commit secret detection, `sops` for secrets encryption
 - **IaC**: `tofu` (Terraform), `tflint` for linting, `terraform-docs` for module READMEs, `checkov` for static analysis, `infracost` for cost estimation, `cfn-lint` for CloudFormation, `aws-sam-cli` for SAM (note: `tfsec` checks live in `trivy config`)
-- **AI / agentic**: `claude` (Claude Code) is the coding agent — do agentic, multi-file edits yourself. `llm` for one-shot prompts and embeddings, `repomix` to pack a repo into a single LLM-friendly file
+- **AI / agentic**: `claude` (Claude Code) is the coding agent — do agentic, multi-file edits yourself. `llm` for one-shot prompts and embeddings.
 - **HTTP**: `xh` for colorized requests, `curlie` for curl with httpie output, `grpcurl` for gRPC
 - **Network**: `trip` (trippy) for traceroute TUI, `sudo mtr` (requires root, lives in sbin), `bandwhich` for bandwidth, `nmap` for scanning, `mkcert` for local TLS certs
 - **Docs**: `d2` for diagrams, `pandoc` for conversion, `leaf` for Markdown preview
@@ -7991,7 +7961,7 @@ the list, then delete this file.
 - [ ] **Mullvad:** `mullvad account login <ACCOUNT_NUMBER>` (CLI is bundled with the app at `/usr/local/bin/mullvad`).
 - [ ] **starlit** (weather): `starlit --setup` and paste a free OpenWeatherMap API key.
 - [ ] **MCP servers:** export tokens your Claude Code MCP servers need, e.g. `export GITHUB_TOKEN=...` (and `AWS_REGION` / `AWS_PROFILE` for the AWS servers). Requires `claude auth login` at least once.
-- [ ] **Claude AI in croft/Helix:** set an Anthropic key — `export ANTHROPIC_API_KEY=sk-ant-...` in `~/.zshrc.local`. Used by **croft** (`croft pair` — the AI navigator in your primary IDE) and **helix-assist** (the in-editor AI LSP in the Helix fallback). For the `llm` pipe bind (`A-a` in Helix): `llm keys set anthropic` then `llm models default claude-sonnet-4-5`. (Email/calendar AI is built into **herald** — configured separately above.)
+- [ ] **Claude AI in croft:** set an Anthropic key — `export ANTHROPIC_API_KEY=sk-ant-...` in `~/.zshrc.local`. Used by **croft** (`croft pair` — the AI navigator in your primary IDE). For the Helix `llm` pipe bind (`A-a` on a selection): `llm keys set anthropic` then `llm models default claude-sonnet-4-5`. (Email/calendar AI is built into **herald** — configured separately above.)
 - [ ] **croft** (primary IDE): installed from git `main` via cargo — run `croft` in a project to open the workspace; re-run `cargo install --git https://github.com/vitali87/croft.git --locked` to upgrade.
 - [ ] **AI side-pane:** `zellij --layout dev` opens your editor + a Claude Code pane side by side (the strongest AI workflow).
 - [ ] **chezmoi:** `chezmoi init <your-dotfiles-repo>` to bring these configs under version control across the MacBook + Mac mini.
@@ -8044,14 +8014,13 @@ CHECKLIST_EOF
 | `Space + k` | Hover docs · `g d` go to definition · `g r` references |
 | `Ctrl + s` | Save (added binding) |
 | `Alt + a` | Send selection to Claude (via `llm`), replace with the result |
-| `Space + a` | helix-assist code-action (fix/improve/refactor via Claude, if `ANTHROPIC_API_KEY` set) |
 | `:w` `:q` | Write / quit |
 
 ## Claude AI
 | Where | How |
 |-------|-----|
 | Side-pane (best) | `zellij --layout dev` — editor + Claude Code panes |
-| Helix inline | `Alt + a` on a selection (llm pipe); `Space + a` (helix-assist LSP) |
+| Helix inline | `Alt + a` on a selection (llm pipe) |
 | herald | Built-in AI triage/summaries/compose styler + MCP server for Claude |
 
 ## Terminal multiplexer & tools
@@ -8085,7 +8054,7 @@ together.
 ## Editor & AI
 - **Helix (`hx`)** — modal terminal editor, built-in LSP + tree-sitter, auto-format on save. The sole editor (`EDITOR`).
 - **Claude Code (`claude`)** — agentic coding in the terminal; hosts the MCP servers. Best via `zellij --layout dev` (editor + Claude pane).
-- **Claude in croft/Helix** — croft's `croft pair` AI navigator; Helix `Alt+a` pipes a selection to Claude (via `llm`) and **helix-assist** adds Claude as an LSP (`Space A`). Powered by `ANTHROPIC_API_KEY` / `llm-anthropic`. Email/calendar AI lives in **herald** (built-in triage/summaries + MCP).
+- **Claude in croft/Helix** — croft's `croft pair` AI navigator (primary IDE); in Helix, `Alt+a` pipes a selection to Claude via `llm`. Powered by `ANTHROPIC_API_KEY` / `llm-anthropic`. Email/calendar AI lives in **herald** (built-in triage/summaries + MCP).
 
 ## Window management, bar & launcher
 - **AeroSpace** — keyboard-driven tiling WM (no SIP disable). Option+hjkl, workspaces 1-9.

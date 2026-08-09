@@ -367,9 +367,7 @@ Faster, prettier, smarter replacements for standard Unix utilities.
 | **Helix (`hx`)** | Fast fallback editor + the `EDITOR` for git/gh/lazygit commit messages -- modal, built-in LSP + tree-sitter, auto-format on save, Dracula theme |
 | **Claude Code (`claude`)** | Agentic coding in the terminal; hosts the migrated MCP servers |
 | **Claude Code** | AI-assisted coding in the terminal (Anthropic, agentic) |
-| **GitHub Copilot CLI** | AI suggestions in the terminal (via `gh copilot suggest`) |
 | **llm** | Simon Willison's CLI -- one-shot prompts, plugin ecosystem, SQLite logging, embeddings |
-| **repomix** | Pack a repo into a single LLM-friendly file with token counts -- great for bootstrapping any agent |
 | **chezmoi** | Dotfile manager -- backup and restore configs across machines |
 | **mitmproxy** | Free HTTP debugging proxy -- inspect and modify API calls from any app |
 | **Ghostty** | Fast GPU-accelerated terminal -- daily driver, native macOS feel |
@@ -943,13 +941,13 @@ Claude is wired into the terminal tools in three tiers:
 | Tier | How | Best for |
 |------|-----|----------|
 | **1. Side-pane** | `zellij --layout dev` — editor + a `claude` pane | Real, multi-file, agentic work (strongest) |
-| **2. `llm` pipe** | Helix `Alt+a` on a selection | Quick in-place edits |
-| **3. AI-as-LSP** | **helix-assist** (`--handler anthropic`) — ghost-text completions + `Space A` | Inline completions inside Helix |
+| **2. croft pair** | `croft pair` — AI navigator inside the primary IDE | In-editor pairing while you code |
+| **3. `llm` pipe** | Helix `Alt+a` on a selection | Quick in-place edits |
 | **4. herald** | Built-in AI triage/summaries + MCP server (email/calendar) | Reading + triaging mail/events |
 
-Set `ANTHROPIC_API_KEY` (for helix-assist) and `llm keys set anthropic` + `llm models
-default claude-sonnet-4-5` (for the `llm` pipe binds). The `llm-anthropic` plugin and
-`helix-assist` are installed by the script.
+Set `ANTHROPIC_API_KEY` (for `croft pair`) and `llm keys set anthropic` + `llm models
+default claude-sonnet-4-5` (for the `llm` pipe bind). The `llm-anthropic` plugin is
+installed by the script.
 
 ### Claude Code MCP Servers
 
