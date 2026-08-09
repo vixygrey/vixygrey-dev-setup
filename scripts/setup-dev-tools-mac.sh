@@ -2163,7 +2163,16 @@ brew_install "herald" "herald (terminal email + calendar — Gmail + iCloud, AI 
 # google-workspace-cli (gws) — one CLI for Drive/Gmail/Docs/Sheets/Calendar/Chat with
 # structured JSON output, built for humans + AI agents (ships 95 Claude Code skills).
 # All company work is on Google Workspace, so this is Claude's read/query surface there.
-brew_install "gws" "google-workspace-cli (Drive/Gmail/Docs/Sheets/Calendar — JSON output, AI-agent-friendly)"
+# NOTE: the Homebrew core formula literally named `gws` is a DIFFERENT tool
+# (git-workspace — "manage workspaces of git repositories"). The Google Workspace
+# CLI is the `googleworkspace-cli` formula; both ship a `gws` binary and therefore
+# conflict, so remove the wrong one if an earlier run (which installed plain `gws`)
+# left it behind, then install the right formula.
+if [[ "$DRY_RUN" != "true" ]] && brew list --formula gws >/dev/null 2>&1; then
+    info "Removing conflicting 'gws' formula (git-workspace) so googleworkspace-cli can install..."
+    brew uninstall gws >> "$LOG_FILE" 2>&1 || warn "Could not remove git-workspace 'gws' (continuing)"
+fi
+brew_install "googleworkspace-cli" "google-workspace-cli (Drive/Gmail/Docs/Sheets/Calendar — JSON output, AI-agent-friendly)"
 brew_cask_install "shottr" "Shottr (fast native screenshots — scrolling capture, OCR, annotations)"
 
 # PDF & documents
