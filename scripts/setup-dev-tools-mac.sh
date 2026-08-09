@@ -3101,7 +3101,23 @@ disable=SC1091,SC2034
 SHELLCHECK_CONF
     success "shellcheck configured"
 
-# leaf (Markdown previewer) runs on sensible defaults; no config block generated.
+# ---- leaf (Markdown previewer) config ----
+# leaf is a viewer, not an editor: Ctrl+E hands the file off to an external
+# editor. leaf IGNORES $EDITOR — its priority is
+#   --editor flag > LEAF_EDITOR > config.toml > nano
+# so without this it falls back to nano. Point it at Helix to match the rest of
+# the setup. {$path}:{$line} opens hx at the first visible source line; pair
+# with `leaf --watch` for live reload. Path: $XDG_CONFIG_HOME/leaf/config.toml.
+LEAF_CONFIG="${XDG_CONFIG_HOME:-$HOME/.config}/leaf/config.toml"
+if ! is_done "config:leaf"; then
+    info "Configuring leaf (Ctrl+E opens Helix)..."
+    write_managed "$LEAF_CONFIG" "#" <<'LEAF_CONF'
+# Ctrl+E hands off editing to Helix (leaf ignores $EDITOR).
+editor = 'hx {$path}:{$line}'
+LEAF_CONF
+    success "leaf configured (Ctrl+E opens Helix at the current line)"
+    mark_done "config:leaf"
+fi
 
 # ---- ngrok config ----
 NGROK_CONFIG_DIR="$HOME/.config/ngrok"
