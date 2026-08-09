@@ -2084,6 +2084,15 @@ brew_install "terminal-notifier" "terminal-notifier (send macOS notifications fr
 brew_cask_install "qlmarkdown" "QLMarkdown (preview Markdown in Finder)"
 brew_cask_install "qlstephen" "QLStephen (preview plain text files without extension)"
 # QuickLookJSON — removed from Homebrew (disabled 2025-12); macOS handles JSON preview natively now
+# Homebrew-cask Quick Look generators stay inert until the QL daemon is reloaded —
+# otherwise Finder keeps showing plain icons for .md / extension-less files until the
+# next login. Reload it now. (If previews are still blank, the plugin may need approval
+# or a quarantine clear under System Settings -> Privacy & Security.)
+if [[ "$DRY_RUN" != "true" ]]; then
+    qlmanage -r >/dev/null 2>&1 || true
+    qlmanage -r cache >/dev/null 2>&1 || true
+    success "Quick Look plugins registered (qlmanage reloaded)"
+fi
 
 fi  # mac-system
 
@@ -4010,6 +4019,17 @@ defaults write com.apple.screencapture disable-shadow -bool true
 # Don't show floating thumbnail after capture
 defaults write com.apple.screencapture show-thumbnail -bool false
 success "Screenshots configured (PNG, ~/Screenshots, no shadow)"
+
+# -- Global hotkey: free cmd+space for Ghostty's quick terminal --
+# Ghostty binds global:cmd+space, which macOS Spotlight owns by default. Disable
+# Spotlight's cmd+space (id 64) and its Finder-search-window variant (id 65) so the
+# OS doesn't swallow the hotkey. Takes effect after logout (or `killall SystemUIServer`).
+# To keep Spotlight on cmd+space instead, re-enable these and rebind Ghostty to cmd+`.
+defaults write com.apple.symbolichotkeys.plist AppleSymbolicHotKeys -dict-add 64 \
+    "<dict><key>enabled</key><false/><key>value</key><dict><key>type</key><string>standard</string><key>parameters</key><array><integer>32</integer><integer>49</integer><integer>1048576</integer></array></dict></dict>"
+defaults write com.apple.symbolichotkeys.plist AppleSymbolicHotKeys -dict-add 65 \
+    "<dict><key>enabled</key><false/></dict>"
+success "Spotlight cmd+space disabled (freed for Ghostty; takes effect after logout)"
 
 # -- Keyboard --
 # Faster key repeat rate (lower = faster, default is 6)
@@ -8167,8 +8187,10 @@ accounts, and macOS permissions that are (deliberately) unscriptable. Work down
 the list, then delete this file.
 
 ## macOS permissions & settings
-- [ ] **Accessibility** — grant to **Ghostty** and **AeroSpace**: System Settings -> Privacy & Security -> Accessibility. (Required for the global launcher hotkey and window management.)
-- [ ] **Disable Spotlight's cmd+space** so the Ghostty quick terminal can use it: System Settings -> Keyboard -> Keyboard Shortcuts -> Spotlight -> uncheck "Show Spotlight search". (Or change the Ghostty bind to `global:cmd+backquote` in `~/.config/ghostty/config`.)
+- [ ] **Accessibility** — grant to **Ghostty**, **AeroSpace**, and **SketchyBar**: System Settings -> Privacy & Security -> Accessibility. (Ghostty: global launcher hotkey; AeroSpace: window management; SketchyBar: window observation + click actions.)
+- [ ] **Screen Recording** — grant to **Shottr**: System Settings -> Privacy & Security -> Screen Recording. Without it, screenshots capture only the desktop/menu bar, not app windows.
+- [ ] **Automation** — the first time you click the SketchyBar clock (it types `herald` into a Ghostty quick terminal), approve the prompt to let it control **System Events**. If the click does nothing, confirm SketchyBar also has Accessibility (above).
+- [ ] **Spotlight's cmd+space** is disabled by the script (freed for the Ghostty quick terminal) — **log out/in** for it to take effect. To keep Spotlight on cmd+space instead, re-enable it (System Settings -> Keyboard -> Keyboard Shortcuts -> Spotlight) and change the Ghostty bind to `global:cmd+backquote` in `~/.config/ghostty/config`.
 - [ ] **Menu bar auto-hide** is set by the script (`_HIHideMenuBar`) so SketchyBar owns the top — **log out/in (or restart)** for it to take effect. If it doesn't stick, toggle System Settings -> Control Center -> "Automatically hide and show the menu bar" -> Always.
 - [ ] **Displays have separate Spaces = OFF** — already set by the script (`spans-displays`), but it needs a **logout/login** to take effect.
 - [ ] Log out and back in once so AeroSpace + the Spaces setting apply cleanly.
