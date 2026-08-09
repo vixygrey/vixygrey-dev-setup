@@ -239,6 +239,7 @@ Faster, prettier, smarter replacements for standard Unix utilities.
 | **imagemagick** | Image manipulation CLI -- resize, convert, composite, watermark |
 | **ffmpeg** | Video/audio processing swiss army knife |
 | **yt-dlp** | Video/audio downloader for YouTube and hundreds of other sites |
+| **surge** | TUI download manager (MIT) -- a browser extension captures browser-started downloads and routes them to a background daemon (port 1700). Complements aria2 (aria2 = scriptable CLI; surge = interactive + browser capture) |
 
 ---
 
