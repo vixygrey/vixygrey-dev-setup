@@ -2,6 +2,26 @@
 
 > Release notes for 7.0.0–7.1.1 live in [GitHub Releases](https://github.com/vixygrey/vixygrey-dev-setup/releases) (auto-generated). This file resumes hand-written notes at 7.2.0.
 
+## [7.3.0] - 2026-08-09
+
+Captures the maintainer's macOS defaults, drops AeroSpace in favor of native Spaces + Zellij, and fixes several login/MCP papercuts. No breaking changes.
+
+### Added
+
+- **macos**: Capture this machine's Finder, trackpad, and appearance settings so fresh installs reproduce them — Finder view settings (Desktop + "Use as Defaults" for all windows), desktop drive visibility, new-window target, keep the empty-trash warning; trackpad tap-to-click/secondary-click/gesture prefs; and **Dark mode** (#180)
+
+### Changed
+
+- **wm**: Remove **AeroSpace** — window management moves to **Zellij** (terminal density) + **native macOS Spaces & tiling** (GUI). SketchyBar stays, minus the workspace pills; revert `spans-displays` so multi-monitor gets per-display Spaces back; keep `mru-spaces=false` (fixed Space order). AeroSpace added to `--cleanup` so existing machines uninstall it (#182)
+- **filesystem**: Consolidate `~/Docs` into the default `~/Documents` (reverses the 6.0.0 rename) — one Documents folder, sidebar de-duplicated; life-admin buckets + tiki notes repo move under `~/Documents` (#178)
+- **sketchybar**: Wifi pill is icon-only — drop the SSID label from the menu bar (#179)
+
+### Fixed
+
+- **mcp**: The github / cloudwatch / iam MCP servers now register — `claude mcp add`'s variadic `-e` flag was eating the server name; reordered to `<name> ... -e KEY=val --` (#177)
+- **ghostty**: Auto-start launches Ghostty in the **background** (`open -g`) instead of hidden (`-gj`) so the global cmd+space quick-terminal hotkey registers after login (it never did from a hidden launch) (#183)
+- **script**: Restore the executable bit on `setup-dev-tools-mac.sh` (#181); drop the stale "hot corners" line from the run summary and suppress the `universalaccess` write error (#176)
+
 ## [7.2.0] - 2026-08-09
 
 Makes a batch of installed tools actually work out of the box, hardens macOS/login integration, and reconciles the README with the script. No breaking changes.
