@@ -1,5 +1,32 @@
 # Changelog
 
+> Release notes for 7.0.0–7.1.1 live in [GitHub Releases](https://github.com/vixygrey/vixygrey-dev-setup/releases) (auto-generated). This file resumes hand-written notes at 7.2.0.
+
+## [7.2.0] - 2026-08-09
+
+Makes a batch of installed tools actually work out of the box, hardens macOS/login integration, and reconciles the README with the script. No breaking changes.
+
+### Added
+
+- **ghostty**: Auto-start Ghostty at login via a LaunchAgent so the global `cmd+space` quick-terminal hotkey survives logout/reboot (#145)
+- **leaf**: Point leaf's `Ctrl+E` editor at Helix instead of nano — leaf ignores `$EDITOR`, so `~/.config/leaf/config.toml` now sets `editor = 'hx {$path}:{$line}'` (#147)
+- **git**: Set the personal identity as the **global default** committer so commits outside `~/Code/{work,personal}` still work; the work `includeIf` still overrides it there (#172)
+- **macos**: Auto-disable Spotlight's `cmd+space` (symbolichotkeys 64/65) so it no longer collides with Ghostty; register Quick Look generators with `qlmanage -r` so `.md`/plain-text previews activate immediately (#167)
+- **backups**: Scaffold a commented `~/.config/borgmatic/config.yaml`; seed ClamAV's `freshclam.conf` and register a daily virus-DB updater LaunchAgent (#171)
+- **theme**: Dracula theming for trippy (`theme-colors`), d2 (`$D2_THEME`), and claws (`--theme dracula`) (#172)
+
+### Changed
+
+- **llm**: Install `llm` via `uv tool ... --with llm-anthropic` instead of Homebrew (brew's externally-managed llm can't install the plugin) and default the model to `anthropic/claude-sonnet-4-5`, so the Helix `Alt+a` pipe reaches Claude (#166)
+- **commitizen / tflint / act / pandoc**: Wire the `cz-conventional-changelog` adapter (`~/.czrc`); write `~/.tflint.hcl` with the AWS ruleset (`tflint --init`); add `--container-architecture linux/amd64` to `~/.actrc`; install `tectonic` so pandoc can render PDFs (#166)
+- **macos**: Gate the Time Machine exclusions on a configured TM destination (skip when unused — backups run via borg/rclone/rsync); drop the hot-corner defaults (macOS default is already off), keeping only `mru-spaces=false` as a required AeroSpace prerequisite (#173)
+
+### Fixed
+
+- **shell**: Source fzf before atuin so atuin owns `Ctrl-R` (was shadowed by fzf); de-duplicate the direnv hook (`.zprofile` + `.zshrc` fired it twice); add `alias assume="source assume"` so granted can export AWS creds into the shell (#165)
+- **docs**: Document the Shottr Screen Recording and SketchyBar Automation/Accessibility permissions in the post-setup checklist; flag the infracost API key (#167, #171)
+- **readme**: Reconcile the README with the script — correct the Claude Code permission allowlist (read-only/scoped, not full write access) and its counts, the Apple-bloat table (GarageBand only, no SIP), removed wallpaper/hot-corner claims, and add missing tools, config files, aliases, and the herald MCP server (#173, #174)
+
 ## [6.0.0] - 2026-07-27
 
 **BREAKING:** Removes the `mac-communication` category (both Slack and Telegram are dropped), so `--only mac-communication` / `--skip mac-communication` are no longer valid category names. Also restructures the `~/` filesystem layout (see Changed) — re-running on an existing machine creates the new folders alongside the old ones; it does not migrate or delete existing files. Curates the installed app set for a solo fractional CIO/CTO consulting workflow (Google Workspace); run `--cleanup` to uninstall the retired apps (#39).
