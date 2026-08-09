@@ -47,7 +47,7 @@ chmod +x scripts/setup-dev-tools-mac.sh
 ## What It Does
 
 1. **Pre-flight checks** -- verifies macOS version, disk space, internet, admin privileges
-2. Installs all tools via Homebrew, Cask, npm, and Mac App Store with **progress tracking**
+2. Installs all tools via Homebrew, Cask, npm, `go install`, and `uv tool` with **progress tracking**
 3. Configures every tool with sensible defaults
 4. Applies the **Dracula** theme everywhere
 5. Sets macOS system defaults (Dock, keyboard, Finder, screenshots, screensaver, etc.)
@@ -240,6 +240,7 @@ Faster, prettier, smarter replacements for standard Unix utilities.
 | **miller (mlr)** | awk/sed/jq for CSV, JSON, and tabular data |
 | **csvkit** | Suite of CSV tools -- csvcut, csvgrep, csvstat, csvlook |
 | **pandoc** | Universal document converter -- Markdown to PDF, DOCX, HTML, etc. |
+| **tectonic** | Self-contained LaTeX/PDF engine so pandoc can render PDFs (`pandoc in.md -o out.pdf --pdf-engine=tectonic`) -- a bare Mac has no PDF engine |
 | **poppler** | PDF tools -- `pdftoppm` (PDF→PNG), `pdftotext`, `pdfinfo` |
 | **imagemagick** | Image manipulation CLI -- resize, convert, composite, watermark |
 | **ffmpeg** | Video/audio processing swiss army knife |
@@ -254,7 +255,8 @@ Faster, prettier, smarter replacements for standard Unix utilities.
 |------|-------------|
 | **shellcheck** | Shell script linter -- catches bugs and bad practices |
 | **shfmt** | Shell script formatter -- consistent style for bash/zsh scripts |
-| **act** | Run GitHub Actions locally before pushing |
+| **act** | Run GitHub Actions locally before pushing (`.actrc` forces `linux/amd64` on Apple Silicon) |
+| **act3** | Glance at the last 3 GitHub Actions runs (`gha3` alias) |
 | **hadolint** | Dockerfile linter -- catches bad practices and security issues |
 | **typos** | Source code spell checker -- fast, low false positives |
 | **ast-grep** | Structural code search/replace using AST -- like semgrep but interactive |
@@ -301,6 +303,14 @@ Faster, prettier, smarter replacements for standard Unix utilities.
 | **fastfetch** | Quick system info display -- faster neofetch replacement |
 | **nano** (latest) | Upgraded nano with syntax highlighting |
 | **lnav** | Advanced log file viewer -- auto-format, SQL queries on logs |
+| **qalc** | Powerful terminal calculator (units, currencies, variables) |
+| **doxx** | Read/preview `.docx` files in the terminal |
+| **vhs** | Script terminal recordings to GIF/MP4 (for demos/docs) |
+| **wiper** | Interactive disk-usage cleanup (ncdu-like, Trash-safe) |
+| **jolt** | Battery/power status at a glance |
+| **has** | Check for the presence/version of CLIs on PATH |
+| **lazyssh** | TUI SSH connection manager |
+| **starlit** | Terminal weather (run `starlit --setup` for an API key) |
 
 ---
 
@@ -372,8 +382,7 @@ Faster, prettier, smarter replacements for standard Unix utilities.
 | **croft** | Primary editor -- VS Code-style terminal IDE (Rust; `cargo install --git`). Three-pane workspace, LSP/DAP, integrated terminal; `croft pair` runs an AI navigator (Anthropic/local). Installed from git `main` |
 | **Helix (`hx`)** | Fast fallback editor + the `EDITOR` for git/gh/lazygit commit messages -- modal, built-in LSP + tree-sitter, auto-format on save, Dracula theme |
 | **Claude Code (`claude`)** | Agentic coding in the terminal; hosts the migrated MCP servers |
-| **Claude Code** | AI-assisted coding in the terminal (Anthropic, agentic) |
-| **llm** | Simon Willison's CLI -- one-shot prompts, plugin ecosystem, SQLite logging, embeddings |
+| **llm** | Simon Willison's CLI -- one-shot prompts, plugin ecosystem, SQLite logging, embeddings. Installed via `uv tool` with the Anthropic plugin; default model `anthropic/claude-sonnet-4-5` (powers the Helix `Alt+a` pipe) |
 | **chezmoi** | Dotfile manager -- backup and restore configs across machines |
 | **mitmproxy** | Free HTTP debugging proxy -- inspect and modify API calls from any app |
 | **Ghostty** | Fast GPU-accelerated terminal -- daily driver, native macOS feel |
@@ -426,6 +435,8 @@ Preview files in Finder by pressing spacebar.
 | **QLMarkdown** | Preview Markdown files with rendered formatting |
 | **QLStephen** | Preview plain text files that have no file extension |
 
+The setup runs `qlmanage -r` after install so the generators activate immediately -- no manual reload or re-login needed.
+
 ---
 
 ## Mac Apps -- System & Utilities
@@ -435,7 +446,6 @@ Preview files in Finder by pressing spacebar.
 | **Pearcleaner** | Open-source deep app uninstaller -- finds leftover files and preferences |
 | **LuLu** | Free open-source outbound firewall -- see what phones home |
 | **Mullvad VPN** | Privacy-focused VPN -- no account required, anonymous payment accepted |
-| **mas** | Mac App Store CLI -- script MAS installs and updates |
 | **dockutil** | Manage Dock pins programmatically (used by the setup script to curate the Dock) |
 | **terminal-notifier** | Send macOS notifications from shell scripts (used by the setup script for run-complete/failure alerts) |
 
@@ -498,18 +508,13 @@ Preview files in Finder by pressing spacebar.
 
 ## Remove Pre-installed Apple Bloat
 
-The `mac-bloat` category removes unused Apple apps (requires sudo, some need SIP disabled):
+The `mac-bloat` category removes unused Apple apps from `/Applications` (requires sudo):
 
 | App | Location |
 |-----|----------|
 | **GarageBand** | `/Applications/GarageBand.app` |
-| **News** | `/System/Applications/News.app` |
-| **Journal** | `/System/Applications/Journal.app` |
-| **Chess** | `/System/Applications/Chess.app` |
-| **Games** | `/System/Applications/Games.app` |
-| **Stocks** | `/System/Applications/Stocks.app` |
-| **Tips** | `/System/Applications/Tips.app` |
-| **Voice Memos** | `/System/Applications/VoiceMemos.app` |
+
+Apps under `/System/Applications` (News, Journal, Chess, Stocks, Tips, Voice Memos, etc.) are **intentionally skipped** — removing them requires disabling SIP, which this setup never does.
 
 ```bash
 # Remove bloat only
@@ -518,8 +523,6 @@ The `mac-bloat` category removes unused Apple apps (requires sudo, some need SIP
 # Skip bloat removal in a full run
 ./scripts/setup-dev-tools-mac.sh --skip mac-bloat
 ```
-
-> **Note:** `/System/Applications` apps require SIP disabled on macOS Sonoma+. Boot into Recovery (Cmd+R) > Terminal > `csrutil disable` > reboot. Re-enable after: `csrutil enable`.
 
 ---
 
@@ -543,6 +546,11 @@ Applied consistently across all tools:
 | **btop** | Full Dracula theme with custom color palette |
 | **lazydocker** | Dracula borders and options colors |
 | **harlequin** | Dracula theme set in config.toml |
+| **trippy** | Dracula `theme-colors` in `~/.config/trippy/trippy.toml` |
+| **zellij** | Dracula theme in the config |
+| **newsboat** | Dracula colors in the config |
+| **claws** | Built-in `dracula` theme via `claws --theme dracula` alias |
+| **miniserve** | `--color-scheme-dark dracula` in the `serve` alias |
 | **vivid** | Dracula-themed LS_COLORS for file type coloring |
 | **vim** | Dracula-ish color scheme (no plugin needed) |
 | **AeroSpace** | Dracula-aware gaps + workspace pills via SketchyBar |
@@ -558,7 +566,7 @@ The script sets up Claude Code with a comprehensive configuration for full-stack
 
 | File | Purpose |
 |------|---------|
-| `~/.claude/settings.json` | Global permissions (110 entries), file ignore patterns, env vars |
+| `~/.claude/settings.json` | Global permissions (121 allow / 7 deny entries), file ignore patterns, env vars |
 | `~/.claude/CLAUDE.md` | Global memory -- coding standards, available CLI tools reference, React/Next.js/AWS/CDK/Python/IaC conventions, security checks runbook |
 | `~/.claude/rules/workflow.md` | Trunk-based workflow rules (PR-first, issues, README-driven) |
 | `~/.claude/rules/git.md` | Git rules (no force-push, conventional commits, branch naming) |
@@ -598,23 +606,23 @@ The script sets up Claude Code with a comprehensive configuration for full-stack
 
 ### Permissions Pre-approved
 
-Common safe commands are pre-approved so Claude doesn't ask every time:
-- **Package managers**: npm, pnpm, bun, npx, uv, cargo, pip
-- **Git**: all git and gh commands
-- **AWS & IaC**: aws, cdk, sam, tofu, tflint, terraform-docs, checkov, infracost
-- **Docker & K8s**: docker, docker-compose, kubectl, k9s, stern
-- **Build tools**: make, just, tsc, jest, vitest
-- **File tools**: cat, bat, ls, eza, find, grep, rg, fd, fzf, tree, jq, yq, fx, mlr, csvlook
-- **Linters**: eslint, prettier, shellcheck, shfmt, ruff, hadolint, typos, ast-grep, commitizen, commitlint
-- **Security**: trivy, semgrep, gitleaks, cosign
-- **Media & docs**: pandoc, d2, mmdc, ffmpeg, magick
-- **Database**: pgcli, mycli, lazysql, sq, dbmate
-- **Other**: lazygit, lazydocker, dive, hyperfine, oha, scc, dust, difft, delta
+The allowlist is deliberately **read-only and scoped** -- Claude runs safe inspection, linting, and formatting commands without asking, but anything that mutates state (installs, deploys, resource/config changes) still prompts:
+- **Read-only git**: `git status/diff/log/show/branch`, `git remote -v`, `git stash list` (no writes; `gh` is *not* pre-approved)
+- **npm**: `npm run/install/test` only (pnpm/bun/npx/uv/cargo/pip prompt)
+- **Inspect & data**: cat, bat, ls, eza, grep, rg, fd, fzf, tree, head, tail, wc, sort, uniq, cut, jq, yq, fx, mlr, csvlook, jnv, mdfind, scc, dust, diff, difft, delta
+- **Linters/formatters/tests**: shellcheck, shfmt, prettier, eslint, ruff, hadolint, typos, ast-grep, tsc, jest, vitest
+- **IaC (read-only)**: tflint, terraform-docs, checkov, infracost (no `aws`/`cdk`/`sam`/`tofu`)
+- **Security scanners**: trivy, semgrep, gitleaks, cosign
+- **Read-only TUIs**: k9s, stern, lazygit, lazydocker, dive, btop, procs, lnav (no `docker`/`kubectl`/`docker-compose`)
+- **Docs & media**: pandoc, d2, mmdc, ffmpeg, magick, manly, soffice, office-py, pdftoppm/pdftotext/pdfinfo, oxipng, jpegoptim, mpv
+- **DB clients**: pgcli, mycli, sq, lazysql
+- **Misc CLIs**: atac, hurl, trippy, bandwhich, gping, doggo, mkcert, gum, llm, leaf, qalc, has, doxx, harlequin/hq, git-cliff, git-absorb, act3, commitizen, commitlint, tiki exec, fastfetch, newsboat, zellij
+- **Tool permissions**: `Read`, `Edit`, `WebFetch`
 
 ### Denied Commands
 
-Destructive commands are blocked:
-- `rm -rf /`, `rm -rf ~`, `sudo rm`, `chmod 777`, `mkfs`, `> /dev/sda*`
+Destructive commands are always blocked:
+- `rm -rf /`, `rm -rf /*`, `rm -rf ~`, `sudo rm *`, `chmod 777 *`, `> /dev/sda*`, `mkfs *`
 
 ---
 
@@ -682,7 +690,7 @@ Spotlight to find things) rather than agonizing over where it "should" go.
 
 ### Global Justfile (~/.justfile)
 
-27 task-runner recipes available from any directory via `gj`:
+26 task-runner recipes available from any directory via `gj`:
 
 | Recipe | Description |
 |--------|-------------|
@@ -733,7 +741,7 @@ Automatically uses different git identities for work vs personal:
 ~/Code/personal/ -> uses ~/.gitconfig-personal  (personal email)
 ```
 
-Edit these files after running the script to fill in your details.
+The **personal** identity is also set as the **global default**, so commits outside those two trees (`~/Code/oss`, `~/Inbox`, `/tmp`, …) still have a committer -- the `~/Code/work` include still overrides it there. The script prompts for your name/email interactively; you can also edit `~/.gitconfig-work` / `~/.gitconfig-personal` afterward.
 
 ---
 
@@ -790,8 +798,18 @@ The script generates config files with sensible defaults:
 | `~/.aws/config` | AWS CLI | Default region, json output, bat pager, auto-prompt, SSO template |
 | `~/.config/git/hooks/` | git | Global pre-commit hooks (debug statements, large files >5MB, conflict markers) |
 | `~/.config/brewfile/Brewfile` | Homebrew | Snapshot of all installed packages with descriptions |
-| `~/.justfile` | just | 27 global task-runner recipes (system, git, Docker, network, cleanup, info) |
+| `~/.justfile` | just | 26 global task-runner recipes (system, git, Docker, network, cleanup, info) |
 | `~/.shellcheckrc` | shellcheck | External sources, disabled false positives |
+| `~/.config/k9s/config.yaml` + skin | k9s | Dracula skin, `$EDITOR=hx` for edit-resource |
+| `~/.config/leaf/config.toml` | leaf | Ctrl+E hands off to Helix at the current line |
+| `~/.config/trippy/trippy.toml` | trippy | Dracula theme-colors |
+| `~/.tflint.hcl` | tflint | Recommended preset + AWS ruleset (fetched via `tflint --init`) |
+| `~/.czrc` | commitizen | Points `cz` at the cz-conventional-changelog adapter |
+| `~/.actrc` | act | Ubuntu images, container reuse, `--container-architecture linux/amd64` |
+| `~/.mlrrc` | miller | Pretty-print output, CSV I/O defaults |
+| `~/.ripgreprc` | ripgrep | Smart-case, hidden files, custom type definitions |
+| `~/.w3m/config` | w3m | UTF-8, cookies off, colors, proxy-from-env |
+| `~/.zshenv` | Shell | mise activation for all shell types (login + non-login) |
 | `~/.actrc` | act | Medium Ubuntu images, container reuse |
 | `~/.mlrrc` | miller | CSV input, pretty table output |
 | `~/.hushlogin` | Terminal | Suppresses "Last login" message |
@@ -874,6 +892,10 @@ All aliases are auto-written to `~/.zshrc`:
 | `ghd` | `gh dash` | GitHub dashboard |
 | `gdft` | `git dft` | Syntax-aware git diff |
 | `gha` | `act` | Run GitHub Actions locally |
+| `gha3` | `act3` | Glance at the last 3 Actions runs |
+| `hq` | `harlequin` | SQL IDE TUI |
+| `claws` | `claws --theme dracula` | All-AWS TUI (Dracula) |
+| `prog` | `progress -m` | Monitor progress of running coreutils |
 | `ytdl` | `yt-dlp` | Download video |
 | `ytmp3` | `yt-dlp -x --audio-format mp3` | Download audio |
 | `bench` | `hyperfine` | Benchmark commands |
@@ -942,7 +964,7 @@ Agentic coding is handled by **Claude Code** (`claude`) in the terminal, which r
 the MCP servers below. (Kiro's agent/specs/steering/hooks are gone with Kiro; Claude
 Code plus your `~/.claude/CLAUDE.md` rules cover the same ground.)
 
-Claude is wired into the terminal tools in three tiers:
+Claude is wired into the terminal tools in four tiers:
 
 | Tier | How | Best for |
 |------|-----|----------|
@@ -951,9 +973,10 @@ Claude is wired into the terminal tools in three tiers:
 | **3. `llm` pipe** | Helix `Alt+a` on a selection | Quick in-place edits |
 | **4. herald** | Built-in AI triage/summaries + MCP server (email/calendar) | Reading + triaging mail/events |
 
-Set `ANTHROPIC_API_KEY` (for `croft pair`) and `llm keys set anthropic` + `llm models
-default claude-sonnet-4-5` (for the `llm` pipe bind). The `llm-anthropic` plugin is
-installed by the script.
+Set `ANTHROPIC_API_KEY` (for `croft pair`) and run `llm keys set anthropic` (for the
+`llm` pipe bind). The script installs `llm` via `uv tool` with the `llm-anthropic`
+plugin and sets the default model to `anthropic/claude-sonnet-4-5`, so only the key is
+left to add.
 
 ### Claude Code MCP Servers
 
@@ -967,6 +990,7 @@ in `~/.claude.json` — never hand-edited). Enabled everywhere:
 | **git** | `git status/diff/log/show` | `mcp-server-git` (uvx) |
 | **fetch** | HTTP fetch with HTML->Markdown | `mcp-server-fetch` (uvx) |
 | **context7** | Up-to-date library docs by package name | `@upstash/context7-mcp` (npx) |
+| **herald** | Email + calendar (Gmail/iCloud) read/search tools | `herald mcp`; mutations require `herald serve` running |
 | **aws-docs / aws-pricing / aws-iac / aws-knowledge** | AWS docs, cost estimation, IaC patterns, knowledge base | `awslabs.*` (uvx) |
 | **cloudwatch / iam** | CloudWatch logs + metrics; read IAM | `awslabs.*` (uvx); need AWS creds |
 
