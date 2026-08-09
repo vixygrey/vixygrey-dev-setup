@@ -230,7 +230,7 @@ declare -A CATEGORY_DESC=(
     [git]="Git, GitHub CLI, delta, lazygit, pre-commit"
     [aws]="AWS CLI, CDK, SAM, Granted, cfn-lint, e1s/e2c/stu/claws (TUIs), s5cmd, steampipe, dynein, iamlive"
     [iac]="OpenTofu (Terraform), tflint, terraform-docs, checkov, infracost"
-    [security]="detect-secrets, gitleaks, trivy, semgrep, Snyk, ClamAV"
+    [security]="detect-secrets, gitleaks, trivy, semgrep, ClamAV"
     [replacements]="eza, bat, fd, ripgrep, zoxide, btop, sd, dust, just, rovr"
     [data-processing]="yq, miller, csvkit, pandoc, ffmpeg, ImageMagick"
     [code-quality]="shellcheck, shfmt, act, hadolint, ruff, commitizen"
@@ -398,7 +398,7 @@ list_categories() {
     printf "  %-25s %s\n" "git"                 "Git, GitHub CLI, delta, lazygit, pre-commit"
     printf "  %-25s %s\n" "aws"                 "AWS CLI, CDK, SAM, Granted, cfn-lint, e1s/e2c/stu/claws (TUIs), s5cmd, steampipe, dynein, iamlive"
     printf "  %-25s %s\n" "iac"                 "OpenTofu (Terraform), tflint, terraform-docs, checkov, infracost"
-    printf "  %-25s %s\n" "security"            "detect-secrets, gitleaks, trivy, semgrep, Snyk, ClamAV, Objective-See"
+    printf "  %-25s %s\n" "security"            "detect-secrets, gitleaks, trivy, semgrep, ClamAV, Objective-See"
     printf "  %-25s %s\n" "replacements"        "eza, bat, fd, ripgrep, zoxide, btop, sd, dust, just, rovr, fx, etc."
     printf "  %-25s %s\n" "data-processing"     "yq, miller, csvkit, pandoc, ffmpeg, ImageMagick"
     printf "  %-25s %s\n" "code-quality"        "shellcheck, shfmt, act, act3, hadolint, ruff, commitizen, ni"
@@ -1459,23 +1459,6 @@ brew_install "gitleaks" "gitleaks (fast git secret scanning — great for CI/pre
 brew_install "trivy" "trivy (container & IaC vulnerability scanning)"
 brew_install "semgrep" "semgrep (static analysis — bugs & security issues)"
 brew_install "cosign" "cosign (sign & verify container images)"
-
-# snyk CLI
-progress
-if ! is_done "install:snyk"; then
-if ! installed snyk; then
-    info "Installing Snyk CLI..."
-    brew tap snyk/tap >> "$LOG_FILE" 2>&1 || true
-    if brew install snyk >> "$LOG_FILE" 2>&1; then
-        success "Snyk CLI installed"
-    else
-        error "Failed to install Snyk CLI"
-    fi
-else
-    warn "Snyk CLI already installed"
-fi
-mark_done "install:snyk"
-fi
 
 # Network security
 brew_install "mkcert" "mkcert (local HTTPS certs for dev)"
@@ -6577,7 +6560,6 @@ else
       "Bash(trivy *)",
       "Bash(semgrep *)",
       "Bash(gitleaks *)",
-      "Bash(snyk *)",
       "Bash(cosign *)",
       "Bash(hyperfine *)",
       "Bash(oha *)",
@@ -6755,7 +6737,7 @@ else
 - **Docker**: `lazydocker` for UI, `dive` to inspect layers, `hadolint` for Dockerfile linting
 - **Testing**: `hyperfine` to benchmark, `oha` for load testing, `hurl` for HTTP test files, `act` for local GitHub Actions
 - **Code quality**: `typos` for spell checking, `ast-grep` for structural search/replace, `shellcheck`/`shfmt` for shell
-- **Security**: `trivy` to scan containers/IaC, `gitleaks` for secrets, `semgrep` for static analysis, `snyk` for dependency scanning, `detect-secrets` for pre-commit secret detection, `sops` for secrets encryption
+- **Security**: `trivy` to scan containers/IaC, `gitleaks` for secrets, `semgrep` for static analysis, `detect-secrets` for pre-commit secret detection, `sops` for secrets encryption
 - **IaC**: `tofu` (Terraform), `tflint` for linting, `terraform-docs` for module READMEs, `checkov` for static analysis, `infracost` for cost estimation, `cfn-lint` for CloudFormation, `aws-sam-cli` for SAM (note: `tfsec` checks live in `trivy config`)
 - **AI / agentic**: `claude` (Claude Code) for in-terminal pair programming, `aider` for git-aware AI edit loops, `llm` for one-shot prompts and embeddings, `repomix` to pack a repo into a single LLM-friendly file
 - **HTTP**: `xh` for colorized requests, `curlie` for curl with httpie output, `grpcurl` for gRPC
@@ -6916,7 +6898,6 @@ Every project should have a README.md with:
 - `trivy fs .` — scan for vulnerabilities
 - `npm audit` / `uv pip audit` — dependency audit
 - `semgrep --config auto .` — static analysis
-- `snyk test` — dependency vulnerability scanning
 - `detect-secrets scan` — pre-commit secret detection
 CLAUDE_MD_CONF
     success "Claude Code global CLAUDE.md created"

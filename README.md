@@ -181,7 +181,6 @@ chmod +x scripts/setup-dev-tools-mac.sh
 | **trivy** | Vulnerability scanner for containers, filesystems, and IaC |
 | **semgrep** | Static analysis tool -- finds bugs and security issues in code |
 | **cosign** | Sign and verify container images and artifacts |
-| **snyk** | Dependency vulnerability scanning for npm, pip, Go, etc. |
 | **mkcert** | Create locally-trusted HTTPS certificates for development |
 | **ssh-audit** | Audit SSH server and client configuration for security |
 | **clamav** | Open-source antivirus engine -- on-demand malware scanning |
@@ -600,7 +599,7 @@ Common safe commands are pre-approved so Claude doesn't ask every time:
 - **Build tools**: make, just, tsc, jest, vitest
 - **File tools**: cat, bat, ls, eza, find, grep, rg, fd, fzf, tree, jq, yq, fx, mlr, csvlook
 - **Linters**: eslint, prettier, shellcheck, shfmt, ruff, hadolint, typos, ast-grep, commitizen, commitlint
-- **Security**: trivy, semgrep, gitleaks, snyk, cosign
+- **Security**: trivy, semgrep, gitleaks, cosign
 - **Media & docs**: pandoc, d2, mmdc, ffmpeg, magick
 - **Database**: pgcli, mycli, lazysql, sq, dbmate
 - **Other**: lazygit, lazydocker, dive, hyperfine, oha, tokei, dust, difft, delta
