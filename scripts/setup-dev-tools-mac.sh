@@ -6804,14 +6804,14 @@ else
 - **Docs**: `d2` for diagrams, `pandoc` for conversion, `leaf` for Markdown preview
 - **Office files** (.pptx/.xlsx/.docx) — three complementary tools:
   - **Render**: `soffice --headless --convert-to pdf --outdir /tmp file.pptx` (LibreOffice) — the fidelity renderer
-  - **See it**: `pdftoppm -png -r 150 /tmp/file.pdf /tmp/page` (poppler) or `magick` — rasterize the PDF so you can visually inspect pages; `pdftotext`/`pdfinfo` for text/metadata
+  - **See it**: `pdftoppm -png -r 150 /tmp/file.pdf /tmp/page` (poppler) rasterizes the PDF to PNGs you can inspect (this is the PDF→image tool — `magick` needs ghostscript for PDFs and is for editing the resulting images: resize/crop/composite); `pdftotext`/`pdfinfo` for text/metadata
   - **Assert on content**: `office-py` (a venv with python-docx/openpyxl/python-pptx), e.g. `office-py -c 'from pptx import Presentation; p=Presentation("deck.pptx"); print(len(p.slides))'`
 - **Database**: `pgcli`/`mycli` for auto-completing SQL, `lazysql` for TUI, `sq` for cross-database queries, `dbmate` for migrations
 - **File management**: `rovr` for the TUI file manager (`nnn` as a minimal fallback), `wiper` for interactive disk-usage cleanup (ncdu-like, Trash-safe), `watchexec` for running commands on file changes, `rclone` for cloud storage sync
 - **Kubernetes**: `k9s` for TUI, `stern` for log tailing (kubectl via OrbStack)
 - **AWS**: `granted`/`assume` for role switching; TUIs `e1s` (ECS), `stu` (S3), `e2c` (EC2), `claws` (broad, k9s-style); `steampipe` for SQL over AWS, `s5cmd` for fast S3 bulk ops, `dynein` for DynamoDB, `iamlive` to generate least-privilege IAM from observed calls
 - **Shell scripting**: `gum` for interactive prompts/spinners, `nushell` for structured data pipelines, `parallel` for parallel execution
-- **Terminal**: `tmux` or `zellij` for multiplexing, `mpv` for video playback, `kew` for a terminal music player, `asciinema` for recording
+- **Terminal**: `zellij` for multiplexing (tmux is intentionally not installed), `mpv` for video playback, `kew` for a terminal music player, `asciinema` for recording
 - **Images/Media**: `imagemagick` for image processing, `oxipng` for PNG optimization, `yt-dlp` for video downloads
 - **Logs**: `lnav` for log file navigation
 - **Modern replacements** (aliased over defaults): `bat`→cat, `eza`→ls, `procs`→ps, `dust`→du, `duf`→df, `btop`→top, `trash`→rm, `gping`→ping, `doggo`→dig, `viddy`→watch, `aria2c`→wget, `sd`→sed
