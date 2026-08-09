@@ -5318,12 +5318,6 @@ sketchybar --add item front_app left \
                  label.padding_left=6 \
                  script="$PLUGIN_DIR/front_app.sh"
 
-# --- Center: clock (click opens herald's calendar in a Ghostty quick terminal) ---
-sketchybar --add item clock center \
-           --set clock update_freq=10 icon="$ICON_CLOCK" icon.color=$PURPLE \
-                 click_script="open -a Ghostty; sleep 0.2; osascript -e 'tell application \"System Events\" to keystroke \"herald\" & return' >/dev/null 2>&1" \
-                 script="$PLUGIN_DIR/clock.sh"
-
 # --- Right (added right-to-left visually) ---
 sketchybar --add item battery right \
            --subscribe battery system_woke power_source_change \
@@ -5354,6 +5348,13 @@ sketchybar --add item vpn right \
            --set vpn update_freq=15 \
                  click_script="$PLUGIN_DIR/vpn_toggle.sh" \
                  script="$PLUGIN_DIR/vpn.sh"
+
+# --- Right: clock (leftmost of the right cluster, just right of the notch) ---
+# Click opens herald's calendar in a Ghostty quick terminal.
+sketchybar --add item clock right \
+           --set clock update_freq=10 icon="$ICON_CLOCK" icon.color=$PURPLE \
+                 click_script="open -a Ghostty; sleep 0.2; osascript -e 'tell application \"System Events\" to keystroke \"herald\" & return' >/dev/null 2>&1" \
+                 script="$PLUGIN_DIR/clock.sh"
 
 sketchybar --update
 SBAR_RC
