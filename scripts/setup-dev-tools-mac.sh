@@ -765,7 +765,7 @@ uv_tool_install() {
     fi
     info "Installing $desc via uv..."
     if [[ "$DRY_RUN" == "true" ]]; then
-        info "[DRY RUN] Would: uv tool install $* ${spec}"
+        info "[DRY RUN] Would: uv tool install${*:+ $*} ${spec}"
     elif uv tool install "$@" "$spec" >> "$LOG_FILE" 2>&1; then
         success "$done_msg"
     else
