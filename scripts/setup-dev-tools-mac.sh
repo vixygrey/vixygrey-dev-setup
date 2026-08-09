@@ -248,7 +248,7 @@ declare -A CATEGORY_DESC=(
     [mac-system]="Pearcleaner, Quick Look plugins, dockutil"
     [mac-productivity]="tiki, Skim, LibreOffice"
     [mac-browsers]="Carbonyl, w3m"
-    [mac-media]="mpv, oxipng, jpegoptim, 7zip, kew"
+    [mac-media]="mpv, oxipng, jpegoptim, 7zip, cliamp"
     [mac-cloud]="rclone, borg"
     [mac-focus]="newsboat"
     [mac-bloat]="Remove pre-installed Apple apps (GarageBand)"
@@ -416,7 +416,7 @@ list_categories() {
     printf "  %-25s %s\n" "mac-system"          "Pearcleaner, Quick Look plugins, dockutil, terminal-notifier"
     printf "  %-25s %s\n" "mac-productivity"    "tiki, Skim, LibreOffice"
     printf "  %-25s %s\n" "mac-browsers"        "Carbonyl, w3m, monolith"
-    printf "  %-25s %s\n" "mac-media"           "mpv, oxipng, jpegoptim, 7zip, kew"
+    printf "  %-25s %s\n" "mac-media"           "mpv, oxipng, jpegoptim, 7zip, cliamp"
     printf "  %-25s %s\n" "mac-cloud"           "rclone, borg"
     printf "  %-25s %s\n" "mac-focus"           "newsboat"
     printf "  %-25s %s\n" "mac-bloat"           "Remove pre-installed Apple apps (GarageBand)"
@@ -1001,7 +1001,8 @@ if [[ "$CLEANUP" == "true" ]]; then
         "cask:notion:Notion:tiki:Notion"
         "cask:notion-calendar:Notion Calendar:herald:Notion Calendar"
         "brew:yazi:yazi:rovr"
-        "brew:cmus:cmus:kew"
+        "brew:cmus:cmus:cliamp"
+        "brew:kew:kew:cliamp"
         "brew:glow:glow:leaf"
         "cask:raycast:Raycast:Ghostty quick-terminal + clipse:Raycast"
         "cask:unifi-identity-endpoint:UniFi Identity Endpoint:removed:UniFi Identity Endpoint"
@@ -2130,7 +2131,10 @@ brew_install "mpv" "mpv (terminal video player)"
 brew_install "oxipng" "oxipng (lossless PNG compression)"
 brew_install "jpegoptim" "jpegoptim (lossless JPEG compression)"
 brew_install "p7zip" "7zip (archive tool — zip, 7z, rar, tar)"
-brew_install "kew" "kew (terminal music player — search-to-play, gapless, spectrum visualizer)"
+# cliamp — Winamp-inspired terminal music player (MIT): many formats, streaming
+# (YouTube/SoundCloud/Spotify/radio), parametric EQ, 20+ visualizations. Replaced kew.
+trust_tap bjarneo/cliamp
+brew_install "cliamp" "cliamp (terminal music player — Winamp-style, streaming, EQ, 20+ visualizers)"
 
 fi  # mac-media
 
@@ -3429,27 +3433,8 @@ screenshot-format=png
 MPV_CONF
     success "mpv configured (hardware accel, save position, screenshots)"
 
-# ---- kew config ----
-# kew stores its config at ~/Library/Preferences/kew/kewrc on macOS. Format is
-# key=value (no spaces); keys verified against kew source. Written as a managed
-# block so re-runs refresh our keys while any of your own (outside the markers) stay.
-KEW_CONFIG_DIR="$HOME/Library/Preferences/kew"
-KEW_CONFIG="$KEW_CONFIG_DIR/kewrc"
-info "Configuring kew (music library, visualizer)..."
-write_managed "$KEW_CONFIG" "#" <<'KEW_CONF'
-[miscellaneous]
-path=~/Media/music
-allowNotifications=1
-
-[track cover]
-coverEnabled=1
-coverStyle=auto
-
-[visualizer]
-visualizerColorType=3
-visualizerHeight=6
-KEW_CONF
-success "kew configured (music library ~/Media/music, party visualizer)"
+# cliamp self-configures on first run (point it at ~/Media/music from its UI /
+# `cliamp ~/Media/music`); no hand-written config here.
 
 # ---- w3m config ----
 W3M_CONFIG_DIR="$HOME/.w3m"
@@ -6692,7 +6677,7 @@ else
 - **Kubernetes**: `k9s` for TUI, `stern` for log tailing (kubectl via OrbStack)
 - **AWS**: `granted`/`assume` for role switching; TUIs `e1s` (ECS), `stu` (S3), `e2c` (EC2), `claws` (broad, k9s-style); `steampipe` for SQL over AWS, `s5cmd` for fast S3 bulk ops, `dynein` for DynamoDB, `iamlive` to generate least-privilege IAM from observed calls
 - **Shell scripting**: `gum` for interactive prompts/spinners, `nushell` for structured data pipelines, `parallel` for parallel execution
-- **Terminal**: `zellij` for multiplexing (tmux is intentionally not installed), `mpv` for video playback, `kew` for a terminal music player, `asciinema` for recording
+- **Terminal**: `zellij` for multiplexing (tmux is intentionally not installed), `mpv` for video playback, `cliamp` for a terminal music player, `asciinema` for recording
 - **Images/Media**: `imagemagick` for image processing, `oxipng` for PNG optimization, `yt-dlp` for video downloads
 - **Logs**: `lnav` for log file navigation
 - **Modern replacements** (aliased over defaults): `bat`→cat, `eza`→ls, `procs`→ps, `dust`→du, `duf`→df, `btop`→top, `trash`→rm, `gping`→ping, `doggo`→dig, `viddy`→watch, `aria2c`→wget, `sd`→sed
@@ -7899,7 +7884,7 @@ echo "  [~/.config/gh-dash]     GitHub dashboard, Dracula theme"
 echo "  [~/.config/stern]       K8s log tailing"
 echo "  [~/.config/zellij]      Modern terminal multiplexer with Dracula theme"
 echo "  [~/.config/mpv]         Video player (hardware accel, save position)"
-echo "  [~/Library/Preferences/kew]  Music player (library ~/Media/music, spectrum visualizer)"
+echo "  [cliamp]                Music player (self-configured; point at ~/Media/music)"
 echo "  [~/.config/git-cliff]   Changelog generator (conventional commits)"
 echo "  [~/.newsboat]           RSS reader (vim keys, Dracula colors, starter URLs)"
 echo "  [~/.config/ghostty]     GPU-accelerated terminal + quick-terminal launcher (cmd+space)"
@@ -7985,7 +7970,7 @@ the list, then delete this file.
 - [ ] **AI side-pane:** `zellij --layout dev` opens your editor + a Claude Code pane side by side (the strongest AI workflow).
 - [ ] **chezmoi:** `chezmoi init <your-dotfiles-repo>` to bring these configs under version control across the MacBook + Mac mini.
 - [ ] **tiki** (notes): your personal notes repo is pre-created and git-initialized at `~/Docs/notes`. Run `cd ~/Docs/notes && tiki` to start. Claude can manage tikis there — its skill is installed at `~/.claude/skills/tiki/` (CRUD via `tiki exec`, quick-capture via `echo "note" | tiki`).
-- [ ] **kew** (music): drop music into `~/Media/music` (the configured library path).
+- [ ] **cliamp** (music): drop music into `~/Media/music`, then run `cliamp ~/Media/music` (or set the folder in its UI). Streaming (YouTube/SoundCloud/Spotify/radio) + EQ + 20+ visualizers are built in.
 - [ ] **leaf** (Markdown): if tab-completion isn't working, run `leaf --auto-complete` and restart your shell (the script attempts this automatically).
 
 ## Standard machine setup
@@ -8050,7 +8035,7 @@ CHECKLIST_EOF
 | zellij `Ctrl + p` then `n` | New pane (see zellij status bar for modes) |
 | lazygit / lazydocker / lazysql / lazynpm / lazyssh / lazyrsync | Full-screen TUIs (arrows + on-screen keys) |
 | `y` rovr · `n` nnn | File managers |
-| `kew <search>` | Play matching tracks; in-app `Space` play/pause, `v` visualizer |
+| `cliamp` | Terminal music player (Winamp-style) — playback, EQ, cycle visualizers |
 | `atac` | API client TUI (or `atac request send <coll>/<req>` headless) |
 
 ## SketchyBar (click actions)
@@ -8094,7 +8079,7 @@ together.
 ## Communication & knowledge
 - **herald** — terminal email **+** calendar in one app (Gmail work + iCloud personal, unified CalDAV), with built-in AI triage/summaries and an MCP server for Claude.
 - **tiki** — Markdown workspace (tasks/docs/kanban/wiki) replacing Notion.
-- **newsboat** — RSS. **kew** — music. **starlit** — weather.
+- **newsboat** — RSS. **cliamp** — music. **starlit** — weather.
 
 ## Infra, cloud & security
 - **rclone** — cloud sync (replaced Cyberduck + Google Drive). **borg** — backups.
