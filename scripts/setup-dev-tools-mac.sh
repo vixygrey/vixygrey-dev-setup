@@ -8026,6 +8026,7 @@ the list, then delete this file.
 - [ ] **Mullvad:** `mullvad account login <ACCOUNT_NUMBER>` (CLI is bundled with the app at `/usr/local/bin/mullvad`).
 - [ ] **starlit** (weather): `starlit --setup` and paste a free OpenWeatherMap API key.
 - [ ] **surge** (download manager): the daemon service was installed by the script (if it didn't prompt, run `surge service install`). Install the browser extension so browser downloads route to surge: **Firefox** — one-click from the Mozilla Add-ons store; **Chrome** — download `extension-chrome.zip` from the [latest release](https://github.com/SurgeDM/Surge/releases) and load-unpacked at `chrome://extensions` (Developer mode). Then pair it with `surge service token` (or TUI → Settings → Extension).
+- [ ] **glab** (GitLab, only if you use it): `glab auth login` to authenticate against gitlab.com or a self-managed instance. Already configured with SSH + Helix + delta and the same alias names as gh (mapped to merge requests).
 - [ ] **MCP servers:** export tokens your Claude Code MCP servers need, e.g. `export GITHUB_TOKEN=...` (and `AWS_REGION` / `AWS_PROFILE` for the AWS servers). Requires `claude auth login` at least once.
 - [ ] **Claude AI in croft:** set an Anthropic key — `export ANTHROPIC_API_KEY=sk-ant-...` in `~/.zshrc.local`. Used by **croft** (`croft pair` — the AI navigator in your primary IDE). For the Helix `llm` pipe bind (`A-a` on a selection): `llm keys set anthropic` then `llm models default claude-sonnet-4-5`. (Email/calendar AI is built into **herald** — configured separately above.)
 - [ ] **croft** (primary IDE): installed from git `main` via cargo — run `croft` in a project to open the workspace; re-run `cargo install --git https://github.com/vitali87/croft.git --locked` to upgrade.
@@ -8118,7 +8119,7 @@ it doesn't cost real capability. Below: what each tool is for, then how it fits
 together.
 
 ## Editor & AI
-- **Helix (`hx`)** — modal terminal editor, built-in LSP + tree-sitter, auto-format on save. The sole editor (`EDITOR`).
+- **croft** — VS Code-style terminal IDE; the **primary editor** (`croft pair` for the AI navigator). **Helix (`hx`)** is the fast fallback and the `EDITOR` for git/gh/lazygit commit messages (modal, built-in LSP + tree-sitter, auto-format on save).
 - **Claude Code (`claude`)** — agentic coding in the terminal; hosts the MCP servers. Best via `zellij --layout dev` (editor + Claude pane).
 - **Claude in croft/Helix** — croft's `croft pair` AI navigator (primary IDE); in Helix, `Alt+a` pipes a selection to Claude via `llm`. Powered by `ANTHROPIC_API_KEY` / `llm-anthropic`. Email/calendar AI lives in **herald** (built-in triage/summaries + MCP).
 
@@ -8133,15 +8134,17 @@ together.
 - **wiper** — interactive disk cleanup (Trash-safe). **taproom** — Homebrew TUI. **has** — tool/version checker.
 
 ## Dev workflow
-- **lazygit / lazydocker / lazysql / lazynpm / lazyssh / lazyrsync** — full-screen TUIs for git, containers, SQL, npm, SSH, rsync.
+- **lazygit / lazydocker / lazysql / lazynpm / lazyssh / lazyrsync / lazyenv** — full-screen TUIs for git, containers, SQL, npm, SSH, rsync, `.env` files.
+- **gh** (GitHub) / **glab** (GitLab) — repo/PR/MR CLIs; glab mirrors gh's aliases (→ merge requests). **scc** — code counter (LOC + complexity + COCOMO). **keyward** — SSH-key manager + security audit.
 - **ATAC** — terminal API client (TUI + scriptable CLI) replacing Bruno; **hurl/xh/curlie/grpcurl** for one-shot + tests.
 - **harlequin / pgcli / mycli / usql / sq** — database CLIs/TUIs (replaced DBeaver).
-- **d2 / mermaid** — diagrams as code (replaced draw.io). **qalc** — calculator. **vhs** — scripted terminal recordings. **doxx** — .docx viewer.
+- **d2 / mermaid** — diagrams as code (replaced draw.io). **qalc** — calculator. **vhs** — scripted terminal recordings. **doxx** — .docx viewer. **manly** — explain a command's flags. **LibreOffice/poppler/office-py** — headless validate & render .pptx/.xlsx/.docx (Claude's doc-check stack).
 
 ## Communication & knowledge
 - **herald** — terminal email **+** calendar in one app (Gmail work + iCloud personal, unified CalDAV), with built-in AI triage/summaries and an MCP server for Claude.
 - **tiki** — Markdown workspace (tasks/docs/kanban/wiki) replacing Notion.
-- **newsboat** — RSS. **cliamp** — music. **starlit** — weather.
+- **gws** (google-workspace-cli) — Drive/Gmail/Docs/Sheets/Calendar from the terminal (structured JSON; Claude's Workspace surface).
+- **newsboat** — RSS. **cliamp** — music. **starlit** — weather. **surge** — download manager (browser-download capture, alongside aria2). **bmm** — bookmarks.
 
 ## Infra, cloud & security
 - **rclone** — cloud sync (replaced Cyberduck + Google Drive). **borg** — backups.
