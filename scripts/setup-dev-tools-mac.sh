@@ -6911,7 +6911,7 @@ else
 - Task runner: just (prefer over make for project-level tasks)
 - Shell note: `bat` is aliased to `cat`; use `/bin/cat` only inside heredoc subshells where bat breaks syntax
 - Dotfiles: chezmoi
-- Launcher: Ghostty quick terminal (global cmd+space) + shell functions `a` (app launcher), `ff`/`rgf`/`s` (file/content/Spotlight search). Window mgmt: native macOS Spaces + tiling. Bar: SketchyBar. Clipboard: clipse (`clip`)
+- Launcher: Ghostty quick terminal (global cmd+space) + shell functions `a` (app launcher), `ff`/`rgf`/`s` (file/content/Spotlight search). Window mgmt: native macOS Spaces + built-in window tiling (no tiling WM). Bar: SketchyBar. Clipboard: clipse (`clip`)
 - API testing/exploration → **use ATAC** (terminal — scriptable CLI + TUI; JSON/YAML collections, Postman import; allow-listed) for anything collection-based or repeatable; reach for `hurl` / `xh` / `curlie` / `grpcurl` for quick one-offs
 - Database: pgcli, mycli, lazysql, harlequin (SQL IDE TUI), usql, sq; migrations via dbmate
 - Diagrams: d2 / Mermaid (code-based, in the terminal)
