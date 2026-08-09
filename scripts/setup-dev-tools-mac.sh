@@ -5153,6 +5153,48 @@ quick-terminal-autohide = true
 GHOSTTY_CONF
 success "Ghostty configured (JetBrains Mono, Dracula theme, transparent titlebar)"
 
+# ---- Ghostty auto-start (launchd agent) ----
+# Ghostty's global cmd+space quick-terminal keybind only exists while Ghostty is
+# running, so a fresh login with no Ghostty leaves the hotkey dead. Register a
+# LaunchAgent so Ghostty launches (hidden, in the background) at login. The
+# hotkey still needs Accessibility permission for Ghostty (see the post-setup
+# checklist) — this agent starts the app but cannot grant that permission.
+GHOSTTY_APP="/Applications/Ghostty.app"
+GHOSTTY_PLIST="$HOME/Library/LaunchAgents/com.ghostty.autostart.plist"
+if ! is_done "config:ghostty-autostart"; then
+if [[ ! -d "$GHOSTTY_APP" ]]; then
+    warn "Ghostty.app not found in /Applications — skipping login auto-start agent"
+elif [[ -f "$GHOSTTY_PLIST" ]]; then
+    warn "Ghostty auto-start agent already exists"
+else
+    info "Creating Ghostty auto-start launch agent (starts hidden at login)..."
+    mkdir -p "$HOME/Library/LaunchAgents"
+    cat > "$GHOSTTY_PLIST" <<'GHOSTTY_PLIST_EOF'
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key><string>com.ghostty.autostart</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>/usr/bin/open</string>
+        <string>-gj</string>
+        <string>-a</string>
+        <string>Ghostty</string>
+    </array>
+    <key>RunAtLoad</key><true/>
+</dict>
+</plist>
+GHOSTTY_PLIST_EOF
+    if [[ "$DRY_RUN" != "true" ]]; then
+        launchctl unload "$GHOSTTY_PLIST" >> "$LOG_FILE" 2>&1 || true
+        launchctl load "$GHOSTTY_PLIST" >> "$LOG_FILE" 2>&1 || warn "Could not load Ghostty launch agent"
+    fi
+    success "Ghostty auto-start registered (starts hidden at login)"
+fi
+mark_done "config:ghostty-autostart"
+fi
+
 # ---- AeroSpace config (tiling window manager) ----
 AEROSPACE_DIR="$HOME/.config/aerospace"
 info "Configuring AeroSpace (i3-style keys, gaps, SketchyBar hook)..."
