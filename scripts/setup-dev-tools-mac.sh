@@ -5293,8 +5293,10 @@ sketchybar --bar height=32 position=top blur_radius=30 color=$BG \
 
 sketchybar --default updates=when_shown \
                      icon.font="$FONT:Bold:13.0" icon.color=$FG \
+                     icon.padding_left=6 icon.padding_right=3 \
                      label.font="$FONT:Semibold:13.0" label.color=$FG \
-                     padding_left=5 padding_right=5 \
+                     label.padding_left=3 label.padding_right=6 \
+                     padding_left=6 padding_right=6 \
                      background.color=$LINE background.corner_radius=6 background.height=22
 
 # --- Left: AeroSpace workspaces ---
