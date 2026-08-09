@@ -5591,7 +5591,7 @@ success "Directory structure created (~/Inbox, ~/Code, ~/Scripts, ~/Docs, ~/Crea
 info "Creating helper scripts in ~/Scripts/bin..."
 
 # -- clean-downloads: delete files older than 30 days --
-cat > "$HOME/Scripts/bin/clean-downloads" <<'SCRIPT'
+write_managed_script "$HOME/Scripts/bin/clean-downloads" <<'SCRIPT'
 #!/usr/bin/env bash
 # Delete files in ~/Downloads older than 30 days
 # Usage: clean-downloads [days]
@@ -5622,7 +5622,7 @@ fi
 SCRIPT
 
 # -- new-project: scaffold a new project --
-cat > "$HOME/Scripts/bin/new-project" <<'SCRIPT'
+write_managed_script "$HOME/Scripts/bin/new-project" <<'SCRIPT'
 #!/usr/bin/env bash
 # Scaffold a new project with git, .editorconfig, .gitignore
 # Usage: new-project <name> [work|personal|oss|learning]
@@ -5762,7 +5762,7 @@ echo "  cd $PROJECT_DIR"
 SCRIPT
 
 # -- clone-work: clone a work repo into the right directory --
-cat > "$HOME/Scripts/bin/clone-work" <<'SCRIPT'
+write_managed_script "$HOME/Scripts/bin/clone-work" <<'SCRIPT'
 #!/usr/bin/env bash
 # Clone a work repo into ~/Code/work/<org>/<repo>
 # Usage: clone-work <github-url-or-org/repo>
@@ -5812,7 +5812,7 @@ echo "  cd $TARGET/$REPO"
 SCRIPT
 
 # -- clone-personal: clone a personal repo --
-cat > "$HOME/Scripts/bin/clone-personal" <<'SCRIPT'
+write_managed_script "$HOME/Scripts/bin/clone-personal" <<'SCRIPT'
 #!/usr/bin/env bash
 # Clone a personal repo into ~/Code/personal/<repo>
 # Usage: clone-personal <repo-name-or-url>
@@ -5860,7 +5860,7 @@ echo "  cd $TARGET"
 SCRIPT
 
 # -- backup-dotfiles: push dotfiles to git via chezmoi --
-cat > "$HOME/Scripts/bin/backup-dotfiles" <<'SCRIPT'
+write_managed_script "$HOME/Scripts/bin/backup-dotfiles" <<'SCRIPT'
 #!/usr/bin/env bash
 # Backup dotfiles using chezmoi
 # Usage: backup-dotfiles
@@ -5906,7 +5906,7 @@ fi
 SCRIPT
 
 # -- project-stats: show stats about all projects --
-cat > "$HOME/Scripts/bin/project-stats" <<'SCRIPT'
+write_managed_script "$HOME/Scripts/bin/project-stats" <<'SCRIPT'
 #!/usr/bin/env bash
 # Show overview of all projects in ~/Code
 # Usage: project-stats
@@ -5939,7 +5939,7 @@ done
 SCRIPT
 
 # -- health-check: quick system overview --
-cat > "$HOME/Scripts/bin/health-check" <<'SCRIPT'
+write_managed_script "$HOME/Scripts/bin/health-check" <<'SCRIPT'
 #!/usr/bin/env bash
 # Quick system health overview
 # Usage: health-check
@@ -6001,7 +6001,7 @@ uptime | sed 's/^/  /'
 SCRIPT
 
 # -- setup-ssh: generate SSH key and add to GitHub --
-cat > "$HOME/Scripts/bin/setup-ssh" <<'SCRIPT'
+write_managed_script "$HOME/Scripts/bin/setup-ssh" <<'SCRIPT'
 #!/usr/bin/env bash
 # Generate SSH key and optionally add to GitHub
 # Usage: setup-ssh [email]
@@ -6045,7 +6045,7 @@ fi
 SCRIPT
 
 # -- export-brewfile: export Brewfile snapshot --
-cat > "$HOME/Scripts/bin/export-brewfile" <<'SCRIPT'
+write_managed_script "$HOME/Scripts/bin/export-brewfile" <<'SCRIPT'
 #!/usr/bin/env bash
 # Export a Brewfile snapshot with descriptions
 # Usage: export-brewfile
@@ -6063,9 +6063,8 @@ echo "Restore on a new machine:"
 echo "  brew bundle install --file=$BREWFILE"
 SCRIPT
 
-# Make all scripts executable
-chmod +x "$HOME/Scripts/bin/"*
-success "Helper scripts created (clean-downloads, new-project, clone-work, clone-personal, backup-dotfiles, project-stats, health-check, setup-ssh, export-brewfile)"
+# (write_managed_script sets +x on each script; no blanket chmod needed.)
+success "Helper scripts written (clean-downloads, new-project, clone-work, clone-personal, backup-dotfiles, project-stats, health-check, setup-ssh, export-brewfile — merged, edits outside the markers are kept)"
 
 # ---- Per-directory Git Config (work vs personal identity) ----
 info "Setting up per-directory git config..."
