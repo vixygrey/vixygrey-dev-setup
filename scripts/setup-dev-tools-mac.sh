@@ -3164,7 +3164,11 @@ if installed claude; then
         }
 
         add_mcp filesystem --transport stdio filesystem -- npx -y @modelcontextprotocol/server-filesystem "$HOME/Code"
-        add_mcp github --transport stdio --env "GITHUB_PERSONAL_ACCESS_TOKEN=\${GITHUB_TOKEN}" github -- npx -y @modelcontextprotocol/server-github
+        # `claude mcp add`'s -e/--env is variadic and greedily eats the following
+        # positional, so the server NAME must come first and each -e must sit right
+        # before `--` (env servers only — see #-note). Literal ${VAR} is expanded by
+        # Claude Code at server-launch time from the user's environment.
+        add_mcp github github --transport stdio -e "GITHUB_PERSONAL_ACCESS_TOKEN=\${GITHUB_TOKEN}" -- npx -y @modelcontextprotocol/server-github
         add_mcp git --transport stdio git -- uvx mcp-server-git
         add_mcp fetch --transport stdio fetch -- uvx mcp-server-fetch
         add_mcp context7 --transport stdio context7 -- npx -y @upstash/context7-mcp
@@ -3172,8 +3176,8 @@ if installed claude; then
         add_mcp aws-pricing --transport stdio aws-pricing -- uvx awslabs.aws-pricing-mcp-server@latest
         add_mcp aws-iac --transport stdio aws-iac -- uvx awslabs.aws-iac-mcp-server@latest
         add_mcp aws-knowledge --transport stdio aws-knowledge -- uvx awslabs.aws-knowledge-mcp-server@latest
-        add_mcp cloudwatch --transport stdio --env "AWS_REGION=\${AWS_REGION}" --env "AWS_PROFILE=\${AWS_PROFILE}" cloudwatch -- uvx awslabs.cloudwatch-mcp-server@latest
-        add_mcp iam --transport stdio --env "AWS_REGION=\${AWS_REGION}" --env "AWS_PROFILE=\${AWS_PROFILE}" iam -- uvx awslabs.iam-mcp-server@latest
+        add_mcp cloudwatch cloudwatch --transport stdio -e "AWS_REGION=\${AWS_REGION}" -e "AWS_PROFILE=\${AWS_PROFILE}" -- uvx awslabs.cloudwatch-mcp-server@latest
+        add_mcp iam iam --transport stdio -e "AWS_REGION=\${AWS_REGION}" -e "AWS_PROFILE=\${AWS_PROFILE}" -- uvx awslabs.iam-mcp-server@latest
         # herald (email + calendar) — read-only after initial sync; mutations need `herald serve`.
         # Inert until herald accounts are configured (see the POST_SETUP checklist).
         add_mcp herald --transport stdio herald -- herald mcp -config "$HOME/.herald/conf.yaml"
