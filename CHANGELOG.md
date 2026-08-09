@@ -2,6 +2,23 @@
 
 > Release notes for 7.0.0–7.1.1 live in [GitHub Releases](https://github.com/vixygrey/vixygrey-dev-setup/releases) (auto-generated). This file resumes hand-written notes at 7.2.0.
 
+## [7.4.0] - 2026-08-09
+
+Adds comprehensive on-machine tool documentation, fills gaps in the post-setup checklist, and fixes the Google Workspace CLI install. No breaking changes.
+
+### Added
+
+- **docs**: New Desktop doc **TOOL_REFERENCE.md** — a categorized reference of every user-facing installed tool (~195 entries) with a plain-English description and worked usage examples, generated fresh on every run alongside the other Desktop docs (#190)
+- **checklist**: The manual auth/first-run steps that were missing — `gh auth login` (the PR workflow assumed it), AWS auth (`aws configure sso` / `granted` / `assume`, plus `steampipe plugin install aws`), and optional `atuin` cross-machine history sync (#190)
+
+### Changed
+
+- **docs**: `TOOLKIT_SUMMARY.md` now points at `TOOL_REFERENCE.md` so its curation is intentional; clarify the window-management wording in the generated CLAUDE.md to `native macOS Spaces + built-in window tiling (no tiling WM)` now that AeroSpace is gone (#190, #186)
+
+### Fixed
+
+- **script**: Install the **`googleworkspace-cli`** formula for the `gws` command instead of Homebrew's core `gws` (which is *git-workspace*, an unrelated tool); the two share a `gws` binary and conflict, so the conflicting formula is removed first and existing machines self-correct on the next run (#188, #189)
+
 ## [7.3.0] - 2026-08-09
 
 Captures the maintainer's macOS defaults, drops AeroSpace in favor of native Spaces + Zellij, and fixes several login/MCP papercuts. No breaking changes.
