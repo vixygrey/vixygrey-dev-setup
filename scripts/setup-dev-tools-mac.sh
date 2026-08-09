@@ -793,8 +793,14 @@ trust_tap() {
         return 0
     fi
     brew tap "$tap" >> "$LOG_FILE" 2>&1 || true
-    brew trust --tap "$tap" >> "$LOG_FILE" 2>&1 \
+    # brew reads its trust from $XDG_CONFIG_HOME/homebrew/trust.json when XDG_CONFIG_HOME
+    # is set (interactive shells — we export it) but from ~/.homebrew/trust.json when it
+    # isn't (launchd / `brew services` at login). Write BOTH, so tapped-formula SERVICES
+    # (e.g. sketchybar via `brew services`) auto-start at login — not just interactive
+    # installs. Writing to one location only leaves the other context refusing the tap.
+    XDG_CONFIG_HOME="$HOME/.config" brew trust --tap "$tap" >> "$LOG_FILE" 2>&1 \
         || warn "Could not trust tap $tap — installs from it may be refused by Homebrew"
+    env -u XDG_CONFIG_HOME brew trust --tap "$tap" >> "$LOG_FILE" 2>&1 || true
 }
 
 # -- Pre-flight checks --------------------------------------------------------
