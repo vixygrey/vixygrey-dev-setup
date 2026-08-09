@@ -4237,6 +4237,10 @@ defaults write NSGlobalDomain NSNavPanelExpandedStateForSaveMode2 -bool true
 defaults write com.apple.menuextra.battery ShowPercent -string "YES" 2>/dev/null || true
 # Set highlight color to Dracula purple
 defaults write NSGlobalDomain AppleHighlightColor -string "0.741176 0.576471 0.976471 Purple"
+# Dark mode (captured from this machine)
+defaults write NSGlobalDomain AppleInterfaceStyle -string "Dark"
+# Keep the menu bar hidden in fullscreen
+defaults write NSGlobalDomain AppleMenuBarVisibleInFullscreen -bool false
 success "Misc macOS defaults configured"
 
 
@@ -6417,11 +6421,25 @@ defaults write com.apple.finder FXDefaultSearchScope -string "SCcf"
 # Disable warning when changing file extensions
 defaults write com.apple.finder FXEnableExtensionChangeWarning -bool false
 
-# Disable warning when emptying trash
-defaults write com.apple.finder WarnOnEmptyTrash -bool false
+# Keep the warning when emptying trash (your preference)
+defaults write com.apple.finder WarnOnEmptyTrash -bool true
 
 # Keep folders on top when sorting by name
 defaults write com.apple.finder _FXSortFoldersFirst -bool true
+
+# --- Captured from this machine: Finder prefs + view settings ---
+# New Finder windows open at Computer
+defaults write com.apple.finder NewWindowTarget -string "PfCm"
+# Show on desktop: external drives + servers + removable; hide internal drives
+defaults write com.apple.finder ShowExternalHardDrivesOnDesktop -bool true
+defaults write com.apple.finder ShowHardDrivesOnDesktop -bool false
+defaults write com.apple.finder ShowMountedServersOnDesktop -bool true
+defaults write com.apple.finder ShowRemovableMediaOnDesktop -bool true
+# Desktop + default (all-window) view settings — captured from "Show View
+# Options -> Use as Defaults" (macOS 26). Re-capture if they drift.
+defaults write com.apple.finder DesktopViewSettings '{ IconViewSettings = { arrangeBy = name; backgroundColorBlue = 1; backgroundColorGreen = 1; backgroundColorRed = 1; backgroundType = 0; gridOffsetX = 0; gridOffsetY = 0; gridSpacing = 54; iconSize = 64; labelOnBottom = 1; showIconPreview = 1; showItemInfo = 1; textSize = 14; viewOptionsVersion = 1; }; } '
+defaults write com.apple.finder StandardViewSettings '{ ExtendedListViewSettingsV2 = { calculateAllSizes = 0; columns = ( { ascending = 1; identifier = name; visible = 1; width = 300; }, { ascending = 0; identifier = ubiquity; visible = 0; width = 35; }, { ascending = 0; identifier = dateModified; visible = 1; width = 181; }, { ascending = 0; identifier = dateCreated; visible = 1; width = 181; }, { ascending = 0; identifier = size; visible = 1; width = 97; }, { ascending = 1; identifier = kind; visible = 1; width = 115; }, { ascending = 1; identifier = label; visible = 0; width = 100; }, { ascending = 1; identifier = version; visible = 0; width = 75; }, { ascending = 1; identifier = comments; visible = 0; width = 300; }, { ascending = 0; identifier = dateLastOpened; visible = 0; width = 200; }, { ascending = 0; identifier = shareOwner; visible = 0; width = 200; }, { ascending = 0; identifier = shareLastEditor; visible = 0; width = 200; }, { ascending = 0; identifier = dateAdded; visible = 0; width = 181; }, { ascending = 0; identifier = invitationStatus; visible = 0; width = 210; } ); iconSize = 16; showIconPreview = 1; sortColumn = name; textSize = 14; useRelativeDates = 1; viewOptionsVersion = 1; }; GalleryViewSettings = { arrangeBy = name; iconSize = 48; showIconPreview = 1; viewOptionsVersion = 1; }; IconViewSettings = { arrangeBy = none; backgroundColorBlue = 1; backgroundColorGreen = 1; backgroundColorRed = 1; backgroundType = 0; gridOffsetX = 0; gridOffsetY = 0; gridSpacing = 54; iconSize = 64; labelOnBottom = 1; showIconPreview = 1; showItemInfo = 0; textSize = 12; viewOptionsVersion = 1; }; ListViewSettings = { calculateAllSizes = 0; columns = { comments = { ascending = 1; index = 7; visible = 0; width = 300; }; dateCreated = { ascending = 0; index = 2; visible = 1; width = 181; }; dateLastOpened = { ascending = 0; index = 8; visible = 0; width = 200; }; dateModified = { ascending = 0; index = 1; visible = 1; width = 181; }; kind = { ascending = 1; index = 4; visible = 1; width = 115; }; label = { ascending = 1; index = 5; visible = 0; width = 100; }; name = { ascending = 1; index = 0; visible = 1; width = 300; }; size = { ascending = 0; index = 3; visible = 1; width = 97; }; version = { ascending = 1; index = 6; visible = 0; width = 75; }; }; iconSize = 16; showIconPreview = 1; sortColumn = name; textSize = 14; useRelativeDates = 1; viewOptionsVersion = 1; }; SettingsType = StandardViewSettings; } '
+defaults write com.apple.finder FK_StandardViewSettings '{ ExtendedListViewSettingsV2 = { calculateAllSizes = 0; columns = ( { ascending = 1; identifier = name; visible = 1; width = 300; }, { ascending = 0; identifier = dateModified; visible = 1; width = 181; }, { ascending = 0; identifier = dateCreated; visible = 0; width = 181; }, { ascending = 0; identifier = size; visible = 1; width = 97; }, { ascending = 1; identifier = kind; visible = 1; width = 115; }, { ascending = 1; identifier = label; visible = 0; width = 100; }, { ascending = 1; identifier = version; visible = 0; width = 75; }, { ascending = 1; identifier = comments; visible = 0; width = 300; }, { ascending = 0; identifier = dateLastOpened; visible = 0; width = 200; }, { ascending = 0; identifier = shareOwner; visible = 0; width = 200; }, { ascending = 0; identifier = shareLastEditor; visible = 0; width = 200; } ); iconSize = 16; showIconPreview = 1; sortColumn = name; textSize = 13; useRelativeDates = 1; viewOptionsVersion = 1; }; IconViewSettings = { arrangeBy = none; backgroundColorBlue = 1; backgroundColorGreen = 1; backgroundColorRed = 1; backgroundType = 0; gridOffsetX = 0; gridOffsetY = 0; gridSpacing = 54; iconSize = 64; labelOnBottom = 1; showIconPreview = 1; showItemInfo = 0; textSize = 12; viewOptionsVersion = 1; }; ListViewSettings = { calculateAllSizes = 0; columns = { comments = { ascending = 1; index = 7; visible = 0; width = 300; }; dateCreated = { ascending = 0; index = 2; visible = 0; width = 181; }; dateLastOpened = { ascending = 0; index = 8; visible = 0; width = 200; }; dateModified = { ascending = 0; index = 1; visible = 1; width = 181; }; kind = { ascending = 1; index = 4; visible = 1; width = 115; }; label = { ascending = 1; index = 5; visible = 0; width = 100; }; name = { ascending = 1; index = 0; visible = 1; width = 300; }; size = { ascending = 0; index = 3; visible = 1; width = 97; }; version = { ascending = 1; index = 6; visible = 0; width = 75; }; }; iconSize = 16; showIconPreview = 1; sortColumn = name; textSize = 13; useRelativeDates = 1; viewOptionsVersion = 1; }; SettingsType = "FK_StandardViewSettings"; } '
 
 # Avoid creating .DS_Store files on network and USB volumes
 defaults write com.apple.desktopservices DSDontWriteNetworkStores -bool true
@@ -6684,6 +6702,23 @@ defaults write NSGlobalDomain com.apple.swipescrolldirection -bool false 2>/dev/
 defaults write NSGlobalDomain com.apple.trackpad.forceClick -bool false 2>/dev/null || true
 defaults write com.apple.AppleMultitouchTrackpad ForceSuppressed -bool true 2>/dev/null || true
 success "Natural scrolling and force click disabled"
+
+# ---- Trackpad: captured from this machine (tap-to-click off, secondary click, gestures) ----
+for _tp in com.apple.AppleMultitouchTrackpad com.apple.driver.AppleBluetoothMultitouch.trackpad; do
+    defaults write "$_tp" Clicking -bool false 2>/dev/null || true                        # tap to click OFF
+    defaults write "$_tp" DragLock -bool false 2>/dev/null || true
+    defaults write "$_tp" TrackpadRightClick -bool true 2>/dev/null || true                # two-finger secondary click
+    defaults write "$_tp" TrackpadCornerSecondaryClick -int 0 2>/dev/null || true
+    defaults write "$_tp" TrackpadThreeFingerTapGesture -int 0 2>/dev/null || true         # look up OFF
+    defaults write "$_tp" TrackpadTwoFingerDoubleTapGesture -bool false 2>/dev/null || true # smart zoom OFF
+    defaults write "$_tp" Dragging -bool false 2>/dev/null || true
+done
+unset _tp
+# Built-in trackpad only: click firmness (1 = medium) + haptic detents
+defaults write com.apple.AppleMultitouchTrackpad FirstClickThreshold -int 1 2>/dev/null || true
+defaults write com.apple.AppleMultitouchTrackpad SecondClickThreshold -int 1 2>/dev/null || true
+defaults write com.apple.AppleMultitouchTrackpad ActuateDetents -bool true 2>/dev/null || true
+success "Trackpad preferences captured (tap-to-click off, two-finger secondary click, gestures)"
 
 # ---- Spaces: one space spans all displays (AeroSpace needs this) ----
 # Equivalent to "Displays have separate Spaces = OFF". Takes effect after logout.
