@@ -1836,7 +1836,34 @@ brew_install "atuin" "atuin (replaces shell history — SQLite-backed, searchabl
 # mise already installed in core section
 
 # Editors & terminals
-brew_install "helix" "Helix (post-modern modal editor — built-in LSP, tree-sitter, multiple selections, zero-config)"
+# Helix stays installed as the fast fallback editor AND the $EDITOR for git/gh/lazygit
+# commit messages (a full IDE is clunky for those); croft (below) is the primary IDE.
+brew_install "helix" "Helix (modal editor — fallback + \$EDITOR for git; built-in LSP, zero-config)"
+# croft — VS Code-style terminal IDE (primary editor). Rust, not on Homebrew; installed
+# from git main via cargo. Build in a .noindex dir so macOS Spotlight doesn't churn/heat
+# during the compile. AI pairing via `croft pair` (uses ANTHROPIC_API_KEY).
+if command -v croft &>/dev/null; then
+    warn "croft already installed"
+    progress
+elif installed cargo; then
+    info "Installing croft (primary terminal IDE) via cargo — compiles from source, may take a few minutes..."
+    if [[ "$DRY_RUN" == "true" ]]; then
+        info "[DRY RUN] Would: cargo install --git https://github.com/vitali87/croft.git --locked"
+    else
+        _croft_target="$HOME/.cache/croft-build.noindex"
+        mkdir -p "$_croft_target"
+        if CARGO_TARGET_DIR="$_croft_target" cargo install --git https://github.com/vitali87/croft.git --locked >> "$LOG_FILE" 2>&1; then
+            success "croft installed (primary IDE — run 'croft' to open, 'croft pair' for the AI navigator)"
+        else
+            error "Failed to install croft via cargo"
+        fi
+        unset _croft_target
+    fi
+    progress
+else
+    warn "Skipping croft — Rust/cargo not installed (rustup provides it)"
+    progress
+fi
 brew_cask_install "ghostty" "Ghostty (fast GPU-accelerated terminal)"
 brew_install "zellij" "zellij (modern terminal multiplexer — discoverable UI, layouts)"
 
@@ -6776,7 +6803,7 @@ else
 
 ## Environment
 - Shell: zsh with starship prompt, atuin history, fzf fuzzy finder, zsh-autosuggestions, zsh-syntax-highlighting
-- Editor: Helix (`hx`) — modal terminal editor with built-in LSP, tree-sitter, Dracula theme; also the `EDITOR` for git/gh/lazygit. Agentic coding via Claude Code (`claude`).
+- Editor / IDE: **croft** is the primary editor (VS Code-style terminal IDE — `croft` to open a workspace, `croft pair` for the AI navigator). **Helix (`hx`)** is the fast fallback and the `EDITOR` for git/gh/lazygit commit messages (still Dracula, built-in LSP). Agentic coding via Claude Code (`claude`).
 - Terminal: Ghostty (Dracula theme)
 - Package managers: pnpm (preferred), npm, bun
 - Python: uv for packages (not pip), ruff for linting (not flake8/black)
@@ -8121,7 +8148,8 @@ the list, then delete this file.
 - [ ] **Mullvad:** `mullvad account login <ACCOUNT_NUMBER>` (CLI is bundled with the app at `/usr/local/bin/mullvad`).
 - [ ] **starlit** (weather): `starlit --setup` and paste a free OpenWeatherMap API key.
 - [ ] **MCP servers:** export tokens your Claude Code MCP servers need, e.g. `export GITHUB_TOKEN=...` (and `AWS_REGION` / `AWS_PROFILE` for the AWS servers). Requires `claude auth login` at least once.
-- [ ] **Claude AI in Helix/aerc:** set an Anthropic key — `export ANTHROPIC_API_KEY=sk-ant-...` in `~/.zshrc.local` (used by **helix-assist**, the in-editor AI LSP). For the `llm` pipe binds (`A-a` in Helix, `S` in aerc): `llm keys set anthropic` then `llm models default claude-sonnet-4-5`.
+- [ ] **Claude AI in croft/Helix/aerc:** set an Anthropic key — `export ANTHROPIC_API_KEY=sk-ant-...` in `~/.zshrc.local`. Used by **croft** (`croft pair` — the AI navigator in your primary IDE) and **helix-assist** (the in-editor AI LSP in the Helix fallback). For the `llm` pipe binds (`A-a` in Helix, `S` in aerc): `llm keys set anthropic` then `llm models default claude-sonnet-4-5`.
+- [ ] **croft** (primary IDE): installed from git `main` via cargo — run `croft` in a project to open the workspace; re-run `cargo install --git https://github.com/vitali87/croft.git --locked` to upgrade.
 - [ ] **AI side-pane:** `zellij --layout dev` opens your editor + a Claude Code pane side by side (the strongest AI workflow).
 - [ ] **chezmoi:** `chezmoi init <your-dotfiles-repo>` to bring these configs under version control across the MacBook + Mac mini.
 - [ ] **tiki** (notes): your personal notes repo is pre-created and git-initialized at `~/Docs/notes`. Run `cd ~/Docs/notes && tiki` to start. Claude can manage tikis there — its skill is installed at `~/.claude/skills/tiki/` (CRUD via `tiki exec`, quick-capture via `echo "note" | tiki`).

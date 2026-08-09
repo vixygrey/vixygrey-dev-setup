@@ -363,7 +363,8 @@ Faster, prettier, smarter replacements for standard Unix utilities.
 | **zsh-syntax-highlighting** | Command coloring in the terminal -- red for errors |
 | **atuin** | Replaces shell history with SQLite-backed, fuzzy-searchable database |
 | **mise** | Universal version manager -- Node, Python, Go, Ruby all in one (replaces nvm + pyenv + rbenv) |
-| **Helix (`hx`)** | Sole editor — post-modern modal terminal editor with built-in LSP + tree-sitter, auto-format on save, Dracula theme. Also the `EDITOR` for git/gh/lazygit |
+| **croft** | Primary editor -- VS Code-style terminal IDE (Rust; `cargo install --git`). Three-pane workspace, LSP/DAP, integrated terminal; `croft pair` runs an AI navigator (Anthropic/local). Installed from git `main` |
+| **Helix (`hx`)** | Fast fallback editor + the `EDITOR` for git/gh/lazygit commit messages -- modal, built-in LSP + tree-sitter, auto-format on save, Dracula theme |
 | **Claude Code (`claude`)** | Agentic coding in the terminal; hosts the migrated MCP servers |
 | **Claude Code** | AI-assisted coding in the terminal (Anthropic, agentic) |
 | **GitHub Copilot CLI** | AI suggestions in the terminal (via `gh copilot suggest`) |
