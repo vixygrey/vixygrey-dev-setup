@@ -111,6 +111,10 @@ chmod +x scripts/setup-dev-tools-mac.sh
 | **pnpm** | Fast, disk-efficient npm alternative |
 | **jq** | Lightweight command-line JSON processor |
 | **direnv** | Per-directory environment variables (auto-loads `.envrc`) |
+| **lazyenv** | TUI for `.env` files across projects -- diff/sync, secret masking, `.gitignore` checks (complements direnv) |
+| **keyward** | TUI SSH-key manager + A–F security audit + encrypted backups (offline, single binary) |
+| **bmm** | CLI/TUI bookmark manager -- local, fzf-friendly, imports HTML/JSON/TXT |
+| **manly** | Explains the flags in a command from its man page (`manly tar -xzf`) |
 | **watchman** | File watching service (used by React Native, Jest, etc.) |
 | **cmake** | Cross-platform build system generator |
 | **pkg-config** | Helper tool for compiling libraries |
@@ -211,7 +215,7 @@ Faster, prettier, smarter replacements for standard Unix utilities.
 | `curl` | **xh** | Colorized HTTP client with JSON shortcuts |
 | `curl` | **curlie** | curl with httpie-like output formatting |
 | `dig` | **doggo** | Colorized DNS lookup with DoH/DoT support |
-| `wc` (code) | **tokei** | Count lines of code by language with statistics |
+| `wc` (code) | **scc** | Count lines of code by language + complexity + COCOMO cost estimate |
 | `watch` | **viddy** | Modern watch with diff highlighting and history |
 | `hexdump` | **hexyl** | Colorized hex viewer with ASCII sidebar |
 | `curl`/`wget` | **aria2** | Multi-connection parallel downloads, 3-10x faster, BitTorrent |
@@ -603,7 +607,7 @@ Common safe commands are pre-approved so Claude doesn't ask every time:
 - **Security**: trivy, semgrep, gitleaks, cosign
 - **Media & docs**: pandoc, d2, mmdc, ffmpeg, magick
 - **Database**: pgcli, mycli, lazysql, sq, dbmate
-- **Other**: lazygit, lazydocker, dive, hyperfine, oha, tokei, dust, difft, delta
+- **Other**: lazygit, lazydocker, dive, hyperfine, oha, scc, dust, difft, delta
 
 ### Denied Commands
 
@@ -705,7 +709,7 @@ Spotlight to find things) rather than agonizing over where it "should" go.
 | `gj timestamp` | Generate an ISO timestamp |
 | `gj weather` | Show weather for a city (via wttr.in) |
 | `gj standup` | Git standup -- what did I do yesterday? |
-| `gj loc` | Count lines of code in current directory (via tokei) |
+| `gj loc` | Count lines of code in current directory (via scc) |
 
 ### Directory Shortcut Aliases
 
