@@ -368,7 +368,6 @@ Faster, prettier, smarter replacements for standard Unix utilities.
 | **Claude Code (`claude`)** | Agentic coding in the terminal; hosts the migrated MCP servers |
 | **Claude Code** | AI-assisted coding in the terminal (Anthropic, agentic) |
 | **GitHub Copilot CLI** | AI suggestions in the terminal (via `gh copilot suggest`) |
-| **aider** | Terminal AI pair programmer -- git-aware edit loops, complementary to Claude Code |
 | **llm** | Simon Willison's CLI -- one-shot prompts, plugin ecosystem, SQLite logging, embeddings |
 | **repomix** | Pack a repo into a single LLM-friendly file with token counts -- great for bootstrapping any agent |
 | **chezmoi** | Dotfile manager -- backup and restore configs across machines |
