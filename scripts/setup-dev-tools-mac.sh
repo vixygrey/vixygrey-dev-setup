@@ -5663,9 +5663,9 @@ P_BT
 source "$HOME/.config/sketchybar/colors.sh"
 SSID=$(ipconfig getsummary en0 2>/dev/null | awk -F ' SSID : ' '/ SSID : / {print $2; exit}')
 if [ -n "$SSID" ]; then
-    sketchybar --set "$NAME" icon="$ICON_WIFI" icon.color=$GREEN label="$SSID" label.color=$GREEN
+    sketchybar --set "$NAME" icon="$ICON_WIFI" icon.color=$GREEN label.drawing=off
 else
-    sketchybar --set "$NAME" icon="$ICON_WIFI_OFF" icon.color=$COMMENT label="off" label.color=$COMMENT
+    sketchybar --set "$NAME" icon="$ICON_WIFI_OFF" icon.color=$COMMENT label.drawing=off
 fi
 P_WIFI
 
