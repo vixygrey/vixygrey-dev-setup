@@ -235,6 +235,7 @@ Faster, prettier, smarter replacements for standard Unix utilities.
 | **miller (mlr)** | awk/sed/jq for CSV, JSON, and tabular data |
 | **csvkit** | Suite of CSV tools -- csvcut, csvgrep, csvstat, csvlook |
 | **pandoc** | Universal document converter -- Markdown to PDF, DOCX, HTML, etc. |
+| **poppler** | PDF tools -- `pdftoppm` (PDF→PNG), `pdftotext`, `pdfinfo` |
 | **imagemagick** | Image manipulation CLI -- resize, convert, composite, watermark |
 | **ffmpeg** | Video/audio processing swiss army knife |
 | **yt-dlp** | Video/audio downloader for YouTube and hundreds of other sites |
@@ -447,6 +448,7 @@ Preview files in Finder by pressing spacebar.
 | **Claude** | AI assistant |
 | **Skim** | Lightweight PDF reader with annotations -- faster than Preview |
 | **LibreOffice** | Headless office suite -- `soffice --headless --convert-to` lets Claude validate/convert .pptx/.xlsx/.docx (authoring stays in Google Workspace) |
+| **office-py** | uv venv (python-docx/openpyxl/python-pptx) exposed on PATH so Claude can assert on office-file *content*, not just render it |
 | **rclone** | SFTP/S3/cloud file transfer from the terminal (replaced the Cyberduck GUI) |
 
 ---
