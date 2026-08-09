@@ -4177,24 +4177,15 @@ defaults write NSGlobalDomain com.apple.trackpad.scaling -float 2.0
 success "Trackpad configured (faster tracking)"
 
 # -- Mission Control --
-# Don't automatically rearrange Spaces based on most recent use
+# Keep ONLY mru-spaces: "automatically rearrange Spaces based on most recent use" must
+# be OFF or AeroSpace's workspace switching misbehaves — a tiling-WM prerequisite, not a
+# preference. The cosmetic Mission Control tweaks (animation speed, group-by-app) were
+# dropped: AeroSpace is the driver, and Mission Control is rarely invoked here.
 defaults write com.apple.dock mru-spaces -bool false
-# Speed up Mission Control animations
-defaults write com.apple.dock expose-animation-duration -float 0.15
-# Group windows by application in Mission Control
-defaults write com.apple.dock expose-group-apps -bool true
-success "Mission Control configured (fixed spaces, fast animations)"
+success "Mission Control: auto-rearrange Spaces disabled (AeroSpace prerequisite)"
 
-# -- Hot Corners (all disabled to prevent accidental triggers) --
-defaults write com.apple.dock wvous-tl-corner -int 1
-defaults write com.apple.dock wvous-tl-modifier -int 0
-defaults write com.apple.dock wvous-tr-corner -int 1
-defaults write com.apple.dock wvous-tr-modifier -int 0
-defaults write com.apple.dock wvous-bl-corner -int 1
-defaults write com.apple.dock wvous-bl-modifier -int 0
-defaults write com.apple.dock wvous-br-corner -int 1
-defaults write com.apple.dock wvous-br-modifier -int 0
-success "Hot corners disabled (all corners off)"
+# Hot Corners: left at macOS defaults (all off). The default is already no-action and
+# they aren't used here, so there's nothing to disable.
 
 # -- Safari --
 # Safari is sandboxed on modern macOS — writes may fail without Full Disk Access
@@ -4251,7 +4242,7 @@ sudo pmset -c displaysleep 120 2>/dev/null || true  # charger: 2 hours
 sudo pmset -b displaysleep 75 2>/dev/null || true   # battery: 1hr 15min
 success "Screensaver at 45min, display sleep at 2hr (charger) / 1h15m (battery)"
 
-# Restart Dock to apply all Dock/Hot Corner/Mission Control changes
+# Restart Dock to apply all Dock/Mission Control changes
 killall Dock 2>/dev/null || true
 
 else
@@ -6634,25 +6625,33 @@ done
 success "Spotlight exclusions set (node_modules, caches via .metadata_never_index)"
 
 # ---- Time Machine exclusions ----
-info "Configuring Time Machine exclusions..."
-TM_EXCLUSIONS=(
-    "$HOME/node_modules"
-    "$HOME/.npm"
-    "$HOME/.pnpm-store"
-    "$HOME/.docker"
-    "$HOME/Library/Caches"
-    "$HOME/.cache"
-    "$HOME/.Trash"
-    "$HOME/Downloads"
-)
-for dir in "${TM_EXCLUSIONS[@]}"; do
-    if [[ -d "$dir" ]]; then
-        # Use sticky exclusion (-p) so it persists even if the directory is recreated
-        # tmutil fails with "Invalid argument" on some paths (e.g., non-existent or special volumes)
-        tmutil addexclusion -p "$dir" >> "$LOG_FILE" 2>&1 || tmutil addexclusion "$dir" >> "$LOG_FILE" 2>&1 || true
-    fi
-done
-success "Time Machine exclusions set (node_modules, Docker, caches, Downloads)"
+# tmutil exclusions ONLY affect Time Machine. Skip entirely when TM has no destination
+# configured — the calls would be inert no-ops, and this setup's real backups (borg/
+# borgmatic, rclone, rsync) carry their own excludes (see the borgmatic config's
+# exclude_patterns). If you add a TM destination later, re-run to apply these.
+if tmutil destinationinfo 2>/dev/null | grep -q 'No destinations configured'; then
+    info "Time Machine not configured — skipping TM exclusions (borg/rclone/rsync carry their own excludes)"
+else
+    info "Configuring Time Machine exclusions..."
+    TM_EXCLUSIONS=(
+        "$HOME/node_modules"
+        "$HOME/.npm"
+        "$HOME/.pnpm-store"
+        "$HOME/.docker"
+        "$HOME/Library/Caches"
+        "$HOME/.cache"
+        "$HOME/.Trash"
+        "$HOME/Downloads"
+    )
+    for dir in "${TM_EXCLUSIONS[@]}"; do
+        if [[ -d "$dir" ]]; then
+            # Use sticky exclusion (-p) so it persists even if the directory is recreated
+            # tmutil fails with "Invalid argument" on some paths (e.g., non-existent or special volumes)
+            tmutil addexclusion -p "$dir" >> "$LOG_FILE" 2>&1 || tmutil addexclusion "$dir" >> "$LOG_FILE" 2>&1 || true
+        fi
+    done
+    success "Time Machine exclusions set (node_modules, Docker, caches, Downloads)"
+fi
 
 # ---- Disable Siri ----
 if defaults read com.apple.assistant.support "Assistant Enabled" 2>/dev/null | grep -q "1"; then
