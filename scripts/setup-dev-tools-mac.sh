@@ -3893,6 +3893,12 @@ info "Configuring macOS system defaults..."
 
 if [[ "$DRY_RUN" != "true" ]]; then
 
+# -- Menu bar --
+# Auto-hide the native macOS menu bar so SketchyBar owns the top strip (the system
+# bar slides down only when you push the cursor to the very top). Without this,
+# SketchyBar renders *under* the native bar. Takes effect after logout/restart.
+defaults write NSGlobalDomain _HIHideMenuBar -bool true
+
 # -- Dock --
 # Auto-hide the Dock
 defaults write com.apple.dock autohide -bool true
@@ -5224,8 +5230,9 @@ AEROSPACE_CONF
 success "AeroSpace configured (Option+hjkl focus, workspaces 1-9, SketchyBar hook)"
 
 # ---- SketchyBar config (Dracula status bar + AeroSpace workspaces) ----
-# Shell-based config (no SbarLua build step). Plugins are simple + label-based so
-# they render without depending on specific Nerd Font glyphs; tune styling later.
+# Shell-based config (no SbarLua build step). Items show a Nerd Font glyph icon
+# (icons.sh) + a value label; the plugins swap the glyph by state (battery level,
+# wifi/bt/vpn on-off, volume level). Glyphs need JetBrainsMono Nerd Font (installed).
 SBAR_DIR="$HOME/.config/sketchybar"
 SBAR_PLUGINS="$SBAR_DIR/plugins"
     info "Creating SketchyBar configuration (Dracula, AeroSpace pills, system widgets)..."
@@ -5244,7 +5251,29 @@ export PINK=0xffff79c6
 export PURPLE=0xffbd93f9
 export RED=0xffff5555
 export YELLOW=0xfff1fa8c
+# Nerd Font glyphs (sourced here so every plugin + the rc get them via colors.sh).
+[ -r "$HOME/.config/sketchybar/icons.sh" ] && source "$HOME/.config/sketchybar/icons.sh"
 SBAR_COLORS
+
+    # Shared Nerd Font glyphs (JetBrainsMono Nerd Font). Bash $'\U...' escapes expand
+    # to the glyph at source time. Codepoints: nf-fa/nf-oct/nf-md sets.
+    write_managed_script "$SBAR_DIR/icons.sh" <<'SBAR_ICONS'
+#!/usr/bin/env bash
+export ICON_CLOCK=$'\uf017'             # nf-fa-clock
+export ICON_CPU=$'\uf4bc'               # nf-oct-cpu
+export ICON_MEM=$'\U000F035B'          # nf-md-memory
+export ICON_BATT=$'\U000F0079'         # nf-md-battery
+export ICON_BATT_CHARGE=$'\U000F0084'  # nf-md-battery-charging
+export ICON_BATT_LOW=$'\U000F0083'     # nf-md-battery-alert
+export ICON_BT_ON=$'\U000F00AF'        # nf-md-bluetooth
+export ICON_BT_OFF=$'\U000F00B2'       # nf-md-bluetooth-off
+export ICON_WIFI=$'\U000F05A9'         # nf-md-wifi
+export ICON_WIFI_OFF=$'\U000F05AA'     # nf-md-wifi-off
+export ICON_VOL=$'\U000F057E'          # nf-md-volume-high
+export ICON_VOL_MUTE=$'\U000F0581'     # nf-md-volume-off
+export ICON_VPN_ON=$'\U000F0565'       # nf-md-shield-check
+export ICON_VPN_OFF=$'\U000F099D'      # nf-md-shield-off-outline
+SBAR_ICONS
 
     write_managed_script "$SBAR_DIR/sketchybarrc" <<'SBAR_RC'
 #!/usr/bin/env bash
@@ -5281,7 +5310,7 @@ sketchybar --add item front_app left \
 
 # --- Center: clock (click opens herald's calendar in a Ghostty quick terminal) ---
 sketchybar --add item clock center \
-           --set clock update_freq=10 icon.drawing=off \
+           --set clock update_freq=10 icon="$ICON_CLOCK" icon.color=$PURPLE \
                  click_script="open -a Ghostty; sleep 0.2; osascript -e 'tell application \"System Events\" to keystroke \"herald\" & return' >/dev/null 2>&1" \
                  script="$PLUGIN_DIR/clock.sh"
 
@@ -5291,28 +5320,28 @@ sketchybar --add item battery right \
            --set battery update_freq=120 script="$PLUGIN_DIR/battery.sh"
 
 sketchybar --add item bluetooth right \
-           --set bluetooth update_freq=30 icon.drawing=off label.color=$PURPLE \
+           --set bluetooth update_freq=30 label.drawing=off \
                  click_script="blueutil --power toggle" \
                  script="$PLUGIN_DIR/bluetooth.sh"
 
 sketchybar --add item wifi right \
-           --set wifi update_freq=30 icon.drawing=off label.color=$GREEN \
+           --set wifi update_freq=30 label.color=$GREEN \
                  script="$PLUGIN_DIR/wifi.sh"
 
 sketchybar --add item volume right \
            --subscribe volume volume_change \
-           --set volume icon.drawing=off script="$PLUGIN_DIR/volume.sh"
+           --set volume script="$PLUGIN_DIR/volume.sh"
 
 sketchybar --add item cpu right \
-           --set cpu update_freq=5 icon.drawing=off label.color=$ORANGE \
+           --set cpu update_freq=5 icon="$ICON_CPU" icon.color=$ORANGE label.color=$ORANGE \
                  script="$PLUGIN_DIR/cpu.sh"
 
 sketchybar --add item mem right \
-           --set mem update_freq=10 icon.drawing=off label.color=$YELLOW \
+           --set mem update_freq=10 icon="$ICON_MEM" icon.color=$YELLOW label.color=$YELLOW \
                  script="$PLUGIN_DIR/mem.sh"
 
 sketchybar --add item vpn right \
-           --set vpn update_freq=15 icon.drawing=off \
+           --set vpn update_freq=15 \
                  click_script="$PLUGIN_DIR/vpn_toggle.sh" \
                  script="$PLUGIN_DIR/vpn.sh"
 
@@ -5350,18 +5379,19 @@ CHARGING=$(pmset -g batt | grep -c 'AC Power')
 COLOR=$GREEN
 [ "$PCT" -lt 40 ] && COLOR=$YELLOW
 [ "$PCT" -lt 20 ] && COLOR=$RED
-LABEL="${PCT}%"
-[ "$CHARGING" -gt 0 ] && LABEL="${PCT}%+"
-sketchybar --set "$NAME" drawing=on icon.drawing=off label="$LABEL" label.color=$COLOR
+ICON="$ICON_BATT"
+[ "$PCT" -lt 20 ] && ICON="$ICON_BATT_LOW"
+[ "$CHARGING" -gt 0 ] && ICON="$ICON_BATT_CHARGE"
+sketchybar --set "$NAME" drawing=on icon="$ICON" icon.color=$COLOR label="${PCT}%" label.color=$COLOR
 P_BATT
 
     write_managed_script "$SBAR_PLUGINS/bluetooth.sh" <<'P_BT'
 #!/usr/bin/env bash
 source "$HOME/.config/sketchybar/colors.sh"
 if command -v blueutil >/dev/null 2>&1 && [ "$(blueutil --power)" = "1" ]; then
-    sketchybar --set "$NAME" label="BT" label.color=$PURPLE
+    sketchybar --set "$NAME" icon="$ICON_BT_ON" icon.color=$PURPLE
 else
-    sketchybar --set "$NAME" label="BT" label.color=$COMMENT
+    sketchybar --set "$NAME" icon="$ICON_BT_OFF" icon.color=$COMMENT
 fi
 P_BT
 
@@ -5370,9 +5400,9 @@ P_BT
 source "$HOME/.config/sketchybar/colors.sh"
 SSID=$(ipconfig getsummary en0 2>/dev/null | awk -F ' SSID : ' '/ SSID : / {print $2; exit}')
 if [ -n "$SSID" ]; then
-    sketchybar --set "$NAME" label="$SSID" label.color=$GREEN
+    sketchybar --set "$NAME" icon="$ICON_WIFI" icon.color=$GREEN label="$SSID" label.color=$GREEN
 else
-    sketchybar --set "$NAME" label="off" label.color=$COMMENT
+    sketchybar --set "$NAME" icon="$ICON_WIFI_OFF" icon.color=$COMMENT label="off" label.color=$COMMENT
 fi
 P_WIFI
 
@@ -5380,14 +5410,15 @@ P_WIFI
 #!/usr/bin/env bash
 source "$HOME/.config/sketchybar/colors.sh"
 VOL="${INFO:-$(osascript -e 'output volume of (get volume settings)')}"
-sketchybar --set "$NAME" label="vol ${VOL}%" label.color=$CYAN
+ICON="$ICON_VOL"; [ "${VOL:-0}" -eq 0 ] 2>/dev/null && ICON="$ICON_VOL_MUTE"
+sketchybar --set "$NAME" icon="$ICON" icon.color=$CYAN label="${VOL}%" label.color=$CYAN
 P_VOL
 
     write_managed_script "$SBAR_PLUGINS/cpu.sh" <<'P_CPU'
 #!/usr/bin/env bash
 source "$HOME/.config/sketchybar/colors.sh"
 CPU=$(ps -A -o %cpu | awk '{s+=$1} END {printf "%d", s/'"$(sysctl -n hw.ncpu)"'}')
-sketchybar --set "$NAME" label="cpu ${CPU}%" label.color=$ORANGE
+sketchybar --set "$NAME" label="${CPU}%" label.color=$ORANGE
 P_CPU
 
     write_managed_script "$SBAR_PLUGINS/mem.sh" <<'P_MEM'
@@ -5395,16 +5426,16 @@ P_CPU
 source "$HOME/.config/sketchybar/colors.sh"
 USED=$(memory_pressure 2>/dev/null | awk -F ': ' '/System-wide memory free percentage/ {print 100-$2}' | tr -d '%')
 [ -z "$USED" ] && USED="?"
-sketchybar --set "$NAME" label="mem ${USED}%" label.color=$YELLOW
+sketchybar --set "$NAME" label="${USED}%" label.color=$YELLOW
 P_MEM
 
     write_managed_script "$SBAR_PLUGINS/vpn.sh" <<'P_VPN'
 #!/usr/bin/env bash
 source "$HOME/.config/sketchybar/colors.sh"
 if command -v mullvad >/dev/null 2>&1 && mullvad status 2>/dev/null | grep -qi 'Connected'; then
-    sketchybar --set "$NAME" label="VPN" label.color=$GREEN
+    sketchybar --set "$NAME" icon="$ICON_VPN_ON" icon.color=$GREEN label="VPN" label.color=$GREEN
 else
-    sketchybar --set "$NAME" label="VPN" label.color=$RED
+    sketchybar --set "$NAME" icon="$ICON_VPN_OFF" icon.color=$RED label="VPN" label.color=$RED
 fi
 P_VPN
 
@@ -8007,7 +8038,7 @@ the list, then delete this file.
 ## macOS permissions & settings
 - [ ] **Accessibility** — grant to **Ghostty** and **AeroSpace**: System Settings -> Privacy & Security -> Accessibility. (Required for the global launcher hotkey and window management.)
 - [ ] **Disable Spotlight's cmd+space** so the Ghostty quick terminal can use it: System Settings -> Keyboard -> Keyboard Shortcuts -> Spotlight -> uncheck "Show Spotlight search". (Or change the Ghostty bind to `global:cmd+backquote` in `~/.config/ghostty/config`.)
-- [ ] **Auto-hide the menu bar** (so SketchyBar is the bar): System Settings -> Control Center -> "Automatically hide and show the menu bar" -> Always.
+- [ ] **Menu bar auto-hide** is set by the script (`_HIHideMenuBar`) so SketchyBar owns the top — **log out/in (or restart)** for it to take effect. If it doesn't stick, toggle System Settings -> Control Center -> "Automatically hide and show the menu bar" -> Always.
 - [ ] **Displays have separate Spaces = OFF** — already set by the script (`spans-displays`), but it needs a **logout/login** to take effect.
 - [ ] Log out and back in once so AeroSpace + the Spaces setting apply cleanly.
 
