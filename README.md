@@ -441,7 +441,7 @@ Preview files in Finder by pressing spacebar.
 
 | App | Description |
 |-----|-------------|
-| **tiki** | Terminal Markdown workspace -- tasks, docs, kanban, wiki (git-backed); replaced the Notion GUI |
+| **tiki** | Terminal Markdown workspace -- tasks, docs, kanban, wiki (git-backed); replaced the Notion GUI. Its official Claude Code skill is installed to `~/.claude/skills/tiki/`, so Claude manages notes/tasks via `tiki exec` (ruki) |
 | **khal + vdirsyncer** | Unified terminal calendar -- syncs Google (work) + iCloud (personal) CalDAV; replaced Notion Calendar |
 | **aerc** | Terminal email -- Gmail (work) + iCloud (personal) in one client |
 | **Shottr** | Fast native screenshots -- scrolling capture, OCR, annotations (local-only, no account) |
