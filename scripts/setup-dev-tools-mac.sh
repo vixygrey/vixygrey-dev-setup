@@ -2270,7 +2270,7 @@ if [[ "$DRY_RUN" != "true" ]] && installed borgmatic; then
 # TODO: set `repositories`, then run: borgmatic init --encryption repokey-blake2
 source_directories:
     - ~/Code
-    - ~/Docs
+    - ~/Documents
     - ~/Creative
 
 repositories:
@@ -2492,7 +2492,7 @@ read_only_style = "fg:red"
 
 [directory.substitutions]
 "Inbox" = "📥 "
-"Docs" = "󰈙 "
+"Documents" = "󰈙 "
 "Downloads" = " "
 "Code" = " "
 "Creative" = "🎨"
@@ -5818,12 +5818,12 @@ DIRS=(
     "$HOME/Screenshots"
 
     # -- Docs (life admin — a few flat, non-overlapping buckets) --------------
-    "$HOME/Docs/finance"    # statements, taxes, invoices
-    "$HOME/Docs/health"
-    "$HOME/Docs/admin"      # legal, insurance, contracts
-    "$HOME/Docs/receipts"
-    "$HOME/Docs/travel"
-    "$HOME/Docs/notes"      # tiki notes/tasks repo (git-backed; git-initialized below)
+    "$HOME/Documents/finance"    # statements, taxes, invoices
+    "$HOME/Documents/health"
+    "$HOME/Documents/admin"      # legal, insurance, contracts
+    "$HOME/Documents/receipts"
+    "$HOME/Documents/travel"
+    "$HOME/Documents/notes"      # tiki notes/tasks repo (git-backed; git-initialized below)
 
     # -- Creative (flat) ------------------------------------------------------
     "$HOME/Creative/writing"
@@ -5841,14 +5841,14 @@ DIRS=(
 for dir in "${DIRS[@]}"; do
     mkdir -p "$dir"
 done
-success "Directory structure created (~/Inbox, ~/Code, ~/Scripts, ~/Docs, ~/Creative, ~/Media, ~/Archive)"
+success "Directory structure created (~/Inbox, ~/Code, ~/Scripts, ~/Documents, ~/Creative, ~/Media, ~/Archive)"
 
 # Git-init the tiki notes repo so it's ready as a git-backed workspace (idempotent).
-if installed git && [[ ! -d "$HOME/Docs/notes/.git" ]]; then
-    if git init -q "$HOME/Docs/notes" >> "$LOG_FILE" 2>&1; then
-        success "Initialized tiki notes repo at ~/Docs/notes (git-backed)"
+if installed git && [[ ! -d "$HOME/Documents/notes/.git" ]]; then
+    if git init -q "$HOME/Documents/notes" >> "$LOG_FILE" 2>&1; then
+        success "Initialized tiki notes repo at ~/Documents/notes (git-backed)"
     else
-        warn "Could not git init ~/Docs/notes"
+        warn "Could not git init ~/Documents/notes"
     fi
 fi
 
@@ -6519,6 +6519,9 @@ SIDEBAR_SWIFT
         "$SIDEBAR_TOOL" remove "$HOME/Movies" 2>/dev/null || true
         "$SIDEBAR_TOOL" remove "$HOME/Music" 2>/dev/null || true
         "$SIDEBAR_TOOL" remove "$HOME/Pictures" 2>/dev/null || true
+        # Drop the legacy ~/Docs entry (consolidated into the default ~/Documents) so
+        # re-runs on existing machines don't leave a dangling favorite.
+        "$SIDEBAR_TOOL" remove "$HOME/Docs" 2>/dev/null || true
 
         # Add our organized folders to sidebar.
         # Inbox and Downloads (the two dump zones) go first for zero-friction access.
@@ -6526,7 +6529,7 @@ SIDEBAR_SWIFT
             "$HOME/Inbox"
             "$HOME/Downloads"
             "$HOME/Code"
-            "$HOME/Docs"
+            "$HOME/Documents"
             "$HOME/Creative"
             "$HOME/Media"
             "$HOME/Archive"
@@ -7005,7 +7008,7 @@ else
 - File transfer: rclone (CLI — SFTP/S3/cloud)
 - Proxy/debugger: mitmproxy
 - Tunneling: ngrok
-- Notes, tasks & project boards → **use tiki** (git-backed Markdown workspace), not ad-hoc scratch files, for anything worth keeping. The `tiki` **skill is installed** (~/.claude/skills/tiki) — use it: CRUD via `tiki exec '<ruki>'` (SQL-like; auto-validates + git-stages), quick-capture via `echo "note" | tiki` (first line = title). Tikis live in the cwd as Markdown. Personal (non-project) notes/tasks go in **~/Docs/notes** (a git repo) — cd there for general notes; for project-specific tasks, use the project's cwd.
+- Notes, tasks & project boards → **use tiki** (git-backed Markdown workspace), not ad-hoc scratch files, for anything worth keeping. The `tiki` **skill is installed** (~/.claude/skills/tiki) — use it: CRUD via `tiki exec '<ruki>'` (SQL-like; auto-validates + git-stages), quick-capture via `echo "note" | tiki` (first line = title). Tikis live in the cwd as Markdown. Personal (non-project) notes/tasks go in **~/Documents/notes** (a git repo) — cd there for general notes; for project-specific tasks, use the project's cwd.
 - Email & calendar: **herald** (one terminal app for both — Gmail work + iCloud personal, unified CalDAV calendar, built-in AI triage/summaries). Herald exposes an **MCP server** (registered in Claude Code) — prefer its MCP tools for reading/searching mail and calendar. **Never send, reply, delete, archive, or modify mail or events without explicit user confirmation** (mutations also require `herald serve` running).
 - Cloud storage: rclone (Google Drive, S3, Dropbox, etc.); borg for versioned backups
 - Browser: Google Chrome (primary); Carbonyl / w3m in the terminal
@@ -7016,7 +7019,7 @@ else
 - All company work runs on **Google Workspace** (Gmail, Docs/Sheets/Slides, Drive, Meet, Chat, Vids). Produce documents/deliverables in Google Workspace, not a local office suite — **author** in Workspace, not MS Office. LibreOffice is installed **only** for headless **validation/conversion** of office files (`soffice --headless --convert-to …`), e.g. checking a `.pptx`/`.xlsx`/`.docx` opens cleanly or rendering it to PDF — not for authoring. Use **Google Meet** for calls (no Zoom); **Google Chat** for messaging (no Slack).
 - To work with Workspace from the terminal, use **`gws`** (google-workspace-cli — Drive/Gmail/Docs/Sheets/Calendar/Chat with structured JSON output; run `gws auth login` first). **Read/list/search/get freely**; but **never send, reply, share, move, delete, or modify** mail, files, or events **without explicit user confirmation** — state exactly what will change first. (gws also ships Claude skills you can add from its repo for specific recipes.)
 - Tool philosophy: prefer **open-source, CLI-first, privacy-preserving, and minimal** options; declutter aggressively. When recommending tools, lead with one option that fits these and flag any that don't.
-- **ADD-friendly home layout** (low-decision, shallow): `~/Inbox` (dump zone — drop anything, sort later), `~/Code` (work/personal/oss/learning), `~/Docs` (finance, health, admin, receipts, travel), `~/Creative`, `~/Media`, `~/Archive`, `~/Screenshots`, `~/Scripts`. When in doubt where a file goes, suggest `~/Inbox` rather than a deep path.
+- **ADD-friendly home layout** (low-decision, shallow): `~/Inbox` (dump zone — drop anything, sort later), `~/Code` (work/personal/oss/learning), `~/Documents` (finance, health, admin, receipts, travel), `~/Creative`, `~/Media`, `~/Archive`, `~/Screenshots`, `~/Scripts`. When in doubt where a file goes, suggest `~/Inbox` rather than a deep path.
 
 ## Available CLI Tools (use these instead of manual approaches)
 - **Search**: `rg` (ripgrep) for content, `fd` for files, `fzf` for interactive, `mdfind` for Spotlight/metadata search (filename, tags, content across the disk)
@@ -8347,7 +8350,7 @@ the list, then delete this file.
 - [ ] **croft** (primary IDE): installed from git `main` via cargo — run `croft` in a project to open the workspace; re-run `cargo install --git https://github.com/vitali87/croft.git --locked` to upgrade.
 - [ ] **AI side-pane:** `zellij --layout dev` opens your editor + a Claude Code pane side by side (the strongest AI workflow).
 - [ ] **chezmoi:** `chezmoi init <your-dotfiles-repo>` to bring these configs under version control across the MacBook + Mac mini.
-- [ ] **tiki** (notes): your personal notes repo is pre-created and git-initialized at `~/Docs/notes`. Run `cd ~/Docs/notes && tiki` to start. Claude can manage tikis there — its skill is installed at `~/.claude/skills/tiki/` (CRUD via `tiki exec`, quick-capture via `echo "note" | tiki`).
+- [ ] **tiki** (notes): your personal notes repo is pre-created and git-initialized at `~/Documents/notes`. Run `cd ~/Documents/notes && tiki` to start. Claude can manage tikis there — its skill is installed at `~/.claude/skills/tiki/` (CRUD via `tiki exec`, quick-capture via `echo "note" | tiki`).
 - [ ] **cliamp** (music): drop music into `~/Media/music`, then run `cliamp ~/Media/music` (or set the folder in its UI). Streaming (YouTube/SoundCloud/Spotify/radio) + EQ + 20+ visualizers are built in.
 - [ ] **leaf** (Markdown): if tab-completion isn't working, run `leaf --auto-complete` and restart your shell (the script attempts this automatically).
 

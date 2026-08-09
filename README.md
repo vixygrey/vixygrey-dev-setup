@@ -654,7 +654,7 @@ Spotlight to find things) rather than agonizing over where it "should" go.
 |
 |-- Screenshots/                 # Screenshots save here
 |
-|-- Docs/                        # -- Life Admin (a few flat buckets) --
+|-- Documents/                   # -- Life Admin (a few flat buckets) --
 |   |-- finance/                 # Statements, taxes, invoices
 |   |-- health/                  # Medical records, insurance cards
 |   |-- admin/                   # Legal, insurance, contracts
