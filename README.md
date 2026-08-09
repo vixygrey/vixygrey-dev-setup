@@ -50,7 +50,7 @@ chmod +x scripts/setup-dev-tools-mac.sh
 2. Installs all tools via Homebrew, Cask, npm, and Mac App Store with **progress tracking**
 3. Configures every tool with sensible defaults
 4. Applies the **Dracula** theme everywhere
-5. Sets macOS system defaults (Dock, keyboard, Finder, screenshots, wallpaper, screensaver, etc.)
+5. Sets macOS system defaults (Dock, keyboard, Finder, screenshots, screensaver, etc.)
 6. Configures Finder sidebar with custom favorites via **LSSharedFileList** API
 7. Sets the Dock to auto-hide and installs `dockutil` so you can curate pins yourself (no automatic pin list — see GUIDE.md for examples)
 8. Optionally **removes pre-installed Apple bloat** (GarageBand, News, Stocks, etc.)
@@ -812,13 +812,11 @@ The script generates config files with sensible defaults:
 | Category | Changes |
 |----------|---------|
 | **Dock** | Auto-hide, small icons (40px), no recents, scale minimize, no delay, spacers, all default pins cleared |
-| **Wallpaper** | Auto-set from `assets/wolf-wallpaper.jpg` to all desktops |
 | **Screensaver** | 45min idle, display sleep at 2hr (charger) / 1h15m (battery) |
 | **Screenshots** | PNG format, saved to `~/Screenshots`, no shadow, no thumbnail |
 | **Keyboard** | Fast key repeat (2/15), no press-and-hold, no auto-correct/capitalize/smart quotes/dashes/periods |
 | **Trackpad** | Faster tracking speed (2.0) |
-| **Mission Control** | Fixed spaces (no auto-rearrange), fast animations, group by app |
-| **Hot Corners** | Top-left: Mission Control, Top-right: Desktop |
+| **Mission Control** | Fixed spaces — auto-rearrange disabled (required by AeroSpace) |
 | **Stage Manager** | Disabled (prevents accidental activation) |
 | **Safari** | Developer menu enabled, full URL in address bar |
 | **TextEdit** | Plain text default, UTF-8 encoding |
