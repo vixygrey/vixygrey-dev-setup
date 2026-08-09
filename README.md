@@ -443,8 +443,7 @@ Preview files in Finder by pressing spacebar.
 | App | Description |
 |-----|-------------|
 | **tiki** | Terminal Markdown workspace -- tasks, docs, kanban, wiki (git-backed); replaced the Notion GUI. Its official Claude Code skill is installed to `~/.claude/skills/tiki/`, so Claude manages notes/tasks via `tiki exec` (ruki) |
-| **khal + vdirsyncer** | Unified terminal calendar -- syncs Google (work) + iCloud (personal) CalDAV; replaced Notion Calendar |
-| **aerc** | Terminal email -- Gmail (work) + iCloud (personal) in one client |
+| **herald** | Terminal email **+** calendar in one app -- Gmail (work) + iCloud (personal), unified CalDAV, built-in AI triage/summaries + an MCP server for Claude; replaced aerc + khal + vdirsyncer + Notion Calendar |
 | **Shottr** | Fast native screenshots -- scrolling capture, OCR, annotations (local-only, no account) |
 | **Claude** | AI assistant |
 | **Skim** | Lightweight PDF reader with annotations -- faster than Preview |
@@ -765,8 +764,7 @@ The script generates config files with sensible defaults:
 | `~/.config/aerospace/aerospace.toml` | AeroSpace | Option+hjkl focus, workspaces 1-9, gaps, SketchyBar hook |
 | `~/.config/sketchybar/` | SketchyBar | Dracula bar: workspace pills, app, clock, battery, wifi, volume, cpu, mem, bluetooth, VPN |
 | `~/Library/Preferences/kew/kewrc` | kew | Music library `~/Media/music`, spectrum visualizer, cover art |
-| `~/.config/aerc/` | aerc | Gmail + iCloud accounts skeleton, threading, plain-text-first viewer |
-| `~/.config/khal/config` + `~/.config/vdirsyncer/config` | khal/vdirsyncer | Unified Google + iCloud calendar |
+| `~/.herald/conf.yaml` | herald | Email + calendar — **self-configured** by herald on first run (not written by setup) |
 | `~/.config/zellij/config.kdl` | zellij | Dracula theme, compact layout, mouse, Ctrl-a prefix |
 | `~/.config/mpv/mpv.conf` | mpv | Hardware accel, save position, screenshots to ~/Screenshots |
 | `~/.config/git-cliff/cliff.toml` | git-cliff | Conventional commits changelog template |
@@ -935,7 +933,7 @@ Run `hx --health` to see what Helix detects. Config lives in `~/.config/helix/co
 (Dracula theme, relative line numbers, inlay hints, auto-format, `Ctrl-s` to save) and
 `languages.toml` (per-language formatters).
 
-### AI agent — Claude Code (+ Helix/aerc integration)
+### AI agent — Claude Code (+ croft/Helix integration)
 
 Agentic coding is handled by **Claude Code** (`claude`) in the terminal, which reuses
 the MCP servers below. (Kiro's agent/specs/steering/hooks are gone with Kiro; Claude
@@ -946,8 +944,9 @@ Claude is wired into the terminal tools in three tiers:
 | Tier | How | Best for |
 |------|-----|----------|
 | **1. Side-pane** | `zellij --layout dev` — editor + a `claude` pane | Real, multi-file, agentic work (strongest) |
-| **2. `llm` pipe** | Helix `Alt+a` on a selection; aerc `S` to summarize a message | Quick in-place edits / email triage |
+| **2. `llm` pipe** | Helix `Alt+a` on a selection | Quick in-place edits |
 | **3. AI-as-LSP** | **helix-assist** (`--handler anthropic`) — ghost-text completions + `Space A` | Inline completions inside Helix |
+| **4. herald** | Built-in AI triage/summaries + MCP server (email/calendar) | Reading + triaging mail/events |
 
 Set `ANTHROPIC_API_KEY` (for helix-assist) and `llm keys set anthropic` + `llm models
 default claude-sonnet-4-5` (for the `llm` pipe binds). The `llm-anthropic` plugin and
