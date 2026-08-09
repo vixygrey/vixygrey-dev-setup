@@ -227,7 +227,7 @@ ALL_CATEGORIES=(
 declare -A CATEGORY_DESC=(
     [prerequisites]="Xcode CLI Tools, Homebrew, GNU coreutils"
     [core]="mise (Node, Python), Go, Rust, OrbStack, bun, uv, pnpm"
-    [git]="Git, GitHub CLI, delta, lazygit, pre-commit"
+    [git]="Git, GitHub CLI, glab, delta, lazygit, pre-commit"
     [aws]="AWS CLI, CDK, SAM, Granted, cfn-lint, e1s/e2c/stu/claws (TUIs), s5cmd, steampipe, dynein, iamlive"
     [iac]="OpenTofu (Terraform), tflint, terraform-docs, checkov, infracost"
     [security]="detect-secrets, gitleaks, trivy, semgrep, ClamAV"
@@ -395,7 +395,7 @@ list_categories() {
     echo ""
     printf "  %-25s %s\n" "prerequisites"       "Xcode CLI Tools, Homebrew, GNU coreutils"
     printf "  %-25s %s\n" "core"                "mise (Node, Python), Go, Rust, OrbStack, bun, uv, pnpm"
-    printf "  %-25s %s\n" "git"                 "Git, GitHub CLI, delta, lazygit, pre-commit"
+    printf "  %-25s %s\n" "git"                 "Git, GitHub CLI, glab, delta, lazygit, pre-commit"
     printf "  %-25s %s\n" "aws"                 "AWS CLI, CDK, SAM, Granted, cfn-lint, e1s/e2c/stu/claws (TUIs), s5cmd, steampipe, dynein, iamlive"
     printf "  %-25s %s\n" "iac"                 "OpenTofu (Terraform), tflint, terraform-docs, checkov, infracost"
     printf "  %-25s %s\n" "security"            "detect-secrets, gitleaks, trivy, semgrep, ClamAV, Objective-See"
@@ -1370,6 +1370,8 @@ banner "Git & GitHub"
 
 brew_install "git" "Git"
 brew_install "gh" "GitHub CLI"
+# GitHub stays primary; glab is the GitLab CLI for client repos hosted on GitLab.
+brew_install "glab" "glab (GitLab CLI — mirrors gh conveniences for GitLab repos)"
 brew_install "git-delta" "delta (better git diffs)"
 brew_install "git-lfs" "Git LFS"
 brew_install "gnupg" "GnuPG (commit signing)"
@@ -4784,6 +4786,40 @@ aliases:
 GH_CONF
     success "GitHub CLI configured (SSH protocol, Helix editor, delta pager, aliases)"
 
+# ---- glab (GitLab CLI) config — mirror the gh conveniences ----
+# GitLab uses merge requests, so the pr* aliases point at `mr` (same alias NAMES as
+# gh, so muscle memory carries over). glab owns its config schema, so drive it via
+# `glab config set` / `glab alias set` rather than hand-writing YAML.
+if [[ "$DRY_RUN" != "true" ]] && installed glab && ! is_done "config:glab"; then
+    info "Configuring glab (SSH, Helix, delta, gh-style aliases → merge requests)..."
+    glab config set git_protocol ssh >> "$LOG_FILE" 2>&1 || true
+    glab config set editor hx >> "$LOG_FILE" 2>&1 || true
+    glab config set glab_pager delta >> "$LOG_FILE" 2>&1 || true
+    while IFS='|' read -r _glab_alias _glab_cmd; do
+        [[ -z "$_glab_alias" ]] && continue
+        glab alias set "$_glab_alias" "$_glab_cmd" >> "$LOG_FILE" 2>&1 || true
+    done <<'GLAB_ALIASES'
+co|mr checkout
+pv|mr view --web
+pc|mr create --web
+pl|mr list
+pm|mr merge --squash --remove-source-branch
+il|issue list
+iv|issue view --web
+ic|issue create --web
+rv|repo view --web
+rc|repo clone
+rl|repo list
+runs|ci list
+watch|ci view
+rerun|ci retry
+rel|release create
+GLAB_ALIASES
+    unset _glab_alias _glab_cmd
+    mark_done "config:glab"
+    success "glab configured (SSH, Helix, delta; gh-style aliases mapped to GitLab MRs/CI)"
+fi
+
 # ---- pip config ----
 PIP_CONFIG_DIR="$HOME/.config/pip"
 PIP_CONFIG="$PIP_CONFIG_DIR/pip.conf"
@@ -6409,7 +6445,7 @@ if [[ -f "$CLAUDE_SETTINGS" ]]; then
     # cleaned too. Note: re-runs re-strip these — re-add any you truly want by editing
     # the CLAUDE_DENY_ALLOW list below, not settings.json.
     CLAUDE_ADD_ALLOW='["Bash(qalc *)","Bash(has *)","Bash(doxx *)","Bash(mdfind *)","Bash(atac *)","Bash(leaf *)","Bash(soffice *)","Bash(office-py *)","Bash(pdftoppm *)","Bash(pdftotext *)","Bash(pdfinfo *)","Bash(tiki exec *)","Bash(git status *)","Bash(git diff *)","Bash(git log *)","Bash(git show *)","Bash(git branch *)","Bash(git remote -v)","Bash(git stash list)"]'
-    CLAUDE_DENY_ALLOW='["Bash(npm *)","Bash(npx *)","Bash(pnpm *)","Bash(bun *)","Bash(node *)","Bash(tsx *)","Bash(ts-node *)","Bash(python3 *)","Bash(pip *)","Bash(uv *)","Bash(uvx *)","Bash(cargo *)","Bash(go *)","Bash(just *)","Bash(make *)","Bash(nu *)","Bash(nushell *)","Bash(topgrade *)","Bash(watchexec *)","Bash(viddy *)","Bash(parallel *)","Bash(act *)","Bash(curl *)","Bash(xh *)","Bash(wget *)","Bash(curlie *)","Bash(aria2c *)","Bash(grpcurl *)","Bash(yt-dlp *)","Bash(aws *)","Bash(cdk *)","Bash(sam *)","Bash(docker *)","Bash(docker-compose *)","Bash(docker compose *)","Bash(kubectl *)","Bash(tofu *)","Bash(s5cmd *)","Bash(dynein *)","Bash(steampipe *)","Bash(iamlive *)","Bash(granted *)","Bash(assume *)","Bash(mitmproxy *)","Bash(mitmdump *)","Bash(nmap *)","Bash(chezmoi *)","Bash(dbmate *)","Bash(env *)","Bash(export *)","Bash(git *)","Bash(git-*)","Bash(gh *)","Bash(cp *)","Bash(mv *)","Bash(trash *)","Bash(sd *)","Bash(sed *)","Bash(awk *)","Bash(find *)","Bash(npkill *)","Bash(ouch *)","Bash(7z *)","Write"]'
+    CLAUDE_DENY_ALLOW='["Bash(npm *)","Bash(npx *)","Bash(pnpm *)","Bash(bun *)","Bash(node *)","Bash(tsx *)","Bash(ts-node *)","Bash(python3 *)","Bash(pip *)","Bash(uv *)","Bash(uvx *)","Bash(cargo *)","Bash(go *)","Bash(just *)","Bash(make *)","Bash(nu *)","Bash(nushell *)","Bash(topgrade *)","Bash(watchexec *)","Bash(viddy *)","Bash(parallel *)","Bash(act *)","Bash(curl *)","Bash(xh *)","Bash(wget *)","Bash(curlie *)","Bash(aria2c *)","Bash(grpcurl *)","Bash(yt-dlp *)","Bash(aws *)","Bash(cdk *)","Bash(sam *)","Bash(docker *)","Bash(docker-compose *)","Bash(docker compose *)","Bash(kubectl *)","Bash(tofu *)","Bash(s5cmd *)","Bash(dynein *)","Bash(steampipe *)","Bash(iamlive *)","Bash(granted *)","Bash(assume *)","Bash(mitmproxy *)","Bash(mitmdump *)","Bash(nmap *)","Bash(chezmoi *)","Bash(dbmate *)","Bash(env *)","Bash(export *)","Bash(git *)","Bash(git-*)","Bash(gh *)","Bash(glab *)","Bash(cp *)","Bash(mv *)","Bash(trash *)","Bash(sd *)","Bash(sed *)","Bash(awk *)","Bash(find *)","Bash(npkill *)","Bash(ouch *)","Bash(7z *)","Write"]'
     if [[ "$DRY_RUN" == "true" ]]; then
         info "[DRY RUN] Would merge settings.json: add safe allow entries + statusline, strip dangerous ones"
     elif command -v jq &>/dev/null; then
@@ -6733,6 +6769,7 @@ else
 - Use `infracost` to estimate costs before applying changes
 
 ## Git Workflow (Trunk-Based)
+- Default host is **GitHub** (`gh`). For a repo hosted on **GitLab**, use **`glab`** — it's configured with the same alias names (`co`, `pv`, `pc`, `pl`, `pm`, …) mapped to merge requests, so the flow below translates 1:1 (PR → MR).
 - **Never commit directly to main** — always use a feature branch + PR
 - Branch naming: feature/, fix/, chore/, docs/ (e.g., feature/add-auth)
 - Branches should be short-lived (< 2 days ideally)
@@ -7899,6 +7936,7 @@ echo "  [~/.config/atuin]       Fuzzy search, local-only"
 echo "  [leaf]                  Terminal Markdown previewer (live watch, fuzzy picker, Mermaid)"
 echo "  [~/.config/yt-dlp]      Best quality, aria2c downloader"
 echo "  [~/.config/gh-dash]     GitHub dashboard, Dracula theme"
+echo "  [~/.config/glab-cli]    GitLab CLI (mirrors gh: SSH, Helix, delta, aliases)"
 echo "  [~/.config/stern]       K8s log tailing"
 echo "  [~/.config/zellij]      Modern terminal multiplexer with Dracula theme"
 echo "  [~/.config/mpv]         Video player (hardware accel, save position)"
