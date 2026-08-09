@@ -4210,8 +4210,9 @@ defaults write com.apple.TextEdit PlainTextEncodingForWrite -int 4
 success "TextEdit configured (plain text, UTF-8)"
 
 # -- Reduce motion / Faster animations --
-# Reduce motion for faster UI
-defaults write com.apple.universalaccess reduceMotion -bool true
+# Reduce motion for faster UI (universalaccess is protected — suppress the write error
+# on machines where it's managed/denied, matching reduceTransparency below).
+defaults write com.apple.universalaccess reduceMotion -bool true 2>/dev/null || true
 # Speed up window resize animations
 defaults write NSGlobalDomain NSWindowResizeTime -float 0.001
 success "Animations configured (reduced motion, fast resize)"
@@ -8261,7 +8262,7 @@ echo "  [~/.config/helix]       Helix — Dracula theme, ruff LSP, auto-format; 
 echo "  [lazygit]               Dracula theme, delta pager"
 echo "  [k9s]                   Dracula skin"
 echo "  [Finder]                Hidden files, path bar, list view"
-echo "  [macOS]                 Dock, keyboard, screenshots, hot corners, Stage Manager"
+echo "  [macOS]                 Dock, keyboard, screenshots, Spotlight hotkey, Stage Manager"
 echo "  [Claude Code]           Custom commands (/pr-review, /test-plan, /dep-audit, /quick-doc, /cleanup)"
 echo ""
 info "Optional Chrome extensions to install manually:"
@@ -8271,7 +8272,7 @@ echo "  - Lighthouse"
 echo "  - JSON Formatter"
 echo ""
 info "Terminal launcher & window management (replaces Raycast/Spotlight):"
-echo "  - cmd+space           Ghostty quick terminal (after disabling Spotlight's cmd+space)"
+echo "  - cmd+space           Ghostty quick terminal (Spotlight's cmd+space auto-disabled; log out/in)"
 echo "  - a                   fuzzy-launch an app        ff   find & open a file"
 echo "  - rgf <pattern>       search file contents        s <q>  Spotlight-index search"
 echo "  - clip                clipboard history (clipse)"
