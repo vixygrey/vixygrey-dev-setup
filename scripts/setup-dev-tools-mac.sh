@@ -1778,19 +1778,9 @@ brew_install "lazysql" "lazysql (TUI for databases — interactive SQL in termin
 uv_tool_install 'harlequin[postgres,mysql,s3]' harlequin \
     "harlequin (terminal SQL IDE; postgres,mysql,s3 adapters)" \
     "harlequin installed (DuckDB + Postgres + MySQL + S3 adapters)"
-# usql — not in Homebrew, install via Go
-progress
-if installed go; then
-    if command -v usql &>/dev/null; then
-        warn "usql (universal SQL CLI) already installed"
-    else
-        info "Installing usql (universal SQL CLI)..."
-        # Note: @latest is intentionally unpinned for usql
-        go install github.com/xo/usql@latest >> "$LOG_FILE" 2>&1 || error "Failed to install usql (requires Go)"
-    fi
-else
-    warn "Skipping usql — Go not installed (run: brew install go)"
-fi
+# usql — not in Homebrew, install via Go (@latest intentionally unpinned).
+# go_install is DRY_RUN-aware and lands the binary in GOBIN (on PATH).
+go_install github.com/xo/usql@latest usql "usql (universal SQL CLI)"
 brew_install "neilotoole/sq/sq" "sq (jq for databases — query SQLite, Postgres, CSV from one tool)"
 brew_install "dbmate" "dbmate (lightweight DB migrations)"
 # DBeaver (GUI) removed — TUI/CLI coverage: harlequin (SQL IDE), lazysql,
