@@ -1018,6 +1018,7 @@ if [[ "$CLEANUP" == "true" ]]; then
         "brew:tokei:tokei:scc"
         "brew:glow:glow:leaf"
         "cask:raycast:Raycast:Ghostty quick-terminal + clipse:Raycast"
+        "cask:aerospace:AeroSpace:native Spaces + macOS tiling:AeroSpace"
         "cask:unifi-identity-endpoint:UniFi Identity Endpoint:removed:UniFi Identity Endpoint"
         "cask:cleanshot:CleanShot X:removed"
         "cask:soulver:Soulver 3:removed:Soulver 3"
@@ -1484,7 +1485,6 @@ banner "Security & Secrets"
 # Secret management
 brew_install "age" "age (modern file encryption)"
 brew_install "sops" "sops (encrypt secrets in YAML/JSON, works with AWS KMS)"
-
 
 # detect-secrets (Yelp's pre-commit secret detection) — available as brew formula
 brew_install "detect-secrets" "detect-secrets (Yelp pre-commit secret detection)"
@@ -2031,9 +2031,6 @@ if [[ "$DRY_RUN" != "true" ]] && installed llm; then
 fi
 
 # Window management, status bar & clipboard (replaces Raycast + Spotlight)
-# AeroSpace — tiling window manager. No SIP disable required (emulated workspaces).
-trust_tap nikitabobko/tap
-brew_cask_install "aerospace" "AeroSpace (tiling window manager — keyboard-driven, no SIP)"
 # SketchyBar — status bar / menu-bar replacement (Dracula), + app-icon font + bluetooth helper.
 trust_tap FelixKratz/formulae
 brew_install "sketchybar" "SketchyBar (customizable macOS status bar)"
@@ -2074,7 +2071,6 @@ fi  # dx
 # =============================================================================
 if should_run "ux"; then
 banner "UX & Design"
-
 
 # Lighthouse (via npm)
 if installed npm; then
@@ -2395,8 +2391,6 @@ else
 fi
 mark_done "config:delta-dracula"
 fi
-
-
 
 # Starship prompt (rich config with Dracula palette)
 STARSHIP_CONFIG="$HOME/.config/starship.toml"
@@ -4181,12 +4175,11 @@ defaults write NSGlobalDomain com.apple.trackpad.scaling -float 2.0
 success "Trackpad configured (faster tracking)"
 
 # -- Mission Control --
-# Keep ONLY mru-spaces: "automatically rearrange Spaces based on most recent use" must
-# be OFF or AeroSpace's workspace switching misbehaves — a tiling-WM prerequisite, not a
-# preference. The cosmetic Mission Control tweaks (animation speed, group-by-app) were
-# dropped: AeroSpace is the driver, and Mission Control is rarely invoked here.
+# Keep Spaces in a fixed order — don't auto-rearrange by most-recent-use, so swiping
+# between Spaces is predictable. The cosmetic Mission Control tweaks (animation speed,
+# group-by-app) were dropped as unused.
 defaults write com.apple.dock mru-spaces -bool false
-success "Mission Control: auto-rearrange Spaces disabled (AeroSpace prerequisite)"
+success "Mission Control: auto-rearrange Spaces disabled (fixed Space order)"
 
 # Hot Corners: left at macOS defaults (all off). The default is already no-action and
 # they aren't used here, so there's nothing to disable.
@@ -4227,7 +4220,6 @@ defaults write com.apple.WindowManager GloballyEnabled -bool false 2>/dev/null |
 defaults write com.apple.WindowManager AutoHide -bool true 2>/dev/null || true
 success "Stage Manager disabled"
 
-
 # -- Misc --
 # Disable Notification Center and remove from menu bar (restart required)
 # Expand save panel by default (already set in Finder section but ensuring global)
@@ -4242,7 +4234,6 @@ defaults write NSGlobalDomain AppleInterfaceStyle -string "Dark"
 # Keep the menu bar hidden in fullscreen
 defaults write NSGlobalDomain AppleMenuBarVisibleInFullscreen -bool false
 success "Misc macOS defaults configured"
-
 
 # -- Screensaver & display sleep timing --
 # Screensaver kicks in at 45 min, display sleep at 2hr (charger) / 1hr 15min (battery)
@@ -5409,95 +5400,13 @@ fi
 mark_done "config:ghostty-autostart"
 fi
 
-# ---- AeroSpace config (tiling window manager) ----
-AEROSPACE_DIR="$HOME/.config/aerospace"
-info "Configuring AeroSpace (i3-style keys, gaps, SketchyBar hook)..."
-write_managed "$AEROSPACE_DIR/aerospace.toml" "#" <<'AEROSPACE_CONF'
-# AeroSpace — tiling window manager. Docs: https://nikitabobko.github.io/AeroSpace/guide
-# No SIP disable required. Set macOS "Displays have separate Spaces" = OFF.
-start-at-login = true
-
-enable-normalization-flatten-containers = true
-enable-normalization-opposite-orientation-for-nested-containers = true
-
-accordion-padding = 30
-default-root-container-layout = 'tiles'
-default-root-container-orientation = 'auto'
-
-# Notify SketchyBar when the focused workspace changes (updates the bar pills).
-exec-on-workspace-change = ['/bin/bash', '-c', 'sketchybar --trigger aerospace_workspace_change FOCUSED_WORKSPACE=$AEROSPACE_FOCUSED_WORKSPACE']
-
-[gaps]
-inner.horizontal = 8
-inner.vertical = 8
-outer.left = 8
-outer.bottom = 8
-outer.top = 8
-outer.right = 8
-
-[mode.main.binding]
-# Focus (Option + hjkl)
-alt-h = 'focus left'
-alt-j = 'focus down'
-alt-k = 'focus up'
-alt-l = 'focus right'
-
-# Move window (Option + Shift + hjkl)
-alt-shift-h = 'move left'
-alt-shift-j = 'move down'
-alt-shift-k = 'move up'
-alt-shift-l = 'move right'
-
-# Layout + fullscreen
-alt-slash = 'layout tiles horizontal vertical'
-alt-comma = 'layout accordion horizontal vertical'
-alt-f = 'fullscreen'
-
-# Resize
-alt-minus = 'resize smart -50'
-alt-equal = 'resize smart +50'
-
-# Workspaces
-alt-1 = 'workspace 1'
-alt-2 = 'workspace 2'
-alt-3 = 'workspace 3'
-alt-4 = 'workspace 4'
-alt-5 = 'workspace 5'
-alt-6 = 'workspace 6'
-alt-7 = 'workspace 7'
-alt-8 = 'workspace 8'
-alt-9 = 'workspace 9'
-
-# Move focused window to workspace
-alt-shift-1 = 'move-node-to-workspace 1'
-alt-shift-2 = 'move-node-to-workspace 2'
-alt-shift-3 = 'move-node-to-workspace 3'
-alt-shift-4 = 'move-node-to-workspace 4'
-alt-shift-5 = 'move-node-to-workspace 5'
-alt-shift-6 = 'move-node-to-workspace 6'
-alt-shift-7 = 'move-node-to-workspace 7'
-alt-shift-8 = 'move-node-to-workspace 8'
-alt-shift-9 = 'move-node-to-workspace 9'
-
-alt-tab = 'workspace-back-and-forth'
-alt-shift-c = 'reload-config'
-alt-shift-semicolon = 'mode service'
-
-[mode.service.binding]
-esc = ['reload-config', 'mode main']
-r = ['flatten-workspace-tree', 'mode main']
-f = ['layout floating tiling', 'mode main']
-backspace = ['close-all-windows-but-current', 'mode main']
-AEROSPACE_CONF
-success "AeroSpace configured (Option+hjkl focus, workspaces 1-9, SketchyBar hook)"
-
-# ---- SketchyBar config (Dracula status bar + AeroSpace workspaces) ----
+# ---- SketchyBar config (Dracula status bar) ----
 # Shell-based config (no SbarLua build step). Items show a Nerd Font glyph icon
 # (icons.sh) + a value label; the plugins swap the glyph by state (battery level,
 # wifi/bt/vpn on-off, volume level). Glyphs need JetBrainsMono Nerd Font (installed).
 SBAR_DIR="$HOME/.config/sketchybar"
 SBAR_PLUGINS="$SBAR_DIR/plugins"
-    info "Creating SketchyBar configuration (Dracula, AeroSpace pills, system widgets)..."
+    info "Creating SketchyBar configuration (Dracula, system widgets)..."
 
     # Shared Dracula palette (sourced by plugins)
     write_managed_script "$SBAR_DIR/colors.sh" <<'SBAR_COLORS'
@@ -5555,18 +5464,6 @@ sketchybar --default updates=when_shown \
                      padding_left=6 padding_right=6 \
                      background.color=$LINE background.corner_radius=6 background.height=22
 
-# --- Left: AeroSpace workspaces ---
-sketchybar --add event aerospace_workspace_change
-for sid in $(aerospace list-workspaces --all 2>/dev/null); do
-  sketchybar --add item space.$sid left \
-             --subscribe space.$sid aerospace_workspace_change \
-             --set space.$sid label="$sid" icon.drawing=off \
-                   label.padding_left=6 \
-                   background.color=$LINE \
-                   click_script="aerospace workspace $sid" \
-                   script="$PLUGIN_DIR/aerospace.sh $sid"
-done
-
 # --- Left: focused app ---
 sketchybar --add item front_app left \
            --subscribe front_app front_app_switched \
@@ -5616,16 +5513,6 @@ sketchybar --update
 SBAR_RC
 
     # -- plugins --
-    write_managed_script "$SBAR_PLUGINS/aerospace.sh" <<'P_AERO'
-#!/usr/bin/env bash
-source "$HOME/.config/sketchybar/colors.sh"
-if [ "$1" = "$FOCUSED_WORKSPACE" ]; then
-    sketchybar --set "$NAME" background.color=$PURPLE label.color=$BG
-else
-    sketchybar --set "$NAME" background.color=$LINE label.color=$FG
-fi
-P_AERO
-
     write_managed_script "$SBAR_PLUGINS/front_app.sh" <<'P_FRONT'
 #!/usr/bin/env bash
 [ "$SENDER" = "front_app_switched" ] && sketchybar --set "$NAME" label="$INFO"
@@ -5715,7 +5602,7 @@ P_VPNT
     if [[ "$DRY_RUN" != "true" ]] && installed sketchybar; then
         brew services restart sketchybar >> "$LOG_FILE" 2>&1 || warn "Could not start sketchybar service (grant it Accessibility if needed)"
     fi
-    success "SketchyBar configured (Dracula, AeroSpace pills, system widgets)"
+    success "SketchyBar configured (Dracula, system widgets)"
 
 # ---- clipse clipboard listener (launchd agent) ----
 # clipse runs a background listener to capture clipboard history. Register a
@@ -5785,7 +5672,6 @@ DIRENV_CONF
 
 # Set RIPGREP_CONFIG_PATH in zshrc (needed for ripgrep to read config)
 # This will be in the managed block below
-
 
 fi  # configs (end of second configs segment)
 
@@ -6720,11 +6606,6 @@ defaults write com.apple.AppleMultitouchTrackpad SecondClickThreshold -int 1 2>/
 defaults write com.apple.AppleMultitouchTrackpad ActuateDetents -bool true 2>/dev/null || true
 success "Trackpad preferences captured (tap-to-click off, two-finger secondary click, gestures)"
 
-# ---- Spaces: one space spans all displays (AeroSpace needs this) ----
-# Equivalent to "Displays have separate Spaces = OFF". Takes effect after logout.
-defaults write com.apple.spaces spans-displays -bool true 2>/dev/null || true
-success "Displays set to share one Space (for AeroSpace) — takes effect after logout"
-
 # ---- Screen dim when idle: 30 minutes ----
 sudo pmset -a halfdim 1 2>/dev/null || true
 sudo pmset -c dim 30 2>/dev/null || true
@@ -6760,14 +6641,8 @@ success "Software Update configured (auto-check, no auto-install)"
 # This prevents projects in ~/Desktop and ~/Documents from being uploaded to iCloud
 defaults write com.apple.bird optimize-storage -bool false 2>/dev/null || true
 
-
 # ---- macOS defaults for installed apps ----
 info "Setting macOS defaults for apps..."
-
-
-
-
-
 
 else
     info "[DRY RUN] Would configure Finder, Touch ID, DNS, Spotlight, Time Machine, Siri, and app defaults"
@@ -7035,7 +6910,7 @@ else
 - Task runner: just (prefer over make for project-level tasks)
 - Shell note: `bat` is aliased to `cat`; use `/bin/cat` only inside heredoc subshells where bat breaks syntax
 - Dotfiles: chezmoi
-- Launcher: Ghostty quick terminal (global cmd+space) + shell functions `a` (app launcher), `ff`/`rgf`/`s` (file/content/Spotlight search). Window mgmt: AeroSpace (Option+hjkl). Bar: SketchyBar. Clipboard: clipse (`clip`)
+- Launcher: Ghostty quick terminal (global cmd+space) + shell functions `a` (app launcher), `ff`/`rgf`/`s` (file/content/Spotlight search). Window mgmt: native macOS Spaces + tiling. Bar: SketchyBar. Clipboard: clipse (`clip`)
 - API testing/exploration → **use ATAC** (terminal — scriptable CLI + TUI; JSON/YAML collections, Postman import; allow-listed) for anything collection-based or repeatable; reach for `hurl` / `xh` / `curlie` / `grpcurl` for quick one-offs
 - Database: pgcli, mycli, lazysql, harlequin (SQL IDE TUI), usql, sq; migrations via dbmate
 - Diagrams: d2 / Mermaid (code-based, in the terminal)
@@ -8295,8 +8170,7 @@ echo "  [cliamp]                Music player (self-configured; point at ~/Media/
 echo "  [~/.config/git-cliff]   Changelog generator (conventional commits)"
 echo "  [~/.newsboat]           RSS reader (vim keys, Dracula colors, starter URLs)"
 echo "  [~/.config/ghostty]     GPU-accelerated terminal + quick-terminal launcher (cmd+space)"
-echo "  [~/.config/aerospace]   Tiling window manager (Option+hjkl, workspaces 1-9)"
-echo "  [~/.config/sketchybar]  Dracula status bar (AeroSpace pills, battery/wifi/vpn/cpu/mem)"
+echo "  [~/.config/sketchybar]  Dracula status bar (app, clock, battery/wifi/vpn/cpu/mem)"
 echo "  [~/.herald]             herald email + calendar (self-configured on first run)"
 echo "  [~/.justfile]           Global task runner recipes"
 echo "  [~/.config/brewfile]    Brewfile snapshot for reproducibility"
@@ -8318,7 +8192,6 @@ echo "  - cmd+space           Ghostty quick terminal (Spotlight's cmd+space auto
 echo "  - a                   fuzzy-launch an app        ff   find & open a file"
 echo "  - rgf <pattern>       search file contents        s <q>  Spotlight-index search"
 echo "  - clip                clipboard history (clipse)"
-echo "  - Option + hjkl       AeroSpace: focus windows;   Option+1..9  switch workspace"
 echo "  - taproom             browse/install Homebrew;    k9s / lazydocker  containers"
 echo ""
 info "Chezmoi quickstart (dotfile backup):"
@@ -8353,13 +8226,11 @@ accounts, and macOS permissions that are (deliberately) unscriptable. Work down
 the list, then delete this file.
 
 ## macOS permissions & settings
-- [ ] **Accessibility** — grant to **Ghostty**, **AeroSpace**, and **SketchyBar**: System Settings -> Privacy & Security -> Accessibility. (Ghostty: global launcher hotkey; AeroSpace: window management; SketchyBar: window observation + click actions.)
+- [ ] **Accessibility** — grant to **Ghostty** and **SketchyBar**: System Settings -> Privacy & Security -> Accessibility. (Ghostty: global launcher hotkey; SketchyBar: front-app observation + click actions.)
 - [ ] **Screen Recording** — grant to **Shottr**: System Settings -> Privacy & Security -> Screen Recording. Without it, screenshots capture only the desktop/menu bar, not app windows.
 - [ ] **Automation** — the first time you click the SketchyBar clock (it types `herald` into a Ghostty quick terminal), approve the prompt to let it control **System Events**. If the click does nothing, confirm SketchyBar also has Accessibility (above).
 - [ ] **Spotlight's cmd+space** is disabled by the script (freed for the Ghostty quick terminal) — **log out/in** for it to take effect. To keep Spotlight on cmd+space instead, re-enable it (System Settings -> Keyboard -> Keyboard Shortcuts -> Spotlight) and change the Ghostty bind to `global:cmd+backquote` in `~/.config/ghostty/config`.
 - [ ] **Menu bar auto-hide** is set by the script (`_HIHideMenuBar`) so SketchyBar owns the top — **log out/in (or restart)** for it to take effect. If it doesn't stick, toggle System Settings -> Control Center -> "Automatically hide and show the menu bar" -> Always.
-- [ ] **Displays have separate Spaces = OFF** — already set by the script (`spans-displays`), but it needs a **logout/login** to take effect.
-- [ ] Log out and back in once so AeroSpace + the Spaces setting apply cleanly.
 
 ## Email + calendar — herald (one app, self-configured)
 - [ ] Run `herald` and follow its onboarding to add both accounts + their calendars:
@@ -8399,21 +8270,6 @@ CHECKLIST_EOF
     # ---- 2. KEYBOARD_SHORTCUTS.md ----
     cat > "$DESKTOP/KEYBOARD_SHORTCUTS.md" <<'SHORTCUTS_EOF'
 # Keyboard Shortcuts
-
-## AeroSpace (tiling window manager) — Option (alt) based
-| Keys | Action |
-|------|--------|
-| `Option + h/j/k/l` | Focus window left/down/up/right |
-| `Option + Shift + h/j/k/l` | Move window |
-| `Option + 1..9` | Switch to workspace 1-9 |
-| `Option + Shift + 1..9` | Move focused window to workspace |
-| `Option + Tab` | Back-and-forth between workspaces |
-| `Option + /` | Tiles layout (horizontal/vertical) |
-| `Option + ,` | Accordion layout |
-| `Option + f` | Fullscreen |
-| `Option + - / =` | Resize smaller / larger |
-| `Option + Shift + c` | Reload AeroSpace config |
-| `Option + Shift + ;` | Enter service mode (then `esc`/`r`/`f`/`backspace`) |
 
 ## Launcher & search (Ghostty quick terminal)
 | Keys / command | Action |
@@ -8460,7 +8316,6 @@ CHECKLIST_EOF
 | Clock | Opens herald (email + calendar) in a Ghostty quick terminal |
 | VPN pill | Toggles `mullvad connect` / `disconnect` |
 | Bluetooth | Toggles Bluetooth power |
-| Workspace pill | Switches to that AeroSpace workspace |
 SHORTCUTS_EOF
 
     # ---- 3. TOOLKIT_SUMMARY.md ----
@@ -8476,9 +8331,8 @@ together.
 - **Claude Code (`claude`)** — agentic coding in the terminal; hosts the MCP servers. Best via `zellij --layout dev` (editor + Claude pane).
 - **Claude in croft/Helix** — croft's `croft pair` AI navigator (primary IDE); in Helix, `Alt+a` pipes a selection to Claude via `llm`. Powered by `ANTHROPIC_API_KEY` / `llm-anthropic`. Email/calendar AI lives in **herald** (built-in triage/summaries + MCP).
 
-## Window management, bar & launcher
-- **AeroSpace** — keyboard-driven tiling WM (no SIP disable). Option+hjkl, workspaces 1-9.
-- **SketchyBar** — Dracula status bar: workspace pills, app, clock, battery, wifi, volume, cpu, mem, bluetooth, VPN.
+## Status bar & launcher
+- **SketchyBar** — Dracula status bar: app, clock, battery, wifi, volume, cpu, mem, bluetooth, VPN.
 - **Ghostty quick terminal** — global cmd+space dropdown that hosts the launcher.
 - **Launcher functions** — `a` (apps), `ff` (files), `rgf` (contents), `s` (Spotlight index), `clip` (clipboard via clipse).
 
@@ -8507,8 +8361,8 @@ together.
 ## How it fits together
 The whole thing is one keyboard-driven loop. **cmd+space** drops the Ghostty quick
 terminal from anywhere; `a`/`ff`/`rgf`/`s` make it a launcher and search bar, so
-Spotlight/Raycast aren't needed. **AeroSpace** tiles windows and **SketchyBar** shows
-state (workspaces, VPN, battery) — the bar's clock even opens **herald**, and its VPN
+Spotlight/Raycast aren't needed. **SketchyBar** shows
+state (VPN, battery) — the bar's clock even opens **herald**, and its VPN
 pill drives the **mullvad** CLI. Editing is **croft** (Helix as fallback); the agent is **Claude Code**,
 which reuses the same **MCP servers** the setup migrated over. The script writes
 these configs to `~/.config`; use **chezmoi** (`chezmoi add`, with **cheznav** as its
@@ -8528,7 +8382,7 @@ echo "  1. Restart your terminal or run: source ~/.zshrc"
 echo "  2. >>> Work through ~/Desktop/POST_SETUP_CHECKLIST.md <<< (email/calendar creds,"
 echo "        macOS permissions, apw/mullvad/starlit setup — the manual bits)."
 echo "        Also on the Desktop: KEYBOARD_SHORTCUTS.md and TOOLKIT_SUMMARY.md."
-echo "  3. Log out/in once so AeroSpace + the Spaces setting take effect."
+echo "  3. Log out/in once so the menu-bar and Spotlight hotkey settings take effect."
 echo "  4. Enable FileVault + macOS Firewall (System Settings > Privacy & Security / Network)."
 echo "  5. Open OrbStack and complete Docker setup."
 
