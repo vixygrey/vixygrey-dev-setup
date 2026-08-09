@@ -761,7 +761,7 @@ The script generates config files with sensible defaults:
 | `~/.config/helix/config.toml` + `languages.toml` | Helix | Dracula theme, relative line numbers, LSP inlay hints, auto-format on save (ruff for Python, taplo/marksman/TS/CSS/bash/yaml servers, rust-analyzer, gopls) |
 | `~/.config/aerospace/aerospace.toml` | AeroSpace | Option+hjkl focus, workspaces 1-9, gaps, SketchyBar hook |
 | `~/.config/sketchybar/` | SketchyBar | Dracula bar: workspace pills, app, clock, battery, wifi, volume, cpu, mem, bluetooth, VPN |
-| `~/Library/Preferences/kew/kewrc` | kew | Music library `~/Media/music`, spectrum visualizer, cover art |
+| _(cliamp)_ | cliamp | Music player — self-configured on first run (point at `~/Media/music`) |
 | `~/.herald/conf.yaml` | herald | Email + calendar — **self-configured** by herald on first run (not written by setup) |
 | `~/.config/zellij/config.kdl` | zellij | Dracula theme, compact layout, mouse, Ctrl-a prefix |
 | `~/.config/mpv/mpv.conf` | mpv | Hardware accel, save position, screenshots to ~/Screenshots |
