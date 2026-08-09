@@ -939,7 +939,7 @@ if [[ "$UNINSTALL" == "true" ]]; then
     echo "# Remove config files:"
     echo "  rm -f ~/.shellcheckrc ~/.editorconfig ~/.prettierrc"
     echo "  rm -f ~/.curlrc ~/.npmrc ~/.ripgreprc ~/.fdignore ~/.nanorc ~/.vimrc"
-    echo "  rm -f ~/.hushlogin ~/.gitmessage ~/.myclirc ~/.gemrc ~/.actrc ~/.mlrrc"
+    echo "  rm -f ~/.hushlogin ~/.gitmessage ~/.myclirc ~/.gemrc ~/.actrc ~/.mlrrc ~/.czrc ~/.tflint.hcl"
     echo "  rm -rf ~/.aria2 ~/.config/atuin ~/.config/ngrok"
     echo "  rm -rf ~/.config/yt-dlp ~/.config/gh-dash ~/.config/stern"
     echo "  rm -rf ~/.config/btop ~/.config/lazydocker ~/.config/mise"
@@ -1668,6 +1668,12 @@ brew_install "csvkit" "csvkit (CSV tools — csvcut, csvgrep, csvstat)"
 # pandoc: universal document converter
 brew_install "pandoc" "pandoc (universal document converter — md, pdf, docx, html)"
 
+# tectonic: self-contained LaTeX engine so pandoc can actually produce PDFs. A bare
+# Mac has no PDF engine, so `pandoc -o x.pdf` fails with "pdflatex not found".
+# tectonic is a single binary that fetches TeX packages on demand (fits CLI-first,
+# minimal). pandoc won't auto-pick it, so pass the flag: pandoc in.md -o out.pdf --pdf-engine=tectonic
+brew_install "tectonic" "tectonic (self-contained LaTeX/PDF engine for pandoc — md → pdf via --pdf-engine=tectonic)"
+
 # imagemagick: image manipulation CLI
 brew_install "imagemagick" "ImageMagick (image resize, convert, composite)"
 
@@ -1703,10 +1709,28 @@ brew_install "ast-grep" "ast-grep (structural code search/replace using AST)"
 if installed npm; then
     npm_global_install "npkill" "npkill (find and nuke node_modules folders — reclaim disk)"
     npm_global_install "commitizen" "commitizen (interactive conventional commits)"
-    npm_global_install "@commitlint/cli" "commitlint (enforce conventional commit format)"
+    # Adapter for commitizen — without it (+ ~/.czrc below) `cz`/`git cz` errors with
+    # "cannot load your commitizen adapter". Installed into the same global root as
+    # commitizen so it resolves as a sibling.
+    npm_global_install "cz-conventional-changelog" "cz-conventional-changelog (commitizen adapter)"
+    # commitlint is PROJECT-SCOPED: its resolve-extends runs from the repo cwd, so a
+    # global config can't resolve @commitlint/config-conventional. Wire commitlint +
+    # config-conventional as per-project devDeps (e.g. via pre-commit/husky); no global
+    # config is shipped here — it wouldn't resolve.
+    npm_global_install "@commitlint/cli" "commitlint (conventional-commit linter — wire per-project)"
     npm_global_install "@antfu/ni" "ni (universal package runner — auto-detects npm/yarn/pnpm/bun)"
 else
-    progress; progress; progress; progress  # keep progress bar accurate when npm unavailable
+    progress; progress; progress; progress; progress  # keep progress bar accurate when npm unavailable
+fi
+
+# commitizen adapter config — JSON, so written directly (write_managed would inject
+# comment markers and break the JSON). Points cz at the conventional-changelog adapter.
+if ! is_done "config:czrc"; then
+    if [[ "$DRY_RUN" != "true" ]]; then
+        printf '{ "path": "cz-conventional-changelog" }\n' > "$HOME/.czrc"
+        success "commitizen adapter wired (~/.czrc → cz-conventional-changelog)"
+    fi
+    mark_done "config:czrc"
 fi
 
 fi  # code-quality
@@ -1953,13 +1977,20 @@ if installed npm; then
 else
     progress  # keep progress bar accurate when npm unavailable
 fi
-# Additional LLM CLIs that pair with Claude Code
-brew_install "llm" "llm (Simon Willison's CLI — one-shot prompts, plugins, SQLite logs, embeddings)"
+# Additional LLM CLIs that pair with Claude Code.
+# Install llm as an isolated uv tool WITH the Anthropic plugin bundled. Homebrew's
+# llm is externally-managed, so `llm install llm-anthropic` can't upgrade llm to the
+# version the plugin needs and fails — the Helix A-a Claude bind then never works.
+# The uv venv also makes `llm models default` stick. (uv bin ~/.local/bin is on PATH.)
+uv_tool_install llm llm "llm (Simon Willison's CLI — one-shot prompts, plugins, embeddings) + Anthropic plugin" "llm installed via uv (Anthropic plugin bundled)" --with llm-anthropic
 
-# Claude via the llm CLI: install the Anthropic plugin (used by the Helix :pipe bind).
+# Point the Helix A-a pipe at Claude — llm's built-in default is OpenAI gpt-4o-mini,
+# so without this the bind routes to the wrong provider. Non-secret and scriptable;
+# only the API key stays manual (llm keys set anthropic).
 if [[ "$DRY_RUN" != "true" ]] && installed llm; then
-    llm install llm-anthropic >> "$LOG_FILE" 2>&1 && success "llm-anthropic plugin installed" \
-        || warn "Could not install llm-anthropic plugin (run: llm install llm-anthropic)"
+    llm models default anthropic/claude-sonnet-4-5 >> "$LOG_FILE" 2>&1 \
+        && success "llm default model set to Claude (anthropic/claude-sonnet-4-5)" \
+        || warn "Could not set llm default model (run: llm models default anthropic/claude-sonnet-4-5)"
 fi
 
 # Window management, status bar & clipboard (replaces Raycast + Spotlight)
@@ -3219,8 +3250,36 @@ ACT_CONFIG="$HOME/.actrc"
 
 # Reuse containers between runs (faster)
 --reuse
+
+# Force amd64 containers on Apple Silicon — many actions ship amd64-only binaries,
+# and act prints a warning on every run without this (containers run under emulation).
+--container-architecture linux/amd64
 ACT_CONF
     success "act configured (medium Ubuntu images, container reuse)"
+
+# ---- tflint config (Terraform linter) ----
+# tflint core only catches syntax/deprecations; the real rules live in the AWS
+# ruleset plugin, which must be declared here and fetched via `tflint --init`.
+# Without it, "lint with tflint" gives near-zero coverage.
+TFLINT_CONFIG="$HOME/.tflint.hcl"
+    info "Creating tflint configuration..."
+    write_managed "$TFLINT_CONFIG" "#" <<'TFLINT_CONF'
+plugin "terraform" {
+  enabled = true
+  preset  = "recommended"
+}
+
+plugin "aws" {
+  enabled = true
+  version = "0.48.0"
+  source  = "github.com/terraform-linters/tflint-ruleset-aws"
+}
+TFLINT_CONF
+    if [[ "$DRY_RUN" != "true" ]] && installed tflint; then
+        tflint --init >> "$LOG_FILE" 2>&1 \
+            && success "tflint configured (recommended preset + AWS ruleset v0.48.0)" \
+            || warn "tflint config written; run 'tflint --init' to fetch the AWS ruleset"
+    fi
 
 # ---- miller config ----
 MLR_CONFIG="$HOME/.mlrrc"
@@ -8132,7 +8191,7 @@ the list, then delete this file.
 - [ ] **surge** (download manager): the daemon service was installed by the script (if it didn't prompt, run `surge service install`). Install the browser extension so browser downloads route to surge: **Firefox** — one-click from the Mozilla Add-ons store; **Chrome** — download `extension-chrome.zip` from the [latest release](https://github.com/SurgeDM/Surge/releases) and load-unpacked at `chrome://extensions` (Developer mode). Then pair it with `surge service token` (or TUI → Settings → Extension).
 - [ ] **glab** (GitLab, only if you use it): `glab auth login` to authenticate against gitlab.com or a self-managed instance. Already configured with SSH + Helix + delta and the same alias names as gh (mapped to merge requests).
 - [ ] **MCP servers:** export tokens your Claude Code MCP servers need, e.g. `export GITHUB_TOKEN=...` (and `AWS_REGION` / `AWS_PROFILE` for the AWS servers). Requires `claude auth login` at least once.
-- [ ] **Claude AI in croft:** set an Anthropic key — `export ANTHROPIC_API_KEY=sk-ant-...` in `~/.zshrc.local`. Used by **croft** (`croft pair` — the AI navigator in your primary IDE). For the Helix `llm` pipe bind (`A-a` on a selection): `llm keys set anthropic` then `llm models default claude-sonnet-4-5`. (Email/calendar AI is built into **herald** — configured separately above.)
+- [ ] **Claude AI in croft:** set an Anthropic key — `export ANTHROPIC_API_KEY=sk-ant-...` in `~/.zshrc.local`. Used by **croft** (`croft pair` — the AI navigator in your primary IDE). For the Helix `llm` pipe bind (`A-a` on a selection), just run `llm keys set anthropic` — setup already installs the plugin (via uv) and sets the default model to `anthropic/claude-sonnet-4-5`. (Email/calendar AI is built into **herald** — configured separately above.)
 - [ ] **croft** (primary IDE): installed from git `main` via cargo — run `croft` in a project to open the workspace; re-run `cargo install --git https://github.com/vitali87/croft.git --locked` to upgrade.
 - [ ] **AI side-pane:** `zellij --layout dev` opens your editor + a Claude Code pane side by side (the strongest AI workflow).
 - [ ] **chezmoi:** `chezmoi init <your-dotfiles-repo>` to bring these configs under version control across the MacBook + Mac mini.
