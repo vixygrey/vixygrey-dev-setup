@@ -1588,8 +1588,26 @@ brew_install "rsync" "rsync (latest — better cp/mv for large transfers)"
 # hexdump -> hexyl: colorized hex viewer with ASCII sidebar
 brew_install "hexyl" "hexyl (replaces hexdump — colorized hex viewer)"
 
-# curl/wget -> aria2: multi-connection parallel downloads, 3-10x faster
+# curl/wget -> aria2: multi-connection parallel downloads, 3-10x faster.
+# aria2 stays as the scriptable backend + wget alias (yt-dlp and this script use aria2c).
 brew_install "aria2" "aria2 (replaces curl/wget for downloads — multi-connection, BitTorrent)"
+
+# surge — interactive TUI download manager whose browser extension intercepts
+# browser-started downloads and hands them to a background daemon (port 1700).
+# Complements aria2 (aria2 = CLI/scripts; surge = interactive + browser capture).
+trust_tap SurgeDM/tap
+# surge is distributed as a cask (prebuilt binary) in SurgeDM/tap, not a formula.
+brew_cask_install "surge" "surge (TUI download manager — browser-download capture via a daemon + extension)"
+# Register the surge background service so the browser extension has something to
+# talk to. May prompt for your password; non-fatal if it doesn't (do it later via
+# `surge service install`). Extension install + token are in the POST_SETUP checklist.
+if [[ "$DRY_RUN" != "true" ]] && command -v surge &>/dev/null; then
+    if surge service install >> "$LOG_FILE" 2>&1; then
+        success "surge daemon service installed (browser extension can now connect on :1700)"
+    else
+        warn "Could not install surge service now — run 'surge service install' later (see checklist)"
+    fi
+fi
 
 # tar/unzip/7z -> ouch: universal archive tool, auto-detects format
 brew_install "ouch" "ouch (universal archive tool — compress/decompress any format)"
@@ -7960,6 +7978,7 @@ the list, then delete this file.
 - [ ] **Apple Passwords CLI (`apw`):** run `brew services start apw`, then `apw auth`, and install the **iCloud Passwords browser extension**.
 - [ ] **Mullvad:** `mullvad account login <ACCOUNT_NUMBER>` (CLI is bundled with the app at `/usr/local/bin/mullvad`).
 - [ ] **starlit** (weather): `starlit --setup` and paste a free OpenWeatherMap API key.
+- [ ] **surge** (download manager): the daemon service was installed by the script (if it didn't prompt, run `surge service install`). Install the browser extension so browser downloads route to surge: **Firefox** — one-click from the Mozilla Add-ons store; **Chrome** — download `extension-chrome.zip` from the [latest release](https://github.com/SurgeDM/Surge/releases) and load-unpacked at `chrome://extensions` (Developer mode). Then pair it with `surge service token` (or TUI → Settings → Extension).
 - [ ] **MCP servers:** export tokens your Claude Code MCP servers need, e.g. `export GITHUB_TOKEN=...` (and `AWS_REGION` / `AWS_PROFILE` for the AWS servers). Requires `claude auth login` at least once.
 - [ ] **Claude AI in croft:** set an Anthropic key — `export ANTHROPIC_API_KEY=sk-ant-...` in `~/.zshrc.local`. Used by **croft** (`croft pair` — the AI navigator in your primary IDE). For the Helix `llm` pipe bind (`A-a` on a selection): `llm keys set anthropic` then `llm models default claude-sonnet-4-5`. (Email/calendar AI is built into **herald** — configured separately above.)
 - [ ] **croft** (primary IDE): installed from git `main` via cargo — run `croft` in a project to open the workspace; re-run `cargo install --git https://github.com/vitali87/croft.git --locked` to upgrade.
