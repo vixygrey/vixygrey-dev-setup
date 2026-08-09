@@ -1627,6 +1627,10 @@ brew_install "pandoc" "pandoc (universal document converter — md, pdf, docx, h
 # imagemagick: image manipulation CLI
 brew_install "imagemagick" "ImageMagick (image resize, convert, composite)"
 
+# poppler: PDF utilities — pdftoppm (PDF->PNG), pdftotext, pdfinfo. Lets Claude
+# rasterize the PDFs LibreOffice produces so it can visually inspect slides/pages.
+brew_install "poppler" "poppler (PDF tools — pdftoppm, pdftotext, pdfinfo)"
+
 # ffmpeg: video/audio processing
 brew_install "ffmpeg" "ffmpeg (video/audio processing swiss army knife)"
 
@@ -2042,6 +2046,32 @@ if [[ "$DRY_RUN" != "true" ]]; then
     fi
     unset _soffice
 fi
+
+# Office-file structural validation for Claude: an isolated uv venv with the
+# python trio (python-docx / openpyxl / python-pptx), exposed as `office-py` on
+# PATH. Lets Claude assert on document/sheet/slide CONTENT (soffice renders;
+# office-py inspects), e.g. office-py -c 'from pptx import Presentation; Presentation("deck.pptx")'.
+if ! installed uv; then
+    warn "Skipping office-validation venv — uv not installed"
+else
+    OFFICE_VENV="$HOME/.local/share/dev-setup/office-venv"
+    if [[ "$DRY_RUN" == "true" ]]; then
+        info "[DRY RUN] Would create office-validation venv (python-docx, openpyxl, python-pptx) -> office-py"
+    elif [[ -x "$OFFICE_VENV/bin/python" ]] && "$OFFICE_VENV/bin/python" -c 'import docx, openpyxl, pptx' 2>/dev/null; then
+        warn "office-py venv already present"
+    else
+        info "Creating office-validation venv (python-docx, openpyxl, python-pptx)..."
+        if uv venv --python 3.13 "$OFFICE_VENV" >> "$LOG_FILE" 2>&1 \
+            && uv pip install --python "$OFFICE_VENV/bin/python" python-docx openpyxl python-pptx >> "$LOG_FILE" 2>&1; then
+            mkdir -p "$HOME/.local/bin"
+            ln -sf "$OFFICE_VENV/bin/python" "$HOME/.local/bin/office-py"
+            success "office-py ready (structural checks for .docx/.xlsx/.pptx)"
+        else
+            warn "Could not create office-validation venv"
+        fi
+    fi
+fi
+progress
 
 # File transfer — Cyberduck (GUI) removed; rclone (installed below) covers SFTP/S3/cloud.
 
@@ -6494,7 +6524,7 @@ if [[ -f "$CLAUDE_SETTINGS" ]]; then
     # reveal, broad git/gh, file destruction, unrestricted Write) so old machines get
     # cleaned too. Note: re-runs re-strip these — re-add any you truly want by editing
     # the CLAUDE_DENY_ALLOW list below, not settings.json.
-    CLAUDE_ADD_ALLOW='["Bash(qalc *)","Bash(has *)","Bash(doxx *)","Bash(mdfind *)","Bash(atac *)","Bash(leaf *)","Bash(soffice *)","Bash(git status *)","Bash(git diff *)","Bash(git log *)","Bash(git show *)","Bash(git branch *)","Bash(git remote -v)","Bash(git stash list)"]'
+    CLAUDE_ADD_ALLOW='["Bash(qalc *)","Bash(has *)","Bash(doxx *)","Bash(mdfind *)","Bash(atac *)","Bash(leaf *)","Bash(soffice *)","Bash(office-py *)","Bash(pdftoppm *)","Bash(pdftotext *)","Bash(pdfinfo *)","Bash(git status *)","Bash(git diff *)","Bash(git log *)","Bash(git show *)","Bash(git branch *)","Bash(git remote -v)","Bash(git stash list)"]'
     CLAUDE_DENY_ALLOW='["Bash(npm *)","Bash(npx *)","Bash(pnpm *)","Bash(bun *)","Bash(node *)","Bash(tsx *)","Bash(ts-node *)","Bash(python3 *)","Bash(pip *)","Bash(uv *)","Bash(uvx *)","Bash(cargo *)","Bash(go *)","Bash(just *)","Bash(make *)","Bash(nu *)","Bash(nushell *)","Bash(aider *)","Bash(topgrade *)","Bash(watchexec *)","Bash(viddy *)","Bash(parallel *)","Bash(act *)","Bash(curl *)","Bash(xh *)","Bash(wget *)","Bash(curlie *)","Bash(aria2c *)","Bash(grpcurl *)","Bash(yt-dlp *)","Bash(aws *)","Bash(cdk *)","Bash(sam *)","Bash(docker *)","Bash(docker-compose *)","Bash(docker compose *)","Bash(kubectl *)","Bash(tofu *)","Bash(s5cmd *)","Bash(dynein *)","Bash(steampipe *)","Bash(iamlive *)","Bash(granted *)","Bash(assume *)","Bash(mitmproxy *)","Bash(mitmdump *)","Bash(nmap *)","Bash(chezmoi *)","Bash(dbmate *)","Bash(env *)","Bash(export *)","Bash(git *)","Bash(git-*)","Bash(gh *)","Bash(cp *)","Bash(mv *)","Bash(trash *)","Bash(sd *)","Bash(sed *)","Bash(awk *)","Bash(find *)","Bash(npkill *)","Bash(ouch *)","Bash(7z *)","Write"]'
     if [[ "$DRY_RUN" == "true" ]]; then
         info "[DRY RUN] Would merge settings.json: add safe allow entries + statusline, strip dangerous ones"
@@ -6589,6 +6619,10 @@ else
       "Bash(oha *)",
       "Bash(pandoc *)",
       "Bash(soffice *)",
+      "Bash(office-py *)",
+      "Bash(pdftoppm *)",
+      "Bash(pdftotext *)",
+      "Bash(pdfinfo *)",
       "Bash(d2 *)",
       "Bash(mmdc *)",
       "Bash(ffmpeg *)",
@@ -6767,7 +6801,11 @@ else
 - **AI / agentic**: `claude` (Claude Code) for in-terminal pair programming, `aider` for git-aware AI edit loops, `llm` for one-shot prompts and embeddings, `repomix` to pack a repo into a single LLM-friendly file
 - **HTTP**: `xh` for colorized requests, `curlie` for curl with httpie output, `grpcurl` for gRPC
 - **Network**: `trip` (trippy) for traceroute TUI, `sudo mtr` (requires root, lives in sbin), `bandwhich` for bandwidth, `nmap` for scanning, `mkcert` for local TLS certs
-- **Docs**: `d2` for diagrams, `pandoc` for conversion, `leaf` for Markdown preview, `soffice --headless --convert-to` (LibreOffice) to validate/convert office files (.pptx/.xlsx/.docx)
+- **Docs**: `d2` for diagrams, `pandoc` for conversion, `leaf` for Markdown preview
+- **Office files** (.pptx/.xlsx/.docx) — three complementary tools:
+  - **Render**: `soffice --headless --convert-to pdf --outdir /tmp file.pptx` (LibreOffice) — the fidelity renderer
+  - **See it**: `pdftoppm -png -r 150 /tmp/file.pdf /tmp/page` (poppler) or `magick` — rasterize the PDF so you can visually inspect pages; `pdftotext`/`pdfinfo` for text/metadata
+  - **Assert on content**: `office-py` (a venv with python-docx/openpyxl/python-pptx), e.g. `office-py -c 'from pptx import Presentation; p=Presentation("deck.pptx"); print(len(p.slides))'`
 - **Database**: `pgcli`/`mycli` for auto-completing SQL, `lazysql` for TUI, `sq` for cross-database queries, `dbmate` for migrations
 - **File management**: `rovr` for the TUI file manager (`nnn` as a minimal fallback), `wiper` for interactive disk-usage cleanup (ncdu-like, Trash-safe), `watchexec` for running commands on file changes, `rclone` for cloud storage sync
 - **Kubernetes**: `k9s` for TUI, `stern` for log tailing (kubectl via OrbStack)
