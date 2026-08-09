@@ -5620,6 +5620,7 @@ DIRS=(
     "$HOME/Docs/admin"      # legal, insurance, contracts
     "$HOME/Docs/receipts"
     "$HOME/Docs/travel"
+    "$HOME/Docs/notes"      # tiki notes/tasks repo (git-backed; git-initialized below)
 
     # -- Creative (flat) ------------------------------------------------------
     "$HOME/Creative/writing"
@@ -5638,6 +5639,15 @@ for dir in "${DIRS[@]}"; do
     mkdir -p "$dir"
 done
 success "Directory structure created (~/Inbox, ~/Code, ~/Scripts, ~/Docs, ~/Creative, ~/Media, ~/Archive)"
+
+# Git-init the tiki notes repo so it's ready as a git-backed workspace (idempotent).
+if installed git && [[ ! -d "$HOME/Docs/notes/.git" ]]; then
+    if git init -q "$HOME/Docs/notes" >> "$LOG_FILE" 2>&1; then
+        success "Initialized tiki notes repo at ~/Docs/notes (git-backed)"
+    else
+        warn "Could not git init ~/Docs/notes"
+    fi
+fi
 
 # ---- Helper Scripts ----
 info "Creating helper scripts in ~/Scripts/bin..."
@@ -6784,7 +6794,7 @@ else
 - File transfer: rclone (CLI — SFTP/S3/cloud)
 - Proxy/debugger: mitmproxy
 - Tunneling: ngrok
-- Notes, tasks & project boards → **use tiki** (git-backed Markdown workspace), not ad-hoc scratch files, for anything worth keeping. The `tiki` **skill is installed** (~/.claude/skills/tiki) — use it: CRUD via `tiki exec '<ruki>'` (SQL-like; auto-validates + git-stages), quick-capture via `echo "note" | tiki` (first line = title). Tikis live in the cwd as Markdown; the skill has the ruki reference.
+- Notes, tasks & project boards → **use tiki** (git-backed Markdown workspace), not ad-hoc scratch files, for anything worth keeping. The `tiki` **skill is installed** (~/.claude/skills/tiki) — use it: CRUD via `tiki exec '<ruki>'` (SQL-like; auto-validates + git-stages), quick-capture via `echo "note" | tiki` (first line = title). Tikis live in the cwd as Markdown. Personal (non-project) notes/tasks go in **~/Docs/notes** (a git repo) — cd there for general notes; for project-specific tasks, use the project's cwd.
 - Email: aerc (terminal — Gmail work + iCloud personal, multi-account)
 - Calendar: khal + vdirsyncer (terminal — unified Google + iCloud CalDAV)
 - Cloud storage: rclone (Google Drive, S3, Dropbox, etc.); borg for versioned backups
@@ -8114,7 +8124,7 @@ the list, then delete this file.
 - [ ] **Claude AI in Helix/aerc:** set an Anthropic key — `export ANTHROPIC_API_KEY=sk-ant-...` in `~/.zshrc.local` (used by **helix-assist**, the in-editor AI LSP). For the `llm` pipe binds (`A-a` in Helix, `S` in aerc): `llm keys set anthropic` then `llm models default claude-sonnet-4-5`.
 - [ ] **AI side-pane:** `zellij --layout dev` opens your editor + a Claude Code pane side by side (the strongest AI workflow).
 - [ ] **chezmoi:** `chezmoi init <your-dotfiles-repo>` to bring these configs under version control across the MacBook + Mac mini.
-- [ ] **tiki** (notes): run `tiki` once and point it at (or init) your notes git repo. Claude can manage tikis for you — its skill is installed at `~/.claude/skills/tiki/` (CRUD via `tiki exec`, quick-capture via `echo "note" | tiki`).
+- [ ] **tiki** (notes): your personal notes repo is pre-created and git-initialized at `~/Docs/notes`. Run `cd ~/Docs/notes && tiki` to start. Claude can manage tikis there — its skill is installed at `~/.claude/skills/tiki/` (CRUD via `tiki exec`, quick-capture via `echo "note" | tiki`).
 - [ ] **kew** (music): drop music into `~/Media/music` (the configured library path).
 - [ ] **leaf** (Markdown): if tab-completion isn't working, run `leaf --auto-complete` and restart your shell (the script attempts this automatically).
 
