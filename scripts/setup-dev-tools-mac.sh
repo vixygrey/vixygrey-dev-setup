@@ -8259,6 +8259,9 @@ the list, then delete this file.
 - [ ] **starlit** (weather): `starlit --setup` and paste a free OpenWeatherMap API key.
 - [ ] **surge** (download manager): the daemon service was installed by the script (if it didn't prompt, run `surge service install`). Install the browser extension so browser downloads route to surge: **Firefox** — one-click from the Mozilla Add-ons store; **Chrome** — download `extension-chrome.zip` from the [latest release](https://github.com/SurgeDM/Surge/releases) and load-unpacked at `chrome://extensions` (Developer mode). Then pair it with `surge service token` (or TUI → Settings → Extension).
 - [ ] **glab** (GitLab, only if you use it): `glab auth login` to authenticate against gitlab.com or a self-managed instance. Already configured with SSH + Helix + delta and the same alias names as gh (mapped to merge requests).
+- [ ] **GitHub CLI (`gh`):** run `gh auth login` (pick SSH or HTTPS). The whole PR workflow (`gh pr`, `gh issue`, `gh pm`) and the `gh ssh-key add` step below all need it — fresh machines start logged out.
+- [ ] **AWS auth:** the CLIs and TUIs (`awscli`, `granted`/`assume`, `steampipe`, `stu`/`e1s`/`e2c`, `s5cmd`) plus the AWS MCP servers are installed but have no credentials yet. SSO: `aws configure sso` (or `granted sso populate` then `assume <profile>`). Static keys: `aws configure`. If you'll query with SQL: `steampipe plugin install aws`.
+- [ ] **atuin history sync** (optional — keeps shell history in sync across the MacBook + Mac mini): `atuin register` (or `atuin login` on the 2nd machine), then `atuin sync`. Local searchable history (`Ctrl+r`) works without an account.
 - [ ] **MCP servers:** export tokens your Claude Code MCP servers need, e.g. `export GITHUB_TOKEN=...` (and `AWS_REGION` / `AWS_PROFILE` for the AWS servers). Requires `claude auth login` at least once.
 - [ ] **infracost** (IaC cost estimates): run `infracost auth login` for a free API key — `infracost breakdown` errors with "No INFRACOST_API_KEY" until then.
 - [ ] **borgmatic backups:** the setup scaffolds `~/.config/borgmatic/config.yaml`. Set `repositories`, store the passphrase in Keychain (`security add-generic-password -a "$USER" -s borg-passphrase -w`), run `borgmatic init --encryption repokey-blake2`, check with `borgmatic create --dry-run`, then enable a daily run (e.g. a LaunchAgent calling `borgmatic --verbosity -1`). ClamAV's virus DB downloads itself in the background after setup.
@@ -8382,16 +8385,2471 @@ locally, over SSH, and — where it matters — can be driven by Claude Code
 (`atac`, `hurl`, `xh` are on its allowlist). GUI survivors are only the irreducible
 ones: Ghostty, Chrome, the container runtime (OrbStack), security tools that need a
 GUI (LuLu, Mullvad), and inherently-visual apps (Shottr, Skim), plus the Claude app.
+
+## Full tool reference
+This summary is a curated overview, not the whole toolbox. For every installed
+tool — a description of what it's for plus usage examples — see the companion
+**TOOL_REFERENCE.md** on your Desktop.
 SUMMARY_EOF
 
-    success "Desktop docs written: POST_SETUP_CHECKLIST.md, KEYBOARD_SHORTCUTS.md, TOOLKIT_SUMMARY.md"
+    # ---- 4. TOOL_REFERENCE.md ----
+    cat > "$DESKTOP/TOOL_REFERENCE.md" <<'REFERENCE_EOF'
+# Tool Reference
+
+Every command-line tool, TUI, and app this setup installs, grouped by what you
+reach for it to do. Each entry says what the tool is, what it replaces or when
+you'd use it, and a few worked examples. Written so someone new to the machine
+can be productive without already knowing the toolkit.
+
+**How to read this:** headings show the command you actually type (e.g. `rg`,
+not "ripgrep"). Where a tool replaces a classic command, that's called out.
+Some tools are aliased over the classic name — see the table just below.
+
+- Curated highlights of the whole setup: **TOOLKIT_SUMMARY.md**
+- Keyboard shortcuts & click actions: **KEYBOARD_SHORTCUTS.md**
+- Manual steps the script can't do (credentials, permissions): **POST_SETUP_CHECKLIST.md**
+
+## Modern replacements (aliased over the classic command)
+
+Your shell aliases these classic commands to modern equivalents — type the name
+on the left, get the tool on the right. Each is documented in full in its
+section below.
+
+| Type… | …and you get | For |
+|-------|--------------|-----|
+| `cat` | **bat** | syntax-highlighted file printing (use `/bin/cat` in heredocs) |
+| `ls` | **eza** | icons, git status, tree view |
+| `ps` | **procs** | sortable, tree, docker-aware process list |
+| `du` | **dust** | visual disk-usage tree |
+| `df` | **duf** | colorful disk-free table |
+| `top` | **btop** | graphed system monitor |
+| `rm` | **trash** | moves to macOS Trash (recoverable) |
+| `ping` | **gping** | live latency graph |
+| `dig` | **doggo** | colorized DNS, DoH |
+| `watch` | **viddy** | diff-highlighted repeated runs |
+| `sed` | **sd** | intuitive find & replace |
+| `wget` | **aria2c** | multi-connection downloads |
+| `cd` | **zoxide (`z`)** | frecency-based directory jumping |
+
+> `bat`, `eza`, `dust`, `duf`, `btop`, `procs` and friends are covered in their
+> categories below; the classic name just runs them for you.
+
+
+## Editors, AI & the shell
+
+### `croft` — Croft
+A Rust-built, VS Code-style IDE that lives entirely in the terminal — panes for a file tree, editor, and terminal in one TUI. It's the primary editor in this setup, reached for over Helix when you want a fuller IDE experience (multi-pane layout, mouse support) without leaving the terminal. Run it from inside a project directory so it picks up the right root; `croft pair` adds an AI navigator alongside your normal editing session for pair-programming style assistance.
+
+```bash
+# launch croft in the current project
+croft
+# launch with the AI pairing navigator active
+croft pair
+```
+
+> Tip: Start it from the project root, not a subdirectory — croft indexes the tree from wherever it's launched.
+
+### `hx` — Helix
+A modal terminal text editor (in the vim/kakoune family) with built-in LSP and tree-sitter support out of the box — no plugin hunting required for syntax highlighting, diagnostics, or go-to-definition. It's selection-first: you select a range, then act on it, which is the opposite order from vim's verb-then-motion. Reach for it as the fast, always-there fallback editor, and it's set as `$EDITOR` for git, `gh`, and `lazygit` commit messages.
+
+```bash
+# open a file
+hx src/main.rs
+# open a whole project directory
+hx .
+```
+
+Inside Helix: `i` enters insert mode, `Esc` returns to normal mode, `:w` saves, and `Space` opens the command menu (file picker, LSP actions, etc.).
+
+> Tip: Because it's selection-first, `w` selects the next word rather than moving past it — get comfortable selecting before acting.
+
+### `claude` — Claude Code
+Anthropic's agentic coding CLI: it reads your codebase, edits files, runs commands, and can operate autonomously on multi-step tasks, all from the terminal. It's also the host for this machine's MCP servers (filesystem, GitHub, AWS, etc.), so it can reach beyond the local repo when needed. Run it inside a repo so it has real project context; it pairs well with `zellij --layout dev`, which opens it next to your editor.
+
+```bash
+# start an interactive session in the current repo
+claude
+# run a one-off prompt non-interactively
+claude -p "explain what this function does" < src/utils.ts
+```
+
+> Tip: Keep a `CLAUDE.md` in the repo root — Claude Code reads it automatically for project-specific conventions.
+
+### `llm` — LLM CLI
+Simon Willison's command-line tool for one-shot LLM prompts, piping text through models, and generating embeddings, without opening a chat UI. The Anthropic plugin ships with this setup and defaults to `anthropic/claude-sonnet-4-5`, and its plugin ecosystem covers most other providers too. It shines in shell pipelines — summarizing command output, transforming file contents, or scripting small AI steps into a larger workflow.
+
+```bash
+# one-shot prompt
+llm "explain the difference between TCP and UDP"
+# pipe a file through a prompt
+cat error.log | llm "what's the root cause of this error?"
+# start a multi-turn conversation
+llm chat
+```
+
+> Tip: Set your key once with `llm keys set anthropic`; after that the model is available to every `llm` invocation without extra flags.
+
+### `starship` — Starship Prompt
+A fast, cross-shell prompt written in Rust that shows contextual info — git branch/status, language versions, exit codes — without the lag some frameworks introduce. It replaces heavier prompt frameworks (like Powerlevel10k or Oh My Posh) with a single static binary and a TOML config. You mostly don't invoke it directly; it's wired into your shell init and just renders on every prompt.
+
+```bash
+# edit the prompt configuration
+hx ~/.config/starship.toml
+# print current config as a starting point
+starship print-config
+```
+
+> Tip: `starship explain` shows which modules are active and why, which is the fastest way to debug a slow or cluttered prompt.
+
+### `atuin` — Atuin
+Replaces plain zsh history with a searchable SQLite database that records timestamps, exit codes, and duration for every command, with optional end-to-end-encrypted sync across machines. It's a major upgrade over `ctrl+r`'s default fuzzy history search, which has no concept of context or success/failure. It's bound to `Ctrl+r` in this setup, so muscle memory carries over — you just get a much richer search experience.
+
+```bash
+# search history interactively (same as pressing Ctrl+r)
+atuin search
+# see stats on your most-used commands
+atuin stats
+# import existing zsh history into atuin's database
+atuin import auto
+```
+
+> Tip: `atuin search --exit 0` filters to only commands that succeeded — handy when hunting for "that command that actually worked."
+
+### `z` — Zoxide
+A smarter `cd` that learns which directories you visit most often and how recently (a "frecency" score), so you can jump to them with a short fuzzy fragment instead of a full path. It replaces plain `cd` for anywhere you go regularly, cutting deep `cd ~/Code/personal/some-project` typing down to a couple of letters. It builds its database automatically just by you `cd`-ing around normally.
+
+```bash
+# jump to the best match for "dev-setup"
+z dev-setup
+# jump to a directory matching two fragments
+z code personal
+# list tracked directories with their scores
+zoxide query -l
+```
+
+> Tip: Use plain `cd` for a path you'll only visit once — `z` learns from every jump, so one-off detours pollute its rankings.
+
+### `zellij` — Zellij
+A terminal multiplexer (splitting one terminal into panes, tabs, and persistent sessions) that's more discoverable than tmux — it shows keybindings on-screen and ships with layout files instead of requiring a custom config to get useful pane arrangements. Reach for it whenever you want a session that survives disconnects, or a fixed layout for repeated work. The `dev` layout in this setup opens an editor pane and a Claude Code pane side by side.
+
+```bash
+# start with the pre-built dev layout (editor + Claude Code)
+zellij --layout dev
+# list running sessions
+zellij list-sessions
+# reattach to a detached session
+zellij attach <session-name>
+```
+
+> Tip: `Ctrl+g` locks/unlocks keybinding mode — if keys stop doing anything inside a pane, you've probably entered a plugin's own input mode.
+
+### `nu` — Nushell
+A shell where pipelines pass structured tables and typed data instead of raw text, so commands like filtering, sorting, and reformatting output work like a query language rather than a chain of `grep`/`awk`/`cut`. It's not the default login shell here — zsh still owns that — but it's the tool to reach for when you're wrangling CSV, JSON, or command output that plain text pipes make painful. Drop into it for a data-heavy task, then drop back out to zsh.
+
+```bash
+# start a nushell session
+nu
+# list files as a sortable table, filtered by size
+ls | where size > 1mb
+# parse JSON output and pull a field
+open package.json | get dependencies
+```
+
+> Tip: `open` auto-detects file type (JSON, TOML, CSV, etc.) and parses it into a table — no separate `jq`/`yq` needed inside nu.
+
+### `direnv` — direnv
+Automatically loads and unloads environment variables per-directory based on an `.envrc` file, so project-specific secrets, API keys, or `PATH` additions apply only while you're inside that directory and vanish when you leave. It replaces manually sourcing `.env` files or juggling global exports for project-specific config. Use it for anything that needs local env vars — database URLs, per-project tool versions, feature flags — without leaking them into your global shell.
+
+```bash
+# create a project-local env file
+echo 'export API_KEY=dev-key-123' > .envrc
+# approve it (required before direnv will load it)
+direnv allow
+# edit and re-approve in one step
+direnv edit .
+```
+
+> Tip: direnv refuses to load an `.envrc` you haven't explicitly `allow`ed — it's a deliberate guard against silently executing shell code from a repo you just cloned.
+
+### `gum` — Gum
+A toolkit of small interactive UI components — prompts, spinners, confirmations, single/multi-select menus, text input — for making plain shell scripts feel like real CLI tools instead of `read`-and-hope. It replaces hand-rolled `select` loops and bare `read` prompts with polished, themeable widgets that still just output plain text you can capture. Reach for it any time a script needs to ask the user something.
+
+```bash
+# ask for confirmation before a destructive action
+gum confirm "Delete all build artifacts?" && rm -rf dist/
+# let the user pick from a list
+gum choose "staging" "production" "dev"
+# show a spinner while a long command runs
+gum spin --title "Installing..." -- npm install
+```
+
+> Tip: Because gum's output is just text on stdout, you can capture a choice directly into a variable: `env=$(gum choose staging production)`.
+
+### `parallel` — GNU Parallel
+Runs shell commands concurrently across a list of inputs, spreading work across CPU cores instead of processing one item at a time in a `for` loop. It's a major speedup over sequential loops for embarrassingly parallel tasks — converting a folder of images, hitting an API for a list of IDs, or running the same script over many files. Reach for it whenever a loop's iterations don't depend on each other.
+
+```bash
+# run a command once per argument
+parallel echo ::: alice bob carol
+# convert every jpg to png, 4 at a time
+ls *.jpg | parallel -j4 convert {} {.}.png
+# download a list of URLs in parallel
+parallel -a urls.txt curl -O
+```
+
+> Tip: `{}` is replaced with the full input and `{.}` with the input minus its extension — useful for generating output filenames.
+
+### `has` — has
+A tiny checker that tells you whether a given CLI tool is installed and, if so, which version — useful for verifying a machine or CI environment has the prerequisites a project expects before you dive into setup. It replaces manually running `<tool> --version` and eyeballing whether it errored. Reach for it at the start of onboarding a new machine or debugging "works on my machine" issues.
+
+```bash
+# check whether node is installed and its version
+has node
+# check multiple tools at once
+has node python go docker
+```
+
+> Tip: `has` exits non-zero if a tool is missing, so it's safe to use directly in a setup script's preflight check: `has docker || echo "install docker first"`.
+
+### `topgrade` — Topgrade
+A single command that updates everything on the machine — Homebrew formulae and casks, npm/pnpm global packages, mise-managed runtimes, macOS system updates, shell plugins, and more — instead of remembering and running a dozen separate update commands. It replaces a personal checklist (or a stale update script) with one tool that knows how to detect and update each package manager it finds installed. Run it periodically as routine maintenance.
+
+```bash
+# update everything topgrade can detect
+topgrade
+# preview what would run without making changes
+topgrade --dry-run
+# skip a specific step
+topgrade --disable brew
+```
+
+> Tip: Run `--dry-run` first on a new machine — the full run touches a lot of package managers at once and it's worth knowing what it'll do.
+
+### `fastfetch` — fastfetch
+Prints a fast system-info summary — OS, kernel, shell, terminal, CPU, memory — often alongside an ASCII/image logo, purely for a quick at-a-glance snapshot of the machine. It's the modern, much faster successor to neofetch (which is now unmaintained). Most people drop it into their shell startup for a nice banner, or run it manually when reporting a bug that needs system details.
+
+```bash
+# print the system info banner
+fastfetch
+# run without the logo, for a compact/scriptable view
+fastfetch --logo none
+```
+
+> Tip: Piping `fastfetch --logo none` output into a bug report is a fast way to give someone your exact environment without typing it out by hand.
+
+### `terminal-notifier` — terminal-notifier
+Posts a native macOS notification (the same banners/alerts you get from any Mac app) from a shell command or script, so you can find out a long-running task finished without staring at the terminal. It replaces manually checking back on a build or leaving a terminal tab focused just to catch completion. Use it at the end of long commands — builds, deploys, test suites — so you get pulled back at the right moment.
+
+```bash
+# fire a notification with a title and message
+terminal-notifier -title "Build" -message "Build complete"
+# notify after a long-running command finishes
+npm run build; terminal-notifier -message "npm build finished"
+# include a sound
+terminal-notifier -message "Deploy done" -sound default
+```
+
+> Tip: Chain it with `;` (not `&&`) if you want the notification even when the preceding command fails — pair it with `$?` in the message to report success/failure.
+
+### `vivid` — Vivid
+Generates `LS_COLORS` theme strings from named color schemes (including Dracula, matching this setup's theme), so directory listings from `ls` and `eza` color files consistently by type and extension. It replaces hand-writing or copy-pasting a `LS_COLORS` string, which is famously unreadable and tedious to customize by hand. You typically run it once during shell setup and export the result.
+
+```bash
+# generate a Dracula LS_COLORS string
+vivid generate dracula
+# export it directly into the current shell
+export LS_COLORS="$(vivid generate dracula)"
+# list available built-in themes
+vivid themes
+```
+
+> Tip: Put the `export LS_COLORS="$(vivid generate dracula)"` line in `.zshrc` so it's set once per shell rather than regenerated on every command.
+
+### `clip` — Clipse
+A TUI clipboard-history manager — it keeps a scrollable, searchable history of things you've copied so you can grab something from three copies ago instead of losing it the moment you copy again. It replaces the single-slot macOS clipboard with a proper history, similar to what tools like Maccy or Alfred's clipboard manager provide, but terminal-native. This setup binds it to the `clip` command; run it any time you need to paste something older than your last copy.
+
+```bash
+# open the clipboard history TUI
+clip
+```
+
+> Tip: Inside the TUI, typing filters the history live — no need to scroll manually through a long list of old copies.
+
+### zsh-autosuggestions — [—]
+Shows a faint, greyed-out inline suggestion as you type, based on your command history and completions — press the right arrow (or `End`) to accept it, similar to fish shell's autosuggestions. It replaces the need to retype or history-search commands you've run before; it just proposes the likely rest of the line as you go. It loads automatically with this shell setup — there's no command to invoke, only keys to accept or ignore what it suggests.
+
+```bash
+# start typing a previously-run command...
+git comm
+# ...then press the right arrow key to accept the suggested rest: "git commit -m ..."
+```
+
+> Tip: Accept only part of a suggestion with `Alt+f` (forward-word) instead of the full line with `End`, if you just want the next word.
+
+### zsh-syntax-highlighting — [—]
+Colorizes the command line as you type it — valid commands turn one color, unknown commands or syntax errors turn another (usually red) — so you catch a typo'd binary name or an unclosed quote before you hit enter. It replaces the "type it, run it, read the error" loop with instant visual feedback. Like zsh-autosuggestions, it loads automatically; there's nothing to invoke, just something to notice while typing.
+
+```bash
+# a known, valid command highlights normally
+ls -la
+# a typo'd or nonexistent command is visibly flagged (e.g. in red) before you press enter
+lsx -la
+```
+
+> Tip: If highlighting looks wrong after installing a new CLI tool, open a fresh shell — it caches known commands at shell start.
+
+
+## Finding, files & disk
+
+### `fzf` — Fuzzy Finder
+A general-purpose interactive fuzzy finder that filters any list of lines from stdin — files, history, process names, git branches, whatever you pipe into it. It replaces manually scrolling or grepping through long lists, letting you type a few loose characters and instantly narrow down to the match you want. In this setup it's wired into the shell: Ctrl+T fuzzy-inserts a file path, Alt+C fuzzy-cd's into a directory, and Ctrl+R fuzzy-searches command history (via atuin). Reach for it any time you'd otherwise pipe something into `grep` and eyeball the result.
+
+```bash
+# fuzzy-filter piped input interactively
+fd . | fzf
+# preview file contents while selecting
+fzf --preview 'bat --color=always {}'
+# open the fuzzy-selected file in your editor
+hx $(fzf)
+```
+
+> Tip: Ctrl+T (insert file path), Alt+C (cd into directory), and Ctrl+R (search shell history) work anywhere at the prompt without typing `fzf` explicitly.
+
+### `rg` — ripgrep
+A drop-in replacement for `grep` that recursively searches file contents by default, is dramatically faster on large trees, and automatically skips files ignored by `.gitignore`. Use it whenever you need to find where a string, function name, or pattern appears across a codebase — it's the default "search code" tool here. It supports regex, file-type filters, and context lines out of the box.
+
+```bash
+# search recursively for a string in the current directory
+rg "TODO"
+# case-insensitive search restricted to Python files
+rg -i -t py "def main"
+# list only filenames that contain a match
+rg -l "deprecated"
+```
+
+> Tip: `rg -t rg --type-list` shows all supported file-type filters (`-t py`, `-t js`, etc.).
+
+### `fd` — fd
+A friendlier, faster replacement for `find`: simple syntax (no `-name`, no leading `.`), colorized output, respects `.gitignore`, and skips hidden files unless asked. Use it to locate files or directories by name pattern instead of wrestling with `find`'s flags. It composes well with `fzf` and `xargs`-style execution via `-x`.
+
+```bash
+# find files matching a name pattern
+fd config
+# find only files with a given extension
+fd -e md
+# include hidden/ignored files in the search
+fd -H -I node_modules
+# run a command against each match
+fd -e log -x rm
+```
+
+### `ast-grep` — ast-grep
+A structural code search-and-replace tool that matches against a language's actual syntax tree instead of raw text, so it understands code shape (function calls, imports, JSX) rather than just character patterns. It replaces fragile regex-based codemods — reach for it when you need to rewrite a pattern like `console.log($ARG)` across a whole repo without false positives inside strings or comments.
+
+```bash
+# find all console.log calls in JS/TS files
+ast-grep run -p 'console.log($$$ARGS)' -l js
+# rewrite a pattern across the codebase
+ast-grep run -p 'var $NAME = $VAL' -r 'let $NAME = $VAL' -l js
+# run a project's configured ast-grep rules
+ast-grep scan
+```
+
+### `rovr` — rovr
+A mouse-first TUI file manager: browse, preview, copy, move, and delete files from a full-screen terminal UI instead of typing every `mv`/`cp` by hand. It's the primary file manager in this setup (with `nnn` kept as a minimal keyboard-only fallback). Reach for it when you want to visually navigate and reorganize a messy directory rather than scripting the operations.
+
+```bash
+# launch rovr in the current directory
+rovr
+# launch rovr in a specific directory
+rovr ~/Downloads
+```
+
+### `nnn` — nnn
+A tiny, extremely fast, keyboard-driven TUI file manager — no mouse needed, minimal dependencies, near-instant startup even on huge directories. It's kept as the lightweight fallback to `rovr` for when you want pure keyboard navigation or are on a constrained/remote session. Navigate with arrow keys or hjkl, open files with Enter, and quit with `q`.
+
+```bash
+# launch nnn in the current directory
+nnn
+# launch nnn with the built-in file preview plugin
+nnn -e
+```
+
+### `wiper` — wiper
+An interactive, ncdu-style disk-usage explorer that lets you drill into directories, see what's eating space, and delete the offenders — but unlike raw `rm`, everything it removes goes to the macOS Trash so it's recoverable. Use it when your disk is filling up and you need to visually hunt down large files or directories before nuking them.
+
+```bash
+# interactively explore disk usage from the current directory
+wiper
+# explore disk usage starting at a specific path
+wiper ~/Downloads
+```
+
+> Tip: because deletions go to Trash, `wiper` is safe to use aggressively — empty the Trash afterward once you're sure.
+
+### `npkill` — npkill
+Scans a directory tree for stray `node_modules` folders and lets you interactively select and delete them to reclaim disk space — a common problem after years of JS project churn. Use it periodically on `~/Code` to clean up old, abandoned project dependencies without deleting the projects themselves.
+
+```bash
+# scan the current directory for node_modules folders
+npkill
+# scan a specific directory
+npkill -d ~/Code
+```
+
+### `ouch` — ouch
+A single tool for compressing and decompressing archives that auto-detects the format from the file extension, so you don't need to remember whether a given archive needs `tar`, `zip`, `unzip`, or `7z`. Reach for it as the default "just compress/extract this" command instead of picking the right tool per format.
+
+```bash
+# compress a directory into a .zip
+ouch compress project/ project.zip
+# extract any supported archive format
+ouch decompress project.zip
+# list the contents of an archive without extracting
+ouch list project.zip
+```
+
+### `7z` [p7zip] — 7-Zip CLI
+The command-line port of 7-Zip, capable of creating and extracting zip, 7z, tar, gzip, and many other archive formats with strong compression ratios. Reach for it when `ouch` doesn't cover a format, when you need 7z's especially tight compression, or when working with password-protected/encrypted archives.
+
+```bash
+# create a .7z archive from a folder
+7z a archive.7z folder/
+# extract an archive into the current directory
+7z x archive.zip
+# list the contents of an archive
+7z l archive.7z
+```
+
+### `rsync` — rsync
+An incremental file-copy and sync tool that only transfers the parts of files that changed, making it far faster than `cp` for large trees or repeated transfers, and it works both locally and over SSH. It's the go-to for syncing project directories, backing up folders, or deploying files to a remote server. `-a` (archive) preserves permissions, timestamps, and symlinks.
+
+```bash
+# sync a local directory, preserving attributes
+rsync -avh src/ dest/
+# sync to a remote host over SSH
+rsync -avz src/ user@host:/remote/dest/
+# sync and delete files at the destination that no longer exist at the source
+rsync -av --delete src/ dest/
+```
+
+> Tip: always keep the trailing slash on the source directory (`src/`) if you want its *contents* copied into `dest/` rather than `dest/src/`.
+
+### `rclone` — rclone
+Often described as "rsync for cloud storage" — it syncs, copies, and manages files across dozens of cloud backends (Google Drive, S3, Dropbox, and more) using the same mental model as `rsync`. Use it for backing up local folders to the cloud, mirroring buckets, or moving files between cloud providers without downloading them to your machine first.
+
+```bash
+# interactively configure a new cloud remote
+rclone config
+# sync a local folder to a configured remote
+rclone sync ~/Documents remote:Documents
+# list files in a remote path
+rclone ls remote:Documents
+```
+
+### `miniserve` — miniserve
+Spins up an instant HTTP file server for the current (or a given) directory — no config, no setup — so you can quickly share files with another device on the network or test static content. Reach for it when you need to grab a file from your phone, hand a teammate a quick download link, or sanity-check a static site build.
+
+```bash
+# serve the current directory over HTTP
+miniserve .
+# serve on a specific port
+miniserve . -p 8080
+# allow browser-based file uploads into the served directory
+miniserve . --upload-files
+```
+
+### `monolith` — monolith
+Saves a complete web page — HTML, CSS, JavaScript, and images — as a single self-contained `.html` file with everything inlined, so the page still renders correctly when opened offline with no external requests. Use it to archive a web page or documentation article exactly as it appeared, for offline reading or long-term reference.
+
+```bash
+# save a page as a single self-contained HTML file
+monolith https://example.com -o page.html
+# save without executing embedded JavaScript
+monolith -j https://example.com -o page.html
+```
+
+### `pv` — pipe viewer
+Inserted into a shell pipeline, `pv` shows a live progress bar, throughput, and ETA for the data flowing through it — something a plain pipe gives you zero visibility into. Use it when copying, compressing, or transferring large amounts of data through pipes and you want to know it's actually moving (and how much longer it'll take).
+
+```bash
+# show progress while copying a large file
+pv bigfile.iso > /dev/null
+# monitor throughput while piping into gzip
+tar cf - mydir | pv | gzip > archive.tar.gz
+# specify a known total size for an accurate ETA
+pv -s 4G bigfile.iso | ssh host 'cat > bigfile.iso'
+```
+
+### `progress` — progress
+Unlike `pv`, which you insert into a pipeline in advance, `progress` inspects an *already-running* coreutils command (`cp`, `mv`, `dd`, `tar`, etc.) and reports its progress and ETA after the fact. Use it when you forgot to wrap a long-running copy in `pv` and just want to know how far along it is.
+
+```bash
+# show progress of currently running cp/mv/dd/tar commands
+progress
+# continuously refresh progress until the command finishes
+progress -w
+```
+
+### `watchexec` — watchexec
+Watches a set of files or directories and automatically re-runs a command whenever something changes — the general-purpose engine behind test-watch and rebuild-on-save loops, independent of any specific language's tooling. Use it to build a live test-runner or dev-rebuild loop for a project that doesn't have its own watch mode.
+
+```bash
+# re-run tests whenever a .py file changes
+watchexec -e py -- pytest
+# watch a specific directory and rebuild on change
+watchexec -w src -- npm run build
+# clear the screen before each re-run
+watchexec --clear -- npm test
+```
+
+### `watchman` — watchman
+A background file-watching service that some JavaScript toolchains (React Native, Jest, Metro) use internally to detect file changes efficiently; you rarely invoke it by hand, but it's what's actually powering "watch mode" under the hood in those tools. You'd only touch it directly to debug a stuck watch or clear its state.
+
+```bash
+# start watching a project directory
+watchman watch ~/Code/my-app
+# list all directories currently being watched
+watchman watch-list
+# stop watching a directory
+watchman watch-del ~/Code/my-app
+```
+
+### `dockutil` — dockutil
+A command-line tool for adding, removing, and querying macOS Dock items, letting you script your Dock layout instead of dragging icons around by hand. Use it in a setup script to reproducibly pin the apps you want on a fresh machine, or to strip out Apple's default clutter.
+
+```bash
+# add an app to the Dock
+dockutil --add /Applications/Ghostty.app
+# remove an app from the Dock by name
+dockutil --remove 'Safari'
+# list current Dock items
+dockutil --list
+```
+
+### `trash` — trash
+A safe drop-in replacement for `rm` that moves files to the macOS Trash instead of permanently deleting them, so a mistyped command doesn't mean unrecoverable data loss. Use it as your default delete command for anything you're not 100% sure about — you can still empty the Trash normally when you're done.
+
+```bash
+# move a file to the Trash instead of deleting it
+trash file.txt
+# trash multiple files with a glob
+trash *.tmp
+# verbose output showing what was trashed
+trash -v old-project/
+```
+
+> Tip: `trash` is aliased over `rm` in this setup — plain `rm` still works, but `trash` is the recoverable default.
+
+### `tree` — tree
+Prints a directory structure as a clean, indented ASCII tree, giving you an at-a-glance overview of a project's layout that's far easier to read than a flat `ls -R`. Use it to document a project structure, check what a scaffold generated, or quickly orient yourself in an unfamiliar repo.
+
+```bash
+# print the directory tree from the current location
+tree
+# limit the depth to 2 levels
+tree -L 2
+# include hidden files, excluding a specific directory
+tree -a -I 'node_modules'
+```
+
+### `nano` — nano
+A simple, beginner-friendly terminal text editor with on-screen keybinding hints, used as the quick fallback when you just need to edit a file without loading a modal editor like Helix. Reach for it for fast one-off edits — a config tweak, a commit message, a quick note — where remembering modal commands would slow you down.
+
+```bash
+# open a file for editing
+nano file.txt
+# open a file at a specific line number
+nano +42 file.txt
+```
+
+> Tip: the key shortcuts are shown at the bottom of the screen — Ctrl+O saves, Ctrl+X exits.
+
+
+## Data, Git & GitHub
+
+### `jq` — JSON Processor
+A command-line JSON processor that lets you filter, transform, and reshape JSON using a small, powerful query language. It's the standard tool for slicing API responses or config files in a pipeline without writing a script. Reach for it whenever you need to extract a field, filter an array, or reformat JSON on the fly.
+
+```bash
+# extract a field from every element of an array
+curl -s api.example.com/users | jq '.[].name'
+# filter objects matching a condition
+jq '.items[] | select(.active == true)' data.json
+# reshape into a new object
+jq '{id: .id, total: (.price * .qty)}' order.json
+```
+
+> Tip: `jq -r` strips the surrounding quotes from string output, handy for feeding results into shell loops.
+
+### `yq` — YAML Processor
+The "jq for YAML" — Mike Farah's Go implementation lets you read, edit, and convert YAML with jq-style syntax, without the footguns of Python-based yq clones. It's essential for editing Kubernetes manifests, CDK-synthesized templates, or CloudFormation YAML from the command line. Use it anywhere you'd reach for jq but the file is YAML.
+
+```bash
+# read a nested value
+yq '.spec.replicas' deployment.yaml
+# update a value in place
+yq -i '.spec.replicas = 3' deployment.yaml
+# convert YAML to JSON
+yq -o=json '.' deployment.yaml
+```
+
+> Tip: `yq` merges multi-document YAML (`---` separated) by default — use `eval-all` for filters that need to see every document at once.
+
+### `fx` — Interactive JSON Viewer
+An interactive terminal JSON viewer for browsing large or unfamiliar JSON payloads — collapsible tree navigation instead of squinting at jq output. It's the better choice over jq when you don't yet know the shape of the data and want to explore it visually before writing a filter. Great for poking at a big API response for the first time.
+
+```bash
+# explore an API response interactively
+curl -s api.example.com/data | fx
+# open a file directly
+fx package.json
+# run a quick inline reducer
+cat data.json | fx 'this.items.length'
+```
+
+> Tip: press `.` inside fx to start typing a JS-style path and see the result live.
+
+### `jnv` — Interactive JSON Navigator
+An interactive JSON navigator that lets you build a jq filter incrementally while previewing the filtered output live, side by side. Where fx is for browsing, jnv is for composing the actual jq query you'll eventually script — you leave with a working filter, not just an answer. Use it when a jq one-liner isn't obvious and you want to iterate visually.
+
+```bash
+# open a file and build a filter interactively
+jnv data.json
+# pipe JSON in from a command
+curl -s api.example.com/data | jnv
+```
+
+> Tip: once you land on the right filter, copy it out and drop it straight into a jq command for scripting.
+
+### `miller` [mlr] — Record Processor for CSV/TSV/JSON
+Miller is like awk, sed, cut, and jq combined, but name-aware and format-aware across CSV, TSV, and JSON. It processes records by field name instead of column position, so scripts stay readable and survive reordered columns. Reach for it when you need to filter, join, or aggregate tabular data faster than pandas but with more structure than raw awk.
+
+```bash
+# convert CSV to JSON
+mlr --icsv --ojson cat data.csv
+# filter rows and keep only some columns
+mlr --csv filter '$amount > 100' then cut -f name,amount data.csv
+# compute grouped statistics
+mlr --csv stats1 -a sum,mean -f amount -g category data.csv
+```
+
+### `csvkit` [csvcut/csvgrep/csvstat/csvjson] — CSV Utility Suite
+A suite of small Unix-style utilities for working with CSV files: cutting columns, grepping rows, computing summary stats, and converting to JSON or SQL. It brings classic Unix text-tool ergonomics to tabular data that plain grep/cut mangle because of quoting and commas. Reach for it for quick, composable CSV inspection without opening a spreadsheet.
+
+```bash
+# summary stats for every column
+csvstat data.csv
+# select specific columns by name
+csvcut -c name,email data.csv
+# filter rows matching a pattern in a column
+csvgrep -c status -m active data.csv
+# convert CSV to JSON
+csvjson data.csv > data.json
+```
+
+### `sq` — Database Swiss-Army Query Tool
+The "jq for databases" — sq queries SQLite, Postgres, MySQL, and even CSV/Excel files through one consistent interface and can output to JSON, CSV, or another database. It's the tool to reach for when you need to poke at a database from the terminal, or move data between a spreadsheet and a real database, without switching clients. Sources are registered once and referenced by a short `@handle`.
+
+```bash
+# register a CSV file as a queryable source
+sq add ./employees.csv --handle @emp
+# query it (SLQ syntax)
+sq '@emp | .name, .salary | .salary > 50000'
+# register and query a Postgres database
+sq add 'postgres://user@host/db' --handle @mydb
+sq '@mydb.users'
+```
+
+> Tip: `sq ls` lists all registered sources so you don't forget your handles.
+
+### `git` — Version Control System
+The distributed version control system underlying the whole trunk-based workflow — branches, commits, merges, and history. In this setup it's configured with delta as the diff pager, difftastic available for structural diffs, and commit signing enabled. Every change here starts with a feature branch and ends in a squash-merged PR.
+
+```bash
+# check working tree status
+git status
+# stage and commit with a conventional message
+git add src/auth.ts && git commit -m "feat(auth): add login page"
+# create and switch to a short-lived feature branch
+git switch -c feature/add-oauth
+# view history through the configured delta pager
+git log -p
+```
+
+### `gh` — GitHub CLI
+The official GitHub CLI for managing pull requests, issues, releases, and repo settings without leaving the terminal. It's central to this PR-first workflow — `gh pr create` opens the PR, and the project's `gh pm` alias squash-merges and deletes the branch in one step. Reach for it anywhere you'd otherwise open github.com.
+
+```bash
+# create a pull request referencing an issue
+gh pr create --title "feat(auth): add login" --body "Closes #42"
+# list open issues
+gh issue list
+# check out a PR locally to review it
+gh pr checkout 123
+# squash-merge and delete the branch (project alias)
+gh pm
+```
+
+### `glab` — GitLab CLI
+GitLab's equivalent of `gh`, mirroring its ergonomics and alias conventions but mapped onto merge requests instead of pull requests. Use it exactly like `gh` when a project lives on GitLab rather than GitHub, so the same trunk-based muscle memory applies. Handy for teams that split repos across both platforms.
+
+```bash
+# create a merge request referencing an issue
+glab mr create --title "fix(api): handle nulls" --description "Closes #12"
+# list open issues
+glab issue list
+# check out a merge request locally
+glab mr checkout 45
+```
+
+### `lazygit` — Terminal UI for Git
+A full-screen terminal UI for git that turns staging, committing, branching, rebasing, and pushing into keyboard-driven panels instead of memorized flags. It's the fast path for everyday git work — interactive rebases and partial-file staging are far quicker here than in raw git. Launch it inside any repo when you want a visual overview of what's changed.
+
+```bash
+# launch the TUI in the current repo
+lazygit
+# launch it pointed at a different repo path
+lazygit -p ~/Code/other-repo
+```
+
+> Tip: press `p` to stage individual hunks/lines interactively instead of whole files.
+
+### `git-delta` [delta] — Syntax-Highlighting Diff Pager
+A syntax-highlighting pager for git diffs that renders side-by-side views with line numbers, replacing git's plain-text diff output. It's wired in here as git's default pager, so `git diff` and `git log -p` are readable by default — no extra flags needed day to day. Call it directly when piping a diff from somewhere else.
+
+```bash
+# pipe a diff through delta directly
+git diff | delta
+# compare two arbitrary files
+delta file_old.py file_new.py
+```
+
+### `difftastic` [difft] — Structural Diff Tool
+A structural, syntax-aware diff tool that compares parsed syntax trees instead of raw text lines, so it doesn't get confused by reformatting or reordered code that a line-based diff would flag as a huge change. Reach for it when a normal diff is noisy — e.g., after a formatter run — and you want to see what actually changed logically.
+
+```bash
+# compare two files structurally
+difft old.py new.py
+# use it as git's diff tool for one command
+git difftool --extcmd=difft HEAD~1
+```
+
+### `git-cliff` [git cliff] — Changelog Generator
+Generates a changelog automatically from conventional-commit history, grouping entries by type (feat, fix, chore, etc.) instead of hand-writing release notes. It relies on the commit message discipline this workflow already enforces, so a changelog is basically free. Run it before cutting a release or to preview what a release would contain.
+
+```bash
+# generate a full changelog
+git cliff -o CHANGELOG.md
+# preview only unreleased commits
+git cliff --unreleased
+# generate a changelog for a specific tag range
+git cliff v1.0.0..v1.2.0
+```
+
+### `git-absorb` [git absorb] — Automatic Fixup Commits
+Automatically figures out which earlier commit your currently staged changes belong to and creates a matching `fixup!` commit, instead of you manually hunting through history and running `git commit --fixup`. It's built for the "oops, small fix belongs in an earlier commit on this branch" moment before a PR is opened. Follow it with an autosquash rebase to actually fold the fixups in.
+
+```bash
+# stage your fix, then let absorb find its target commit
+git absorb
+# preview what would be absorbed without committing
+git absorb --dry-run
+# fold the fixup commits into their targets
+git rebase -i --autosquash main
+```
+
+### `git-lfs` [git lfs] — Large File Storage
+Git Large File Storage replaces large binaries (PSDs, datasets, video) in the repo with lightweight text pointers, storing the actual content separately so clones and fetches stay fast. Use it for any file type that's large and changes often enough that Git's normal delta compression doesn't help. Set it up once per repo, then it works transparently on every commit.
+
+```bash
+# enable LFS in a repo (once per machine)
+git lfs install
+# track a file type
+git lfs track "*.psd"
+# check status of LFS-tracked files
+git lfs status
+```
+
+### `commitizen` [cz] — Conventional Commit Prompt
+An interactive command-line prompt that walks you through writing a properly formatted conventional commit — type, scope, description — instead of you recalling the exact syntax. It removes the guesswork of `type(scope): description` formatting and keeps commit history consistent across a team. Use it in place of `git commit` whenever you want a guided commit.
+
+```bash
+# launch the interactive commit prompt
+cz commit
+# shorthand for the same thing
+cz c
+```
+
+### cz-conventional-changelog — Commitizen Adapter
+Not a standalone command — this is the adapter package that defines the actual conventional-commit prompt format (types, scopes, breaking-change questions) that `cz` uses under the hood. It's installed as a dependency and wired into `commitizen` via config, not invoked directly. You'd only touch this when configuring or swapping which commit convention `cz` prompts for.
+
+```json
+// package.json — points commitizen at this adapter
+{
+  "config": {
+    "commitizen": {
+      "path": "cz-conventional-changelog"
+    }
+  }
+}
+```
+
+### `commitlint` — Commit Message Linter
+Lints commit messages against the conventional-commit spec, rejecting anything that doesn't match `type(scope): description` before it lands in history. It's typically wired into a git `commit-msg` hook so bad messages are caught at commit time rather than in review. Use it to enforce the same convention `commitizen` helps you write.
+
+```bash
+# lint the most recent commit
+npx commitlint --from HEAD~1 --to HEAD
+# lint a commit message file (used inside a commit-msg hook)
+npx commitlint --edit "$1"
+```
+
+### `pre-commit` — Git Hook Framework
+A framework for managing git pre-commit hooks — linters, formatters, secret scanners — declared in a single `.pre-commit-config.yaml` instead of hand-rolled shell scripts in `.git/hooks`. It installs and runs a whole toolchain of checks automatically before each commit, and the config is versioned with the repo so every contributor gets the same hooks. Set it up once per project, then forget about it.
+
+```bash
+# install the hooks defined in .pre-commit-config.yaml
+pre-commit install
+# run all configured hooks against the whole repo
+pre-commit run --all-files
+# update hook versions to their latest releases
+pre-commit autoupdate
+```
+
+### `scc` — Source Code Counter
+Counts lines of code by language across a codebase, along with cyclomatic complexity and COCOMO cost/effort estimates — a much faster, more informative replacement for `cloc` or `wc -l`. Use it to get a quick sense of a new codebase's size and language mix, or to track complexity trends over time. It's fast enough to run on large monorepos without waiting.
+
+```bash
+# get a full breakdown of the current project
+scc .
+# sort output by complexity instead of line count
+scc --sort complexity .
+# output machine-readable JSON for other tooling
+scc --format json .
+```
+
+
+## HTTP, APIs & networking
+
+### `xh` — Friendly HTTP Client
+A fast, HTTPie-compatible HTTP client written in Rust. It replaces `curl` for everyday API poking with colorized, JSON-first output, sensible defaults (assumes `https://`, sends/parses JSON automatically), and simple `key=value` syntax for bodies. Reach for it when testing or debugging a REST API from the terminal.
+
+```bash
+# GET request with colorized JSON output
+xh https://api.example.com/users
+# POST a JSON body using key=value pairs
+xh POST https://api.example.com/users name=Ada role=admin
+# download a file to disk
+xh --download https://example.com/file.zip
+# verbose mode: show the full request and response
+xh -v POST httpbin.org/post foo=bar
+```
+
+> Tip: use `:=` instead of `=` for non-string JSON values, e.g. `xh POST url active:=true count:=3`.
+
+### `curlie` — curl with HTTPie Ergonomics
+Wraps `curl` to add HTTPie-style colorized output and shorthand syntax, while still exposing curl's full flag set underneath. It's the middle ground when you need curl's power (custom certs, proxies, obscure options) but want nicer, more readable output than raw curl gives you.
+
+```bash
+# simple GET with colorized output
+curlie example.com
+# verbose request/response with headers
+curlie -v example.com
+# HTTPie-style POST with key=value body
+curlie POST example.com/api key=value
+# full curl flags still work
+curlie -X PUT example.com/api -d '{"a":1}' -H 'Content-Type: application/json'
+```
+
+### `hurl` — HTTP Requests as Testable Text Files
+Runs and tests HTTP requests written in plain-text `.hurl` files, chaining multiple requests and asserting on status codes, headers, and body/JSON content. Because tests are just text files, they version well in git and drop straight into CI — no client library or GUI required.
+
+```bash
+# run a .hurl file and print the last response body
+hurl request.hurl
+# run as a test suite; exits non-zero on any failed assertion
+hurl --test api-tests.hurl
+# inject a variable into the requests
+hurl --variable base_url=https://staging.example.com api.hurl
+# run a whole test suite and generate an HTML report
+hurl --test --report-html report/ tests/*.hurl
+```
+
+### `grpcurl` — curl for gRPC
+Lets you list services and methods, describe message schemas, and invoke gRPC endpoints from the shell — the gRPC equivalent of curl for REST. Works via server reflection when available, or against local `.proto` files otherwise. Use it to poke at a gRPC service during development without writing a client.
+
+```bash
+# list all services exposed by a server (needs reflection enabled)
+grpcurl -plaintext localhost:50051 list
+# describe a service's methods and message types
+grpcurl -plaintext localhost:50051 describe mypackage.MyService
+# call a method with a JSON payload
+grpcurl -plaintext -d '{"id": 1}' localhost:50051 mypackage.MyService/GetItem
+# no reflection available: point at local proto files instead
+grpcurl -plaintext -import-path ./protos -proto myservice.proto localhost:50051 list
+```
+
+### `atac` — Terminal API Client
+"Arguably a Terminal API Client" — a Postman/Insomnia alternative that runs fully offline in the terminal, with no account required. It's TUI-first for building and running requests interactively, but collections are stored as plain files so they're git-friendly, and it can import existing Postman, cURL, or OpenAPI collections.
+
+```bash
+# launch the TUI in the current directory (creates a workspace)
+atac
+# use a specific directory for collections/config/logs
+atac -d ~/api-collections
+# import an existing Postman collection
+atac import postman_collection.json
+```
+
+> Tip: `atac --dry-run` runs without writing changes to disk — handy for trying it out risk-free.
+
+### `oha` — HTTP Load Testing
+A Rust-based HTTP load-testing tool (an alternative to `ab`/`wrk`) that fires many requests at an endpoint and shows a live TUI of latency percentiles and throughput as results come in. Reach for it when you want a quick, visual sense of how an API endpoint holds up under load.
+
+```bash
+# 200 requests total against an endpoint
+oha https://example.com/api
+# fixed number of requests
+oha -n 1000 https://example.com/api
+# run for a fixed duration instead of a fixed count
+oha -z 30s https://example.com/api
+# set concurrency level
+oha -c 50 -n 2000 https://example.com/api
+```
+
+### `hyperfine` — Command-Line Benchmarking
+Runs a command many times and reports statistically sound timing (mean, min/max, standard deviation), optionally comparing multiple commands side by side. It replaces ad hoc `time` loops for answering "which of these is actually faster?"
+
+```bash
+# benchmark a single command
+hyperfine 'grep foo bigfile.txt'
+# compare two commands directly
+hyperfine 'fd pattern' 'find . -name pattern'
+# warm up caches with 3 runs before timing
+hyperfine --warmup 3 'npm run build'
+```
+
+### `ngrok` — Public HTTPS Tunnel to Localhost
+Exposes a port on your local machine as a public HTTPS URL, so you can share a dev server, test webhooks from a third-party service, or demo something running locally. Requires a free account and an authtoken configured once via `ngrok config add-authtoken`.
+
+```bash
+# tunnel local port 3000 to a public https URL
+ngrok http 3000
+# tunnel a specific local host:port
+ngrok http 127.0.0.1:8080
+# use a reserved/custom subdomain (paid plans)
+ngrok http --subdomain=myapp 3000
+```
+
+> Tip: ngrok prints a local web UI at `http://127.0.0.1:4040` where you can inspect and replay every request that hit the tunnel.
+
+### `mkcert` — Locally-Trusted TLS Certificates
+Creates TLS certificates that your browser and OS actually trust for local development, by installing a local certificate authority (CA) into your system trust store. It replaces self-signed certs (and the browser warnings that come with them) when you need HTTPS on `localhost` or a local dev domain.
+
+```bash
+# install the local CA into system/browser trust stores (one-time)
+mkcert -install
+# generate a cert+key for localhost
+mkcert localhost
+# generate a cert covering multiple names/IPs
+mkcert localhost 127.0.0.1 myapp.local
+```
+
+### `caddy` — Web Server with Automatic HTTPS
+A modern web server that provisions and renews TLS certificates automatically. Beyond production use, it doubles as a zero-config static file server and reverse proxy for local development — no config file needed for the common cases.
+
+```bash
+# serve a directory of static files
+caddy file-server --root /path/to/files --listen :8080
+# reverse-proxy one local port to another
+caddy reverse-proxy --from localhost:80 --to localhost:8000
+# run using a Caddyfile
+caddy run --config Caddyfile
+# format a Caddyfile in place
+caddy fmt Caddyfile --overwrite
+```
+
+### `carbonyl` — Chromium in the Terminal
+A real Chromium browser rendered entirely inside the terminal, including images, CSS, JavaScript, and video. Unlike `w3m`, it renders actual web pages rather than just text, which makes it useful for quickly checking how a page looks over SSH or in a headless environment.
+
+```bash
+# open a URL in the terminal browser
+carbonyl https://example.com
+# open with a specific window size
+carbonyl --width=120 --height=40 https://example.com
+```
+
+### `w3m` — Classic Text-Based Browser
+A lightweight, text-only terminal web browser and pager that renders HTML as formatted plain text (tables, links, basic layout) without images or JS. It's useful for quickly reading a page or man-page-like HTML over SSH where a full browser isn't practical.
+
+```bash
+# open a page in the browser
+w3m https://example.com
+# render a page straight to stdout, no interactive session
+w3m -dump https://example.com | less
+# browse a local HTML file
+w3m ./notes.html
+```
+
+### `trip` [trippy] — Traceroute + Ping TUI
+Combines traceroute and ping into a single live TUI, charting latency and packet loss per network hop over time so you can see where a connection is degrading, not just a one-shot snapshot. Needs raw sockets, so it runs elevated by default (`sudo`) unless `--unprivileged` is supported and used.
+
+```bash
+# trace a target with the interactive TUI (needs sudo)
+sudo trip example.com
+# trace without elevated privileges, where supported
+trip example.com --unprivileged
+# trace using TCP to a specific port (e.g. through firewalls that block ICMP)
+sudo trip example.com -p tcp -P 443
+# generate a one-shot pretty text report instead of the live TUI
+sudo trip example.com -m pretty
+```
+
+### `mtr` — Combined Ping + Traceroute
+Continuously updates a live view combining ping and traceroute, showing per-hop latency, jitter, and packet loss so you can pinpoint which hop on a route is causing problems. Needs raw sockets (`sudo`), and on this setup it lives in `/usr/sbin` rather than the default `PATH`.
+
+```bash
+# live interactive report (needs sudo)
+sudo mtr example.com
+# generate a fixed-count text report instead of the live view
+sudo mtr --report --report-cycles 10 example.com
+# use TCP instead of ICMP (helps when ICMP is filtered)
+sudo mtr --tcp example.com
+```
+
+### `gping` — Ping with a Live Graph
+Pings one or more hosts and plots the results as a live latency graph in the terminal, instead of a scrolling list of numbers. It's aliased over `ping` in this setup, so typing the familiar command gets you the graph.
+
+```bash
+# ping one host with a live latency graph
+gping example.com
+# compare multiple hosts on the same graph
+gping example.com 1.1.1.1 8.8.8.8
+# ping by specifying an interval between pings
+gping --interval 0.5 example.com
+```
+
+### `doggo` — Modern DNS Client
+A modern replacement for `dig` with colorized, human-readable tabular output by default (with JSON available for scripting), plus support for encrypted DNS protocols (DNS-over-HTTPS/TLS). It's aliased over `dig` here, so the familiar habit gets the friendlier output.
+
+```bash
+# look up A records for a domain
+doggo example.com
+# query a specific record type
+doggo example.com MX
+# query against a specific resolver
+doggo example.com @1.1.1.1
+# machine-readable output for scripts
+doggo --json example.com A | jq '.responses[0].answers[].address'
+```
+
+### `bandwhich` — Live Network Utilization by Process
+Shows a live TUI breakdown of current network bandwidth usage per process and per connection, so you can immediately see what's saturating your link. It needs raw socket access, so it must be run with `sudo`.
+
+```bash
+# launch the live bandwidth-by-process view (needs sudo)
+sudo bandwhich
+# only watch a specific network interface
+sudo bandwhich -i en0
+```
+
+### `nmap` — Network Scanner
+The standard network scanner for host discovery, port scanning, and service/version detection. Use it to find what's alive on a network, which ports are open on a host, and what software is listening on them — common for auditing your own infrastructure or debugging connectivity.
+
+```bash
+# discover live hosts on a subnet
+nmap -sn 192.168.1.0/24
+# scan the common ports on a host
+nmap example.com
+# detect service and version info on open ports
+nmap -sV example.com
+# scan a specific port range
+nmap -p 1-1000 example.com
+```
+
+> Tip: some scan types (e.g. `-sS` SYN scans) need `sudo` for raw socket access; a plain `-sV` connect scan usually doesn't.
+
+### `ssh-audit` — SSH Configuration Auditor
+Connects to an SSH server (or inspects a client config) and reports which key exchange, cipher, and MAC algorithms it offers, flagging weak or deprecated ones against current best practices. Use it to check your own servers aren't offering outdated crypto before they go anywhere near the internet.
+
+```bash
+# audit a server's SSH configuration on the default port
+ssh-audit example.com
+# audit a non-standard port
+ssh-audit example.com -p 2222
+# output results as JSON for scripting/CI
+ssh-audit --json example.com
+```
+
+### `lazyssh` — TUI SSH Connection Manager
+A keyboard-driven TUI for browsing, searching, and connecting to hosts defined in `~/.ssh/config`, inspired by `lazydocker`/`k9s`. It saves you from memorizing IPs or retyping long `ssh` invocations — pick a host from a list and connect, all through the standard `ssh` binary underneath so it never touches your keys or credentials directly.
+
+```bash
+# launch the TUI (lists hosts from ~/.ssh/config)
+lazyssh
+```
+
+> Tip: press `a` inside the TUI to add a new host profile through a guided form (alias, host/IP, user, port, identity file) — there's no CLI flag for adding hosts, it's TUI-only.
+
+### `keyward` — Offline SSH Key Manager
+A single-binary, keyboard-driven TUI (with scriptable CLI commands) for discovering, inspecting, generating, rotating, and auditing SSH keys and `~/.ssh/config` — with no daemon and no network access. Use the CLI subcommands in scripts or CI, and the TUI for everyday interactive key management.
+
+```bash
+# launch the interactive TUI
+keyward
+# run a security audit, failing CI on critical findings
+keyward audit --fail-on=critical
+# list discovered keys as JSON
+keyward list --json
+# write an encrypted backup of ~/.ssh
+keyward backup --out ~/Archive/ssh-backup.tar.age
+```
+
+### `blueutil` — CLI Bluetooth Control
+Controls macOS Bluetooth from the command line — power state, listing paired/connected devices, and connecting or disconnecting a specific device by address or name. It's what drives the Bluetooth toggle in the SketchyBar menu bar on this setup, but it's just as usable directly.
+
+```bash
+# turn Bluetooth on (or off / toggle)
+blueutil --power on
+# list currently paired devices
+blueutil --paired
+# list currently connected devices
+blueutil --connected
+# connect to a device by its MAC address
+blueutil --connect AA-BB-CC-DD-EE-FF
+```
+
+
+## Databases, containers & cloud
+
+### `harlequin` — Harlequin SQL IDE
+A full SQL IDE that runs in your terminal as a TUI, with a results grid, schema browser, and query editor. It connects to DuckDB (its default), Postgres, MySQL, SQLite, and S3-hosted data via adapter plugins, replacing the need to open a heavyweight desktop DB client just to poke around. Reach for it when you want to interactively explore or query a database without leaving the terminal.
+
+```bash
+# open (or create) a local DuckDB file
+harlequin mydata.db
+# connect to Postgres via the postgres adapter
+harlequin -a postgres "postgres://user:pass@localhost:5432/mydb"
+# connect to MySQL via the mysql adapter
+harlequin -a mysql -h localhost -p 3306 -U user --database mydb
+```
+
+> Tip: run `harlequin --help` after installing an adapter — each one adds its own connection flags.
+
+### `pgcli` — Postgres CLI
+A drop-in replacement for `psql` with auto-completion, syntax highlighting, and smarter multi-line editing. It knows Postgres table/column names as you type, which makes ad hoc querying much faster than the stock client. Use it any time you're working directly against a Postgres database from the terminal.
+
+```bash
+# connect with a full connection URL
+pgcli postgres://user@localhost:5432/mydb
+# connect with discrete flags, like psql
+pgcli -h localhost -U myuser -d mydb
+# connect to a non-default port
+pgcli -h localhost -U myuser -d mydb -p 5433
+```
+
+> Tip: it supports the same `\d`, `\dt`, `\l` meta-commands you already know from `psql`.
+
+### `mycli` — MySQL CLI
+The MySQL/MariaDB sibling of `pgcli` — a `mysql` client replacement with auto-completion, syntax highlighting, and smart pagination. It's the tool to reach for whenever you're running ad hoc queries against MySQL or MariaDB and want a friendlier interactive experience than the stock client.
+
+```bash
+# connect the same way you would with the mysql client
+mycli -u root -h 127.0.0.1 mydb
+# connect via a connection URL
+mycli mysql://user:pass@localhost/mydb
+# connect to a remote host on a custom port
+mycli -u myuser -h db.example.com -P 3307 mydb
+```
+
+### `usql` — Universal SQL CLI
+One CLI that speaks to nearly any database — Postgres, MySQL, SQLite, SQL Server, and more — through a single consistent interface and connection-URL syntax. It's handy when you bounce between different database engines and don't want to context-switch between `psql`, `mycli`, etc. Use it for quick cross-engine scripting or when a project's DB type isn't fixed.
+
+```bash
+# connect to Postgres
+usql pg://user@localhost/mydb
+# connect to a local SQLite file
+usql sqlite:./local.db
+# run one query non-interactively and exit
+usql pg://user@localhost/mydb -c "select count(*) from users;"
+```
+
+### `lazysql` — Lazy SQL TUI
+A keyboard-driven, `lazygit`-style TUI for browsing tables and running queries interactively, supporting Postgres, MySQL, and SQLite. It's a good middle ground between a full SQL IDE and a bare CLI client when you mainly want to poke around a schema and run quick queries with the mouse out of the loop. Connections can be saved for reuse instead of retyping a URL each time.
+
+```bash
+# connect directly with a connection URL
+lazysql postgres://user:pass@localhost:5432/mydb
+# connect to a local SQLite database
+lazysql sqlite:///path/to/local.db
+# open in read-only mode to browse safely
+lazysql --read-only postgres://user:pass@localhost:5432/mydb
+```
+
+### `dbmate` — Database Migrations
+A lightweight, framework-agnostic schema migration tool that works with plain `.sql` up/down files instead of a language-specific DSL. It reads the target database from a `DATABASE_URL` environment variable, so it fits into any stack without pulling in an ORM's migration system. Use it to version-control and apply schema changes consistently across environments.
+
+```bash
+# point dbmate at your database
+export DATABASE_URL="postgres://user:pass@localhost:5432/mydb?sslmode=disable"
+# scaffold a new migration file
+dbmate new create_users
+# apply all pending migrations
+dbmate up
+# undo the most recent migration
+dbmate rollback
+```
+
+### `orbstack` — OrbStack
+A fast, low-memory replacement for Docker Desktop that transparently provides working `docker` and `kubectl` commands, plus lightweight Linux VMs, without the resource overhead. It's mostly a background macOS app — open it once to finish setup, and it keeps `docker`/`kubectl` working from any terminal afterward. Reach for its own `orb` CLI when you specifically need a general-purpose Linux VM rather than a container.
+
+```bash
+# first run: launches the app and finishes setup, then it sits in the background
+open -a OrbStack
+# once running, docker/kubectl "just work" against it
+docker ps
+kubectl get nodes
+# spin up a lightweight Linux VM
+orb create ubuntu dev
+```
+
+### `lazydocker` — Lazy Docker TUI
+A full-screen terminal UI for Docker: browse containers, images, volumes, and Compose stacks, tail logs, and view live stats, all navigable with the keyboard. It's the Docker equivalent of `lazygit` — far faster than repeatedly typing `docker ps` / `docker logs` / `docker stats` by hand. Launch it from any project directory to manage whatever's running there.
+
+```bash
+# launch the TUI; auto-detects a docker-compose.yml in the current directory
+lazydocker
+# point it at a specific compose file
+DOCKER_COMPOSE_FILE=./docker/docker-compose.yml lazydocker
+```
+
+> Tip: press `d` on a container to remove it, `[`/`]` to switch panels — check the in-app help (`?`) for the full keymap.
+
+### `dive` — Docker Image Layer Explorer
+Inspects a Docker image layer-by-layer, showing exactly what each layer added and how much space is wasted by duplicated or unnecessary files. It's the tool for shrinking bloated images and understanding *why* an image is as large as it is, beyond what `docker history` shows. It can also run non-interactively in CI to fail a build that regresses on image efficiency.
+
+```bash
+# analyze an existing image interactively
+dive myimage:latest
+# build an image and analyze it in one step
+dive build -t myimage:latest .
+# non-interactive CI mode: pass/fail on efficiency thresholds
+CI=true dive myimage:latest
+```
+
+> Tip: add a `.dive-ci` file to your repo root to set the efficiency and wasted-space thresholds used in CI mode.
+
+### `hadolint` — Dockerfile Linter
+A linter purpose-built for Dockerfiles that flags anti-patterns like missing version pins, unnecessary layers, and insecure practices, backed by Docker's own best-practice rules. It catches issues `docker build` won't warn you about. Run it before building any image, ideally wired into pre-commit or CI.
+
+```bash
+# lint a Dockerfile
+hadolint Dockerfile
+# ignore a specific rule you've deliberately chosen not to follow
+hadolint --ignore DL3008 Dockerfile
+# emit machine-readable output for CI
+hadolint -f json Dockerfile
+```
+
+### `trivy` — All-in-One Security Scanner
+A single scanner covering container images, filesystems, and IaC misconfigurations, replacing the need for separate tools per concern (it absorbed what `tfsec` used to do, now available via `trivy config`). It's usually the first thing to run before pushing an image or applying infrastructure changes. Use it in CI as a gate against known CVEs and misconfigurations.
+
+```bash
+# scan a container image for vulnerabilities
+trivy image myimage:latest
+# scan the local filesystem/project
+trivy fs .
+# scan IaC (Terraform, Kubernetes manifests, Dockerfiles) for misconfigurations
+trivy config .
+```
+
+### `cosign` — Container Signing
+Signs and verifies container images and other artifacts as part of a software supply-chain security practice, built around the Sigstore project. It lets you (and downstream consumers) cryptographically confirm an image came from you and hasn't been tampered with. Reach for it when publishing images you want consumers or a cluster admission controller to trust.
+
+```bash
+# generate a signing key pair
+cosign generate-key-pair
+# sign an image with your private key
+cosign sign --key cosign.key myimage:latest
+# verify an image's signature with the public key
+cosign verify --key cosign.pub myimage:latest
+```
+
+> Tip: `cosign sign myimage:latest` without `--key` does keyless signing via OIDC (e.g. GitHub Actions identity) — no key management needed.
+
+### `kubectl` — Kubernetes CLI
+The standard command-line client for inspecting and managing Kubernetes resources — pods, deployments, services, and everything else in a cluster. OrbStack provides a working `kubectl` automatically once it's running. It's the baseline tool everything else in the Kubernetes toolchain (like `k9s` and `stern`) sits on top of.
+
+```bash
+# list pods in the current namespace
+kubectl get pods
+# see detailed info and recent events for a pod
+kubectl describe pod mypod
+# stream logs from a pod
+kubectl logs -f mypod
+# apply a manifest
+kubectl apply -f deployment.yaml
+```
+
+### `k9s` — Kubernetes TUI
+A real-time terminal UI for navigating and managing Kubernetes clusters — browse resources, drill into pods, view logs, and edit or delete objects, all without memorizing `kubectl` flags. It's dramatically faster for day-to-day cluster exploration than typing individual `kubectl` commands. Use it whenever you're actively debugging or monitoring what's running in a cluster.
+
+```bash
+# launch against your current kube context
+k9s
+# start in a specific namespace
+k9s -n kube-system
+# start against a specific kube context
+k9s --context prod
+```
+
+### `stern` — Multi-Pod Log Tailing
+Tails logs from multiple Kubernetes pods and containers at once, matching them by name or label selector and color-coding each source. It solves the problem of `kubectl logs` only following one pod at a time, which is painful once you have replicas. Use it whenever you need to watch logs across a deployment during a rollout or incident.
+
+```bash
+# tail logs from all pods matching a name prefix
+stern mypod-prefix
+# tail all pods in a namespace
+stern . -n kube-system
+# tail pods matching a label selector
+stern --selector app=myapp
+```
+
+### `awscli` — AWS CLI
+The official command-line interface for every AWS service, used both directly and as the foundation many other AWS tools (like `granted` and `session-manager-plugin`) build on. It's how you configure credentials, inspect resources, and script anything AWS from the terminal. Nearly every AWS workflow starts or ends with an `aws` command.
+
+```bash
+# set up SSO-based login
+aws configure sso
+# list objects in an S3 bucket
+aws s3 ls s3://mybucket
+# describe EC2 instances using a specific profile
+aws ec2 describe-instances --profile myprofile
+# confirm which identity/role is currently active
+aws sts get-caller-identity
+```
+
+### `assume` — Granted (AWS SSO Role Switching)
+Granted's `assume` command makes switching between AWS SSO profiles and roles fast — it exports temporary credentials for a chosen profile straight into your current shell instead of you hand-editing `~/.aws/credentials` or juggling `--profile` flags everywhere. It also has a browser-console mode for when you just want to click around in the AWS Console. Reach for it constantly if you work across multiple AWS accounts/roles.
+
+```bash
+# fuzzy-search and assume a profile, exporting creds into this shell
+assume
+# assume a specific named profile directly
+assume myprofile
+# open the AWS web console for a profile instead of exporting creds
+assume myprofile -c
+```
+
+> Tip: `assume myprofile -c -s ec2` opens the console directly on a specific service (EC2 in this case).
+
+### `cdk` — AWS CDK CLI
+The command-line tool for the AWS Cloud Development Kit — synthesizes CloudFormation templates from infrastructure defined in real code (TypeScript, Python, etc.) and deploys them. It replaces hand-written CloudFormation/YAML with type-checked, reusable infrastructure code. Use it for any AWS infrastructure project defined via CDK.
+
+```bash
+# scaffold a new CDK app
+cdk init app --language typescript
+# synthesize CloudFormation templates without deploying
+cdk synth
+# preview what would change before deploying
+cdk diff
+# deploy a specific stack
+cdk deploy MyStack
+```
+
+### `cdk-nag` — CDK Nag
+A library (not a standalone command) that you wire into a CDK app to run curated best-practice and compliance rule packs — like AWS Solutions or NIST 800-53 — against every construct during `cdk synth`. It catches insecure or non-compliant infrastructure patterns before they're ever deployed, acting like a linter for your CDK-defined resources. Add it early in a project so violations surface as you build, not after an audit.
+
+```typescript
+import { Aspects } from 'aws-cdk-lib';
+import { AwsSolutionsChecks } from 'cdk-nag';
+
+// apply the AWS Solutions rule pack to every construct in the app
+Aspects.of(app).add(new AwsSolutionsChecks({ verbose: true }));
+```
+
+> Tip: findings show up as `cdk synth` warnings/errors — suppress specific, reviewed exceptions with `NagSuppressions` rather than disabling the whole check.
+
+### `sam` — AWS SAM CLI
+Builds, locally tests, and deploys AWS serverless applications (Lambda, API Gateway, Step Functions, etc.) defined with the Serverless Application Model. Its standout feature is local invocation and API emulation — you can run a Lambda function or an entire API locally in a Docker container before ever deploying. Use it for serverless projects where fast local iteration matters.
+
+```bash
+# scaffold a new serverless app
+sam init
+# invoke a single function locally
+sam local invoke MyFunction
+# run a local API Gateway emulator for the whole app
+sam local start-api
+# deploy, prompting for any missing config
+sam deploy --guided
+```
+
+### `cfn-lint` — CloudFormation Linter
+Validates CloudFormation templates against the actual AWS resource specification and a large set of best-practice rules, catching errors like invalid property names or type mismatches long before a deploy fails. It's much more thorough than CloudFormation's own template validation. Run it on any hand-written or CDK-synthesized CloudFormation template before deploying.
+
+```bash
+# lint a single template
+cfn-lint template.yaml
+# lint every template in a directory
+cfn-lint templates/*.yaml
+# ignore a specific rule
+cfn-lint --ignore-checks W3011 template.yaml
+```
+
+### `steampipe` — Cloud Infrastructure via SQL
+Lets you query live cloud infrastructure — AWS resources, and many other sources — using plain SQL, powered by a Postgres foreign-data-wrapper engine under the hood. It's excellent for inventory audits, posture checks, and ad hoc "which resources have X" questions that would otherwise mean scripting the AWS CLI plus `jq`. Requires installing a plugin for whichever provider you're querying.
+
+```bash
+# install the AWS plugin (one-time setup)
+steampipe plugin install aws
+# open the interactive SQL query shell
+steampipe query
+# run a single query directly
+steampipe query "select instance_id, instance_type from aws_ec2_instance"
+```
+
+> Tip: `steampipe query` results are just SQL, so you can join across services — e.g. correlate IAM roles with the EC2 instances that use them.
+
+### `s5cmd` — Fast S3 Client
+A massively parallel S3 client that's 10–30x faster than `aws s3` for bulk copy and sync operations, because it parallelizes transfers far more aggressively. Reach for it whenever you're moving large numbers of objects or large volumes of data in or out of S3 and `aws s3 sync` feels too slow.
+
+```bash
+# copy a single file to S3
+s5cmd cp localfile.txt s3://mybucket/path/
+# sync a local directory to S3 in parallel
+s5cmd sync ./localdir s3://mybucket/path/
+# list objects in a bucket
+s5cmd ls s3://mybucket/
+```
+
+### `stu` — S3 TUI
+A terminal UI for browsing S3 buckets, previewing objects, and downloading files, without needing the AWS Console or scripting `aws s3` commands. It behaves like the AWS CLI in terms of credential resolution — it just picks up your default profile or environment variables. Use it when you want to visually explore what's in a bucket rather than list-and-grep.
+
+```bash
+# launch and browse using your default AWS profile
+stu
+# connect using a specific named profile
+stu --profile myprofile
+# jump straight into a specific bucket
+stu --bucket mybucket
+```
+
+### `e1s` — ECS TUI
+A `k9s`-style terminal UI for Amazon ECS — browse clusters, services, and tasks, exec into running containers, and tail logs, all interactively instead of chaining `aws ecs describe-*` commands. It's the fastest way to see what's actually running in an ECS cluster and poke at it. Use it for day-to-day ECS operations and debugging.
+
+```bash
+# launch using your default AWS profile/region
+e1s
+# launch against a specific profile
+e1s --profile myprofile
+# launch against a specific region
+e1s --region us-east-1
+```
+
+### `e2c` — EC2 TUI
+A terminal UI for browsing and managing Amazon EC2 instances — view state, type, and other details, and start/stop/reboot/terminate or connect via SSH, all without leaving the terminal or opening the Console. It's the EC2 counterpart to `e1s` and `k9s`. Reach for it when you need a quick visual view of running instances across a region.
+
+```bash
+# launch using default credentials/region
+e2c
+# launch against a specific region
+e2c --region us-east-1
+```
+
+> Tip: set `AWS_PROFILE` in your shell to point `e2c` at a non-default profile.
+
+### `dy` — Dynein (DynamoDB CLI)
+An ergonomic DynamoDB CLI from AWS Labs that gives you shorthand commands for common table and item operations, plus import/export, instead of the verbose JSON-heavy syntax of `aws dynamodb`. Use it for quick interactive exploration and scripting against DynamoDB tables.
+
+```bash
+# list tables in the current region
+dy ls
+# list tables across every AWS region
+dy ls --all-regions
+# scan a table
+dy scan -t my-table
+```
+
+### `claws` — Broad AWS TUI
+A `k9s`-style terminal UI that spans roughly 70 AWS services in one browsable interface, rather than focusing on a single service like `e1s` or `e2c` do. It's useful when you want one general-purpose place to poke around AWS without switching tools per service, though as a younger project it's less polished than the service-specific TUIs. Treat it as a broad-coverage exploration tool rather than your primary daily driver for any one service.
+
+```bash
+# launch using your default AWS profile/region
+claws
+```
+
+> Tip: being a younger project, expect rougher edges than `k9s`/`e1s` — fall back to `aws` CLI or a service-specific TUI if a feature is missing.
+
+### `iamlive` — IAM Policy Generator
+Watches the AWS API calls your application or script actually makes and generates a least-privilege IAM policy from that observed traffic, instead of you guessing which permissions are needed. It runs either as a local HTTPS proxy or via AWS's client-side monitoring (CSM) protocol. Use it while running a script or app to derive the minimal IAM policy it truly needs, rather than over-granting.
+
+```bash
+# start in proxy mode (set HTTPS_PROXY to iamlive's bind address to capture calls)
+iamlive --mode proxy
+# start in CSM mode instead (AWS-only, captures actions but not resource ARNs)
+iamlive --mode csm
+```
+
+> Tip: proxy mode captures full resource ARNs for a tighter policy; CSM mode only captures actions with wildcard resources.
+
+### `session-manager-plugin` — SSM Session Manager Plugin
+A plugin for the AWS CLI that enables `aws ssm start-session`, letting you open an interactive shell or port-forward to an EC2 instance without SSH keys, bastion hosts, or open inbound ports. It's not invoked directly — it's automatically used by the `aws ssm` subcommands once installed. Use it whenever you need shell access or a tunnel into a private instance managed by SSM.
+
+```bash
+# open an interactive shell on an instance, no SSH required
+aws ssm start-session --target i-0123456789abcdef0
+
+# forward a local port to a port on the remote instance
+aws ssm start-session --target i-0123456789abcdef0 \
+  --document-name AWS-StartPortForwardingSession \
+  --parameters '{"portNumber":["5432"],"localPortNumber":["15432"]}'
+```
+
+### `tofu` — OpenTofu
+The open-source, community-governed fork of Terraform for defining and provisioning multi-cloud infrastructure as code. It's a drop-in replacement using the same HCL syntax and workflow (`init`/`plan`/`apply`), for teams that want infrastructure tooling that stays fully open source. Use it as your primary IaC tool for any cloud resources.
+
+```bash
+# initialize providers and backend
+tofu init
+# preview changes
+tofu plan
+# apply changes
+tofu apply
+# auto-format all .tf files recursively
+tofu fmt -recursive
+```
+
+### `tflint` — Terraform/OpenTofu Linter
+A linter for Terraform/OpenTofu configuration that catches provider-specific errors, deprecated syntax, and style issues that `tofu validate` won't catch, since it understands provider resource schemas. Run it before `tofu plan`/`apply` to catch mistakes early and enforce team conventions.
+
+```bash
+# install/update provider plugins tflint needs
+tflint --init
+# lint the current directory
+tflint
+# lint recursively through subdirectories/modules
+tflint --recursive
+```
+
+### `terraform-docs` — Module Documentation Generator
+Auto-generates Markdown documentation of a Terraform/OpenTofu module's inputs, outputs, providers, and resources directly from the code, so module docs never drift out of sync by hand. Use it to keep every module's README accurate with zero manual upkeep.
+
+```bash
+# generate a markdown table and write it to a new file
+terraform-docs markdown table --output-file README.md .
+# inject/update generated docs between markers in an existing README
+terraform-docs markdown table --output-file README.md --output-mode inject .
+```
+
+> Tip: add `<!-- BEGIN_TF_DOCS -->` / `<!-- END_TF_DOCS -->` markers to a README so `--output-mode inject` knows where to update.
+
+### `checkov` — IaC Static Analysis
+Runs static analysis over infrastructure-as-code — Terraform, CloudFormation, Kubernetes manifests, Dockerfiles — against hundreds of built-in security and compliance policies. It catches misconfigurations like overly permissive IAM policies or unencrypted storage before they're ever applied. Run it as a pre-deploy gate alongside `trivy config`.
+
+```bash
+# scan the current directory (auto-detects IaC type)
+checkov -d .
+# scan a single file
+checkov -f template.yaml
+# scan only Terraform resources in a directory
+checkov -d . --framework terraform
+```
+
+### `infracost` — Cloud Cost Estimation
+Estimates the monthly dollar cost of Terraform/OpenTofu changes before you apply them, by combining your plan output with live cloud pricing data. It turns "will this change blow up our AWS bill" into a number you can see in a PR, rather than finding out after the fact. Run it as part of your pre-apply review process.
+
+```bash
+# estimate the cost of the infrastructure in the current directory
+infracost breakdown --path .
+# show the cost difference against a previous estimate
+infracost diff --path . --compare-to infracost-base.json
+```
+
+
+## Security, testing, runtimes & backups
+
+### `gitleaks` — Gitleaks
+Scans a git repo's full history (or a directory, or staged changes) for hardcoded secrets like API keys and tokens using regex/entropy rules. It replaces manually grepping for leaked credentials and catches what got committed before you noticed. Run it locally before pushing, or wire it into pre-commit/CI to block leaks automatically.
+
+```bash
+# scan a repo's full git history
+gitleaks detect --source . -v
+# scan only staged changes (pre-commit hook)
+gitleaks protect --staged -v
+# write findings to a JSON report
+gitleaks detect --source . --report-path gitleaks-report.json
+```
+
+> Tip: `gitleaks protect --staged` is the one to wire into a pre-commit hook — `detect` scans history, which is too slow to run on every commit.
+
+### `detect-secrets` — detect-secrets
+Yelp's secret scanner builds a baseline file of known/allowed secrets, then flags anything new that looks like a credential on future scans — useful for adopting scanning in an existing repo without drowning in old false positives. It's commonly wired into pre-commit to block newly introduced secrets. Reach for it when you want a living, auditable baseline rather than a full history scan.
+
+```bash
+# generate an initial baseline of existing "secrets"
+detect-secrets scan > .secrets.baseline
+# re-scan and update the baseline against new findings
+detect-secrets scan --baseline .secrets.baseline
+# interactively review/label flagged findings
+detect-secrets audit .secrets.baseline
+```
+
+### `semgrep` — Semgrep
+A fast static analysis tool that finds bugs and security issues by matching simple, code-like pattern rules across dozens of languages — no deep AST expertise needed to write or read a rule. It's a lighter-weight alternative to heavier SAST tools, backed by a large community ruleset for OWASP-style issues. Use it in CI or before a PR to catch injection risks and common mistakes automatically.
+
+```bash
+# run with the default auto-selected ruleset for this repo
+semgrep --config auto .
+# run a specific curated security ruleset
+semgrep --config p/security-audit .
+# scan only files changed since main
+semgrep scan --config p/ci --baseline-commit main
+```
+
+### `age` — age
+A modern, simple file encryption tool built as a friendlier alternative to GPG — no keyring management, no web-of-trust ceremony, just a keypair or a passphrase. Generate a keypair once, then encrypt files to a recipient's public key or with a shared passphrase. Reach for it whenever you need to encrypt a file for yourself or someone else without GPG's complexity.
+
+```bash
+# generate a new keypair
+age-keygen -o key.txt
+# encrypt a file to a recipient's public key
+age -r age1ql3z7hjy54... -o secret.age secret.txt
+# decrypt with your private key
+age -d -i key.txt -o secret.txt secret.age
+# encrypt with a passphrase instead of a key
+age -p -o secret.age secret.txt
+```
+
+### `sops` — sops
+Encrypts the values inside a YAML/JSON/ENV file while leaving the keys in plaintext, so a secrets file stays diffable and readable in git while its contents stay protected. It integrates with age, AWS KMS, GCP KMS, and PGP as the underlying encryption backend. Use it to safely commit per-environment secrets (like `secrets.prod.yaml`) straight into a repo.
+
+```bash
+# encrypt a file in place (uses .sops.yaml config for the key)
+sops -e -i secrets.yaml
+# decrypt a file to stdout
+sops -d secrets.yaml
+# open the encrypted file in $EDITOR, re-encrypting on save
+sops secrets.yaml
+```
+
+> Tip: define your age recipient or KMS key once in a `.sops.yaml` at the repo root so `sops` picks it up automatically instead of passing `--age`/`--kms` every time.
+
+### `apw` — Apple Passwords CLI
+Gives shell access to Apple Passwords (iCloud Keychain) logins and TOTP codes without opening the Passwords app or a browser — handy for scripts, launcher integrations, or quickly grabbing a 2FA code in the terminal. It runs a small background daemon you authenticate against via a system prompt. Needs macOS 14+ and the daemon running before use.
+
+```bash
+# start the background daemon (once, or via `brew services start apw`)
+apw start
+# authenticate the CLI against the running daemon
+apw auth
+# look up a saved password for a domain
+apw pw list google.com
+# grab the current one-time (TOTP) code for a domain
+apw otp get google.com
+```
+
+### `clamscan` — ClamAV
+An open-source antivirus engine for on-demand scanning of files and directories — not a real-time monitor, but useful for checking downloads, USB drives, or a suspicious folder against known malware signatures. Update the virus database with `freshclam` before scanning since ClamAV is only as good as its definitions. Reach for it for a quick, free malware check without a commercial AV subscription.
+
+```bash
+# update the virus definition database
+freshclam
+# scan a directory recursively, reporting only infected files
+clamscan -r -i ~/Downloads
+# scan and move infected files into quarantine
+clamscan -r --move=~/quarantine ~/Downloads
+```
+
+### LuLu — Outbound Firewall
+LuLu is a free, open-source macOS outbound firewall that watches for and blocks unexpected outbound network connections — the reverse of most firewalls, which focus on inbound traffic. It alerts the first time an app tries to phone home, letting you allow or block it, which is useful for catching malware, trackers, or apps being unexpectedly chatty. There's no CLI; everything happens through its menu-bar icon and the alert popups it shows when a new connection is attempted.
+
+*No CLI — manage via the menu-bar icon and its connection-alert popups.*
+
+### `mullvad` — Mullvad VPN
+Mullvad is a privacy-focused, no-logs VPN service; the GUI app bundles a `mullvad` CLI for scripting connections, checking status, and switching relays without opening the app window. This setup's SketchyBar VPN pill uses the CLI under the hood to toggle the connection and show status at a glance. Reach for the CLI when you want to connect/disconnect from a script or check state quickly.
+
+```bash
+# connect to the VPN
+mullvad connect
+# check current connection status
+mullvad status
+# disconnect
+mullvad disconnect
+# pick a specific relay location
+mullvad relay set location us
+```
+
+### `just` — Just
+A command/task runner that reads recipes from a `Justfile` in your project root — a simpler `make`, without tab-vs-space pitfalls or file-target semantics getting in the way. Recipes are just named shell commands, so it's a natural home for `just build`, `just test`, `just deploy` style project shortcuts. Reach for it any time a project needs a handful of common one-liners that new contributors shouldn't have to memorize.
+
+```bash
+# list all available recipes in this project's Justfile
+just --list
+# run the recipe named "test"
+just test
+# run a recipe with arguments
+just deploy staging
+```
+
+### `act` — act
+Runs your GitHub Actions workflows locally in Docker containers, so you can debug a CI pipeline without committing, pushing, and waiting on GitHub's runners. It reads `.github/workflows/*.yml` and simulates the triggering event locally. Reach for it while iterating on a workflow file — much faster than the push-wait-check loop.
+
+```bash
+# run the workflows triggered by a push event (the default)
+act
+# run only jobs triggered by pull_request
+act pull_request
+# list the jobs/workflows act would run, without running them
+act -l
+# run a specific job by name
+act -j build
+```
+
+### `act3` — act3
+A tiny terminal dashboard that fetches and displays the last three GitHub Actions runs for a repo (or several repos), so you can glance at CI health without opening a browser. It's unrelated to `act` (which runs workflows locally) — act3 only reports on runs that already happened on GitHub. Reach for it right after pushing, to confirm CI passed without leaving the terminal.
+
+```bash
+# check the current directory's repo
+act3
+# check specific repositories
+act3 -r owner/repo1,owner/repo2
+# render output as a table instead of the default view
+act3 -f table
+```
+
+### `ruff` — Ruff
+An extremely fast Python linter and formatter, written in Rust, that replaces flake8 (linting), Black (formatting), and isort (import sorting) with a single tool and config. It runs orders of magnitude faster than the tools it replaces, which matters on large codebases and in pre-commit hooks. Use it as the default Python linter/formatter for both one-off checks and CI.
+
+```bash
+# lint the current project
+ruff check .
+# lint and auto-fix what's safely fixable
+ruff check --fix .
+# format code (Black-compatible style)
+ruff format .
+```
+
+### `shellcheck` — ShellCheck
+A static analysis linter for shell scripts that catches quoting mistakes, unsafe globbing, portability issues, and other classic bash/sh footguns before they bite in production. Each warning comes with a rationale and suggested fix, which makes it genuinely useful for learning shell pitfalls, not just flagging them. Run it on any script before committing, or wire it into CI/pre-commit for shell-heavy repos.
+
+```bash
+# check a single script
+shellcheck deploy.sh
+# check all shell scripts in a directory
+shellcheck scripts/*.sh
+# output in a format editors/CI can parse
+shellcheck -f json deploy.sh
+```
+
+### `shfmt` — shfmt
+A gofmt-style formatter for shell scripts that enforces one consistent style (indentation, spacing, line breaks) across a codebase, removing style bikeshedding from code review. It pairs naturally with shellcheck — shfmt handles formatting, shellcheck handles correctness. Run it before committing shell scripts, or in CI to enforce a house style.
+
+```bash
+# print a formatted version of a script to stdout
+shfmt deploy.sh
+# format a file in place with 2-space indentation
+shfmt -w -i 2 deploy.sh
+# check whether files are already formatted (for CI)
+shfmt -d scripts/*.sh
+```
+
+### `typos` — typos
+A fast source-code spell checker tuned for low false positives on code (it understands identifiers, camelCase, etc.), catching typos in comments, strings, and docs that regular spell checkers choke on. It's designed to be safe to run unattended in CI. Add it as a pre-push or CI check to catch embarrassing typos before they ship.
+
+```bash
+# check the current directory
+typos
+# check and interactively fix typos
+typos -w
+# check a specific file or path
+typos README.md
+```
+
+### `lighthouse` — Lighthouse
+Google's automated web page auditor, scoring performance, accessibility, SEO, and best practices, available as a CLI so it can run outside Chrome DevTools and in CI. It's the standard way to get an objective, repeatable audit of a page rather than eyeballing load times. Run it against a local dev server or a deployed URL before shipping a page.
+
+```bash
+# audit a URL and open the HTML report
+lighthouse https://example.com --view
+# output raw JSON for scripting/CI thresholds
+lighthouse https://example.com --output json --output-path report.json
+# audit only performance and accessibility categories
+lighthouse https://example.com --only-categories=performance,accessibility
+```
+
+### `mise` — mise
+A universal runtime/version manager for Node, Python, Go, Ruby, and more — one tool instead of nvm + pyenv + rbenv + gvm — plus a lightweight task runner. It reads a `.tool-versions` or `.mise.toml` file per project and switches versions automatically when you `cd` in. Reach for it any time a project needs a pinned language/runtime version or a simple project task.
+
+```bash
+# install and pin a Node version for this project
+mise use node@20
+# install every tool version listed in .mise.toml/.tool-versions
+mise install
+# list installed and active tool versions
+mise ls
+```
+
+### `uv` — uv
+An extremely fast Python package manager and virtual environment tool written in Rust, replacing pip, venv, and pip-tools with a single 10-100x faster binary. It also runs one-off Python tools in isolated environments without polluting a project (`uvx`). Use it for creating venvs, installing dependencies, and locking, instead of raw pip.
+
+```bash
+# create a virtual environment
+uv venv
+# install dependencies from requirements/pyproject
+uv pip install -r requirements.txt
+# run a tool in an ephemeral environment, no install needed
+uvx ruff check .
+```
+
+### `bun` — Bun
+An all-in-one JavaScript/TypeScript runtime, bundler, test runner, and package manager, aiming to be a faster drop-in for Node plus npm/webpack/jest. It runs TypeScript directly with no build step and installs packages significantly faster than npm/yarn. Reach for it on projects that want one fast toolchain instead of stitching several together.
+
+```bash
+# install dependencies
+bun install
+# run a script directly (TS/JS, no build step)
+bun run index.ts
+# run the project's test suite
+bun test
+# add a package
+bun add zod
+```
+
+### `ni` — ni
+A universal Node package-manager runner that detects which package manager a project uses (npm, yarn, pnpm, or bun) from its lockfile and runs the equivalent command, so you never have to remember which one a given repo wants. `ni` installs, `nr` runs a script, `nx` executes a package binary. Reach for it when jumping between projects that use different package managers.
+
+```bash
+# install dependencies with whichever PM the lockfile implies
+ni
+# run the "build" script
+nr build
+# execute a package binary without installing it globally
+nx eslint .
+```
+
+### `go` — Go
+The official Go toolchain: compiler, module/dependency manager, test runner, and formatter in one binary. It's what you use to build, run, test, and manage dependencies for any Go project — there's no separate package manager to install. Reach for it for anything Go-related.
+
+```bash
+# run a Go program without building a binary first
+go run main.go
+# build a binary
+go build ./...
+# run the test suite
+go test ./...
+# add/update a dependency in go.mod
+go get example.com/pkg@latest
+```
+
+### `tsc` — TypeScript Compiler
+The TypeScript compiler and type checker: it type-checks `.ts`/`.tsx` files and can emit compiled JavaScript. In modern setups it's often used purely for type-checking (`--noEmit`) while a separate bundler handles the actual build. Run it before a PR to catch type errors a linter alone would miss.
+
+```bash
+# type-check the project without emitting output files
+tsc --noEmit
+# compile according to tsconfig.json
+tsc
+# watch mode: re-check on every file save
+tsc --noEmit --watch
+```
+
+### `tsx` — tsx
+Runs TypeScript and ESM files directly with no separate build/compile step, powered by esbuild under the hood — great for scripts, small tools, or trying something quickly without setting up a bundler. It's a common drop-in replacement for `ts-node` with much faster startup. Reach for it for one-off scripts or a project's dev entrypoint.
+
+```bash
+# run a TypeScript file directly
+tsx script.ts
+# watch mode: re-run on file changes
+tsx watch server.ts
+```
+
+### `turbo` — Turborepo
+A high-performance build system for JavaScript/TypeScript monorepos, providing task caching (local and remote) and dependency-aware task pipelines so you only rebuild/retest what actually changed. It dramatically speeds up `build`/`test`/`lint` across many packages compared to running each one naively. Reach for it once a repo has multiple interdependent packages and builds start feeling slow.
+
+```bash
+# run the "build" task across all packages in dependency order
+turbo run build
+# run multiple tasks, using the cache where possible
+turbo run lint test
+# force a clean run, bypassing the cache
+turbo run build --force
+```
+
+### `taproom` — Taproom
+An interactive terminal UI for Homebrew: browse, search, and inspect formulae and casks (description, version, dependencies, install counts) and run install/upgrade/uninstall actions directly from the list, instead of memorizing `brew` subcommands. Reach for it when exploring what's installed or available, rather than for one-off `brew` commands you already know by heart.
+
+```bash
+# launch the TUI
+taproom
+# launch and force a refresh of cached formula/cask data
+taproom --invalidate-cache
+# launch with an initial filter applied
+taproom --filters installed
+```
+
+### `cheznav` — cheznav
+A dual-pane terminal UI for chezmoi: your home directory on one side, chezmoi-managed dotfiles on the other, with synced selection between them so you can visually add, diff, and apply dotfiles instead of remembering `chezmoi add`/`chezmoi apply` paths. Handy for a quick visual sanity check before applying changes. Requires chezmoi itself to already be set up.
+
+```bash
+# launch the TUI
+cheznav
+# launch in dry-run mode (no actual chezmoi changes applied)
+cheznav --dry-run
+```
+
+### `borg` — BorgBackup
+A deduplicated, compressed, and encrypted backup tool — because it dedupes at the chunk level, incremental backups after the first are fast and tiny even across many snapshots. It's designed for efficient offsite or local snapshot backups you can prune by retention policy. Reach for it (directly, or via borgmatic) any time you need real backups, not just a folder copy.
+
+```bash
+# initialize an encrypted backup repository
+borg init --encryption=repokey /path/to/repo
+# create a new backup archive
+borg create /path/to/repo::'{now}' ~/Documents
+# list archives in a repository
+borg list /path/to/repo
+# extract a named archive
+borg extract /path/to/repo::2026-08-09
+```
+
+### `borgmatic` — borgmatic
+A configuration and scheduling layer on top of borg: instead of remembering borg's flags, you declare sources, retention policy, and hooks in a YAML config, and borgmatic drives borg (create, prune, check) for you. It's what turns borg into a "set it and forget it" backup system, often paired with cron/launchd. Reach for it once your borg setup outgrows a couple of manual commands.
+
+```bash
+# run backup, prune, and consistency check per config
+borgmatic
+# create a backup only, skipping prune/check
+borgmatic create
+# list archives in the configured repository
+borgmatic list
+# restore files from the most recent archive
+borgmatic extract --archive latest
+```
+
+### `chezmoi` — chezmoi
+Manages your dotfiles across multiple machines from a single git-backed source directory, with templating for per-machine differences and built-in secrets integration (age, pass, 1Password, etc.) so secrets never land in the repo in plaintext. It replaces ad hoc symlink scripts or copying dotfiles by hand between machines. Reach for it to add a new dotfile, sync changes, or bring a fresh machine up to your configured state.
+
+```bash
+# add an existing dotfile to chezmoi's source state
+chezmoi add ~/.zshrc
+# preview what would change before applying
+chezmoi diff
+# apply the managed dotfiles to this machine
+chezmoi apply
+# pull the latest changes from git and apply them
+chezmoi update
+```
+
+
+## Docs, media, terminal apps & extras
+
+### `d2` — Text-to-Diagram Language
+A declarative diagramming language: you write plain-text code describing boxes, arrows, and containers, and `d2` compiles it into a clean SVG, PNG, or PDF. It replaces GUI diagramming tools (draw.io, Visio) with something that lives in a repo, diffs cleanly, and renders from the terminal — reach for it when documenting architecture, flows, or system diagrams alongside code.
+
+```bash
+# render a .d2 file to SVG (default output)
+d2 architecture.d2
+# live-reload in the browser while editing
+d2 --watch architecture.d2
+# render to PNG using the ELK layout engine
+d2 --layout elk architecture.d2 architecture.png
+```
+
+> Tip: `d2 fmt architecture.d2` reformats the source file in place.
+
+### `mmdc` — Mermaid CLI
+Renders Mermaid diagram definitions (flowcharts, sequence diagrams, gantt charts) to SVG, PNG, or PDF without a browser — the same syntax GitHub and Notion render inline in Markdown. Use it to turn a `.mmd` file (or Mermaid fences inside a Markdown doc) into a static image for docs, slides, or emails.
+
+```bash
+# render a flowchart definition to SVG
+mmdc -i flow.mmd -o flow.svg
+# extract and render every mermaid fence in a Markdown file
+mmdc -i README.md -o diagrams
+# render with a dark theme and transparent background
+mmdc -i flow.mmd -o flow.png -t dark -b transparent
+```
+
+### `pandoc` — Universal Document Converter
+The Swiss-army knife of document conversion: it moves content between Markdown, HTML, Word (docx), PDF, LaTeX, EPUB, and dozens of other formats. It's the backbone of a terminal-first writing workflow — reach for it any time you need to turn a Markdown note into something you can send someone who doesn't live in a terminal.
+
+```bash
+# Markdown to a Word document
+pandoc notes.md -o notes.docx
+# Markdown to PDF (needs a PDF engine, e.g. tectonic)
+pandoc notes.md -o notes.pdf --pdf-engine=tectonic
+# standalone HTML page from Markdown
+pandoc notes.md -o notes.html -s
+```
+
+> Tip: use `-f`/`-t` to force the input/output format when pandoc can't infer it from the file extension.
+
+### `tectonic` — Self-Contained LaTeX Engine
+A modern, self-contained TeX/LaTeX engine that fetches only the packages a document needs instead of requiring a multi-gigabyte TeX Live install. On a bare Mac it's what gives pandoc a PDF engine, so `pandoc ... -o out.pdf` actually works.
+
+```bash
+# compile a .tex file straight to PDF
+tectonic paper.tex
+# use it as pandoc's PDF engine
+pandoc report.md -o report.pdf --pdf-engine=tectonic
+```
+
+### `leaf` — Terminal Markdown Previewer
+A live-reloading Markdown viewer for the terminal, with a fuzzy file picker and built-in Mermaid/LaTeX rendering. It replaces switching to a browser tab or GUI previewer just to check how a document will look while you write it.
+
+```bash
+# open the fuzzy picker to browse Markdown files
+leaf --picker
+# preview one file with live reload on save
+leaf --watch README.md
+# render straight to stdout, no TUI
+leaf --inline notes.md
+```
+
+> Tip: leaf is a viewer, not an editor — Ctrl+E hands the open file to your configured editor (`-e/--editor`, not `$EDITOR`, which leaf ignores).
+
+### `doxx` — Terminal .docx Viewer
+Reads and renders Microsoft Word `.docx` files directly in the terminal, so you don't have to open Word or LibreOffice just to skim a document someone sent you. It can also export a docx's content to plain text, Markdown, or JSON for further processing.
+
+```bash
+# view a Word document in the terminal
+doxx report.docx
+# jump straight to the document outline view
+doxx report.docx --outline
+# export the content to Markdown
+doxx report.docx --export markdown
+```
+
+### `pdftotext`/`pdftoppm`/`pdfinfo` — Poppler PDF Utilities
+A trio of small, fast utilities built on the Poppler PDF library: `pdftotext` pulls text out of a PDF, `pdftoppm` rasterizes pages to images, and `pdfinfo` prints metadata (page count, size, producer). Reach for these when you need to script something against a PDF rather than open it in a viewer.
+
+```bash
+# extract text, preserving the original layout
+pdftotext -layout report.pdf report.txt
+# render each page to a PNG
+pdftoppm -png report.pdf page
+# print page count, size, and other metadata
+pdfinfo report.pdf
+```
+
+### `soffice` — LibreOffice (Headless)
+LibreOffice run in headless mode, used here purely as a conversion/validation engine rather than an interactive office suite — actual document authoring stays in Google Workspace. It's the tool of choice for batch-converting or sanity-checking `.docx`/`.xlsx`/`.pptx` files from a script.
+
+```bash
+# convert a Word doc to PDF, no GUI
+soffice --headless --convert-to pdf report.docx
+# convert a spreadsheet to CSV
+soffice --headless --convert-to csv data.xlsx
+```
+
+> Tip: add `--outdir <path>` to control where the converted file lands.
+
+### `magick` — ImageMagick
+The all-purpose image toolkit: resize, crop, rotate, composite, convert between formats, and batch-process images from the command line. It replaces opening Preview/Photoshop for anything mechanical — resizing a folder of screenshots, converting HEIC to PNG, stitching a thumbnail.
+
+```bash
+# convert between formats
+magick input.heic output.png
+# resize an image to a max width, keeping aspect ratio
+magick input.jpg -resize 800x output.jpg
+# batch-resize every PNG in a directory
+magick mogrify -resize 50% *.png
+```
+
+### `ffmpeg` — Audio/Video Processor
+The universal media processor: transcode between formats, trim clips, extract audio, adjust resolution, and pretty much anything else involving audio or video — all scriptable from the terminal, no GUI editor required.
+
+```bash
+# transcode a video to a smaller H.264 mp4
+ffmpeg -i input.mov -c:v libx264 -crf 23 output.mp4
+# extract the audio track as mp3
+ffmpeg -i input.mp4 -vn -c:a libmp3lame output.mp3
+# trim a clip from 00:01:00 for 30 seconds
+ffmpeg -i input.mp4 -ss 00:01:00 -t 30 -c copy clip.mp4
+```
+
+### `oxipng` — Lossless PNG Optimizer
+Recompresses PNG files to shrink their size with zero quality loss — no visible difference, just a smaller file. It's scriptable and CI-friendly, so it's the natural choice for optimizing images before committing them to a repo or shipping them on a site.
+
+```bash
+# optimize a PNG in place at the default level
+oxipng image.png
+# push harder for maximum compression (slower)
+oxipng -o max image.png
+# optimize every PNG in a directory
+oxipng -o 4 *.png
+```
+
+### `jpegoptim` — JPEG Optimizer
+Shrinks JPEG file size by stripping unnecessary metadata and optimizing encoding, either losslessly or with a controlled quality cap. Use it right before committing or publishing photos/screenshots when you want smaller files without a visible quality hit.
+
+```bash
+# optimize losslessly, overwriting the original
+jpegoptim photo.jpg
+# cap quality at 85 for a bigger size reduction
+jpegoptim --max=85 photo.jpg
+# preview what would happen without writing changes
+jpegoptim --noaction photo.jpg
+```
+
+### `yt-dlp` — Video/Audio Downloader
+Downloads video and audio from YouTube and thousands of other sites, picking up where the now-dormant `youtube-dl` left off with far more active maintenance. Use it to grab a video for offline viewing or pull just the audio track from a talk or podcast episode.
+
+```bash
+# download a video at best quality
+yt-dlp "https://youtube.com/watch?v=..."
+# extract audio only, saved as mp3
+yt-dlp -x --audio-format mp3 "https://youtube.com/watch?v=..."
+# download an entire playlist
+yt-dlp --yes-playlist "https://youtube.com/playlist?list=..."
+```
+
+### `mpv` — Media Player
+A minimal, keyboard-driven media player that runs from the terminal, handling essentially any video or audio format with hardware-accelerated playback. It replaces reaching for QuickTime/VLC for a quick local playback check.
+
+```bash
+# play a video file
+mpv movie.mkv
+# play audio only, skipping the video track
+mpv --no-video song.flac
+# start playback partway through
+mpv --start=00:10:00 movie.mkv
+```
+
+### `asciinema` — Terminal Session Recorder
+Records a terminal session as a lightweight, replayable text-based cast (not a video), which can be played back locally or uploaded and shared as a link. It's the right tool for documenting a CLI workflow in a README or ticket — far smaller and more copy-pasteable than a screen recording.
+
+```bash
+# start recording a session to a file
+asciinema rec demo.cast
+# play a recording back
+asciinema play demo.cast
+# upload a recording and get a shareable link
+asciinema upload demo.cast
+```
+
+### `vhs` — Scripted Terminal Recordings
+Turns a plain-text `.tape` script (a sequence of keystrokes and timings) into a reproducible GIF or MP4 of a terminal session. It replaces manually re-recording a screencast every time a demo needs updating — since the script is checked into the repo, the recording regenerates itself. Reach for it for docs and READMEs where you want a polished, repeatable demo rather than a one-off screen recording.
+
+```bash
+# scaffold a new .tape file with example content
+vhs new demo.tape
+# render a .tape script to its configured output(s)
+vhs demo.tape
+# render straight to a specific output file
+vhs demo.tape -o demo.gif
+```
+
+### `qalc` — Terminal Calculator (libqalculate)
+A serious calculator for the command line: arbitrary math expressions, unit conversion, live currency exchange rates, variables, and symbolic computation, all from one line. It replaces reaching for a GUI calculator or a spreadsheet cell for anything beyond trivial arithmetic.
+
+```bash
+# evaluate an expression directly
+qalc "2^10 + sqrt(144)"
+# convert units
+qalc "5 miles to km"
+# start an interactive REPL session
+qalc -interactive
+```
+
+> Tip: `qalc -exrates` refreshes currency exchange rates before a conversion.
+
+### `manly` — Command Flag Explainer
+Explains exactly what a command and the specific flags you passed it do, pulled straight from its man page — instead of you re-reading the whole page to find the three flags you care about. Reach for it right after pasting a command you don't fully trust.
+
+```bash
+# explain what these flags actually do
+manly rm --preserve-root -rf
+# explain a tar invocation
+manly tar -xzf archive.tar.gz
+```
+
+### `tldr` — Community Cheat Sheets
+Pulls up short, example-first cheat sheets for a command instead of a full man page — a handful of the most common real-world invocations rather than an exhaustive flag reference. Use it when you just want to remember "how do I usually run this thing."
+
+```bash
+# show simplified examples for a command
+tldr tar
+# refresh the local cheat-sheet database
+tldr --update
+# list every page available locally
+tldr --list
+```
+
+### `lnav` — Log File Navigator
+An advanced log viewer that auto-detects log formats, merges multiple files into one time-ordered view, and lets you run SQL queries over the parsed log data. It replaces `less`/`tail -f` plus manual `grep` gymnastics when you're trying to make sense of real log files.
+
+```bash
+# open one or more log files
+lnav app.log
+# merge and tail every log in a directory, following new lines
+lnav -r /var/log/myapp/
+# run a command (e.g. a query) after loading
+lnav -c ':filter-in ERROR' app.log
+```
+
+### `hexyl` — Hex Viewer
+A colorized hex dump tool with an ASCII sidebar, making binary file contents actually readable — a friendlier, faster alternative to `hexdump`/`xxd`. Use it when you need to eyeball the raw bytes of a file, e.g. checking a file's magic number or debugging a binary format.
+
+```bash
+# view a file as hex + ASCII
+hexyl file.bin
+# only look at the first 64 bytes
+hexyl --length 64 file.bin
+# skip a header and view what follows
+hexyl --skip 512 file.bin
+```
+
+### `herald` — Terminal Email + Calendar
+A unified terminal client for email and calendar — Gmail (work) and iCloud (personal) in one place — with AI-assisted triage and an MCP server so Claude can read (and, with confirmation, act on) your inbox and calendar. It replaces running separate mail and calendar apps.
+
+```bash
+# first run: interactive onboarding to add accounts
+herald
+# run the background daemon (needed for MCP mutations)
+herald serve -config ~/.herald/conf.yaml
+# check daemon status
+herald status
+```
+
+> Tip: herald is read-only for Claude until the daemon (`herald serve`) is running.
+
+### `gws` — Google Workspace CLI
+A single CLI for the whole of Google Workspace — Drive, Gmail, Calendar, Sheets, Docs, Chat — with structured JSON output designed for both humans and AI agents to consume. It replaces ad-hoc `curl` calls against Google's REST APIs; every subcommand mirrors a Workspace API resource and method.
+
+```bash
+# one-time setup, then log in
+gws auth setup
+gws auth login
+# list the 10 most recently modified Drive files
+gws drive files list --params '{"pageSize": 10}'
+# create a new spreadsheet
+gws sheets spreadsheets create --json '{"properties": {"title": "Q1 Budget"}}'
+```
+
+> Tip: add `--dry-run` to preview the request before it's sent — invaluable before anything that mutates data.
+
+### `tiki` — Terminal Markdown Workspace
+A git-backed workspace for tasks, docs, kanban boards, and a wiki — all stored as plain Markdown files you can browse and edit as a TUI or from the CLI. It replaces a Notion-style app with something that lives in a repo, diffs like code, and syncs via git.
+
+```bash
+# launch the TUI over the Markdown files in this directory
+tiki
+# quick-capture a note from piped input (first line = title)
+echo "Follow up with client" | tiki
+# run a ruki query against the workspace and exit
+tiki exec 'select id, title where status = "ready"'
+```
+
+### `newsboat` — Terminal RSS Reader
+A vim-keybinding RSS/Atom feed reader for the terminal, highly configurable via a plain-text config and URL file. Use it to follow blogs, changelogs, and news feeds without a browser tab (or a bloated GUI reader) always open.
+
+```bash
+# launch newsboat with the default feed list
+newsboat
+# refresh all feeds once on startup
+newsboat --refresh-on-start
+# use a specific URL file for feeds
+newsboat --url-file=~/.newsboat/work-urls
+```
+
+### `cliamp` — Terminal Music Player
+A Winamp-inspired terminal music player with local playback, streaming provider integration (Spotify/Qobuz), an equalizer, and 20+ visualizers. Point it at a music folder and control playback, queueing, and shuffle entirely from the keyboard.
+
+```bash
+# launch and load a directory of local music
+cliamp ~/Media/music
+# check current playback status
+cliamp status
+# skip to the next track
+cliamp next
+```
+
+> Tip: `cliamp setup` walks through connecting streaming providers like Spotify or Qobuz.
+
+### `starlit` — Weather CLI
+A minimal, nicely styled weather CLI — current conditions and forecast, right in the terminal, no browser tab or app needed. Requires a free OpenWeatherMap API key on first use.
+
+```bash
+# one-time setup: store your OpenWeatherMap key
+starlit --setup
+# get weather for your default city
+starlit
+# get weather for a specific city
+starlit tokyo
+```
+
+### `bmm` — Bookmark Manager
+A local bookmark manager with both a scriptable CLI and a TUI browser, storing bookmarks in a local database you can search and tag. It replaces a browser's built-in (and un-scriptable) bookmark bar — reach for it when you want bookmarks that work the same way across browsers and are easy to search from a terminal.
+
+```bash
+# save a new bookmark
+bmm save "https://example.com" --title "Example"
+# search bookmarks by term
+bmm search terraform
+# open the interactive TUI browser
+bmm tui
+```
+
+> Tip: `bmm import` pulls bookmarks in from an HTML, JSON, or plain-text export.
+
+### `surge` — Download Manager (TUI)
+A TUI download manager that pairs with a browser extension: the extension intercepts downloads in Chrome and hands them to a local `surge` daemon, giving you a manageable, resumable download queue instead of the browser's own download tray. It complements `aria2` — `aria2` is for scripted/CLI downloads, `surge` is for downloads you start by clicking a link in the browser.
+
+```bash
+# install the background daemon service (one-time)
+surge service install
+# open the TUI to manage the download queue
+surge
+```
+
+### `aria2c` — Multi-Protocol Download Utility
+A multi-connection, multi-protocol downloader supporting HTTP(S), FTP, BitTorrent, and Metalink, capable of splitting a single download across multiple connections for much higher throughput. Reach for it for large files, resumable downloads, or bulk/scripted downloading where a browser's download manager isn't enough.
+
+```bash
+# download a file with multiple connections
+aria2c -x4 -s4 "https://example.com/large-file.zip"
+# resume a partially completed download
+aria2c -c "https://example.com/large-file.zip"
+# download a list of URLs from a file
+aria2c -i urls.txt
+```
+
+### `jolt` — Battery/Energy Monitor
+A terminal battery and power monitor: charge level, health, power draw, and history, at a glance or as a live TUI. Use it to check battery health trends over time instead of digging through macOS's own battery settings.
+
+```bash
+# launch the live terminal UI
+jolt
+# print current battery/power metrics as JSON
+jolt pipe
+# view historical battery data
+jolt history
+```
+
+### `lazynpm` — TUI for npm
+A terminal UI for npm projects — browsing and running scripts, inspecting and updating dependencies — from the same team and interaction model as `lazygit`/`lazydocker`. Launch it inside a Node project instead of memorizing `npm run` script names.
+
+```bash
+# launch inside an npm project directory
+lazynpm
+```
+
+### `lazyenv` — TUI for .env Files
+A terminal UI for managing `.env` files across projects: browse variables, diff and sync values between environments, and mask secrets on screen so they're not shown in cleartext by default. It complements `direnv` — `direnv` auto-loads variables, `lazyenv` is for editing and comparing them.
+
+```bash
+# open the TUI scanning the current directory
+lazyenv
+# scan a specific project recursively
+lazyenv ~/Code/myapp --recursive
+# reveal secret values in cleartext at startup
+lazyenv --show-all
+```
+
+> Tip: it checks `.gitignore` by default and backs up the file before its first save — pass `--no-git-check`/`--no-backup` to skip either.
+
+### `lazyrsync` — TUI for rsync
+A terminal UI over `rsync`, built around reusable sync "profiles" so you don't have to re-type long `rsync` invocations for the same source/destination pairs. Define a profile once, then run or inspect it from the TUI or a one-shot command.
+
+```bash
+# list configured profiles and their resolved rsync commands
+lazyrsync list
+# run a profile's tasks without opening the TUI
+lazyrsync run myprofile
+# launch the interactive TUI
+lazyrsync
+```
+
+### `choose` — Simple Field Selector
+A simpler alternative to `cut`/`awk` for pulling specific fields or columns out of lines of text, using intuitive index and range syntax instead of `awk`'s programming-language overhead. It supports negative indices to count from the end of a line, something `cut` can't do at all. Reach for it any time you're piping command output and just need "give me column 3."
+
+```bash
+# select the second field (0-indexed) on each line
+echo "a b c" | choose 1
+# select a range of fields
+echo "a b c d e" | choose 1:3
+# use a custom field separator
+echo "a,b,c" | choose -f ',' 0
+```
+
+> Tip: `choose -1` (a negative index) grabs the last field on each line.
+
+
+## GUI apps & under-the-hood
+
+These are the deliberate GUI survivors — apps kept because a terminal equivalent
+would cost real capability — plus the invisible plumbing the toolkit depends on
+but you rarely invoke by hand.
+
+### Ghostty — Terminal Emulator
+The fast, GPU-accelerated terminal that hosts this whole setup, themed Dracula.
+Its global **quick terminal** drops down from anywhere on `cmd+space` and hosts
+the launcher functions (`a`, `ff`, `rgf`, `s`, `clip`). Config lives at
+`~/.config/ghostty/config`.
+
+### Google Chrome — Primary Browser
+The primary GUI browser (Carbonyl and w3m cover terminal browsing). Kept for
+sites that need a full modern engine, extensions, and DevTools.
+
+### Shottr — Screenshots
+Fast native screenshot tool with scrolling capture, OCR, and annotation. Saves
+to `~/Screenshots`. Needs **Screen Recording** permission (see the checklist) or
+it captures only the desktop, not app windows.
+
+### Skim — PDF Reader
+A lightweight PDF reader/annotator, faster than Preview and good for reading
+papers and marking up documents.
+
+### SketchyBar — Status Bar
+The customizable macOS status bar (Dracula-themed) shown at the top: front app,
+clock, battery, wifi, volume, cpu, mem, bluetooth, VPN. The clock opens herald;
+the VPN pill drives `mullvad`; the bluetooth pill drives `blueutil`. Needs
+**Accessibility** permission. Config: `~/.config/sketchybar/`.
+
+### Pearcleaner — App Uninstaller
+An open-source deep uninstaller that removes an app *and* its leftover support
+files, caches, and preferences — a free AppCleaner replacement.
+
+### QLMarkdown & QLStephen — Quick Look Plugins
+Finder Quick Look plugins: **QLMarkdown** renders `.md` files when you press
+space on them; **QLStephen** previews extension-less plain-text files (README,
+LICENSE, dotfiles). No commands — they work inside Finder.
+
+### Language servers (Helix / croft use these automatically)
+Installed so the editors get completion, diagnostics, and go-to-definition with
+zero config — you never call them directly:
+`bash-language-server`, `marksman` (Markdown), `taplo` (TOML + formatter),
+`yaml-language-server`, `typescript-language-server`,
+`vscode-langservers-extracted` (HTML/CSS/JSON/ESLint).
+
+### Build & runtime dependencies
+Pulled in so other tools compile and run; rarely invoked by hand:
+`cmake`, `pkgconf` (provides `pkg-config`), `coreutils`, `findutils`, `gawk`,
+`gnu-sed`, `gnu-tar` (GNU versions of core Unix utilities), `gnupg` +
+`pinentry-mac` (commit signing / passphrase entry), `watchman` (file-watching
+service used by some JS toolchains).
+
+### Fonts
+Installed for the terminal, editors, and SketchyBar glyphs:
+JetBrains Mono (+ Nerd Font) — primary dev font; Fira Code (+ Nerd Font) —
+ligature font; Hack Nerd Font; MesloLGS Nerd Font; Inter — UI font;
+sketchybar-app-font — app glyphs for the status bar.
+
+---
+
+*This file is regenerated on every run of `setup-dev-tools-mac.sh`, so it always
+matches the tools the script currently installs.*
+REFERENCE_EOF
+
+    success "Desktop docs written: POST_SETUP_CHECKLIST.md, KEYBOARD_SHORTCUTS.md, TOOLKIT_SUMMARY.md, TOOL_REFERENCE.md"
 fi
 
 info "Next steps:"
 echo "  1. Restart your terminal or run: source ~/.zshrc"
 echo "  2. >>> Work through ~/Desktop/POST_SETUP_CHECKLIST.md <<< (email/calendar creds,"
 echo "        macOS permissions, apw/mullvad/starlit setup — the manual bits)."
-echo "        Also on the Desktop: KEYBOARD_SHORTCUTS.md and TOOLKIT_SUMMARY.md."
+echo "        Also on the Desktop: KEYBOARD_SHORTCUTS.md, TOOLKIT_SUMMARY.md, and"
+echo "        TOOL_REFERENCE.md (every tool, with usage examples)."
 echo "  3. Log out/in once so the menu-bar and Spotlight hotkey settings take effect."
 echo "  4. Enable FileVault + macOS Firewall (System Settings > Privacy & Security / Network)."
 echo "  5. Open OrbStack and complete Docker setup."
