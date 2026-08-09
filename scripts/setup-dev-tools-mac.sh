@@ -5305,6 +5305,7 @@ for sid in $(aerospace list-workspaces --all 2>/dev/null); do
   sketchybar --add item space.$sid left \
              --subscribe space.$sid aerospace_workspace_change \
              --set space.$sid label="$sid" icon.drawing=off \
+                   label.padding_left=6 \
                    background.color=$LINE \
                    click_script="aerospace workspace $sid" \
                    script="$PLUGIN_DIR/aerospace.sh $sid"
@@ -5314,6 +5315,7 @@ done
 sketchybar --add item front_app left \
            --subscribe front_app front_app_switched \
            --set front_app icon.drawing=off label.color=$PURPLE label.font="$FONT:Bold:13.0" \
+                 label.padding_left=6 \
                  script="$PLUGIN_DIR/front_app.sh"
 
 # --- Center: clock (click opens herald's calendar in a Ghostty quick terminal) ---
@@ -5328,7 +5330,7 @@ sketchybar --add item battery right \
            --set battery update_freq=120 script="$PLUGIN_DIR/battery.sh"
 
 sketchybar --add item bluetooth right \
-           --set bluetooth update_freq=30 label.drawing=off \
+           --set bluetooth update_freq=30 label.drawing=off icon.padding_right=6 \
                  click_script="blueutil --power toggle" \
                  script="$PLUGIN_DIR/bluetooth.sh"
 
