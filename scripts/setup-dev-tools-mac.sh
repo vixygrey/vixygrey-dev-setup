@@ -2011,6 +2011,23 @@ brew_cask_install "claude" "Claude (AI assistant)"
 # Notion (GUI) replaced by tiki — terminal Markdown workspace (tasks/docs/kanban/wiki, git-backed).
 trust_tap boolean-maybe/tap
 brew_install "tiki" "tiki (terminal Markdown workspace — tasks, docs, kanban, wiki; git-backed)"
+# tiki's official Claude Code skill — teaches Claude to manage the user's notes/tasks
+# via `tiki exec '<ruki>'` (CRUD with auto git-staging). The brew formula ships only
+# the binary, so fetch the skill into ~/.claude/skills/ (refreshed each run to track
+# upstream). See https://github.com/boolean-maybe/tiki/tree/main/ai/skills/tiki
+if [[ "$DRY_RUN" == "true" ]]; then
+    info "[DRY RUN] Would install tiki's Claude Code skill -> ~/.claude/skills/tiki/SKILL.md"
+else
+    _tiki_skill_dir="$HOME/.claude/skills/tiki"
+    mkdir -p "$_tiki_skill_dir"
+    if curl -fsSL "https://raw.githubusercontent.com/boolean-maybe/tiki/main/ai/skills/tiki/SKILL.md" \
+        -o "$_tiki_skill_dir/SKILL.md" 2>>"$LOG_FILE" && [[ -s "$_tiki_skill_dir/SKILL.md" ]]; then
+        success "tiki Claude Code skill installed (~/.claude/skills/tiki/)"
+    else
+        warn "Could not fetch tiki Claude skill — install manually from github.com/boolean-maybe/tiki (ai/skills/tiki)"
+    fi
+    unset _tiki_skill_dir
+fi
 # Notion Calendar (GUI) replaced by khal + vdirsyncer (unified Gmail + iCloud, below).
 # Terminal email (Gmail work + iCloud personal):
 brew_install "aerc" "aerc (terminal email — Gmail XOAUTH2 + iCloud IMAP, multi-account)"
@@ -6514,7 +6531,7 @@ if [[ -f "$CLAUDE_SETTINGS" ]]; then
     # reveal, broad git/gh, file destruction, unrestricted Write) so old machines get
     # cleaned too. Note: re-runs re-strip these — re-add any you truly want by editing
     # the CLAUDE_DENY_ALLOW list below, not settings.json.
-    CLAUDE_ADD_ALLOW='["Bash(qalc *)","Bash(has *)","Bash(doxx *)","Bash(mdfind *)","Bash(atac *)","Bash(leaf *)","Bash(soffice *)","Bash(office-py *)","Bash(pdftoppm *)","Bash(pdftotext *)","Bash(pdfinfo *)","Bash(git status *)","Bash(git diff *)","Bash(git log *)","Bash(git show *)","Bash(git branch *)","Bash(git remote -v)","Bash(git stash list)"]'
+    CLAUDE_ADD_ALLOW='["Bash(qalc *)","Bash(has *)","Bash(doxx *)","Bash(mdfind *)","Bash(atac *)","Bash(leaf *)","Bash(soffice *)","Bash(office-py *)","Bash(pdftoppm *)","Bash(pdftotext *)","Bash(pdfinfo *)","Bash(tiki exec *)","Bash(git status *)","Bash(git diff *)","Bash(git log *)","Bash(git show *)","Bash(git branch *)","Bash(git remote -v)","Bash(git stash list)"]'
     CLAUDE_DENY_ALLOW='["Bash(npm *)","Bash(npx *)","Bash(pnpm *)","Bash(bun *)","Bash(node *)","Bash(tsx *)","Bash(ts-node *)","Bash(python3 *)","Bash(pip *)","Bash(uv *)","Bash(uvx *)","Bash(cargo *)","Bash(go *)","Bash(just *)","Bash(make *)","Bash(nu *)","Bash(nushell *)","Bash(aider *)","Bash(topgrade *)","Bash(watchexec *)","Bash(viddy *)","Bash(parallel *)","Bash(act *)","Bash(curl *)","Bash(xh *)","Bash(wget *)","Bash(curlie *)","Bash(aria2c *)","Bash(grpcurl *)","Bash(yt-dlp *)","Bash(aws *)","Bash(cdk *)","Bash(sam *)","Bash(docker *)","Bash(docker-compose *)","Bash(docker compose *)","Bash(kubectl *)","Bash(tofu *)","Bash(s5cmd *)","Bash(dynein *)","Bash(steampipe *)","Bash(iamlive *)","Bash(granted *)","Bash(assume *)","Bash(mitmproxy *)","Bash(mitmdump *)","Bash(nmap *)","Bash(chezmoi *)","Bash(dbmate *)","Bash(env *)","Bash(export *)","Bash(git *)","Bash(git-*)","Bash(gh *)","Bash(cp *)","Bash(mv *)","Bash(trash *)","Bash(sd *)","Bash(sed *)","Bash(awk *)","Bash(find *)","Bash(npkill *)","Bash(ouch *)","Bash(7z *)","Write"]'
     if [[ "$DRY_RUN" == "true" ]]; then
         info "[DRY RUN] Would merge settings.json: add safe allow entries + statusline, strip dangerous ones"
@@ -6610,6 +6627,7 @@ else
       "Bash(pandoc *)",
       "Bash(soffice *)",
       "Bash(office-py *)",
+      "Bash(tiki exec *)",
       "Bash(pdftoppm *)",
       "Bash(pdftotext *)",
       "Bash(pdfinfo *)",
@@ -6766,7 +6784,7 @@ else
 - File transfer: rclone (CLI — SFTP/S3/cloud)
 - Proxy/debugger: mitmproxy
 - Tunneling: ngrok
-- Docs / PM: tiki (terminal Markdown workspace — tasks/docs/kanban/wiki, git-backed)
+- Notes, tasks & project boards → **use tiki** (git-backed Markdown workspace), not ad-hoc scratch files, for anything worth keeping. The `tiki` **skill is installed** (~/.claude/skills/tiki) — use it: CRUD via `tiki exec '<ruki>'` (SQL-like; auto-validates + git-stages), quick-capture via `echo "note" | tiki` (first line = title). Tikis live in the cwd as Markdown; the skill has the ruki reference.
 - Email: aerc (terminal — Gmail work + iCloud personal, multi-account)
 - Calendar: khal + vdirsyncer (terminal — unified Google + iCloud CalDAV)
 - Cloud storage: rclone (Google Drive, S3, Dropbox, etc.); borg for versioned backups
@@ -8096,7 +8114,7 @@ the list, then delete this file.
 - [ ] **Claude AI in Helix/aerc:** set an Anthropic key — `export ANTHROPIC_API_KEY=sk-ant-...` in `~/.zshrc.local` (used by **helix-assist**, the in-editor AI LSP). For the `llm` pipe binds (`A-a` in Helix, `S` in aerc): `llm keys set anthropic` then `llm models default claude-sonnet-4-5`.
 - [ ] **AI side-pane:** `zellij --layout dev` opens your editor + a Claude Code pane side by side (the strongest AI workflow).
 - [ ] **chezmoi:** `chezmoi init <your-dotfiles-repo>` to bring these configs under version control across the MacBook + Mac mini.
-- [ ] **tiki** (notes): run `tiki` once and point it at (or init) your notes git repo.
+- [ ] **tiki** (notes): run `tiki` once and point it at (or init) your notes git repo. Claude can manage tikis for you — its skill is installed at `~/.claude/skills/tiki/` (CRUD via `tiki exec`, quick-capture via `echo "note" | tiki`).
 - [ ] **kew** (music): drop music into `~/Media/music` (the configured library path).
 - [ ] **leaf** (Markdown): if tab-completion isn't working, run `leaf --auto-complete` and restart your shell (the script attempts this automatically).
 
