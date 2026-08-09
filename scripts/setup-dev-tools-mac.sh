@@ -973,6 +973,9 @@ if [[ "$CLEANUP" == "true" ]]; then
     # Used as fallback to find apps in /Applications that weren't installed via Homebrew.
     DEPRECATED_TOOLS=(
         "brew:tmux:tmux:zellij"
+        "brew:aerc:aerc:herald"
+        "brew:khal:khal:herald"
+        "brew:vdirsyncer:vdirsyncer:herald"
         "cask:protonvpn:Proton VPN:Mullvad VPN"
         "cask:proton-mail:Proton Mail:removed"
         "cask:proton-pass:Proton Pass:removed"
@@ -989,7 +992,7 @@ if [[ "$CLEANUP" == "true" ]]; then
         "cask:google-drive:Google Drive:rclone:Google Drive"
         "cask:drawio:draw.io:d2 + mermaid-cli:draw.io"
         "cask:notion:Notion:tiki:Notion"
-        "cask:notion-calendar:Notion Calendar:khal + vdirsyncer:Notion Calendar"
+        "cask:notion-calendar:Notion Calendar:herald:Notion Calendar"
         "brew:yazi:yazi:rovr"
         "brew:cmus:cmus:kew"
         "brew:glow:glow:leaf"
@@ -1919,7 +1922,7 @@ brew_install "aider" "aider (terminal AI pair programmer — git-aware edit loop
 brew_install "llm" "llm (Simon Willison's CLI — one-shot prompts, plugins, SQLite logs, embeddings)"
 brew_install "repomix" "repomix (pack a repo into a single LLM-friendly file with token counts)"
 
-# Claude via the llm CLI: install the Anthropic plugin (used by the Helix/aerc :pipe binds).
+# Claude via the llm CLI: install the Anthropic plugin (used by the Helix :pipe bind).
 if [[ "$DRY_RUN" != "true" ]] && installed llm; then
     llm install llm-anthropic >> "$LOG_FILE" 2>&1 && success "llm-anthropic plugin installed" \
         || warn "Could not install llm-anthropic plugin (run: llm install llm-anthropic)"
@@ -2055,11 +2058,12 @@ else
     fi
     unset _tiki_skill_dir
 fi
-# Notion Calendar (GUI) replaced by khal + vdirsyncer (unified Gmail + iCloud, below).
-# Terminal email (Gmail work + iCloud personal):
-brew_install "aerc" "aerc (terminal email — Gmail XOAUTH2 + iCloud IMAP, multi-account)"
-brew_install "khal" "khal (terminal calendar — unified Gmail + iCloud via vdirsyncer)"
-brew_install "vdirsyncer" "vdirsyncer (sync CalDAV to local storage for khal)"
+# Terminal email + calendar → herald: one app for email AND calendar (Gmail work +
+# iCloud personal, IMAP/SMTP + CalDAV), with built-in AI triage/summaries and an MCP
+# server for Claude. Replaced aerc + khal + vdirsyncer (three tools → one). Herald
+# self-configures via its own onboarding (no hand-written config); see the checklist.
+trust_tap herald-email/herald
+brew_install "herald" "herald (terminal email + calendar — Gmail + iCloud, AI triage, MCP server)"
 brew_cask_install "shottr" "Shottr (fast native screenshots — scrolling capture, OCR, annotations)"
 
 # PDF & documents
@@ -3025,11 +3029,14 @@ if installed claude; then
         add_mcp aws-knowledge --transport stdio aws-knowledge -- uvx awslabs.aws-knowledge-mcp-server@latest
         add_mcp cloudwatch --transport stdio --env "AWS_REGION=\${AWS_REGION}" --env "AWS_PROFILE=\${AWS_PROFILE}" cloudwatch -- uvx awslabs.cloudwatch-mcp-server@latest
         add_mcp iam --transport stdio --env "AWS_REGION=\${AWS_REGION}" --env "AWS_PROFILE=\${AWS_PROFILE}" iam -- uvx awslabs.iam-mcp-server@latest
+        # herald (email + calendar) — read-only after initial sync; mutations need `herald serve`.
+        # Inert until herald accounts are configured (see the POST_SETUP checklist).
+        add_mcp herald --transport stdio herald -- herald mcp -config "$HOME/.herald/conf.yaml"
         unset -f add_mcp
 
         success "Claude Code MCP servers configured (user scope)"
         info "  Added: filesystem, github, git, fetch, context7, aws-docs, aws-pricing,"
-        info "         aws-iac, aws-knowledge, cloudwatch, iam"
+        info "         aws-iac, aws-knowledge, cloudwatch, iam, herald"
         info "  Opt-in per project (claude mcp add --scope project <name> ...):"
         info "         playwright, postgres, aws-ccapi, aws-serverless, aws-lambda-tool,"
         info "         aws-eks, aws-ecs, aws-dynamodb"
@@ -5239,10 +5246,10 @@ sketchybar --add item front_app left \
            --set front_app icon.drawing=off label.color=$PURPLE label.font="$FONT:Bold:13.0" \
                  script="$PLUGIN_DIR/front_app.sh"
 
-# --- Center: clock (click opens khal in a Ghostty quick terminal) ---
+# --- Center: clock (click opens herald's calendar in a Ghostty quick terminal) ---
 sketchybar --add item clock center \
            --set clock update_freq=10 icon.drawing=off \
-                 click_script="open -a Ghostty; sleep 0.2; osascript -e 'tell application \"System Events\" to keystroke \"khal\" & return' >/dev/null 2>&1" \
+                 click_script="open -a Ghostty; sleep 0.2; osascript -e 'tell application \"System Events\" to keystroke \"herald\" & return' >/dev/null 2>&1" \
                  script="$PLUGIN_DIR/clock.sh"
 
 # --- Right (added right-to-left visually) ---
@@ -5417,170 +5424,12 @@ fi
 mark_done "config:clipse"
 fi
 
-# ---- aerc email config (skeleton — secrets are manual) ----
-# aerc handles Gmail (XOAUTH2) + iCloud (app-specific password) in one client.
-# We write a commented skeleton; fill the placeholders per POST_SETUP_CHECKLIST.md.
-AERC_DIR="$HOME/.config/aerc"
-if ! is_done "config:aerc"; then
-if [[ -f "$AERC_DIR/accounts.conf" ]]; then
-    warn "aerc config already exists"
-else
-    info "Creating aerc config skeleton (Gmail + iCloud accounts)..."
-    mkdir -p "$AERC_DIR"
-    cat > "$AERC_DIR/accounts.conf" <<'AERC_ACCOUNTS'
-# aerc accounts — fill in the placeholders (see ~/Desktop/POST_SETUP_CHECKLIST.md).
-# Personal (iCloud): generate an app-specific password at appleid.apple.com.
-# aerc will prompt for the password on first connect (or use a source-cred-cmd).
-
-[Personal (iCloud)]
-source   = imaps://YOUR_APPLEID%40icloud.com@imap.mail.me.com:993
-outgoing = smtps://YOUR_APPLEID%40icloud.com@smtp.mail.me.com:587
-from     = Your Name <YOUR_APPLEID@icloud.com>
-copy-to  = Sent Messages
-
-# Work (Gmail): create a Google Cloud OAuth "Desktop" app, then obtain a refresh
-# token. Paste client id/secret + token below (aerc refreshes the token itself).
-[Work (Gmail)]
-source   = imaps+xoauth2://YOUR_ADDR%40gmail.com@imap.gmail.com:993
-outgoing = smtps+xoauth2://YOUR_ADDR%40gmail.com@smtp.gmail.com:465
-from     = Your Name <YOUR_ADDR@gmail.com>
-oauth2_client_id     = YOUR_GOOGLE_CLIENT_ID
-oauth2_client_secret = YOUR_GOOGLE_CLIENT_SECRET
-oauth2_token_endpoint = https://accounts.google.com/o/oauth2/token
-outgoing-cred-cmd = # set by aerc after OAuth; leave blank initially
-copy-to  = "[Gmail]/Sent Mail"
-AERC_ACCOUNTS
-    cat > "$AERC_DIR/aerc.conf" <<'AERC_CONF'
-[general]
-unsafe-accounts-conf = false
-
-[ui]
-threading-enabled = true
-sidebar-width = 22
-index-columns = date<20,name<20,flags>4,subject<*
-timestamp-format = 2006-01-02 15:04
-this-day-time-format = 15:04
-
-[viewer]
-pager = less -R
-alternatives = text/plain,text/html
-html = false
-
-[filters]
-text/plain = colorize
-text/html = pandoc -f html -t plain 2>/dev/null || cat
-AERC_CONF
-    # binds.conf: start from aerc's shipped defaults so we don't clobber them,
-    # then append an AI summarize/triage bind (Claude via llm + llm-anthropic).
-    AERC_SHARE="$(brew --prefix 2>/dev/null)/share/aerc"
-    if [[ -f "$AERC_SHARE/binds.conf" ]]; then
-        cp "$AERC_SHARE/binds.conf" "$AERC_DIR/binds.conf"
-    else
-        : > "$AERC_DIR/binds.conf"
-    fi
-    cat >> "$AERC_DIR/binds.conf" <<'AERC_BINDS'
-
-# AI: summarize/triage the selected message with Claude (llm + llm-anthropic).
-# Set your default llm model to Claude first: llm models default claude-sonnet-4-5
-[messages]
-S = :pipe -m llm "Summarize this email in 3 concise bullets and suggest a triage label"<Enter>
-AERC_BINDS
-    # Lock down: accounts.conf holds the iCloud app-password + Gmail OAuth secret.
-    # aerc also requires 0600 here (unsafe-accounts-conf = false) to use the password.
-    chmod 700 "$AERC_DIR" 2>/dev/null || true
-    chmod 600 "$AERC_DIR/accounts.conf" "$AERC_DIR/aerc.conf" 2>/dev/null || true
-    success "aerc config skeleton created (edit accounts.conf with your credentials)"
-fi
-mark_done "config:aerc"
-fi
-
-# ---- khal + vdirsyncer config (unified Gmail + iCloud calendar) ----
-# vdirsyncer syncs both CalDAV sources to local .ics; khal reads them.
-# Credentials (iCloud app-password, Google OAuth client) are filled in manually.
-if ! is_done "config:khal-vdirsyncer"; then
-VDIR_DIR="$HOME/.config/vdirsyncer"
-KHAL_DIR="$HOME/.config/khal"
-if [[ -f "$VDIR_DIR/config" ]]; then
-    warn "vdirsyncer/khal config already exists"
-else
-    info "Creating khal + vdirsyncer config skeletons..."
-    mkdir -p "$VDIR_DIR" "$KHAL_DIR" \
-             "$HOME/.local/share/calendars/personal" \
-             "$HOME/.local/share/calendars/work" \
-             "$HOME/.local/share/vdirsyncer/status"
-    cat > "$VDIR_DIR/config" <<'VDIR_CONF'
-# vdirsyncer — fill in usernames + credentials (see POST_SETUP_CHECKLIST.md).
-[general]
-status_path = "~/.local/share/vdirsyncer/status/"
-
-# --- iCloud (personal) via CalDAV + app-specific password ---
-[pair icloud]
-a = "icloud_local"
-b = "icloud_remote"
-collections = ["from a", "from b"]
-metadata = ["color", "displayname"]
-
-[storage icloud_local]
-type = "filesystem"
-path = "~/.local/share/calendars/personal/"
-fileext = ".ics"
-
-[storage icloud_remote]
-type = "caldav"
-url = "https://caldav.icloud.com/"
-username = "YOUR_APPLEID@icloud.com"
-# App-specific password from appleid.apple.com:
-password = "YOUR_ICLOUD_APP_SPECIFIC_PASSWORD"
-
-# --- Google (work) via the native google_calendar storage (OAuth) ---
-[pair google]
-a = "google_local"
-b = "google_remote"
-collections = ["from a", "from b"]
-metadata = ["color", "displayname"]
-
-[storage google_local]
-type = "filesystem"
-path = "~/.local/share/calendars/work/"
-fileext = ".ics"
-
-[storage google_remote]
-type = "google_calendar"
-token_file = "~/.local/share/vdirsyncer/google_token"
-client_id = "YOUR_GOOGLE_CLIENT_ID"
-client_secret = "YOUR_GOOGLE_CLIENT_SECRET"
-VDIR_CONF
-    # Lock down: vdirsyncer config holds the iCloud app-password + Google client_secret.
-    chmod 700 "$VDIR_DIR" 2>/dev/null || true
-    chmod 600 "$VDIR_DIR/config" 2>/dev/null || true
-    cat > "$KHAL_DIR/config" <<'KHAL_CONF'
-[calendars]
-
-[[personal]]
-path = ~/.local/share/calendars/personal/*
-type = discover
-color = light magenta
-
-[[work]]
-path = ~/.local/share/calendars/work/*
-type = discover
-color = light cyan
-
-[locale]
-timeformat = %H:%M
-dateformat = %Y-%m-%d
-longdateformat = %Y-%m-%d %a
-datetimeformat = %Y-%m-%d %H:%M
-weeknumbers = left
-
-[default]
-default_calendar = personal
-highlight_event_days = True
-KHAL_CONF
-    success "khal + vdirsyncer skeletons created (run 'vdirsyncer discover' after adding creds)"
-fi
-mark_done "config:khal-vdirsyncer"
-fi
+# ---- email + calendar (herald) ----
+# herald self-configures through its own onboarding (accounts, calendars, themes) —
+# there is no hand-written config here. Complete setup from the POST_SETUP checklist:
+#   herald                                      # first run: add Gmail + iCloud, CalDAV
+#   herald serve -config ~/.herald/conf.yaml    # background server (MCP mutations need it)
+# The herald MCP server is registered for Claude in the MCP section below.
 
 # ---- direnv config ----
 DIRENV_CONFIG_DIR="$HOME/.config/direnv"
@@ -6822,8 +6671,7 @@ else
 - Proxy/debugger: mitmproxy
 - Tunneling: ngrok
 - Notes, tasks & project boards → **use tiki** (git-backed Markdown workspace), not ad-hoc scratch files, for anything worth keeping. The `tiki` **skill is installed** (~/.claude/skills/tiki) — use it: CRUD via `tiki exec '<ruki>'` (SQL-like; auto-validates + git-stages), quick-capture via `echo "note" | tiki` (first line = title). Tikis live in the cwd as Markdown. Personal (non-project) notes/tasks go in **~/Docs/notes** (a git repo) — cd there for general notes; for project-specific tasks, use the project's cwd.
-- Email: aerc (terminal — Gmail work + iCloud personal, multi-account)
-- Calendar: khal + vdirsyncer (terminal — unified Google + iCloud CalDAV)
+- Email & calendar: **herald** (one terminal app for both — Gmail work + iCloud personal, unified CalDAV calendar, built-in AI triage/summaries). Herald exposes an **MCP server** (registered in Claude Code) — prefer its MCP tools for reading/searching mail and calendar. **Never send, reply, delete, archive, or modify mail or events without explicit user confirmation** (mutations also require `herald serve` running).
 - Cloud storage: rclone (Google Drive, S3, Dropbox, etc.); borg for versioned backups
 - Browser: Google Chrome (primary); Carbonyl / w3m in the terminal
 - Credentials → **never read, type, enter, or exfiltrate passwords, tokens, API keys, or secrets**, and never echo them into a terminal. Auth is handled by Apple Passwords (iCloud Keychain) and the OS credential tools; defer to the user for anything that needs a credential (no third-party password manager is installed)
@@ -8069,8 +7917,7 @@ echo "  [~/.newsboat]           RSS reader (vim keys, Dracula colors, starter UR
 echo "  [~/.config/ghostty]     GPU-accelerated terminal + quick-terminal launcher (cmd+space)"
 echo "  [~/.config/aerospace]   Tiling window manager (Option+hjkl, workspaces 1-9)"
 echo "  [~/.config/sketchybar]  Dracula status bar (AeroSpace pills, battery/wifi/vpn/cpu/mem)"
-echo "  [~/.config/aerc]        Terminal email skeleton (Gmail + iCloud — add credentials)"
-echo "  [~/.config/khal]        Terminal calendar (unified Gmail + iCloud via vdirsyncer)"
+echo "  [~/.herald]             herald email + calendar (self-configured on first run)"
 echo "  [~/.justfile]           Global task runner recipes"
 echo "  [~/.config/brewfile]    Brewfile snapshot for reproducibility"
 echo "  [~/.config/helix]       Helix — Dracula theme, ruff LSP, auto-format; MCP servers migrated to Claude Code"
@@ -8132,23 +7979,19 @@ the list, then delete this file.
 - [ ] **Displays have separate Spaces = OFF** — already set by the script (`spans-displays`), but it needs a **logout/login** to take effect.
 - [ ] Log out and back in once so AeroSpace + the Spaces setting apply cleanly.
 
-## Email — aerc (`~/.config/aerc/accounts.conf`)
-- [ ] **iCloud (personal):** create an **app-specific password** at appleid.apple.com -> Sign-In & Security -> App-Specific Passwords. Put your address in the `Personal (iCloud)` source/outgoing/from lines.
-- [ ] **Gmail (work):** create a Google Cloud OAuth **Desktop app** (console.cloud.google.com -> APIs & Services -> Credentials), enable the Gmail API, then obtain a refresh token. Fill `oauth2_client_id` / `oauth2_client_secret` in the `Work (Gmail)` account.
-- [ ] Launch `aerc` and confirm both accounts connect.
-
-## Calendar — khal + vdirsyncer (`~/.config/vdirsyncer/config`)
-- [ ] **iCloud:** set `username` + the app-specific password in `storage icloud_remote`.
-- [ ] **Google:** set `client_id` / `client_secret` in `storage google_remote` (reuse or make another Google OAuth client).
-- [ ] Run `vdirsyncer discover` then `vdirsyncer sync`. Launch `khal` (or `ikhal`) to see the unified calendar.
-- [ ] Optional: add `vdirsyncer sync` to a cron/launchd job for periodic refresh.
+## Email + calendar — herald (one app, self-configured)
+- [ ] Run `herald` and follow its onboarding to add both accounts + their calendars:
+  - **iCloud (personal):** create an **app-specific password** at appleid.apple.com -> Sign-In & Security -> App-Specific Passwords; herald uses it for IMAP/SMTP + iCloud CalDAV.
+  - **Gmail (work):** add the Gmail account in herald (OAuth or an app password) and its Google CalDAV calendar.
+- [ ] Start the background server so the **Claude MCP** (and mutations) work: `herald serve -config ~/.herald/conf.yaml` (add it to a login item / launchd if you want it always on). Read-only MCP works after the first sync.
+- [ ] Optional: enable herald's AI features (semantic search, triage, compose styler). Default provider is local **Ollama**; to use Claude instead, point it at your `ANTHROPIC_API_KEY`.
 
 ## Accounts, keys & first-run
 - [ ] **Apple Passwords CLI (`apw`):** run `brew services start apw`, then `apw auth`, and install the **iCloud Passwords browser extension**.
 - [ ] **Mullvad:** `mullvad account login <ACCOUNT_NUMBER>` (CLI is bundled with the app at `/usr/local/bin/mullvad`).
 - [ ] **starlit** (weather): `starlit --setup` and paste a free OpenWeatherMap API key.
 - [ ] **MCP servers:** export tokens your Claude Code MCP servers need, e.g. `export GITHUB_TOKEN=...` (and `AWS_REGION` / `AWS_PROFILE` for the AWS servers). Requires `claude auth login` at least once.
-- [ ] **Claude AI in croft/Helix/aerc:** set an Anthropic key — `export ANTHROPIC_API_KEY=sk-ant-...` in `~/.zshrc.local`. Used by **croft** (`croft pair` — the AI navigator in your primary IDE) and **helix-assist** (the in-editor AI LSP in the Helix fallback). For the `llm` pipe binds (`A-a` in Helix, `S` in aerc): `llm keys set anthropic` then `llm models default claude-sonnet-4-5`.
+- [ ] **Claude AI in croft/Helix:** set an Anthropic key — `export ANTHROPIC_API_KEY=sk-ant-...` in `~/.zshrc.local`. Used by **croft** (`croft pair` — the AI navigator in your primary IDE) and **helix-assist** (the in-editor AI LSP in the Helix fallback). For the `llm` pipe bind (`A-a` in Helix): `llm keys set anthropic` then `llm models default claude-sonnet-4-5`. (Email/calendar AI is built into **herald** — configured separately above.)
 - [ ] **croft** (primary IDE): installed from git `main` via cargo — run `croft` in a project to open the workspace; re-run `cargo install --git https://github.com/vitali87/croft.git --locked` to upgrade.
 - [ ] **AI side-pane:** `zellij --layout dev` opens your editor + a Claude Code pane side by side (the strongest AI workflow).
 - [ ] **chezmoi:** `chezmoi init <your-dotfiles-repo>` to bring these configs under version control across the MacBook + Mac mini.
@@ -8209,7 +8052,7 @@ CHECKLIST_EOF
 |-------|-----|
 | Side-pane (best) | `zellij --layout dev` — editor + Claude Code panes |
 | Helix inline | `Alt + a` on a selection (llm pipe); `Space + a` (helix-assist LSP) |
-| aerc | `S` on a message — summarize/triage via Claude |
+| herald | Built-in AI triage/summaries/compose styler + MCP server for Claude |
 
 ## Terminal multiplexer & tools
 | Keys | Action |
@@ -8225,7 +8068,7 @@ CHECKLIST_EOF
 ## SketchyBar (click actions)
 | Item | Click |
 |------|-------|
-| Clock | Opens khal in a Ghostty quick terminal |
+| Clock | Opens herald (email + calendar) in a Ghostty quick terminal |
 | VPN pill | Toggles `mullvad connect` / `disconnect` |
 | Bluetooth | Toggles Bluetooth power |
 | Workspace pill | Switches to that AeroSpace workspace |
@@ -8242,7 +8085,7 @@ together.
 ## Editor & AI
 - **Helix (`hx`)** — modal terminal editor, built-in LSP + tree-sitter, auto-format on save. The sole editor (`EDITOR`).
 - **Claude Code (`claude`)** — agentic coding in the terminal; hosts the MCP servers. Best via `zellij --layout dev` (editor + Claude pane).
-- **Claude in Helix/aerc** — `Alt+a` pipes a selection to Claude (via `llm`); **helix-assist** adds Claude as an LSP (`Space A`); aerc `S` summarizes an email. All powered by `llm-anthropic` / `ANTHROPIC_API_KEY`.
+- **Claude in croft/Helix** — croft's `croft pair` AI navigator; Helix `Alt+a` pipes a selection to Claude (via `llm`) and **helix-assist** adds Claude as an LSP (`Space A`). Powered by `ANTHROPIC_API_KEY` / `llm-anthropic`. Email/calendar AI lives in **herald** (built-in triage/summaries + MCP).
 
 ## Window management, bar & launcher
 - **AeroSpace** — keyboard-driven tiling WM (no SIP disable). Option+hjkl, workspaces 1-9.
@@ -8261,8 +8104,7 @@ together.
 - **d2 / mermaid** — diagrams as code (replaced draw.io). **qalc** — calculator. **vhs** — scripted terminal recordings. **doxx** — .docx viewer.
 
 ## Communication & knowledge
-- **aerc** — terminal email (Gmail work + iCloud personal, one client).
-- **khal + vdirsyncer** — unified terminal calendar (Google + iCloud).
+- **herald** — terminal email **+** calendar in one app (Gmail work + iCloud personal, unified CalDAV), with built-in AI triage/summaries and an MCP server for Claude.
 - **tiki** — Markdown workspace (tasks/docs/kanban/wiki) replacing Notion.
 - **newsboat** — RSS. **kew** — music. **starlit** — weather.
 
@@ -8275,8 +8117,8 @@ together.
 The whole thing is one keyboard-driven loop. **cmd+space** drops the Ghostty quick
 terminal from anywhere; `a`/`ff`/`rgf`/`s` make it a launcher and search bar, so
 Spotlight/Raycast aren't needed. **AeroSpace** tiles windows and **SketchyBar** shows
-state (workspaces, VPN, battery) — the bar's clock even opens **khal**, and its VPN
-pill drives the **mullvad** CLI. Editing is **Helix**; the agent is **Claude Code**,
+state (workspaces, VPN, battery) — the bar's clock even opens **herald**, and its VPN
+pill drives the **mullvad** CLI. Editing is **croft** (Helix as fallback); the agent is **Claude Code**,
 which reuses the same **MCP servers** the setup migrated over. The script writes
 these configs to `~/.config`; use **chezmoi** (`chezmoi add`, with **cheznav** as its
 TUI) to track them in git and keep the MacBook and Mac mini in sync — that step is
