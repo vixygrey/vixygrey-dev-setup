@@ -387,7 +387,7 @@ Faster, prettier, smarter replacements for standard Unix utilities.
 | **mitmproxy** | Free HTTP debugging proxy -- inspect and modify API calls from any app |
 | **Ghostty** | Fast GPU-accelerated terminal -- daily driver, native macOS feel |
 | **zellij** | Modern terminal multiplexer -- discoverable UI, layouts, Rust-based |
-| **Ghostty quick terminal + `a`/`ff`/`rgf`/`s`** | Terminal launcher & search (global cmd+space dropdown) replacing Raycast/Spotlight; **clipse** for clipboard history; **AeroSpace** tiling WM + **SketchyBar** status bar |
+| **Ghostty quick terminal + `a`/`ff`/`rgf`/`s`** | Terminal launcher & search (global cmd+space dropdown) replacing Raycast/Spotlight; **clipse** for clipboard history; **SketchyBar** status bar |
 | **TypeScript** | Typed JavaScript -- installed globally for scripts and tooling |
 | **tsx** | Run TypeScript files directly without a build step |
 | **Turborepo** | High-performance monorepo build system |
@@ -553,7 +553,6 @@ Applied consistently across all tools:
 | **miniserve** | `--color-scheme-dark dracula` in the `serve` alias |
 | **vivid** | Dracula-themed LS_COLORS for file type coloring |
 | **vim** | Dracula-ish color scheme (no plugin needed) |
-| **AeroSpace** | Dracula-aware gaps + workspace pills via SketchyBar |
 | **macOS** | System highlight color set to Dracula purple |
 
 ---
@@ -773,8 +772,7 @@ The script generates config files with sensible defaults:
 | `~/.config/caddy/Caddyfile` | Caddy | Development server template |
 | `~/.config/asciinema/config` | asciinema | 2s idle limit, no keystroke recording |
 | `~/.config/helix/config.toml` + `languages.toml` | Helix | Dracula theme, relative line numbers, LSP inlay hints, auto-format on save (ruff for Python, taplo/marksman/TS/CSS/bash/yaml servers, rust-analyzer, gopls) |
-| `~/.config/aerospace/aerospace.toml` | AeroSpace | Option+hjkl focus, workspaces 1-9, gaps, SketchyBar hook |
-| `~/.config/sketchybar/` | SketchyBar | Dracula bar: workspace pills, app, clock, battery, wifi, volume, cpu, mem, bluetooth, VPN |
+| `~/.config/sketchybar/` | SketchyBar | Dracula bar: app, clock, battery, wifi, volume, cpu, mem, bluetooth, VPN |
 | _(cliamp)_ | cliamp | Music player — self-configured on first run (point at `~/Media/music`) |
 | `~/.herald/conf.yaml` | herald | Email + calendar — **self-configured** by herald on first run (not written by setup) |
 | `~/.config/zellij/config.kdl` | zellij | Dracula theme, compact layout, mouse, Ctrl-a prefix |
@@ -834,7 +832,7 @@ The script generates config files with sensible defaults:
 | **Screenshots** | PNG format, saved to `~/Screenshots`, no shadow, no thumbnail |
 | **Keyboard** | Fast key repeat (2/15), no press-and-hold, no auto-correct/capitalize/smart quotes/dashes/periods |
 | **Trackpad** | Faster tracking speed (2.0) |
-| **Mission Control** | Fixed spaces — auto-rearrange disabled (required by AeroSpace) |
+| **Mission Control** | Fixed spaces — auto-rearrange disabled (predictable Space order) |
 | **Stage Manager** | Disabled (prevents accidental activation) |
 | **Safari** | Developer menu enabled, full URL in address bar |
 | **TextEdit** | Plain text default, UTF-8 encoding |
@@ -1034,7 +1032,6 @@ Claude Code reads `${AWS_REGION}` and `${AWS_PROFILE}` from your shell environme
 | `cmd + space` | Ghostty quick terminal (global dropdown) — after disabling Spotlight's shortcut |
 | `a` | Fuzzy-launch an app · `ff` find a file · `rgf <q>` search contents · `s <q>` mdfind |
 | `clip` | Clipboard history (clipse) |
-| `Option + hjkl` | AeroSpace: focus windows · `Option + 1..9` switch workspace |
 | `taproom` · `k9s` · `lazydocker` | Homebrew · Kubernetes · Docker TUIs |
 
 See `~/Desktop/KEYBOARD_SHORTCUTS.md` (generated on setup) for the full list.
