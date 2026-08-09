@@ -3371,6 +3371,44 @@ TFLINT_CONF
             || warn "tflint config written; run 'tflint --init' to fetch the AWS ruleset"
     fi
 
+# ---- trippy Dracula theme ----
+# trippy theme colors are hex WITHOUT the leading '#' (or named colors). Item names
+# come from `trip --print-tui-theme-items`; trippy validates the file, so keep them exact.
+TRIPPY_CONFIG="$HOME/.config/trippy/trippy.toml"
+    info "Creating trippy Dracula theme..."
+    write_managed "$TRIPPY_CONFIG" "#" <<'TRIPPY_CONF'
+[theme-colors]
+bg-color = "282a36"
+border-color = "6272a4"
+text-color = "f8f8f2"
+tab-text-color = "bd93f9"
+hops-table-header-bg-color = "44475a"
+hops-table-header-text-color = "f8f8f2"
+hops-table-row-active-text-color = "50fa7b"
+hops-table-row-inactive-text-color = "6272a4"
+hops-chart-selected-color = "bd93f9"
+hops-chart-unselected-color = "6272a4"
+hops-chart-axis-color = "6272a4"
+frequency-chart-bar-color = "bd93f9"
+frequency-chart-text-color = "f8f8f2"
+flows-chart-bar-selected-color = "50fa7b"
+flows-chart-bar-unselected-color = "6272a4"
+flows-chart-text-current-color = "50fa7b"
+flows-chart-text-non-current-color = "f8f8f2"
+samples-chart-color = "8be9fd"
+samples-chart-lost-color = "ff5555"
+help-dialog-bg-color = "44475a"
+help-dialog-text-color = "f8f8f2"
+settings-dialog-bg-color = "44475a"
+settings-tab-text-color = "bd93f9"
+info-bar-bg-color = "44475a"
+info-bar-text-color = "f8f8f2"
+map-world-color = "f8f8f2"
+map-radius-color = "ffb86c"
+map-selected-color = "50fa7b"
+TRIPPY_CONF
+    success "trippy Dracula theme configured"
+
 # ---- miller config ----
 MLR_CONFIG="$HOME/.mlrrc"
     info "Creating miller configuration..."
@@ -8098,6 +8136,11 @@ alias n="nnn -de"
 alias prog="progress -m"
 alias clip="clipse"    # clipboard-history TUI (replaces Raycast clipboard)
 
+# -- Dracula theming for tools that theme via env/flags (config-file tools themed elsewhere) --
+alias claws="claws --theme dracula"    # claws AWS TUI — built-in Dracula theme
+export D2_THEME=200                     # d2 diagrams — dark theme (d2 has no exact Dracula; 200 = Dark Mauve)
+export D2_DARK_THEME=200
+
 # -- Terminal launcher & search (replaces Raycast / Spotlight) ----------------
 # Run these in the Ghostty quick terminal (global cmd+space) for a launcher feel.
 # a: fuzzy-launch an installed macOS app
@@ -8530,6 +8573,16 @@ if [[ -f "$GITCONFIG_PERSONAL" ]] && grep -q "^    # name = " "$GITCONFIG_PERSON
     email = $personal_email
 GIT_PERSONAL_ID
             success "Personal git identity set ($personal_email)"
+            # Use personal as the GLOBAL default so commits outside ~/Code/{work,personal}
+            # still have a committer (otherwise `git commit` fails with "unknown identity"
+            # in ~/Code/oss, ~/Inbox, /tmp, etc.). git reads config top-to-bottom, so the
+            # work includeIf must sit AFTER [user] to override it — re-assert it here so it
+            # lands after the [user] block git config just appended.
+            git config --global user.name "$personal_name"
+            git config --global user.email "$personal_email"
+            git config --global --unset-all "includeIf.gitdir:~/Code/work/.path" 2>/dev/null || true
+            git config --global "includeIf.gitdir:~/Code/work/.path" "$GITCONFIG_WORK"
+            success "Global git default = personal ($personal_email); ~/Code/work still overrides it"
         fi
     fi
 fi
