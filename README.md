@@ -446,6 +446,7 @@ Preview files in Finder by pressing spacebar.
 | **Shottr** | Fast native screenshots -- scrolling capture, OCR, annotations (local-only, no account) |
 | **Claude** | AI assistant |
 | **Skim** | Lightweight PDF reader with annotations -- faster than Preview |
+| **LibreOffice** | Headless office suite -- `soffice --headless --convert-to` lets Claude validate/convert .pptx/.xlsx/.docx (authoring stays in Google Workspace) |
 | **rclone** | SFTP/S3/cloud file transfer from the terminal (replaced the Cyberduck GUI) |
 
 ---

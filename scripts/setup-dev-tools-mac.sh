@@ -246,7 +246,7 @@ declare -A CATEGORY_DESC=(
     [ux]="Lighthouse"
     [docs]="d2, Mermaid CLI"
     [mac-system]="Pearcleaner, Quick Look plugins, dockutil"
-    [mac-productivity]="tiki, Skim"
+    [mac-productivity]="tiki, Skim, LibreOffice"
     [mac-browsers]="Carbonyl, w3m"
     [mac-media]="mpv, oxipng, jpegoptim, 7zip, kew"
     [mac-cloud]="rclone, borg"
@@ -414,7 +414,7 @@ list_categories() {
     printf "  %-25s %s\n" "ux"                  "Lighthouse"
     printf "  %-25s %s\n" "docs"                "d2, Mermaid CLI"
     printf "  %-25s %s\n" "mac-system"          "Pearcleaner, Quick Look plugins, dockutil, terminal-notifier"
-    printf "  %-25s %s\n" "mac-productivity"    "tiki, Skim"
+    printf "  %-25s %s\n" "mac-productivity"    "tiki, Skim, LibreOffice"
     printf "  %-25s %s\n" "mac-browsers"        "Carbonyl, w3m, monolith"
     printf "  %-25s %s\n" "mac-media"           "mpv, oxipng, jpegoptim, 7zip, kew"
     printf "  %-25s %s\n" "mac-cloud"           "rclone, borg"
@@ -1059,7 +1059,6 @@ if [[ "$CLEANUP" == "true" ]]; then
         "cask:slack:Slack:removed"
         "cask:telegram:Telegram:removed"
         "cask:notion-mail:Notion Mail:removed (retired by Notion):Notion Mail"
-        "cask:libreoffice:LibreOffice:Google Workspace:LibreOffice"
     )
 
     CLEANUP_COUNT=0
@@ -2027,6 +2026,22 @@ brew_cask_install "shottr" "Shottr (fast native screenshots — scrolling captur
 
 # PDF & documents
 brew_cask_install "skim" "Skim (lightweight PDF reader with annotations — faster than Preview)"
+
+# LibreOffice — headless office suite so Claude can validate & convert presentations,
+# spreadsheets, and documents (soffice --headless --convert-to ...). Authoring still
+# happens in Google Workspace; this is for local file validation/conversion only.
+brew_cask_install "libreoffice" "LibreOffice (headless doc/sheet/slide validation + conversion)"
+# The cask ships only the .app, so put `soffice` on PATH (~/.local/bin is on PATH)
+# — that's what Claude invokes for headless validation.
+if [[ "$DRY_RUN" != "true" ]]; then
+    _soffice="/Applications/LibreOffice.app/Contents/MacOS/soffice"
+    if [[ -x "$_soffice" ]]; then
+        mkdir -p "$HOME/.local/bin"
+        ln -sf "$_soffice" "$HOME/.local/bin/soffice"
+        success "soffice linked to ~/.local/bin (headless: soffice --headless --convert-to pdf file.pptx)"
+    fi
+    unset _soffice
+fi
 
 # File transfer — Cyberduck (GUI) removed; rclone (installed below) covers SFTP/S3/cloud.
 
@@ -6479,7 +6494,7 @@ if [[ -f "$CLAUDE_SETTINGS" ]]; then
     # reveal, broad git/gh, file destruction, unrestricted Write) so old machines get
     # cleaned too. Note: re-runs re-strip these — re-add any you truly want by editing
     # the CLAUDE_DENY_ALLOW list below, not settings.json.
-    CLAUDE_ADD_ALLOW='["Bash(qalc *)","Bash(has *)","Bash(doxx *)","Bash(mdfind *)","Bash(atac *)","Bash(leaf *)","Bash(git status *)","Bash(git diff *)","Bash(git log *)","Bash(git show *)","Bash(git branch *)","Bash(git remote -v)","Bash(git stash list)"]'
+    CLAUDE_ADD_ALLOW='["Bash(qalc *)","Bash(has *)","Bash(doxx *)","Bash(mdfind *)","Bash(atac *)","Bash(leaf *)","Bash(soffice *)","Bash(git status *)","Bash(git diff *)","Bash(git log *)","Bash(git show *)","Bash(git branch *)","Bash(git remote -v)","Bash(git stash list)"]'
     CLAUDE_DENY_ALLOW='["Bash(npm *)","Bash(npx *)","Bash(pnpm *)","Bash(bun *)","Bash(node *)","Bash(tsx *)","Bash(ts-node *)","Bash(python3 *)","Bash(pip *)","Bash(uv *)","Bash(uvx *)","Bash(cargo *)","Bash(go *)","Bash(just *)","Bash(make *)","Bash(nu *)","Bash(nushell *)","Bash(aider *)","Bash(topgrade *)","Bash(watchexec *)","Bash(viddy *)","Bash(parallel *)","Bash(act *)","Bash(curl *)","Bash(xh *)","Bash(wget *)","Bash(curlie *)","Bash(aria2c *)","Bash(grpcurl *)","Bash(yt-dlp *)","Bash(aws *)","Bash(cdk *)","Bash(sam *)","Bash(docker *)","Bash(docker-compose *)","Bash(docker compose *)","Bash(kubectl *)","Bash(tofu *)","Bash(s5cmd *)","Bash(dynein *)","Bash(steampipe *)","Bash(iamlive *)","Bash(granted *)","Bash(assume *)","Bash(mitmproxy *)","Bash(mitmdump *)","Bash(nmap *)","Bash(chezmoi *)","Bash(dbmate *)","Bash(env *)","Bash(export *)","Bash(git *)","Bash(git-*)","Bash(gh *)","Bash(cp *)","Bash(mv *)","Bash(trash *)","Bash(sd *)","Bash(sed *)","Bash(awk *)","Bash(find *)","Bash(npkill *)","Bash(ouch *)","Bash(7z *)","Write"]'
     if [[ "$DRY_RUN" == "true" ]]; then
         info "[DRY RUN] Would merge settings.json: add safe allow entries + statusline, strip dangerous ones"
@@ -6573,6 +6588,7 @@ else
       "Bash(hyperfine *)",
       "Bash(oha *)",
       "Bash(pandoc *)",
+      "Bash(soffice *)",
       "Bash(d2 *)",
       "Bash(mmdc *)",
       "Bash(ffmpeg *)",
@@ -6735,7 +6751,7 @@ else
 
 ## Working Context
 - Independent **fractional CIO/CTO and consultant**; company is **VixenTec LLC**.
-- All company work runs on **Google Workspace** (Gmail, Docs/Sheets/Slides, Drive, Meet, Chat, Vids). Produce documents/deliverables in Google Workspace, not a local office suite (no LibreOffice/MS Office installed). Use **Google Meet** for calls (no Zoom); **Google Chat** for messaging (no Slack).
+- All company work runs on **Google Workspace** (Gmail, Docs/Sheets/Slides, Drive, Meet, Chat, Vids). Produce documents/deliverables in Google Workspace, not a local office suite — **author** in Workspace, not MS Office. LibreOffice is installed **only** for headless **validation/conversion** of office files (`soffice --headless --convert-to …`), e.g. checking a `.pptx`/`.xlsx`/`.docx` opens cleanly or rendering it to PDF — not for authoring. Use **Google Meet** for calls (no Zoom); **Google Chat** for messaging (no Slack).
 - Tool philosophy: prefer **open-source, CLI-first, privacy-preserving, and minimal** options; declutter aggressively. When recommending tools, lead with one option that fits these and flag any that don't.
 - **ADD-friendly home layout** (low-decision, shallow): `~/Inbox` (dump zone — drop anything, sort later), `~/Code` (work/personal/oss/learning), `~/Docs` (finance, health, admin, receipts, travel), `~/Creative`, `~/Media`, `~/Archive`, `~/Screenshots`, `~/Scripts`. When in doubt where a file goes, suggest `~/Inbox` rather than a deep path.
 
@@ -6751,7 +6767,7 @@ else
 - **AI / agentic**: `claude` (Claude Code) for in-terminal pair programming, `aider` for git-aware AI edit loops, `llm` for one-shot prompts and embeddings, `repomix` to pack a repo into a single LLM-friendly file
 - **HTTP**: `xh` for colorized requests, `curlie` for curl with httpie output, `grpcurl` for gRPC
 - **Network**: `trip` (trippy) for traceroute TUI, `sudo mtr` (requires root, lives in sbin), `bandwhich` for bandwidth, `nmap` for scanning, `mkcert` for local TLS certs
-- **Docs**: `d2` for diagrams, `pandoc` for conversion, `leaf` for Markdown preview
+- **Docs**: `d2` for diagrams, `pandoc` for conversion, `leaf` for Markdown preview, `soffice --headless --convert-to` (LibreOffice) to validate/convert office files (.pptx/.xlsx/.docx)
 - **Database**: `pgcli`/`mycli` for auto-completing SQL, `lazysql` for TUI, `sq` for cross-database queries, `dbmate` for migrations
 - **File management**: `rovr` for the TUI file manager (`nnn` as a minimal fallback), `wiper` for interactive disk-usage cleanup (ncdu-like, Trash-safe), `watchexec` for running commands on file changes, `rclone` for cloud storage sync
 - **Kubernetes**: `k9s` for TUI, `stern` for log tailing (kubectl via OrbStack)
