@@ -2073,6 +2073,10 @@ fi
 # self-configures via its own onboarding (no hand-written config); see the checklist.
 trust_tap herald-email/herald
 brew_install "herald" "herald (terminal email + calendar — Gmail + iCloud, AI triage, MCP server)"
+# google-workspace-cli (gws) — one CLI for Drive/Gmail/Docs/Sheets/Calendar/Chat with
+# structured JSON output, built for humans + AI agents (ships 95 Claude Code skills).
+# All company work is on Google Workspace, so this is Claude's read/query surface there.
+brew_install "gws" "google-workspace-cli (Drive/Gmail/Docs/Sheets/Calendar — JSON output, AI-agent-friendly)"
 brew_cask_install "shottr" "Shottr (fast native screenshots — scrolling capture, OCR, annotations)"
 
 # PDF & documents
@@ -6665,6 +6669,7 @@ else
 ## Working Context
 - Independent **fractional CIO/CTO and consultant**; company is **VixenTec LLC**.
 - All company work runs on **Google Workspace** (Gmail, Docs/Sheets/Slides, Drive, Meet, Chat, Vids). Produce documents/deliverables in Google Workspace, not a local office suite — **author** in Workspace, not MS Office. LibreOffice is installed **only** for headless **validation/conversion** of office files (`soffice --headless --convert-to …`), e.g. checking a `.pptx`/`.xlsx`/`.docx` opens cleanly or rendering it to PDF — not for authoring. Use **Google Meet** for calls (no Zoom); **Google Chat** for messaging (no Slack).
+- To work with Workspace from the terminal, use **`gws`** (google-workspace-cli — Drive/Gmail/Docs/Sheets/Calendar/Chat with structured JSON output; run `gws auth login` first). **Read/list/search/get freely**; but **never send, reply, share, move, delete, or modify** mail, files, or events **without explicit user confirmation** — state exactly what will change first. (gws also ships Claude skills you can add from its repo for specific recipes.)
 - Tool philosophy: prefer **open-source, CLI-first, privacy-preserving, and minimal** options; declutter aggressively. When recommending tools, lead with one option that fits these and flag any that don't.
 - **ADD-friendly home layout** (low-decision, shallow): `~/Inbox` (dump zone — drop anything, sort later), `~/Code` (work/personal/oss/learning), `~/Docs` (finance, health, admin, receipts, travel), `~/Creative`, `~/Media`, `~/Archive`, `~/Screenshots`, `~/Scripts`. When in doubt where a file goes, suggest `~/Inbox` rather than a deep path.
 
@@ -7971,6 +7976,10 @@ the list, then delete this file.
   - **Gmail (work):** add the Gmail account in herald (OAuth or an app password) and its Google CalDAV calendar.
 - [ ] Start the background server so the **Claude MCP** (and mutations) work: `herald serve -config ~/.herald/conf.yaml` (add it to a login item / launchd if you want it always on). Read-only MCP works after the first sync.
 - [ ] Optional: enable herald's AI features (semantic search, triage, compose styler). Default provider is local **Ollama**; to use Claude instead, point it at your `ANTHROPIC_API_KEY`.
+
+## Google Workspace CLI — gws
+- [ ] Authorize `gws`: run `gws auth setup` (walks you through a Google Cloud OAuth project) then `gws auth login`. After that, Claude can read your Drive/Gmail/Docs/Sheets/Calendar via `gws` (structured JSON) — it's instructed to confirm before sending/sharing/deleting/modifying anything.
+- [ ] Optional: browse gws's bundled **Claude skills** at github.com/googleworkspace/cli (`skills/`) and copy the ones you want into `~/.claude/skills/`.
 
 ## Accounts, keys & first-run
 - [ ] **Apple Passwords CLI (`apw`):** run `brew services start apw`, then `apw auth`, and install the **iCloud Passwords browser extension**.
