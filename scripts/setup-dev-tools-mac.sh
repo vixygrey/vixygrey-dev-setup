@@ -5359,11 +5359,12 @@ GHOSTTY_CONF
 success "Ghostty configured (JetBrains Mono, Dracula theme, transparent titlebar)"
 
 # ---- Ghostty auto-start (launchd agent) ----
-# Ghostty's global cmd+space quick-terminal keybind only exists while Ghostty is
-# running, so a fresh login with no Ghostty leaves the hotkey dead. Register a
-# LaunchAgent so Ghostty launches (hidden, in the background) at login. The
-# hotkey still needs Accessibility permission for Ghostty (see the post-setup
-# checklist) — this agent starts the app but cannot grant that permission.
+# Ghostty's global cmd+space quick-terminal keybind only registers once Ghostty has
+# fully initialized a window — a fresh login with no Ghostty, OR one launched HIDDEN,
+# leaves the hotkey dead. Register a LaunchAgent that opens Ghostty in the BACKGROUND
+# (`open -g`, NOT `-gj`): it doesn't steal focus at login but does create a window so
+# the hotkey registers (and stays registered even if you then close it). Still needs
+# Accessibility permission for Ghostty (see the post-setup checklist).
 GHOSTTY_APP="/Applications/Ghostty.app"
 GHOSTTY_PLIST="$HOME/Library/LaunchAgents/com.ghostty.autostart.plist"
 if ! is_done "config:ghostty-autostart"; then
@@ -5372,7 +5373,7 @@ if [[ ! -d "$GHOSTTY_APP" ]]; then
 elif [[ -f "$GHOSTTY_PLIST" ]]; then
     warn "Ghostty auto-start agent already exists"
 else
-    info "Creating Ghostty auto-start launch agent (starts hidden at login)..."
+    info "Creating Ghostty auto-start launch agent (starts in the background at login)..."
     mkdir -p "$HOME/Library/LaunchAgents"
     cat > "$GHOSTTY_PLIST" <<'GHOSTTY_PLIST_EOF'
 <?xml version="1.0" encoding="UTF-8"?>
@@ -5383,7 +5384,7 @@ else
     <key>ProgramArguments</key>
     <array>
         <string>/usr/bin/open</string>
-        <string>-gj</string>
+        <string>-g</string>
         <string>-a</string>
         <string>Ghostty</string>
     </array>
@@ -5395,7 +5396,7 @@ GHOSTTY_PLIST_EOF
         launchctl unload "$GHOSTTY_PLIST" >> "$LOG_FILE" 2>&1 || true
         launchctl load "$GHOSTTY_PLIST" >> "$LOG_FILE" 2>&1 || warn "Could not load Ghostty launch agent"
     fi
-    success "Ghostty auto-start registered (starts hidden at login)"
+    success "Ghostty auto-start registered (starts in the background at login)"
 fi
 mark_done "config:ghostty-autostart"
 fi
