@@ -4974,13 +4974,27 @@ if [ -x ".git/hooks/pre-commit" ]; then
     exec .git/hooks/pre-commit "$@"
 fi
 
-# Check for debug statements (-z/-0/-r: handle spaces in names + empty staged set)
-if git diff --cached --name-only -z | xargs -0 -r grep -l 'console\.log\|debugger\|binding\.pry\|import pdb' 2>/dev/null; then
+# Check for leftover debug statements — scoped per language so shell/markdown/config
+# files aren't false-flagged for merely *mentioning* a debug token (e.g. a script that
+# documents `console.log`, or docs with a `debugger` example). Add a trailing `debug-ok`
+# comment to whitelist an intentional line. (-z/-r: handle spaces in names + empty set.)
+debug_hits=""
+while IFS= read -r -d '' f; do
+    case "$f" in
+        *.js|*.jsx|*.ts|*.tsx|*.mjs|*.cjs|*.vue|*.svelte|*.astro) pat='console\.log\|debugger' ;;
+        *.py)              pat='import pdb\|pdb\.set_trace\|breakpoint()' ;;
+        *.rb|*.rake|*.erb) pat='binding\.pry\|binding\.irb' ;;
+        *) continue ;;
+    esac
+    hits=$(grep -nH "$pat" "$f" 2>/dev/null | grep -v 'debug-ok')
+    [ -n "$hits" ] && debug_hits="${debug_hits}${hits}"$'\n'
+done < <(git diff --cached --name-only --diff-filter=d -z)
+if [ -n "$debug_hits" ]; then
     echo ""
     echo "WARNING: Debug statements found in staged files:"
-    git diff --cached --name-only -z | xargs -0 -r grep -n 'console\.log\|debugger\|binding\.pry\|import pdb' 2>/dev/null
+    printf '%s' "$debug_hits"
     echo ""
-    echo "Remove them or commit with --no-verify to bypass."
+    echo "Remove them, add a trailing 'debug-ok' comment, or commit with --no-verify to bypass."
     exit 1
 fi
 
@@ -5000,8 +5014,12 @@ if [[ -n "$large_files" ]]; then
     exit 1
 fi
 
-# Check for merge conflict markers
-if git diff --cached --name-only -z | xargs -0 -r grep -l '<<<<<<<\|=======\|>>>>>>>' 2>/dev/null; then
+# Check for merge conflict markers — anchored to line start and requiring the trailing
+# space/ref that real `<<<<<<< `, `||||||| `, `>>>>>>> ` markers always carry, so a
+# markdown setext heading underline (`=======`) or an ASCII rule doesn't false-flag.
+# The angle/pipe markers are unambiguous; a genuine conflict always contains them.
+if git diff --cached --name-only --diff-filter=d -z \
+    | xargs -0 -r grep -lE '^(<{7}|>{7}|\|{7}) ' 2>/dev/null; then
     echo ""
     echo "ERROR: Merge conflict markers found in staged files."
     exit 1
