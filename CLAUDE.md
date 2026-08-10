@@ -43,6 +43,19 @@ The script installs a **global** hook (`git config --global core.hooksPath ~/.co
 - **CHANGELOG.md** is hand-written from 7.2.0 onward. Add entries under `## [Unreleased]` (create it if absent) in `### Added` / `### Changed` / `### Fixed`, and reference the PR number, e.g. `(#193)`. Concurrent PRs both touching `[Unreleased]` will conflict — serialize merges or rebase.
 - When building `gh pr create --body`/`gh issue create --body`, prefer `--body-file`; if you must use a heredoc subshell, call `/bin/cat` (the user's `cat` is aliased to `bat`).
 
+## Cutting a release
+
+Releases are hand-prepared in a PR, then **a tag push triggers the GitHub release automatically** — never run `gh release create` by hand.
+
+1. Bump `SCRIPT_VERSION` in `scripts/setup-dev-tools-mac.sh` (semver: new features → minor, fixes-only → patch, breaking → major).
+2. In `CHANGELOG.md`, rename the top `## [Unreleased]` to `## [X.Y.Z] - YYYY-MM-DD` and rewrite its summary line to cover the whole release. Keep the `### Added` / `### Changed` / `### Fixed` groups. Do not leave an empty `[Unreleased]` behind — it's re-added when the next change lands.
+3. Commit as `chore(release): bump version to X.Y.Z`, open a PR, merge (squash) once CI is green.
+4. On updated `main`, create an **annotated** tag and push it:
+   ```bash
+   git tag -a vX.Y.Z -m "Release X.Y.Z" && git push origin vX.Y.Z
+   ```
+5. `.github/workflows/release.yml` (trigger: `push` tags `v*`) builds `vixygrey-dev-setup-macos-vX.Y.Z.zip` (the script + `docs/GUIDE.md` + `docs/SHORTCUTS.md` + `README.md` + `LICENSE`) and publishes the GitHub Release with **auto-generated** notes (a PR list). The hand-written `CHANGELOG.md` is the canonical human changelog; the release-page notes are the auto PR summary.
+
 ## Environment gotchas
 
 - `rm` is aliased to **`trash`** (rejects `-rf`); use `/bin/rm` in test scripts that clean up temp dirs.

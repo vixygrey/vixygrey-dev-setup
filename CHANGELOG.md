@@ -2,9 +2,9 @@
 
 > Release notes for 7.0.0–7.1.1 live in [GitHub Releases](https://github.com/vixygrey/vixygrey-dev-setup/releases) (auto-generated). This file resumes hand-written notes at 7.2.0.
 
-## [Unreleased]
+## [7.5.0] - 2026-08-10
 
-Installs a scoped set of Google Workspace (`gws`) Claude skills and documents that the OAuth scopes granted at `gws auth setup` — not the installed skills — are the real access boundary. No breaking changes.
+Deepens the Claude Code integration: a scoped set of Google Workspace (`gws`) skills, four first-party skills for installed tools (`office-docs`, `d2-diagrams`, `dbmate-migrations`, `api-testing`), and a project `CLAUDE.md`. Also fixes the global pre-commit hook's false positives and switches the terminal to a Nerd Font. No breaking changes.
 
 ### Added
 
@@ -214,28 +214,3 @@ Minor release rolling up two follow-up PRs to v4.0.0: a tool-discoverability aud
 
 - Document all new tools in `GUIDE-MACOS.md`, `GUIDE-LINUX.md`, `GUIDE-WINDOWS.md` with usage examples (#5)
 - Update `SHORTCUTS-*.md` with new alias rows and a "Terminal Apps" section (#5)
-
-## [Unreleased]
-
-### Bug Fixes
-
-- **ci**: Remove unused variables, exclude remaining PSScriptAnalyzer rules
-- **ci**: Use system shellcheck, exclude false-positive PSScriptAnalyzer rules
-- Local-outside-function error, firewall detection, and remove tmux
-- Resolve install failures, Safari sandbox errors, and progress bar rendering
-- Resolve 99 issues across all three setup scripts
-
-### Documentation
-
-- Update README to reflect mysides replacement with LSSharedFileList API
-- Split documentation into per-platform self-contained guides
-
-### Miscellaneous
-
-- Pre-publication audit — shellcheck fixes, CI, configs sync
-- Rename setup-dev-tools.sh to setup-dev-tools-mac.sh
-- Reorganize project structure
-
-### Refactoring
-
-- Remove tmux (replaced by zellij), replace Proton suite with Mullvad VPN
