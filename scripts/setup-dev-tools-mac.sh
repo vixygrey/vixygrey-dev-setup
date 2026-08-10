@@ -5393,8 +5393,11 @@ write_managed "$GHOSTTY_CONFIG" "#" <<'GHOSTTY_CONF'
 # Ghostty configuration
 # Docs: https://ghostty.org/docs/config
 
-# Font
-font-family = "JetBrains Mono"
+# Font — the Nerd Font variant so glyph icons (eza, starship, lazygit, Claude
+# Code, etc.) render natively in the terminal instead of relying on font
+# fallback. Same family SketchyBar uses. If any double-width nerd glyphs
+# misalign, switch to "JetBrainsMono Nerd Font Mono" (forces single-width).
+font-family = "JetBrainsMono Nerd Font"
 font-size = 14
 
 # Dracula theme
@@ -5440,7 +5443,7 @@ quick-terminal-screen = main
 quick-terminal-animation-duration = 0.15
 quick-terminal-autohide = true
 GHOSTTY_CONF
-success "Ghostty configured (JetBrains Mono, Dracula theme, transparent titlebar)"
+success "Ghostty configured (JetBrainsMono Nerd Font, Dracula theme, transparent titlebar)"
 
 # ---- Ghostty auto-start (launchd agent) ----
 # Ghostty's global cmd+space quick-terminal keybind only registers once Ghostty has
