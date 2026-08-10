@@ -12,6 +12,10 @@ Installs a scoped set of Google Workspace (`gws`) Claude skills and documents th
 - **docs**: Add a root **`CLAUDE.md`** documenting repo conventions for AI agents — the script is a generator (edit heredocs, not output), the managed-block/idempotency/`--dry-run` patterns, the `bash -n` + ShellCheck + `--dry-run` verification loop, the global pre-commit hook's regenerate-on-re-run behavior and `debug-ok` whitelist, heredoc quoting, changelog-on-every-PR, and the `trash`/`bat` alias gotchas (#197)
 - **script**: Install a scoped set of **24 `gws` Claude skills** — 10 service skills + 14 recipes covering **Drive/Docs/Slides/Sheets/Forms only** — into `~/.claude/skills/`, refreshed each run. Gmail/Calendar/Chat/Meet skills are deliberately excluded, and `recipe-create-feedback-form` is dropped because it depends on `gws-gmail`. The generated `CLAUDE.md` now lists exactly which skills/recipes Claude has and notes that skills are not an access boundary; the post-setup checklist gains an **OAuth-fence reminder** (authorize only the five services' scopes at `gws auth setup`) (#193)
 
+### Changed
+
+- **ghostty**: Set the terminal `font-family` to **`JetBrainsMono Nerd Font`** (was plain `JetBrains Mono`) so glyph icons — eza, starship, lazygit, Claude Code, etc. — render natively instead of relying on font fallback. The Nerd Font was already installed and is the same family SketchyBar uses (#201)
+
 ### Fixed
 
 - **hooks**: The global pre-commit hook is now **language-aware** — the debug-statement check scans only the file types each token belongs to (JS/TS for `console.log`/`debugger`, Python for pdb/`breakpoint()`, Ruby for `binding.pry`), so shell scripts and markdown that merely *mention* those tokens are no longer rejected (this repo's own script previously required `--no-verify`); a trailing `debug-ok` comment whitelists an intentional line. The merge-conflict-marker check is anchored to line start and requires the trailing space real markers carry, so markdown setext headings (`=======`) no longer false-flag (#195)
