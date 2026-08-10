@@ -8,6 +8,7 @@ Installs a scoped set of Google Workspace (`gws`) Claude skills and documents th
 
 ### Added
 
+- **docs**: Add a root **`CLAUDE.md`** documenting repo conventions for AI agents — the script is a generator (edit heredocs, not output), the managed-block/idempotency/`--dry-run` patterns, the `bash -n` + ShellCheck + `--dry-run` verification loop, the global pre-commit hook's regenerate-on-re-run behavior and `debug-ok` whitelist, heredoc quoting, changelog-on-every-PR, and the `trash`/`bat` alias gotchas (#197)
 - **script**: Install a scoped set of **24 `gws` Claude skills** — 10 service skills + 14 recipes covering **Drive/Docs/Slides/Sheets/Forms only** — into `~/.claude/skills/`, refreshed each run. Gmail/Calendar/Chat/Meet skills are deliberately excluded, and `recipe-create-feedback-form` is dropped because it depends on `gws-gmail`. The generated `CLAUDE.md` now lists exactly which skills/recipes Claude has and notes that skills are not an access boundary; the post-setup checklist gains an **OAuth-fence reminder** (authorize only the five services' scopes at `gws auth setup`) (#193)
 
 ### Fixed
