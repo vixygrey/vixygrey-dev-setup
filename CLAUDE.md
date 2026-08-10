@@ -1,0 +1,55 @@
+# CLAUDE.md — vixygrey-dev-setup
+
+Guidance for AI agents working in this repo. Read this before editing.
+
+## What this repo is
+
+A single idempotent Bash script, [`scripts/setup-dev-tools-mac.sh`](scripts/setup-dev-tools-mac.sh) (~10k lines), that provisions a macOS developer machine: installs CLI/GUI tools via Homebrew, writes dotfiles/config, and **generates the user's Claude Code environment** — `~/.claude/CLAUDE.md`, `~/.claude/rules/*`, agents, commands, skills, MCP servers — plus Desktop docs (`POST_SETUP_CHECKLIST.md`, `TOOL_REFERENCE.md`, `KEYBOARD_SHORTCUTS.md`, `TOOLKIT_SUMMARY.md`). Almost all work happens in that one script.
+
+## The golden rule: edit the generator, never the output
+
+Config files, the user's `~/.claude/CLAUDE.md`, the pre-commit hook, and the Desktop docs are all **generated** by the script — usually inside a quoted heredoc. To change any of them, edit the heredoc **in the script**, not the produced file (which gets overwritten on the next run). Generated files carry a managed-block marker: `# >>> dev-setup managed block (do not edit between the markers) >>>`.
+
+## Conventions that are easy to get wrong
+
+- **Idempotency is mandatory.** Every run must be safe to repeat. Use the existing guards: `mark_done`/`is_done "<key>"`, and the `brew_install` / `brew_cask_install` / `npm_global_install` / `go_install` / `uv_tool_install` helpers (they snapshot installed state and skip work already done). Don't call `brew install` directly.
+- **Honor `--dry-run`.** Any block with side effects must do nothing when `$DRY_RUN == "true"` (print an `info "[DRY RUN] Would …"` line instead). `write_managed`/`write_managed_script` already handle this; raw `git`/`curl`/`cp`/`ln`/`mkdir` blocks you add must guard themselves.
+- **Write files with the managed helpers**, not ad-hoc redirection:
+  - `write_managed <file> [comment-prefix]` — wraps stdin in a managed block (refreshes in place on re-run; backs up+replaces an unmarked pre-existing file).
+  - `write_managed_script <file>` — same, for executables; keeps the shebang on line 1 and `chmod +x`.
+- **Logging/UX helpers:** `info`, `success`, `warn`, `error`, `banner`, `progress`. Everything verbose goes to `$LOG_FILE` via `log`.
+- **Guard on tool presence** with `installed <cmd>` before using an optional tool.
+- **Heredoc quoting:** use `<<'MARKER'` (quoted) for literal content — this is the default, and it keeps `$` and backticks literal (most generated files rely on this). Only use an unquoted heredoc when you deliberately want the script's variables expanded.
+
+## Testing / verification loop (do this before every commit)
+
+1. `bash -n scripts/setup-dev-tools-mac.sh` — syntax.
+2. `shellcheck -S warning scripts/setup-dev-tools-mac.sh` — **this is what CI runs** (`.github/workflows/lint.yml`). Keep it clean.
+3. `./scripts/setup-dev-tools-mac.sh --dry-run` (or `--only <category>`) — preview without mutating the machine.
+4. When you change a generated file, extract and exercise it in a throwaway dir rather than trusting the heredoc by eye (e.g. the pre-commit hook was tested against sample staged files in a temp `git init`).
+
+Useful flags: `--dry-run`, `--list`, `--list-categories`, `--only <cats>`, `--skip <cats>`, `--interactive/-i`, `--resume`, `--cleanup`, `--uninstall`, `--version`.
+
+## The generated pre-commit hook
+
+The script installs a **global** hook (`git config --global core.hooksPath ~/.config/git/hooks`) that runs on all repos. It checks for debug statements (language-scoped: JS/TS `console.log`/`debugger`, Python pdb/`breakpoint()`, Ruby `binding.pry`), files >5 MB, and merge-conflict markers. Two things to know:
+
+- A change to the hook only takes effect **after the script is re-run** to regenerate it. So editing the hook's heredoc will not stop the *currently installed* (old) hook from firing on your very next commit — that commit may still need `--no-verify`.
+- To whitelist an intentional debug token on a line, add a trailing **`debug-ok`** comment. Prefer that over `--no-verify`.
+
+## Commits, PRs, CHANGELOG
+
+- Trunk-based: branch off `main` (`feature/`, `fix/`, `chore/`, `docs/`), open a PR, squash-merge. Conventional commit messages.
+- **CHANGELOG.md** is hand-written from 7.2.0 onward. Add entries under `## [Unreleased]` (create it if absent) in `### Added` / `### Changed` / `### Fixed`, and reference the PR number, e.g. `(#193)`. Concurrent PRs both touching `[Unreleased]` will conflict — serialize merges or rebase.
+- When building `gh pr create --body`/`gh issue create --body`, prefer `--body-file`; if you must use a heredoc subshell, call `/bin/cat` (the user's `cat` is aliased to `bat`).
+
+## Environment gotchas
+
+- `rm` is aliased to **`trash`** (rejects `-rf`); use `/bin/rm` in test scripts that clean up temp dirs.
+- `bat` shadows `cat`; use `/bin/cat` in scripts/subshells that need raw output.
+- Target platform is macOS + zsh; the script is bash and assumes Homebrew.
+
+## What the script provisions for Claude (so you can reason about it)
+
+- **Skills** installed to `~/.claude/skills/`: `tiki` (curl'd `SKILL.md`) and a **scoped set of Google Workspace (`gws`) skills** — Drive/Docs/Slides/Sheets/Forms only (sparse-cloned from `googleworkspace/cli`; Gmail/Calendar/Chat/Meet deliberately excluded). Skills are recipes, **not** an access boundary — `gws`'s reach is set by the OAuth scopes granted at `gws auth setup`.
+- **MCP servers** registered via `claude mcp add` (not idempotent — the script guards): `filesystem, github, git, fetch, context7, aws-docs, aws-pricing, aws-iac, aws-knowledge, cloudwatch, iam, herald`.
