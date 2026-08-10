@@ -7037,6 +7037,7 @@ else
   - **Render**: `soffice --headless --convert-to pdf --outdir /tmp file.pptx` (LibreOffice) — the fidelity renderer
   - **See it**: `pdftoppm -png -r 150 /tmp/file.pdf /tmp/page` (poppler) rasterizes the PDF to PNGs you can inspect (this is the PDF→image tool — `magick` needs ghostscript for PDFs and is for editing the resulting images: resize/crop/composite); `pdftotext`/`pdfinfo` for text/metadata
   - **Assert on content**: `office-py` (a venv with python-docx/openpyxl/python-pptx), e.g. `office-py -c 'from pptx import Presentation; p=Presentation("deck.pptx"); print(len(p.slides))'`
+  - **Skills**: the `office-docs` skill wraps this render→see→assert loop into one recipe; Claude Code's **bundled** `docx`/`pptx`/`xlsx`/`pdf` skills author & edit local files with the same libraries (preview results via the render step above). Local files only — cloud Google Docs/Sheets/Slides use `gws`.
 - **Database**: `pgcli`/`mycli` for auto-completing SQL, `lazysql` for TUI, `sq` for cross-database queries, `dbmate` for migrations
 - **File management**: `rovr` for the TUI file manager (`nnn` as a minimal fallback), `wiper` for interactive disk-usage cleanup (ncdu-like, Trash-safe), `watchexec` for running commands on file changes, `rclone` for cloud storage sync
 - **Kubernetes**: `k9s` for TUI, `stern` for log tailing (kubectl via OrbStack)
@@ -7920,6 +7921,59 @@ Keep the first line under 72 characters. Use imperative mood ("add" not "added")
 CMD_COMMIT
 
     success "Claude Code commands created (20 commands: /pr-review, /test-plan, /dep-audit, /quick-doc, /cleanup, /security-scan, /perf-check, /docker-lint, /iac-review, /convert, /new-feature, /fix-bug, /create-readme, /init-project, /refactor, /add-endpoint, /add-component, /ci-fix, /changelog, /commit-msg)"
+fi
+
+# ---- Claude Code first-party skills (authored here) ----
+# Skills that teach Claude to use tools THIS script installs, written fresh each run
+# (script-owned, like the gws skills, so updates propagate). Unlike the commands above,
+# a SKILL.md must start with its YAML frontmatter on line 1 — so these use plain
+# heredocs, NOT write_managed (its leading comment marker would break the frontmatter).
+if [[ "$DRY_RUN" == "true" ]]; then
+    info "[DRY RUN] Would write first-party Claude skills (office-docs) -> ~/.claude/skills/"
+else
+    info "Writing first-party Claude Code skills..."
+    mkdir -p "$HOME/.claude/skills/office-docs"
+    cat > "$HOME/.claude/skills/office-docs/SKILL.md" <<'SKILL_OFFICE_DOCS'
+---
+name: office-docs
+description: Inspect, validate, convert, and visually verify LOCAL Office / OpenDocument files (.docx, .pptx, .xlsx, .odt, .ods, .odp) from the terminal — render to PDF/PNG to actually see them, extract text/metadata, and assert on structured content. Use when handed a local office file to check, screenshot, convert, or verify. NOT for authoring (that stays in Google Workspace) and NOT for cloud Drive files (use the gws skills).
+---
+
+# office-docs — work with local Office / OpenDocument files
+
+This machine has a purpose-built local toolchain for `.docx`/`.pptx`/`.xlsx` (installed by the dev setup). Authoring belongs in Google Workspace; this skill is for **inspecting, validating, converting, and visually verifying files already on the local filesystem**.
+
+## The three moves
+
+1. **Render (fidelity) — see what it actually looks like.** LibreOffice headless is the renderer; rasterize the PDF to PNGs you can open and read:
+   ```bash
+   soffice --headless --convert-to pdf --outdir /tmp "deck.pptx"
+   pdftoppm -png -r 150 /tmp/deck.pdf /tmp/deck-page   # -> /tmp/deck-page-1.png, -2.png, ...
+   ```
+   Then Read the PNGs to judge layout and visuals. `soffice` also converts formats: `--convert-to csv` (xlsx->csv), `--convert-to docx`, `--convert-to txt`.
+
+2. **Extract text / metadata** without rendering:
+   ```bash
+   pdftotext /tmp/deck.pdf -     # text to stdout
+   pdfinfo   /tmp/deck.pdf       # page count, dimensions, metadata
+   doxx report.docx             # read a .docx directly in the terminal
+   ```
+
+3. **Assert on structured content** with `office-py` (a venv carrying python-docx / openpyxl / python-pptx):
+   ```bash
+   office-py -c 'from pptx import Presentation; p=Presentation("deck.pptx"); print(len(p.slides))'
+   office-py -c 'import openpyxl; wb=openpyxl.load_workbook("data.xlsx"); print(wb.sheetnames)'
+   office-py -c 'import docx; d=docx.Document("report.docx"); print(len(d.paragraphs))'
+   ```
+
+## Guidance
+
+- To **create or heavily edit** a local `.docx`/`.pptx`/`.xlsx`, prefer Claude Code's bundled `docx` / `pptx` / `xlsx` skills (same underlying libraries); use move #1 to preview the result.
+- For **cloud** Google Docs/Sheets/Slides, use the `gws` skills — this skill is for local files only.
+- Always render into `/tmp` (or the scratch dir), never next to the source file.
+- If `soffice` errors on a file, report it — usually a corrupt or password-protected document. `soffice` needs no running instance; it runs fully headless.
+SKILL_OFFICE_DOCS
+    success "First-party Claude skills written: office-docs -> ~/.claude/skills/"
 fi
 
 fi  # configs (Claude Code)
