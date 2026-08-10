@@ -2,6 +2,14 @@
 
 > Release notes for 7.0.0–7.1.1 live in [GitHub Releases](https://github.com/vixygrey/vixygrey-dev-setup/releases) (auto-generated). This file resumes hand-written notes at 7.2.0.
 
+## [Unreleased]
+
+Installs a scoped set of Google Workspace (`gws`) Claude skills and documents that the OAuth scopes granted at `gws auth setup` — not the installed skills — are the real access boundary. No breaking changes.
+
+### Added
+
+- **script**: Install a scoped set of **24 `gws` Claude skills** — 10 service skills + 14 recipes covering **Drive/Docs/Slides/Sheets/Forms only** — into `~/.claude/skills/`, refreshed each run. Gmail/Calendar/Chat/Meet skills are deliberately excluded, and `recipe-create-feedback-form` is dropped because it depends on `gws-gmail`. The generated `CLAUDE.md` now lists exactly which skills/recipes Claude has and notes that skills are not an access boundary; the post-setup checklist gains an **OAuth-fence reminder** (authorize only the five services' scopes at `gws auth setup`) (#193)
+
 ## [7.4.0] - 2026-08-09
 
 Adds comprehensive on-machine tool documentation, fills gaps in the post-setup checklist, and fixes the Google Workspace CLI install. No breaking changes.
