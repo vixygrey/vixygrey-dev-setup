@@ -7932,7 +7932,7 @@ fi
 # a SKILL.md must start with its YAML frontmatter on line 1 — so these use plain
 # heredocs, NOT write_managed (its leading comment marker would break the frontmatter).
 if [[ "$DRY_RUN" == "true" ]]; then
-    info "[DRY RUN] Would write first-party Claude skills (office-docs) -> ~/.claude/skills/"
+    info "[DRY RUN] Would write first-party Claude skills (office-docs, d2-diagrams, dbmate-migrations, api-testing) -> ~/.claude/skills/"
 else
     info "Writing first-party Claude Code skills..."
     mkdir -p "$HOME/.claude/skills/office-docs"
@@ -7976,7 +7976,143 @@ This machine has a purpose-built local toolchain for `.docx`/`.pptx`/`.xlsx` (in
 - Always render into `/tmp` (or the scratch dir), never next to the source file.
 - If `soffice` errors on a file, report it — usually a corrupt or password-protected document. `soffice` needs no running instance; it runs fully headless.
 SKILL_OFFICE_DOCS
-    success "First-party Claude skills written: office-docs -> ~/.claude/skills/"
+
+    mkdir -p "$HOME/.claude/skills/d2-diagrams"
+    cat > "$HOME/.claude/skills/d2-diagrams/SKILL.md" <<'SKILL_D2'
+---
+name: d2-diagrams
+description: Create and render diagrams as code — architecture, flowcharts, sequence, ER, network — with d2 (primary) or mermaid/mmdc (fallback), producing SVG/PNG. Use when the user asks to diagram, visualize, sketch, or draw a system/flow/architecture, or to turn a description or code into a diagram file.
+---
+
+# d2-diagrams — diagrams as code
+
+This setup uses **`d2`** as the primary diagram tool (it replaced draw.io); `mmdc` (mermaid) is the fallback when the user specifically wants mermaid or a diagram type d2 handles awkwardly.
+
+## d2 workflow
+
+1. Write the diagram source to a `.d2` file (keep it next to the output so it stays regenerable):
+   ```d2
+   # arch.d2
+   user -> api: request
+   api -> db: query
+   api -> cache: read-through
+   ```
+2. Render, then Read the PNG (or open the SVG) to actually see it:
+   ```bash
+   d2 arch.d2 arch.svg              # SVG (default, crisp, scalable)
+   d2 arch.d2 arch.png              # PNG (for inline viewing)
+   d2 --theme 200 arch.d2 arch.svg  # apply a theme
+   d2 --layout elk arch.d2 out.svg  # ELK engine for dense graphs (default is dagre)
+   d2 --watch arch.d2               # live-reload preview in the browser
+   ```
+
+## mermaid fallback
+
+```bash
+mmdc -i flow.mmd -o flow.svg     # flowcharts, sequence, ER, gantt
+```
+
+## Guidance
+
+- Default to d2 unless the user asks for mermaid.
+- Commit the `.d2`/`.mmd` source, not just the rendered image.
+- For big graphs, try `--layout elk` if dagre gets tangled.
+SKILL_D2
+
+    mkdir -p "$HOME/.claude/skills/dbmate-migrations"
+    cat > "$HOME/.claude/skills/dbmate-migrations/SKILL.md" <<'SKILL_DBMATE'
+---
+name: dbmate-migrations
+description: Create and run database schema migrations with dbmate — new timestamped up/down SQL files, apply, roll back, and check status. Use when the user wants to add or alter a table/column, create a migration, or manage schema changes. Follows this setup's DB conventions.
+---
+
+# dbmate-migrations — database migrations
+
+`dbmate` manages plain-SQL migrations, driven by `DATABASE_URL` (it reads `.env` by default).
+
+## Workflow
+
+```bash
+dbmate new add_users_table   # -> db/migrations/<timestamp>_add_users_table.sql
+dbmate up                    # apply all pending migrations
+dbmate down                  # roll back the most recent migration
+dbmate status                # list applied + pending
+```
+
+Each file has an up and a down section:
+
+```sql
+-- migrate:up
+create table users (
+  id         bigint generated always as identity primary key,
+  email      text not null unique,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+create index idx_users_email on users (email);
+
+-- migrate:down
+drop table users;
+```
+
+## Conventions (from the global DB rules)
+
+- Table names **plural, snake_case** (`user_accounts`, `order_items`).
+- Always include `id`, `created_at`, `updated_at`.
+- Foreign keys are `<table_singular>_id`; **index** FKs and any column used in WHERE/ORDER BY.
+- **Never edit an already-applied migration** — write a new one.
+- Always provide a working `-- migrate:down` so rollbacks are safe.
+SKILL_DBMATE
+
+    mkdir -p "$HOME/.claude/skills/api-testing"
+    cat > "$HOME/.claude/skills/api-testing/SKILL.md" <<'SKILL_API'
+---
+name: api-testing
+description: Test and debug HTTP/gRPC APIs from the terminal — send requests, write repeatable test files with assertions, and inspect responses. Use when the user wants to hit an endpoint, verify an API response, write an API test, or debug a request. Leads with headless tools (hurl, xh, curlie, grpcurl); atac is the interactive TUI for saved collections.
+---
+
+# api-testing — HTTP/gRPC from the terminal
+
+## One-off requests — `xh` (or `curlie`)
+
+```bash
+xh GET api.example.com/users limit==20 Authorization:"Bearer $TOKEN"   # ==  query param,  :  header
+xh POST api.example.com/users name=Ada email=ada@example.com           # =  builds a JSON body
+```
+`curlie` is curl's interface with httpie-style colored output.
+
+## Repeatable tests with assertions — `hurl` (preferred for anything worth keeping)
+
+```hurl
+# users.hurl
+GET https://api.example.com/users
+HTTP 200
+[Asserts]
+jsonpath "$.data" count > 0
+jsonpath "$.data[0].id" exists
+```
+```bash
+hurl --test users.hurl   # run as a test: assertions + exit code + report
+hurl users.hurl          # just execute and print the response body
+```
+
+## gRPC — `grpcurl`
+
+```bash
+grpcurl -plaintext localhost:50051 list
+grpcurl -d '{"id":1}' localhost:50051 svc.Users/Get
+```
+
+## Interactive / saved collections — `atac`
+
+`atac` is the TUI API client (Postman-like; imports Postman collections, stores JSON/YAML on disk). Point the user there for exploratory work; use `hurl`/`xh` for anything Claude should run headlessly.
+
+## Guidance
+
+- Save anything worth rerunning as a `.hurl` file (assertable, version-controlled) rather than ad-hoc `xh` commands.
+- Never hard-code secrets — reference env vars / `{{token}}` variables.
+SKILL_API
+    success "First-party Claude skills written: office-docs, d2-diagrams, dbmate-migrations, api-testing -> ~/.claude/skills/"
 fi
 
 fi  # configs (Claude Code)
