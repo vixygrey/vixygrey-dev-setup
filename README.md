@@ -781,7 +781,7 @@ The script generates config files with sensible defaults:
 | `~/.newsboat/config` | newsboat | Vim keys, Dracula colors, auto-reload |
 | `~/.newsboat/urls` | newsboat | Starter RSS feeds (Claude Code, Node, Rust, GitHub) |
 | `~/Library/Application Support/nushell/env.nu` | nushell | Starship prompt, Homebrew paths |
-| `~/.config/ghostty/config` | Ghostty | JetBrains Mono, Dracula palette, transparent titlebar |
+| `~/.config/ghostty/config` | Ghostty | JetBrainsMono Nerd Font, Dracula palette, transparent titlebar |
 | `~/.config/fastfetch/config.jsonc` | fastfetch | Nerd Font icons, package counts, Node/Python/Go/Rust/Docker versions, battery, disk, colored output |
 | `~/.config/mise/config.toml` | mise | Auto-install, trust ~/Code |
 | `~/.config/topgrade.toml` | topgrade | Cleanup, greedy cask updates |
