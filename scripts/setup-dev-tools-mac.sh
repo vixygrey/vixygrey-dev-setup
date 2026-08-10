@@ -2173,6 +2173,63 @@ if [[ "$DRY_RUN" != "true" ]] && brew list --formula gws >/dev/null 2>&1; then
     brew uninstall gws >> "$LOG_FILE" 2>&1 || warn "Could not remove git-workspace 'gws' (continuing)"
 fi
 brew_install "googleworkspace-cli" "google-workspace-cli (Drive/Gmail/Docs/Sheets/Calendar — JSON output, AI-agent-friendly)"
+# gws Claude skills — SCOPED to Drive / Docs / Slides / Sheets / Forms ONLY. Upstream
+# ships ~95 skills spanning Gmail, Calendar, Chat, Meet, Tasks, Contacts, admin, etc.;
+# we deliberately install just the file/document surface so Claude gets the recipes for
+# those services and nothing that would drive your inbox, calendar, or chats. Refreshed
+# each run to track upstream. IMPORTANT: skills are convenience recipes — they do NOT
+# gate access. The real boundary is the OAuth scopes granted at `gws auth setup/login`
+# (called out in the post-setup checklist). recipe-create-feedback-form is intentionally
+# omitted: it depends on gws-gmail for its email-the-link step (outside the fence).
+GWS_SKILLS=(
+    # core service skills (gws-shared is the required base the others build on)
+    gws-shared
+    gws-drive gws-drive-upload
+    gws-docs gws-docs-write
+    gws-sheets gws-sheets-read gws-sheets-append
+    gws-slides
+    gws-forms
+    # recipes — Drive
+    recipe-bulk-download-folder recipe-find-large-files recipe-organize-drive-folder
+    recipe-create-shared-drive recipe-share-folder-with-team
+    # recipes — Docs
+    recipe-create-doc-from-template
+    # recipes — Slides
+    recipe-create-presentation
+    # recipes — Sheets
+    recipe-backup-sheet-as-csv recipe-compare-sheet-tabs recipe-copy-sheet-for-new-month
+    recipe-create-expense-tracker recipe-generate-report-from-sheet recipe-log-deal-update
+    # recipes — Forms
+    recipe-collect-form-responses
+)
+if [[ "$DRY_RUN" == "true" ]]; then
+    info "[DRY RUN] Would install ${#GWS_SKILLS[@]} scoped Google Workspace Claude skills (Drive/Docs/Slides/Sheets/Forms) -> ~/.claude/skills/"
+elif ! installed git; then
+    warn "Skipping Google Workspace Claude skills — git not available"
+else
+    info "Installing ${#GWS_SKILLS[@]} scoped Google Workspace Claude skills (Drive/Docs/Slides/Sheets/Forms)..."
+    _gws_tmp="$(mktemp -d)"
+    if git clone --depth 1 --filter=blob:none --sparse \
+        https://github.com/googleworkspace/cli "$_gws_tmp" >> "$LOG_FILE" 2>&1 \
+        && git -C "$_gws_tmp" sparse-checkout set skills >> "$LOG_FILE" 2>&1; then
+        mkdir -p "$HOME/.claude/skills"
+        _gws_ok=0; _gws_miss=0
+        for _skill in "${GWS_SKILLS[@]}"; do
+            if [[ -d "$_gws_tmp/skills/$_skill" ]]; then
+                rm -rf "$HOME/.claude/skills/$_skill"
+                cp -R "$_gws_tmp/skills/$_skill" "$HOME/.claude/skills/" && _gws_ok=$((_gws_ok + 1))
+            else
+                warn "  gws skill not found upstream (skipped): $_skill"
+                _gws_miss=$((_gws_miss + 1))
+            fi
+        done
+        success "Google Workspace skills installed: $_gws_ok in ~/.claude/skills/ ($_gws_miss missing upstream)"
+    else
+        warn "Could not fetch Google Workspace skills — clone manually from github.com/googleworkspace/cli (skills/)"
+    fi
+    rm -rf "$_gws_tmp"
+    unset _gws_tmp _skill _gws_ok _gws_miss
+fi
 brew_cask_install "shottr" "Shottr (fast native screenshots — scrolling capture, OCR, annotations)"
 
 # PDF & documents
@@ -6937,7 +6994,11 @@ else
 ## Working Context
 - Independent **fractional CIO/CTO and consultant**; company is **VixenTec LLC**.
 - All company work runs on **Google Workspace** (Gmail, Docs/Sheets/Slides, Drive, Meet, Chat, Vids). Produce documents/deliverables in Google Workspace, not a local office suite — **author** in Workspace, not MS Office. LibreOffice is installed **only** for headless **validation/conversion** of office files (`soffice --headless --convert-to …`), e.g. checking a `.pptx`/`.xlsx`/`.docx` opens cleanly or rendering it to PDF — not for authoring. Use **Google Meet** for calls (no Zoom); **Google Chat** for messaging (no Slack).
-- To work with Workspace from the terminal, use **`gws`** (google-workspace-cli — Drive/Gmail/Docs/Sheets/Calendar/Chat with structured JSON output; run `gws auth login` first). **Read/list/search/get freely**; but **never send, reply, share, move, delete, or modify** mail, files, or events **without explicit user confirmation** — state exactly what will change first. (gws also ships Claude skills you can add from its repo for specific recipes.)
+- To work with Workspace from the terminal, use **`gws`** (google-workspace-cli — Drive/Gmail/Docs/Sheets/Calendar/Chat with structured JSON output; run `gws auth login` first). **Read/list/search/get freely**; but **never send, reply, share, move, delete, or modify** mail, files, or events **without explicit user confirmation** — state exactly what will change first.
+- **gws Claude skills you have (pre-installed in `~/.claude/skills/`)** — a scoped set covering **Drive, Docs, Slides, Sheets, and Forms only**; Gmail/Calendar/Chat/Meet/Tasks/Contacts skills were deliberately left out. Prefer these skills over hand-rolling `gws` invocations:
+  - **Service skills**: `gws-shared` (auth/flags/output — the base), `gws-drive`, `gws-drive-upload`, `gws-docs`, `gws-docs-write`, `gws-sheets`, `gws-sheets-read`, `gws-sheets-append`, `gws-slides`, `gws-forms`.
+  - **Recipes** (canned multi-step workflows): Drive — `recipe-bulk-download-folder`, `recipe-find-large-files`, `recipe-organize-drive-folder`, `recipe-create-shared-drive`, `recipe-share-folder-with-team`; Docs — `recipe-create-doc-from-template`; Slides — `recipe-create-presentation`; Sheets — `recipe-backup-sheet-as-csv`, `recipe-compare-sheet-tabs`, `recipe-copy-sheet-for-new-month`, `recipe-create-expense-tracker`, `recipe-generate-report-from-sheet`, `recipe-log-deal-update`; Forms — `recipe-collect-form-responses`.
+  - Skills are recipes, **not** an access boundary: having only these does not stop `gws` from reaching Gmail/Calendar if those OAuth scopes were granted. The fence is the scopes chosen at `gws auth setup` — treat email/calendar/chat as out of scope unless the user says otherwise.
 - Tool philosophy: prefer **open-source, CLI-first, privacy-preserving, and minimal** options; declutter aggressively. When recommending tools, lead with one option that fits these and flag any that don't.
 - **ADD-friendly home layout** (low-decision, shallow): `~/Inbox` (dump zone — drop anything, sort later), `~/Code` (work/personal/oss/learning), `~/Documents` (finance, health, admin, receipts, travel), `~/Creative`, `~/Media`, `~/Archive`, `~/Screenshots`, `~/Scripts`. When in doubt where a file goes, suggest `~/Inbox` rather than a deep path.
 
@@ -8250,8 +8311,9 @@ the list, then delete this file.
 - [ ] Optional: enable herald's AI features (semantic search, triage, compose styler). Default provider is local **Ollama**; to use Claude instead, point it at your `ANTHROPIC_API_KEY`.
 
 ## Google Workspace CLI — gws
-- [ ] Authorize `gws`: run `gws auth setup` (walks you through a Google Cloud OAuth project) then `gws auth login`. After that, Claude can read your Drive/Gmail/Docs/Sheets/Calendar via `gws` (structured JSON) — it's instructed to confirm before sending/sharing/deleting/modifying anything.
-- [ ] Optional: browse gws's bundled **Claude skills** at github.com/googleworkspace/cli (`skills/`) and copy the ones you want into `~/.claude/skills/`.
+- [ ] Authorize `gws`: run `gws auth setup` (walks you through a Google Cloud OAuth project) then `gws auth login`. After that, Claude can work with your Workspace via `gws` (structured JSON) — it's instructed to confirm before sending/sharing/deleting/modifying anything.
+- [ ] **Scope the OAuth fence — this, not the skills, is what actually limits access.** The Claude skills installed below only give Claude *recipes* for Drive/Docs/Slides/Sheets/Forms; they do **not** restrict what `gws` can call. Any scope you grant during `gws auth setup` is reachable regardless of which skills exist. To keep Claude out of email/calendar/chat entirely, authorize **only** the Drive, Docs, Slides, Sheets, and Forms scopes there.
+- [ ] The Drive/Docs/Slides/Sheets/Forms **Claude skills are pre-installed** (`~/.claude/skills/gws-*` plus the matching `recipe-*`); Gmail/Calendar/Chat/Meet skills were deliberately left out. To add more later, copy them from github.com/googleworkspace/cli (`skills/`).
 
 ## Accounts, keys & first-run
 - [ ] **Apple Passwords CLI (`apw`):** run `brew services start apw`, then `apw auth`, and install the **iCloud Passwords browser extension**.

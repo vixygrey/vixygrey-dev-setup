@@ -457,7 +457,7 @@ The setup runs `qlmanage -r` after install so the generators activate immediatel
 |-----|-------------|
 | **tiki** | Terminal Markdown workspace -- tasks, docs, kanban, wiki (git-backed); replaced the Notion GUI. Its official Claude Code skill is installed to `~/.claude/skills/tiki/`, so Claude manages notes/tasks via `tiki exec` (ruki) |
 | **herald** | Terminal email **+** calendar in one app -- Gmail (work) + iCloud (personal), unified CalDAV, built-in AI triage/summaries + an MCP server for Claude; replaced aerc + khal + vdirsyncer + Notion Calendar |
-| **gws** (google-workspace-cli) | One CLI for Drive/Gmail/Docs/Sheets/Calendar/Chat with structured JSON output -- Claude's read/query surface for Workspace (`gws auth login` first; instructed to confirm before any mutation) |
+| **gws** (google-workspace-cli) | One CLI for Drive/Gmail/Docs/Sheets/Calendar/Chat with structured JSON output -- Claude's read/query surface for Workspace (`gws auth login` first; instructed to confirm before any mutation). A **scoped set of gws Claude skills -- Drive/Docs/Slides/Sheets/Forms only** -- is installed to `~/.claude/skills/` (Gmail/Calendar/Chat/Meet excluded); the real access boundary is the OAuth scopes granted at `gws auth`, not the skills |
 | **Shottr** | Fast native screenshots -- scrolling capture, OCR, annotations (local-only, no account) |
 | **Claude** | AI assistant |
 | **Skim** | Lightweight PDF reader with annotations -- faster than Preview |
