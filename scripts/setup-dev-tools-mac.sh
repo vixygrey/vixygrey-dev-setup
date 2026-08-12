@@ -7194,11 +7194,16 @@ CLAUDE_IGNORE_CONF
 
 # ---- Claude Code global CLAUDE.md (memory/instructions) ----
 CLAUDE_MD="$HOME/.claude/CLAUDE.md"
-if [[ -f "$CLAUDE_MD" ]]; then
-    warn "Claude Code global CLAUDE.md already exists"
-else
-    info "Creating Claude Code global CLAUDE.md..."
-    cat > "$CLAUDE_MD" <<'CLAUDE_MD_CONF'
+# REFRESHED on every run, not create-once. This file used to be written only when
+# absent, which meant a machine provisioned once never received another correction:
+# the maintainer's copy had drifted 33 lines and still named eight tools the script
+# had removed (aider, repomix, kew, aerc, khal, tmux, snyk, trippy). That drift is
+# actively harmful — it is what Claude reads as ground truth about this machine, and
+# it sent one audit chasing "stale" references that had already been fixed here.
+# write_managed refreshes the block in place and keeps anything outside the markers;
+# a pre-existing unmarked file is backed up to *.pre-managed.<timestamp> first.
+info "Writing Claude Code global CLAUDE.md..."
+write_managed "$CLAUDE_MD" "#" <<'CLAUDE_MD_CONF'
 # Global Development Standards
 
 ## Workflow Philosophy
@@ -7207,6 +7212,12 @@ else
 - **Issues for everything** — create GitHub issues before starting work, reference in PRs
 - **README-driven development** — every project and significant module gets a README
 - **Industry best practices** — follow established patterns, OWASP, 12-factor, SOLID, DRY
+
+## This machine's config is GENERATED — edit the generator, not the output
+- `~/.zshrc`, `~/.claude/` (this file, `rules/`, `agents/`, `commands/`, `hooks/`, `settings.json`), `~/.config/*` and the Desktop docs are all written by **`~/Code/personal/vixygrey-dev-setup-main/scripts/setup-dev-tools-mac.sh`**, and refreshed on every run.
+- **Never hand-edit those files to make a change stick** — anything between the `>>> dev-setup managed block` markers is overwritten on the next run. Edit the matching heredoc in that script instead, then re-run it. A direct edit is fine as a temporary local patch, but say so explicitly, because it will be reverted.
+- Edits *outside* the markers survive, as does `settings.json` (merged with `jq`, not replaced — your own permission rules are kept).
+- The script is the source of truth for what is installed. Before recommending a tool, check it is actually present (`command -v <tool>`) — and note the **binary name often differs from the package name** (`trippy`→`trip`, `nushell`→`nu`, `dynein`→`dy`, `imagemagick`→`magick`, `aws-sam-cli`→`sam`, `csvkit`→`csvlook`/`in2csv`).
 
 ## Environment
 - Shell: zsh with starship prompt, atuin history, fzf fuzzy finder, zsh-autosuggestions, zsh-syntax-highlighting
@@ -7423,19 +7434,19 @@ Every project should have a README.md with:
 - `semgrep --config auto .` — static analysis
 - `detect-secrets scan` — pre-commit secret detection
 CLAUDE_MD_CONF
-    success "Claude Code global CLAUDE.md created"
-fi
+success "Claude Code global CLAUDE.md written (refreshed each run; edits outside the markers are kept)"
 
 # ---- Claude Code rules directory ----
 CLAUDE_RULES_DIR="$HOME/.claude/rules"
-if [[ -d "$CLAUDE_RULES_DIR" ]]; then
-    warn "Claude Code rules directory already exists"
-else
-    info "Creating Claude Code rules..."
-    mkdir -p "$CLAUDE_RULES_DIR"
+# Refreshed every run, same reasoning as the global CLAUDE.md above: these files are
+# what Claude treats as standing instructions, so a machine provisioned once must not
+# be stuck with the rules as they were that day. write_managed replaces the block in
+# place and keeps anything outside the markers.
+info "Writing Claude Code rules..."
+mkdir -p "$CLAUDE_RULES_DIR"
 
     # Workflow rules (trunk-based, PR-first)
-    cat > "$CLAUDE_RULES_DIR/workflow.md" <<'WORKFLOW_RULES'
+    write_managed "$CLAUDE_RULES_DIR/workflow.md" "#" <<'WORKFLOW_RULES'
 # Workflow Rules (Trunk-Based Development)
 
 ## PR-First Approach
@@ -7467,7 +7478,7 @@ else
 WORKFLOW_RULES
 
     # Git rules
-    cat > "$CLAUDE_RULES_DIR/git.md" <<'GIT_RULES'
+    write_managed "$CLAUDE_RULES_DIR/git.md" "#" <<'GIT_RULES'
 # Git Rules
 
 - Never force-push to main or master
@@ -7483,7 +7494,7 @@ WORKFLOW_RULES
 GIT_RULES
 
     # Security rules
-    cat > "$CLAUDE_RULES_DIR/security.md" <<'SEC_RULES'
+    write_managed "$CLAUDE_RULES_DIR/security.md" "#" <<'SEC_RULES'
 # Security Rules
 
 - Never hardcode API keys, tokens, passwords, or secrets
@@ -7495,7 +7506,7 @@ GIT_RULES
 SEC_RULES
 
     # TypeScript rules
-    cat > "$CLAUDE_RULES_DIR/typescript.md" <<'TS_RULES'
+    write_managed "$CLAUDE_RULES_DIR/typescript.md" "#" <<'TS_RULES'
 # TypeScript Rules
 
 - Enable strict mode in tsconfig.json
@@ -7508,7 +7519,7 @@ SEC_RULES
 TS_RULES
 
     # Python rules
-    cat > "$CLAUDE_RULES_DIR/python.md" <<'PY_RULES'
+    write_managed "$CLAUDE_RULES_DIR/python.md" "#" <<'PY_RULES'
 # Python Rules
 
 - Use uv for package management (not pip directly)
@@ -7521,7 +7532,7 @@ TS_RULES
 PY_RULES
 
     # Docker rules
-    cat > "$CLAUDE_RULES_DIR/docker.md" <<'DOCKER_RULES'
+    write_managed "$CLAUDE_RULES_DIR/docker.md" "#" <<'DOCKER_RULES'
 # Docker Rules
 
 - Multi-stage builds for production images (builder + runtime)
@@ -7534,7 +7545,7 @@ PY_RULES
 DOCKER_RULES
 
     # IaC rules
-    cat > "$CLAUDE_RULES_DIR/iac.md" <<'IAC_RULES'
+    write_managed "$CLAUDE_RULES_DIR/iac.md" "#" <<'IAC_RULES'
 # Infrastructure as Code Rules
 
 - Use OpenTofu/Terraform with state stored remotely (S3 + DynamoDB)
@@ -7548,8 +7559,7 @@ DOCKER_RULES
 - Use workspaces or separate state files per environment
 IAC_RULES
 
-    success "Claude Code rules created (workflow, git, security, typescript, python, docker, iac)"
-fi
+success "Claude Code rules written (workflow, git, security, typescript, python, docker, iac — refreshed each run)"
 
 # ---- Claude Code hooks ----
 CLAUDE_HOOKS_DIR="$HOME/.claude/hooks"
