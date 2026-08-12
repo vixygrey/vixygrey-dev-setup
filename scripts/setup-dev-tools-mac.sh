@@ -1777,8 +1777,10 @@ brew_install "rsync" "rsync (latest — better cp/mv for large transfers)"
 # hexdump -> hexyl: colorized hex viewer with ASCII sidebar
 brew_install "hexyl" "hexyl (replaces hexdump — colorized hex viewer)"
 
-# curl/wget -> aria2: multi-connection parallel downloads, 3-10x faster.
-# aria2 stays as the scriptable backend + wget alias (yt-dlp and this script use aria2c).
+# aria2: multi-connection parallel downloads, 3-10x faster than a single stream.
+# The scriptable download backend (yt-dlp and this script use aria2c), reached via
+# its own name or the `dl` shortcut. Deliberately NOT aliased over `wget` — the
+# flags differ, so the alias only turned "command not found" into an exception.
 brew_install "aria2" "aria2 (replaces curl/wget for downloads — multi-connection, BitTorrent)"
 
 # surge — interactive TUI download manager whose browser extension intercepts
@@ -5281,6 +5283,12 @@ GLAB_ALIASES
 fi
 
 # ---- pip config ----
+# This looks like dead weight now that uv is the package manager and there is no
+# `pip` alias — it is not. Bare `pip` is absent, but `pip3` ships inside Homebrew's
+# python@3.14, which ~20 installed formulae depend on (awscli, cfn-lint, checkov,
+# csvkit, borgmatic, …), so it cannot be removed and stays one tab-completion away.
+# `require-virtualenv = true` below is what stops an absent-minded `pip3 install`
+# from polluting that shared interpreter. Keep this file.
 PIP_CONFIG_DIR="$HOME/.config/pip"
 PIP_CONFIG="$PIP_CONFIG_DIR/pip.conf"
     info "Creating pip configuration..."
@@ -7711,8 +7719,8 @@ CMD_TEST_PLAN
     # /dep-audit — audit dependencies
     cat > "$CLAUDE_COMMANDS_DIR/dep-audit.md" <<'CMD_DEP_AUDIT'
 Audit the project dependencies:
-1. Check for known vulnerabilities (run npm audit or pip audit)
-2. Identify outdated packages (run npm outdated or pip list --outdated)
+1. Check for known vulnerabilities (run npm audit or uv pip audit)
+2. Identify outdated packages (run npm outdated or uv pip list --outdated)
 3. Flag any packages with no recent maintenance (>2 years)
 4. Check for duplicate/redundant dependencies
 5. Estimate total bundle size impact of each dependency if this is a frontend project
@@ -8516,8 +8524,11 @@ alias y="rovr"         # rovr file manager (mouse-first TUI; nnn 'n' is the mini
 alias jx="fx"          # fx interactive JSON viewer
 
 # -- Download & Transfer ------------------------------------------------------
+# `dl` is a shortcut for a tool that IS installed. There is deliberately no
+# `wget` alias: wget is not installed, aria2c takes different flags, and aliasing
+# turned a clean "command not found" into a confusing aria2c exception. Use
+# `curl`, `xh`, or `aria2c`/`dl` directly.
 alias dl="aria2c"
-alias wget="aria2c"
 
 # -- Git & GitHub -------------------------------------------------------------
 alias lg="lazygit"
@@ -8546,7 +8557,12 @@ alias md2html="pandoc -f markdown -t html -s"
 alias md2docx="pandoc -f markdown -t docx"
 
 # -- Python (uv) -------------------------------------------------------------
-alias pip="uv pip"
+# No `pip` alias. Bare `pip` is not installed, so the alias only redirected muscle
+# memory — and it redirected badly: `pip install X` became `uv pip install X`,
+# which fails with "No virtual environment found" and reads like a broken Python
+# setup. `uv pip …` is one word longer and unambiguous. (`pip3` does exist, inside
+# Homebrew's python@3.14 that 20 other formulae depend on; ~/.config/pip/pip.conf
+# is what keeps it from installing globally by accident.)
 alias venv="uv venv"
 alias pyrun="uv run"
 
@@ -8966,12 +8982,17 @@ section below.
 | `ping` | **gping** | live latency graph |
 | `dig` | **doggo** | colorized DNS, DoH |
 | `watch` | **viddy** | diff-highlighted repeated runs |
-| `sed` | **sd** | intuitive find & replace |
-| `wget` | **aria2c** | multi-connection downloads |
-| `cd` | **zoxide (`z`)** | frecency-based directory jumping |
 
-> `bat`, `eza`, `dust`, `duf`, `btop`, `procs` and friends are covered in their
-> categories below; the classic name just runs them for you.
+> These aliases are **interactive only**. Scripts and AI agents get the real
+> POSIX commands, because none of the replacements accept the original's flags
+> (`du -sh` prints dust's help, `ps aux` silently ignores `aux`). `rm` is the one
+> exception — it still routes to Trash everywhere, and accepts `-r`/`-f`.
+>
+> Tools without a classic-name alias, reached by their own names: **sd**
+> (find & replace — its own syntax, *not* a sed drop-in), **zoxide** (`z`/`zi`
+> for frecency jumping; plain `cd` is untouched), **aria2c** (`dl`),
+> **rg**, **fd**. `bat`, `eza`, `dust`, `duf`, `btop` and `procs` are covered in
+> their categories below.
 
 
 ## Editors, AI & the shell
