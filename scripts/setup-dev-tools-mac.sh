@@ -8406,8 +8406,13 @@ command -v starship &>/dev/null && eval "$(starship init zsh)"
 # atuin (replaces ctrl-r shell history)
 command -v atuin &>/dev/null && eval "$(atuin init zsh)"
 
-# granted — `assume` is a POSIX sh script that must be SOURCED to export AWS creds into the shell
-command -v assume &>/dev/null && alias assume="source assume"
+# granted — `assume` is a POSIX sh script that must be SOURCED to export AWS creds into the shell.
+# Interactive only, for the same reason as the alias section below: sourcing exports creds into the
+# shell you are sitting in, which is meaningless for a one-shot agent command, and shadowing the
+# binary with `source` makes plain invocations (`assume --help`) behave unexpectedly.
+if [[ -o interactive && -z "$CLAUDECODE" && -z "$AI_AGENT" ]]; then
+    command -v assume &>/dev/null && alias assume="source assume"
+fi
 
 # fzf — Dracula colors + fd for file finding + bat for preview
 export FZF_DEFAULT_OPTS=" \
@@ -8468,17 +8473,24 @@ unset _cachedir
 # different syntax from their replacements and would break scripts/muscle memory.
 # Instead, we provide short aliases for the modern tools.
 #
-# INTERACTIVE ONLY. That same reasoning applies to every alias below: none of the
-# replacements accept the flags the original takes. `du -sh` prints dust's help
-# text, `rm -rf` is rejected by trash, `top -l1` is an unknown argument — and the
-# quiet ones are worse: `ps aux` and `dig +short` silently ignore the argument and
-# return differently-shaped output that looks correct. A human notices; a script
-# or an AI agent parses the garbage.
+# INTERACTIVE ONLY — and the guard opened here stays open until the end of the
+# System section, covering EVERY alias and the fzf launcher functions, not just the
+# replacements immediately below.
+#
+# That same reasoning applies throughout: none of the replacements accept the flags
+# the original takes. `du -sh` prints dust's help text, `rm -rf` is rejected by
+# trash, `top -l1` is an unknown argument, `pip install X` becomes `uv pip install`
+# and dies with "No virtual environment found" — and the quiet ones are worse:
+# `ps aux` and `dig +short` silently ignore the argument and return
+# differently-shaped output that looks correct. A human notices; a script or an AI
+# agent parses the garbage. The TUI launchers (lg, lzd, hq, y, n, clip, claws) and
+# the fzf-backed a/ff/rgf simply block when no terminal is attached.
 #
 # Claude Code and similar agents run commands through a NON-interactive shell that
 # still sources this file, so they inherited all of it. Gate on interactivity (the
 # principled test — scripts should get real tools too), plus the agent env vars as
-# a backstop in case an agent ever runs `zsh -i`.
+# a backstop in case an agent ever runs `zsh -i`. Gating the whole section rather
+# than a hazard list means aliases added later are covered automatically.
 if [[ -o interactive && -z "$CLAUDECODE" && -z "$AI_AGENT" ]]; then
     alias ls="eza --icons"
     alias ll="eza -la --icons --git"
@@ -8494,29 +8506,6 @@ if [[ -o interactive && -z "$CLAUDECODE" && -z "$AI_AGENT" ]]; then
     alias watch="viddy"
     alias hexdump="hexyl"
     alias rm="trash"
-else
-    # Non-interactive: real POSIX tools, with one deliberate exception. Losing
-    # rm="trash" would make agent deletions permanent, so keep the recoverable
-    # -delete net but tolerate the flags trash rejects — strip options, pass the
-    # paths. `--` ends option parsing, as with real rm.
-    rm() {
-        local -a paths
-        local arg endopts=0
-        for arg in "$@"; do
-            if (( endopts )); then
-                paths+=("$arg")
-            elif [[ "$arg" == "--" ]]; then
-                endopts=1
-            elif [[ "$arg" == -* ]]; then
-                continue
-            else
-                paths+=("$arg")
-            fi
-        done
-        (( ${#paths[@]} )) || return 0
-        command trash "${paths[@]}"
-    }
-fi
 
 # Short aliases for modern tools (don't override builtins)
 alias rg="rg"          # ripgrep (already the command name)
@@ -8633,9 +8622,43 @@ alias brewsnap="export-brewfile"
 alias update="topgrade"
 alias sysinfo="fastfetch"
 
+else
+    # ---- Non-interactive / agent shell ------------------------------------
+    # Everything above is an interactive convenience and stays out of here, so
+    # `pip`, `wget`, `du`, `ps` and friends resolve to the real binaries. The
+    # replacements do not accept the originals' flags — `pip install X` becomes
+    # `uv pip install X` and dies with "No virtual environment found", `wget
+    # -qO- URL` throws — and the TUI launchers (lg, lzd, hq, y, n, clip, claws)
+    # would block a shell with no terminal attached.
+    #
+    # One deliberate exception: dropping rm="trash" would make agent deletions
+    # permanent. Keep the recoverable-delete net but tolerate the flags trash
+    # rejects — strip options, pass the paths. `--` ends option parsing, as with
+    # real rm; with no paths left it is a no-op rather than an error.
+    rm() {
+        local -a paths
+        local arg endopts=0
+        for arg in "$@"; do
+            if (( endopts )); then
+                paths+=("$arg")
+            elif [[ "$arg" == "--" ]]; then
+                endopts=1
+            elif [[ "$arg" == -* ]]; then
+                continue
+            else
+                paths+=("$arg")
+            fi
+        done
+        (( ${#paths[@]} )) || return 0
+        command trash "${paths[@]}"
+    }
+fi
+
 # -- Terminal Welcome Screen --------------------------------------------------
-# Colorful greeting on new terminal sessions (skip inside editor-integrated terminals)
-if [[ "$TERM_PROGRAM" != "vscode" ]] && [[ -z "$INSIDE_EMACS" ]]; then
+# Colorful greeting on new terminal sessions (skip inside editor-integrated terminals).
+# Also requires an interactive shell: sourcing this file from a script or an agent
+# should not emit a banner into captured output.
+if [[ -o interactive ]] && [[ "$TERM_PROGRAM" != "vscode" ]] && [[ -z "$INSIDE_EMACS" ]]; then
     if command -v fastfetch &>/dev/null; then
         fastfetch --logo small 2>/dev/null
     fi
