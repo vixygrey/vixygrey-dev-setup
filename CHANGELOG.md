@@ -8,6 +8,10 @@
 
 - **mac-productivity**: Install **`reminders-cli`** (`keith/formulae`, binary `reminders`) so Apple Reminders are reachable from the terminal — the one gap between the existing productivity tools, since `tiki` keeps tasks in git and `herald` owns mail and calendar events, but neither can create an alert that follows you to iPhone/Watch via iCloud. The generated `CLAUDE.md` now draws that three-way line explicitly and tells Claude that "remind me" means this tool, with reads free and mutations gated on explicit user intent. Only the read-only verb is auto-approved in `settings.json` (`Bash(reminders show*)`) — `add`/`complete`/`delete` still prompt. Ships a `TOOL_REFERENCE.md` entry and a checklist step for the one-time macOS Reminders consent prompt, which is granted to the terminal rather than to the binary and silently yields empty results until approved (#208)
 
+### Changed
+
+- **cleanup**: `--cleanup` now removes the **orphaned support trees left behind by the VS Code / Kiro / Cursor casks** it already uninstalls. Homebrew only ever owned the `.app`, so `~/.vscode`, `~/.kiro`, `~/.cursor` and their `~/Library/Application Support` counterparts survived every run — ~1.5 GB across 73 extension folders on the maintainer's machine, for three editors long since replaced by Helix + Claude Code. A tree is only touched when its `.app` is genuinely absent, so a manual reinstall is never gutted, and removal prefers `trash` over `rm -rf` so a mistake is recoverable (#210)
+
 ### Fixed
 
 - **claude**: Correct five tool references in the generated `CLAUDE.md` that named the **Homebrew package instead of the binary**, so Claude was being told to run commands that do not exist — `csvkit` → `csvlook`/`in2csv`/`csvjson`, `aws-sam-cli` → `sam`, `dynein` → `dy`, `nushell` → `nu`, `imagemagick` → `magick`. Same class as the `Bash(trippy *)` rule fixed in #206 (the binary is `trip`) (#209)

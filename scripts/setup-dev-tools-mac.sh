@@ -1138,6 +1138,56 @@ if [[ "$CLEANUP" == "true" ]]; then
         esac
     done
 
+    # -- Orphaned editor support trees ----------------------------------------
+    # Uninstalling the VS Code / Kiro / Cursor casks above removes the .app, but
+    # Homebrew never owned their per-user trees — the extension folders and the
+    # Application Support state stay behind indefinitely. On the maintainer's
+    # machine that was ~1.5 GB across 73 extension folders for three editors that
+    # had already been replaced by Helix + Claude Code.
+    #
+    # Guarded two ways: only touch a tree whose .app is genuinely absent (so a
+    # manual reinstall is never gutted), and prefer `trash` over `rm -rf` so a
+    # mistake is recoverable from the Finder Trash rather than final.
+    ORPHANED_EDITOR_DIRS=(
+        "Visual Studio Code|$HOME/.vscode"
+        "Visual Studio Code|$HOME/Library/Application Support/Code"
+        "Kiro|$HOME/.kiro"
+        "Kiro|$HOME/Library/Application Support/Kiro"
+        "Cursor|$HOME/.cursor"
+        "Cursor|$HOME/Library/Application Support/Cursor"
+    )
+    for entry in "${ORPHANED_EDITOR_DIRS[@]}"; do
+        _app="${entry%%|*}"
+        _dir="${entry#*|}"
+        _pretty="${_dir/#$HOME/\~}"
+        if [[ ! -d "$_dir" ]]; then
+            ((CLEANUP_SKIPPED++))
+            continue
+        fi
+        if [[ -d "/Applications/${_app}.app" ]]; then
+            info "Keeping $_pretty — ${_app} is still installed"
+            ((CLEANUP_SKIPPED++))
+            continue
+        fi
+        if [[ "$DRY_RUN" == "true" ]]; then
+            info "[DRY RUN] Would remove orphaned $_pretty (${_app} is not installed)"
+        else
+            info "Removing orphaned $_pretty (${_app} is not installed)..."
+            if installed trash; then
+                if trash "$_dir" >> "$LOG_FILE" 2>&1; then
+                    ((CLEANUP_COUNT++)); success "$_pretty moved to Trash"
+                else
+                    error "Failed to remove $_pretty"
+                fi
+            elif rm -rf "$_dir"; then
+                ((CLEANUP_COUNT++)); success "$_pretty removed"
+            else
+                error "Failed to remove $_pretty"
+            fi
+        fi
+    done
+    unset _app _dir _pretty
+
     echo ""
     if [[ "$DRY_RUN" != "true" ]]; then
         success "Cleanup complete: $CLEANUP_COUNT removed, $CLEANUP_SKIPPED not found (already clean)"
