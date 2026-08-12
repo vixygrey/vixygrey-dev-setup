@@ -7244,7 +7244,7 @@ else
 - **Images/Media**: `magick` for image processing (ImageMagick), `oxipng` for PNG optimization, `yt-dlp` for video downloads
 - **Logs**: `lnav` for log file navigation
 - **Misc**: `qalc` for precise calculations + unit/currency conversions, `has` to check which tool versions are installed (e.g. `has node git jq`), `reminders` for Apple Reminders (see Environment above for when to use it)
-- **Modern replacements** (aliased over defaults): `bat`→cat, `eza`→ls, `procs`→ps, `dust`→du, `duf`→df, `btop`→top, `trash`→rm, `gping`→ping, `doggo`→dig, `viddy`→watch, `aria2c`→wget, `sd`→sed
+- **Modern replacements are interactive-only — in your shell, `du`, `df`, `ps`, `top`, `cat`, `ls`, `dig`, `ping`, `watch`, `hexdump` are the REAL POSIX tools.** The user's interactive shell aliases them to `dust`/`duf`/`procs`/`btop`/`bat`/`eza`/`doggo`/`gping`/`viddy`/`hexyl`, but those aliases are gated off for non-interactive and agent shells precisely because none of them accept the original's flags. So write ordinary POSIX commands (`du -sh`, `ps aux`, `dig +short`) and they will work — no `/bin/` prefixes or workarounds needed. The modern tools are still available **by their own names** (`dust`, `procs`, `rg`, `fd`, `sd`, …) when you actually want them; prefer those for search and structured output, and note `sd` and `rg` have their own syntax, unrelated to `sed`/`grep`. The one exception: `rm` still routes to Trash so deletions stay recoverable, but it accepts `-r`/`-f` normally.
 
 ## Code Standards
 - Use TypeScript strict mode for all TS projects
@@ -8467,21 +8467,56 @@ unset _cachedir
 # Note: we avoid aliasing cd, sed, find, grep, diff globally since they have
 # different syntax from their replacements and would break scripts/muscle memory.
 # Instead, we provide short aliases for the modern tools.
-alias ls="eza --icons"
-alias ll="eza -la --icons --git"
-alias la="eza -a --icons"
-alias lt="eza --tree --icons --level=3"
-alias cat="bat --paging=never"
-alias top="btop"
-alias du="dust"
-alias df="duf"
-alias ps="procs"
-alias ping="gping"
-alias dig="doggo"
-alias watch="viddy"
-alias hexdump="hexyl"
-alias rm="trash"
-alias make="just"
+#
+# INTERACTIVE ONLY. That same reasoning applies to every alias below: none of the
+# replacements accept the flags the original takes. `du -sh` prints dust's help
+# text, `rm -rf` is rejected by trash, `top -l1` is an unknown argument — and the
+# quiet ones are worse: `ps aux` and `dig +short` silently ignore the argument and
+# return differently-shaped output that looks correct. A human notices; a script
+# or an AI agent parses the garbage.
+#
+# Claude Code and similar agents run commands through a NON-interactive shell that
+# still sources this file, so they inherited all of it. Gate on interactivity (the
+# principled test — scripts should get real tools too), plus the agent env vars as
+# a backstop in case an agent ever runs `zsh -i`.
+if [[ -o interactive && -z "$CLAUDECODE" && -z "$AI_AGENT" ]]; then
+    alias ls="eza --icons"
+    alias ll="eza -la --icons --git"
+    alias la="eza -a --icons"
+    alias lt="eza --tree --icons --level=3"
+    alias cat="bat --paging=never"
+    alias top="btop"
+    alias du="dust"
+    alias df="duf"
+    alias ps="procs"
+    alias ping="gping"
+    alias dig="doggo"
+    alias watch="viddy"
+    alias hexdump="hexyl"
+    alias rm="trash"
+else
+    # Non-interactive: real POSIX tools, with one deliberate exception. Losing
+    # rm="trash" would make agent deletions permanent, so keep the recoverable
+    # -delete net but tolerate the flags trash rejects — strip options, pass the
+    # paths. `--` ends option parsing, as with real rm.
+    rm() {
+        local -a paths
+        local arg endopts=0
+        for arg in "$@"; do
+            if (( endopts )); then
+                paths+=("$arg")
+            elif [[ "$arg" == "--" ]]; then
+                endopts=1
+            elif [[ "$arg" == -* ]]; then
+                continue
+            else
+                paths+=("$arg")
+            fi
+        done
+        (( ${#paths[@]} )) || return 0
+        command trash "${paths[@]}"
+    }
+fi
 
 # Short aliases for modern tools (don't override builtins)
 alias rg="rg"          # ripgrep (already the command name)
