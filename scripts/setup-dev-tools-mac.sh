@@ -1291,9 +1291,30 @@ if [[ "$CLEANUP" == "true" ]]; then
     unset _tap _why
 
     echo ""
-    if [[ "$DRY_RUN" != "true" ]]; then
+    if [[ "$DRY_RUN" == "true" ]]; then
+        # Preview what autoremove would reclaim. Note this UNDERSTATES the real run:
+        # most orphans only come into existence once the uninstalls above actually
+        # happen (removing aider is what orphans python@3.12), and a dry run has
+        # removed nothing, so only pre-existing orphans show up here.
+        _orphans=$(brew autoremove --dry-run 2>/dev/null | grep -c '^' || true)
+        if [[ "${_orphans:-0}" -gt 0 ]]; then
+            info "[DRY RUN] Would also remove $_orphans already-orphaned dependency/ies (brew autoremove)"
+        else
+            info "[DRY RUN] No dependencies are orphaned yet — a real run may orphan more as it uninstalls"
+        fi
+        unset _orphans
+    else
         success "Cleanup complete: $CLEANUP_COUNT removed, $CLEANUP_SKIPPED not found (already clean)"
         if [[ "$CLEANUP_COUNT" -gt 0 ]]; then
+            # Uninstalling a formula leaves behind the dependencies it pulled in —
+            # removing aider, for instance, orphans python@3.12. `brew cleanup` does
+            # NOT touch those: it only purges download caches and outdated versions.
+            # `brew autoremove` is what removes them, and it only considers formulae
+            # Homebrew recorded as installed AS A DEPENDENCY — anything installed on
+            # request is never touched, so this cannot remove a tool you asked for.
+            # Run before cleanup so the freshly-uninstalled files are purged too.
+            info "Removing orphaned dependencies (brew autoremove)..."
+            brew autoremove >> "$LOG_FILE" 2>&1 || warn "brew autoremove failed — see $LOG_FILE"
             info "Running brew cleanup..."
             brew cleanup >> "$LOG_FILE" 2>&1 || true
         fi
