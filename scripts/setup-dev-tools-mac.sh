@@ -6753,19 +6753,47 @@ if [[ -f "$CLAUDE_SETTINGS" ]]; then
     # reveal, broad git/gh, file destruction, unrestricted Write) so old machines get
     # cleaned too. Note: re-runs re-strip these — re-add any you truly want by editing
     # the CLAUDE_DENY_ALLOW list below, not settings.json.
+    #
+    # This branch also MIGRATES three defects written by older versions of this script
+    # (see #206), since machines provisioned before the fix never re-run the create
+    # heredoc below:
+    #   1. PostToolUse entries shaped {matcher, command} — schema-invalid, so the hooks
+    #      silently never ran. Normalized to {matcher, hooks:[{type,command}]}.
+    #   2. A "fileSuggestionSettings" key that Claude Code does not implement (ignored
+    #      outright) — dropped; ~/.ignore below replaces it.
+    #   3. A Linux-flavoured deny list (/dev/sda, mkfs) on a macOS-only target.
     CLAUDE_ADD_ALLOW='["Bash(qalc *)","Bash(has *)","Bash(doxx *)","Bash(mdfind *)","Bash(atac *)","Bash(leaf *)","Bash(manly *)","Bash(soffice *)","Bash(office-py *)","Bash(pdftoppm *)","Bash(pdftotext *)","Bash(pdfinfo *)","Bash(tiki exec *)","Bash(git status *)","Bash(git diff *)","Bash(git log *)","Bash(git show *)","Bash(git branch *)","Bash(git remote -v)","Bash(git stash list)"]'
     CLAUDE_DENY_ALLOW='["Bash(npm *)","Bash(npx *)","Bash(pnpm *)","Bash(bun *)","Bash(node *)","Bash(tsx *)","Bash(ts-node *)","Bash(python3 *)","Bash(pip *)","Bash(uv *)","Bash(uvx *)","Bash(cargo *)","Bash(go *)","Bash(just *)","Bash(make *)","Bash(nu *)","Bash(nushell *)","Bash(topgrade *)","Bash(watchexec *)","Bash(viddy *)","Bash(parallel *)","Bash(act *)","Bash(curl *)","Bash(xh *)","Bash(wget *)","Bash(curlie *)","Bash(aria2c *)","Bash(grpcurl *)","Bash(yt-dlp *)","Bash(aws *)","Bash(cdk *)","Bash(sam *)","Bash(docker *)","Bash(docker-compose *)","Bash(docker compose *)","Bash(kubectl *)","Bash(tofu *)","Bash(s5cmd *)","Bash(dynein *)","Bash(steampipe *)","Bash(iamlive *)","Bash(granted *)","Bash(assume *)","Bash(mitmproxy *)","Bash(mitmdump *)","Bash(nmap *)","Bash(chezmoi *)","Bash(dbmate *)","Bash(env *)","Bash(export *)","Bash(git *)","Bash(git-*)","Bash(gh *)","Bash(glab *)","Bash(cp *)","Bash(mv *)","Bash(trash *)","Bash(sd *)","Bash(sed *)","Bash(awk *)","Bash(find *)","Bash(npkill *)","Bash(ouch *)","Bash(7z *)","Write"]'
+    # Allowlist entries that are dead rather than dangerous: renamed binaries or rules
+    # already covered by a broader prefix. Stripped on re-run so they don't accumulate.
+    CLAUDE_STALE_ALLOW='["Bash(trippy *)","Bash(wc -l *)"]'
+    # Deny rules retargeted from Linux to macOS, plus the common rm spellings the
+    # original literal-prefix rules missed. These are fat-finger guardrails, NOT a
+    # security boundary — permission rules match literally, so variants still pass.
+    CLAUDE_ADD_DENY='["Bash(rm -rf /)","Bash(rm -fr /)","Bash(rm -rf /*)","Bash(rm -fr /*)","Bash(rm -rf ~)","Bash(rm -fr ~)","Bash(rm -rf ~/*)","Bash(rm -fr ~/*)","Bash(sudo rm *)","Bash(chmod 777 *)","Bash(> /dev/disk*)","Bash(dd of=/dev/disk*)","Bash(diskutil erase*)","Bash(diskutil partitionDisk*)","Bash(newfs_*)"]'
+    CLAUDE_DROP_DENY='["Bash(> /dev/sda*)","Bash(mkfs *)"]'
     if [[ "$DRY_RUN" == "true" ]]; then
-        info "[DRY RUN] Would merge settings.json: add safe allow entries + statusline, strip dangerous ones"
+        info "[DRY RUN] Would merge settings.json: add safe allow entries + statusline, strip dangerous ones, migrate legacy hooks shape"
     elif command -v jq &>/dev/null; then
         info "Merging + hardening Claude settings.json permissions..."
         CLAUDE_TMP=$(mktemp)
         if jq --argjson add "$CLAUDE_ADD_ALLOW" --argjson deny "$CLAUDE_DENY_ALLOW" \
-            '.permissions.allow = (((.permissions.allow // []) + $add) - $deny | unique)
-             | .statusLine = (.statusLine // {"type":"command","command":"~/.claude/statusline.sh"})' \
+               --argjson stale "$CLAUDE_STALE_ALLOW" \
+               --argjson adddeny "$CLAUDE_ADD_DENY" --argjson dropdeny "$CLAUDE_DROP_DENY" \
+            'def normalize_hook:
+               if (type == "object") and (has("hooks") | not) and has("command")
+               then {matcher: (.matcher // ""), hooks: [{type: "command", command: .command}]}
+               else . end;
+             .permissions.allow = (((.permissions.allow // []) + $add) - $deny - $stale | unique)
+             | .permissions.deny = (((.permissions.deny // []) + $adddeny) - $dropdeny | unique)
+             | .statusLine = (.statusLine // {"type":"command","command":"~/.claude/statusline.sh"})
+             | del(.fileSuggestionSettings)
+             | if (.hooks? | type) == "object"
+               then .hooks |= with_entries(.value |= (if type == "array" then map(normalize_hook) else . end))
+               else . end' \
             "$CLAUDE_SETTINGS" > "$CLAUDE_TMP" 2>/dev/null; then
             mv "$CLAUDE_TMP" "$CLAUDE_SETTINGS"
-            success "Claude settings.json hardened (safe allowlist + statusline; dangerous auto-approvals stripped)"
+            success "Claude settings.json hardened + migrated (allowlist, macOS deny rules, PostToolUse hooks shape)"
         else
             rm -f "$CLAUDE_TMP"
             warn "Could not merge settings.json — add the new Bash(...) allow entries + statusLine manually"
@@ -6823,7 +6851,6 @@ else
       "Bash(delta *)",
       "Bash(scc *)",
       "Bash(dust *)",
-      "Bash(wc -l *)",
       "Bash(du -sh *)",
       "Bash(date *)",
       "Bash(pwd)",
@@ -6873,7 +6900,7 @@ else
       "Bash(atac *)",
       "Bash(jnv *)",
       "Bash(lazysql *)",
-      "Bash(trippy *)",
+      "Bash(trip *)",
       "Bash(oxipng *)",
       "Bash(jpegoptim *)",
       "Bash(mpv *)",
@@ -6906,12 +6933,20 @@ else
     ],
     "deny": [
       "Bash(rm -rf /)",
-      "Bash(rm -rf ~)",
+      "Bash(rm -fr /)",
       "Bash(rm -rf /*)",
+      "Bash(rm -fr /*)",
+      "Bash(rm -rf ~)",
+      "Bash(rm -fr ~)",
+      "Bash(rm -rf ~/*)",
+      "Bash(rm -fr ~/*)",
       "Bash(sudo rm *)",
       "Bash(chmod 777 *)",
-      "Bash(> /dev/sda*)",
-      "Bash(mkfs *)"
+      "Bash(> /dev/disk*)",
+      "Bash(dd of=/dev/disk*)",
+      "Bash(diskutil erase*)",
+      "Bash(diskutil partitionDisk*)",
+      "Bash(newfs_*)"
     ]
   },
 
@@ -6919,15 +6954,20 @@ else
     "PostToolUse": [
       {
         "matcher": "Edit|Write",
-        "command": "~/.claude/hooks/format-on-edit.sh"
-      },
-      {
-        "matcher": "Edit|Write",
-        "command": "~/.claude/hooks/lint-python.sh"
-      },
-      {
-        "matcher": "Edit|Write",
-        "command": "~/.claude/hooks/lint-dockerfile.sh"
+        "hooks": [
+          {
+            "type": "command",
+            "command": "~/.claude/hooks/format-on-edit.sh"
+          },
+          {
+            "type": "command",
+            "command": "~/.claude/hooks/lint-python.sh"
+          },
+          {
+            "type": "command",
+            "command": "~/.claude/hooks/lint-dockerfile.sh"
+          }
+        ]
       }
     ]
   },
@@ -6936,39 +6976,38 @@ else
     "DISABLE_PROMPT_CACHING": "0"
   },
 
-  "fileSuggestionSettings": {
-    "ignoredPatterns": [
-      "node_modules/**",
-      ".git/**",
-      ".next/**",
-      "dist/**",
-      "build/**",
-      ".turbo/**",
-      "coverage/**",
-      ".nyc_output/**",
-      "__pycache__/**",
-      ".venv/**",
-      ".terraform/**",
-      "cdk.out/**",
-      "target/**",
-      "*.min.js",
-      "*.min.css",
-      "package-lock.json",
-      "pnpm-lock.yaml",
-      "yarn.lock",
-      "Cargo.lock",
-      "go.sum"
-    ]
-  },
-
   "statusLine": {
     "type": "command",
     "command": "~/.claude/statusline.sh"
   }
 }
 CLAUDE_SETTINGS_CONF
-    success "Claude Code settings.json created (permissions, file ignore patterns, statusline)"
+    success "Claude Code settings.json created (permissions, statusline)"
 fi
+
+# ---- Global ~/.ignore (replaces the non-existent fileSuggestionSettings key) ----
+# Claude Code honours .ignore files and, via respectGitignore (default true), each
+# repo's .gitignore. So build/dependency dirs — node_modules, dist, .venv, cdk.out —
+# are already filtered out of @ file-suggestions by .gitignore. What .gitignore can
+# never hide is the noise that is deliberately COMMITTED: lock files, minified
+# bundles, sourcemaps. Those go here. Note this also applies to ripgrep searches run
+# under $HOME, which is usually desirable but is a real side effect.
+CLAUDE_IGNORE="$HOME/.ignore"
+    info "Creating global .ignore (Claude Code @ suggestions + ripgrep)..."
+    write_managed "$CLAUDE_IGNORE" "#" <<'CLAUDE_IGNORE_CONF'
+package-lock.json
+pnpm-lock.yaml
+yarn.lock
+bun.lockb
+Cargo.lock
+go.sum
+uv.lock
+poetry.lock
+*.min.js
+*.min.css
+*.map
+CLAUDE_IGNORE_CONF
+    success "Global .ignore created (lock files + minified bundles hidden from @ suggestions)"
 
 # ---- Claude Code global CLAUDE.md (memory/instructions) ----
 CLAUDE_MD="$HOME/.claude/CLAUDE.md"
@@ -7342,12 +7381,21 @@ INPUT=$(cat)
 FILE=$(echo "$INPUT" | jq -r '.tool_input.file_path // empty' 2>/dev/null)
 
 if [[ -n "$FILE" ]] && [[ "$FILE" =~ \.(ts|tsx|js|jsx|css|scss|json|md)$ ]]; then
-    if [[ -f "$FILE" ]] && command -v prettier &>/dev/null; then
+    if [[ -f "$FILE" ]]; then
         # Only format if a prettier config exists in the project
         PROJECT_DIR=$(dirname "$FILE")
         while [[ "$PROJECT_DIR" != "/" ]]; do
-            if [[ -f "$PROJECT_DIR/.prettierrc" ]] || [[ -f "$PROJECT_DIR/.prettierrc.json" ]] || [[ -f "$PROJECT_DIR/prettier.config.js" ]]; then
-                prettier --write "$FILE" 2>/dev/null || true
+            if [[ -f "$PROJECT_DIR/.prettierrc" ]] || [[ -f "$PROJECT_DIR/.prettierrc.json" ]] \
+               || [[ -f "$PROJECT_DIR/.prettierrc.yaml" ]] || [[ -f "$PROJECT_DIR/.prettierrc.yml" ]] \
+               || [[ -f "$PROJECT_DIR/.prettierrc.js" ]] || [[ -f "$PROJECT_DIR/.prettierrc.mjs" ]] \
+               || [[ -f "$PROJECT_DIR/prettier.config.js" ]] || [[ -f "$PROJECT_DIR/prettier.config.mjs" ]]; then
+                # This setup installs no global prettier, so fall back to the project's
+                # own copy. --no-install keeps npx offline: node_modules/.bin or nothing.
+                if command -v prettier &>/dev/null; then
+                    prettier --write "$FILE" 2>/dev/null || true
+                elif command -v npx &>/dev/null; then
+                    npx --no-install prettier --write "$FILE" 2>/dev/null || true
+                fi
                 break
             fi
             PROJECT_DIR=$(dirname "$PROJECT_DIR")

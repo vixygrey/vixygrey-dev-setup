@@ -2,6 +2,16 @@
 
 > Release notes for 7.0.0–7.1.1 live in [GitHub Releases](https://github.com/vixygrey/vixygrey-dev-setup/releases) (auto-generated). This file resumes hand-written notes at 7.2.0.
 
+## [Unreleased]
+
+### Fixed
+
+- **claude**: Repair the generated `settings.json` **PostToolUse hooks**, which were schema-invalid and therefore **never ran on any machine this script has provisioned**. Entries were emitted as `{matcher, command}`, but the schema requires a nested `hooks` array (`{matcher, hooks:[{type,command}]}`) — Claude Code reported `Expected array, but received undefined` and silently skipped all three hooks (auto-format, ruff, hadolint). The three entries now collapse into a single `Edit|Write` entry (#206)
+- **claude**: Drop the **`fileSuggestionSettings`** key from the generated settings — Claude Code does not implement it (0 occurrences in the shipped binary), so its 20 ignore patterns were inert. Build/dependency dirs were already excluded via each repo's `.gitignore` (`respectGitignore` defaults to true); the genuinely-unfiltered noise is the *committed* kind, so the script now writes a global **`~/.ignore`** covering lock files, minified bundles, and sourcemaps instead. Note this also applies to ripgrep searches under `$HOME` (#206)
+- **claude**: Retarget the generated `permissions.deny` list from **Linux to macOS** — `> /dev/sda*` → `> /dev/disk*`, `mkfs *` → `diskutil erase*` / `diskutil partitionDisk*` / `newfs_*` — and add the `rm -fr` and `~/*` spellings the original literal-prefix rules missed. These remain fat-finger guardrails, not a security boundary (#206)
+- **claude**: Make the `format-on-edit.sh` prettier hook actually fire. It gated on a global `prettier` that this script never installs, so it no-opped even once wired correctly; it now falls back to the project-local copy via `npx --no-install prettier` and recognises five more config filenames (`.prettierrc.yaml/.yml/.js/.mjs`, `prettier.config.mjs`) (#206)
+- **claude**: **Migrate existing installs.** The `configs` block only writes the full settings heredoc when `~/.claude/settings.json` is absent, so already-provisioned machines took the jq merge path and would never have been repaired. That path now normalizes legacy `{matcher, command}` hook entries across every hook event, drops `fileSuggestionSettings`, migrates the deny list, and strips stale allow entries (`Bash(trippy *)` — the binary is `trip` — and `Bash(wc -l *)`, already covered by `Bash(wc *)`). The migration is idempotent and leaves user-added rules and custom keys untouched (#206)
+
 ## [7.5.0] - 2026-08-10
 
 Deepens the Claude Code integration: a scoped set of Google Workspace (`gws`) skills, four first-party skills for installed tools (`office-docs`, `d2-diagrams`, `dbmate-migrations`, `api-testing`), and a project `CLAUDE.md`. Also fixes the global pre-commit hook's false positives and switches the terminal to a Nerd Font. No breaking changes.
