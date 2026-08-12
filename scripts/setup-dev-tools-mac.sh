@@ -242,7 +242,7 @@ declare -A CATEGORY_DESC=(
     [containers]="lazydocker, dive, kubectl, k9s"
     [api]="ATAC, grpcurl"
     [networking]="mtr, bandwhich, nmap"
-    [dx]="fzf, starship, atuin, croft, Helix, Ghostty, zellij, llm"
+    [dx]="fzf, starship, atuin, croft, micro, Ghostty, zellij, llm"
     [ux]="Lighthouse"
     [docs]="d2, Mermaid CLI"
     [mac-system]="Pearcleaner, Quick Look plugins, dockutil, terminal-notifier"
@@ -967,6 +967,7 @@ if [[ "$CLEANUP" == "true" ]]; then
     # Used as fallback to find apps in /Applications that weren't installed via Homebrew.
     DEPRECATED_TOOLS=(
         "brew:tmux:tmux:zellij"
+        "brew:helix:Helix (hx):micro"
         "brew:aider:aider:Claude Code"
         "brew:repomix:repomix:Claude Code"
         "brew:aerc:aerc:herald"
@@ -979,9 +980,9 @@ if [[ "$CLEANUP" == "true" ]]; then
         "cask:docker:Docker Desktop:OrbStack:Docker"
         "cask:warp:Warp terminal:Ghostty:Warp"
         "cask:iterm2:iTerm2:Ghostty:iTerm"
-        "cask:cursor:Cursor (AI editor):Helix + Claude Code:Cursor"
-        "cask:kiro:Kiro:Helix + Claude Code:Kiro"
-        "cask:visual-studio-code:Visual Studio Code:Helix:Visual Studio Code"
+        "cask:cursor:Cursor (AI editor):croft + Claude Code:Cursor"
+        "cask:kiro:Kiro:croft + Claude Code:Kiro"
+        "cask:visual-studio-code:Visual Studio Code:croft:Visual Studio Code"
         "cask:bruno:Bruno:ATAC:Bruno"
         "cask:dbeaver-community:DBeaver Community:harlequin + lazysql:DBeaver"
         "cask:cyberduck:Cyberduck:rclone:Cyberduck"
@@ -1057,7 +1058,7 @@ if [[ "$CLEANUP" == "true" ]]; then
         "cask:imageoptim:ImageOptim:oxipng + jpegoptim (CLI)"
         "cask:keka:Keka:p7zip (CLI)"
         "formula:entr:entr:watchexec"
-        "cask:zed:Zed:Helix:Zed"
+        "cask:zed:Zed:croft:Zed"
         "cask:slack:Slack:removed"
         "cask:telegram:Telegram:removed"
         "cask:notion-mail:Notion Mail:removed (retired by Notion):Notion Mail"
@@ -1143,7 +1144,7 @@ if [[ "$CLEANUP" == "true" ]]; then
     # Homebrew never owned their per-user trees — the extension folders and the
     # Application Support state stay behind indefinitely. On the maintainer's
     # machine that was ~1.5 GB across 73 extension folders for three editors that
-    # had already been replaced by Helix + Claude Code.
+    # had already been replaced by croft + Claude Code.
     #
     # Guarded two ways: only touch a tree whose .app is genuinely absent (so a
     # manual reinstall is never gutted), and prefer `trash` over `rm -rf` so a
@@ -1212,6 +1213,7 @@ if [[ "$CLEANUP" == "true" ]]; then
         "aerc|$HOME/.config/aerc|herald"
         "khal|$HOME/.config/khal|herald"
         "vdirsyncer|$HOME/.config/vdirsyncer|herald"
+        "hx|$HOME/.config/helix|micro"
         "cmus|$HOME/.config/cmus|cliamp"
         "kew|$HOME/.config/kew|cliamp"
         "glow|$HOME/.config/glow|leaf"
@@ -2122,9 +2124,13 @@ brew_install "atuin" "atuin (replaces shell history — SQLite-backed, searchabl
 # mise already installed in core section
 
 # Editors & terminals
-# Helix stays installed as the fast fallback editor AND the $EDITOR for git/gh/lazygit
-# commit messages (a full IDE is clunky for those); croft (below) is the primary IDE.
-brew_install "helix" "Helix (modal editor — fallback + \$EDITOR for git; built-in LSP, zero-config)"
+# micro is the $EDITOR for git/gh/lazygit commit messages and quick edits (a full IDE is
+# clunky for those); croft (below) is the primary IDE. It replaced Helix in 7.6.0: modal
+# editing was friction rather than help here, and micro is the opposite trade — non-modal
+# (Ctrl+S/Ctrl+Q/Ctrl+C-V, nothing to learn) with a `keymenu` strip that keeps the
+# bindings on screen. Ships dracula-tc as a built-in colorscheme, so there is no theme
+# file to maintain.
+brew_install "micro" "micro (non-modal terminal editor — \$EDITOR for git; on-screen key menu)"
 # croft — VS Code-style terminal IDE (primary editor). Rust, not on Homebrew; installed
 # from git main via cargo. Build in a .noindex dir so macOS Spotlight doesn't churn/heat
 # during the compile. AI pairing via `croft pair` (uses ANTHROPIC_API_KEY).
@@ -2153,26 +2159,27 @@ fi
 brew_cask_install "ghostty" "Ghostty (fast GPU-accelerated terminal)"
 brew_install "zellij" "zellij (modern terminal multiplexer — discoverable UI, layouts)"
 
-# Language servers for Helix (so `hx` has LSP for the main languages out of the box).
+# Language servers for croft (LSP for the main languages out of the box). These outlived
+# the Helix removal in 7.6.0 — croft consumes them too, so retiring Helix orphaned nothing.
 # Python uses ruff's built-in server (already installed). TOML/Markdown via brew:
-brew_install "taplo" "taplo (TOML language server + formatter — used by Helix)"
-brew_install "marksman" "marksman (Markdown language server — used by Helix)"
+brew_install "taplo" "taplo (TOML language server + formatter — used by croft)"
+brew_install "marksman" "marksman (Markdown language server — used by croft)"
 if installed npm; then
-    npm_global_install "typescript-language-server" "TypeScript/JavaScript language server (Helix LSP)"
-    npm_global_install "vscode-langservers-extracted" "HTML/CSS/JSON/ESLint language servers (Helix LSP)"
-    npm_global_install "bash-language-server" "Bash language server (Helix LSP)"
-    npm_global_install "yaml-language-server" "YAML language server (Helix LSP)"
+    npm_global_install "typescript-language-server" "TypeScript/JavaScript language server (croft LSP)"
+    npm_global_install "vscode-langservers-extracted" "HTML/CSS/JSON/ESLint language servers (croft LSP)"
+    npm_global_install "bash-language-server" "Bash language server (croft LSP)"
+    npm_global_install "yaml-language-server" "YAML language server (croft LSP)"
 else
     progress; progress; progress; progress  # keep progress bar accurate when npm unavailable
 fi
 if [[ "$DRY_RUN" != "true" ]]; then
     # rust-analyzer (Rust LSP) via rustup component; gopls (Go LSP) via go install.
     if installed rustup; then
-        rustup component add rust-analyzer >> "$LOG_FILE" 2>&1 || warn "Could not add rust-analyzer component (Rust LSP for Helix)"
+        rustup component add rust-analyzer >> "$LOG_FILE" 2>&1 || warn "Could not add rust-analyzer component (Rust LSP for croft)"
     fi
     if installed go; then
-        info "Installing gopls (Go LSP for Helix) — compiles, may take a moment..."
-        go install golang.org/x/tools/gopls@latest >> "$LOG_FILE" 2>&1 || warn "Could not install gopls (Go LSP for Helix)"
+        info "Installing gopls (Go LSP for croft) — compiles, may take a moment..."
+        go install golang.org/x/tools/gopls@latest >> "$LOG_FILE" 2>&1 || warn "Could not install gopls (Go LSP for croft)"
     fi
 fi
 
@@ -2186,11 +2193,11 @@ fi
 # Additional LLM CLIs that pair with Claude Code.
 # Install llm as an isolated uv tool WITH the Anthropic plugin bundled. Homebrew's
 # llm is externally-managed, so `llm install llm-anthropic` can't upgrade llm to the
-# version the plugin needs and fails — the Helix A-a Claude bind then never works.
+# version the plugin needs and fails — `llm` then has no Anthropic backend at all.
 # The uv venv also makes `llm models default` stick. (uv bin ~/.local/bin is on PATH.)
 uv_tool_install llm llm "llm (Simon Willison's CLI — one-shot prompts, plugins, embeddings) + Anthropic plugin" "llm installed via uv (Anthropic plugin bundled)" --with llm-anthropic
 
-# Point the Helix A-a pipe at Claude — llm's built-in default is OpenAI gpt-4o-mini,
+# Point `llm` at Claude — its built-in default is OpenAI gpt-4o-mini,
 # so without this the bind routes to the wrong provider. Non-secret and scriptable;
 # only the API key stays manual (llm keys set anthropic).
 if [[ "$DRY_RUN" != "true" ]] && installed llm; then
@@ -2602,8 +2609,8 @@ fi  # mac-bloat
 if should_run "dracula"; then
 banner "Dracula Theme"
 
-# Helix - Dracula theme is bundled with Helix and set via ~/.config/helix/config.toml
-# (see the Helix config block below). No extension install needed.
+# micro - Dracula (dracula-tc) is bundled with micro and set via ~/.config/micro/settings.json
+# (see the micro config block below). No theme file to install.
 
 # bat (Dracula is built-in, just needs to be set)
 if installed bat; then
@@ -3154,16 +3161,16 @@ git:
   autoRefresh: true
   branchLogCmd: "git log --graph --color=always --abbrev-commit --decorate --date=relative --pretty=medium {{branchName}} --"
 os:
-  edit: 'hx {{filename}}'
-  editAtLine: 'hx {{filename}}:{{line}}'
-  editAtLineAndWait: 'hx {{filename}}:{{line}}'
+  edit: 'micro {{filename}}'
+  editAtLine: 'micro {{filename}} +{{line}}'
+  editAtLineAndWait: 'micro {{filename}} +{{line}}'
   editInTerminal: true
   open: "open {{filename}}"
   openLink: "open {{link}}"
 notARepository: skip
 promptToReturnFromSubprocess: false
 LAZYGIT_CONF
-    success "lazygit configured (Dracula theme, delta pager, auto-fetch, Helix editor)"
+    success "lazygit configured (Dracula theme, delta pager, auto-fetch, micro editor)"
 fi  # installed lazygit
 
 # ---- k9s Dracula skin ----
@@ -3270,110 +3277,73 @@ K9S_CFG
     fi
     success "k9s Dracula skin configured"
 
-# ---- Helix editor config ----
-HELIX_CONFIG_DIR="$HOME/.config/helix"
-info "Configuring Helix (Dracula theme, LSP, auto-format)..."
-write_managed "$HELIX_CONFIG_DIR/config.toml" "#" <<'HELIX_CONF'
-theme = "dracula"
-
-[editor]
-line-number = "relative"
-mouse = true
-cursorline = true
-color-modes = true
-true-color = true
-bufferline = "multiple"
-rulers = [100]
-scrolloff = 8
-completion-trigger-len = 1
-auto-format = true
-auto-save = true
-
-[editor.cursor-shape]
-insert = "bar"
-normal = "block"
-select = "underline"
-
-[editor.file-picker]
-hidden = false
-
-[editor.lsp]
-display-messages = true
-display-inlay-hints = true
-
-[editor.statusline]
-left = ["mode", "spinner", "file-name", "file-modification-indicator"]
-center = []
-right = ["diagnostics", "selections", "position", "file-encoding", "file-type"]
-
-[editor.indent-guides]
-render = true
-character = "▏"
-
-[editor.soft-wrap]
-enable = true
-
-[keys.normal]
-"C-s" = ":w"
-# Claude via llm: pipe the selection to Claude and replace it with the result.
-# Set your default model to Claude first:  llm models default claude-sonnet-4-5
-# (For "explain"/chat, use the Claude Code pane — see the 'dev' zellij layout.)
-"A-a" = ":pipe llm 'Improve the selection. Output only the replacement text, no explanation.'"
-HELIX_CONF
-write_managed "$HELIX_CONFIG_DIR/languages.toml" "#" <<'HELIX_LANG'
-# Ruff as the Python language server (matches the project's ruff-first Python rule)
-[language-server.ruff]
-command = "ruff"
-args = ["server"]
-
-[[language]]
-name = "python"
-language-servers = ["ruff"]
-auto-format = true
-
-[[language]]
-name = "typescript"
-language-servers = ["typescript-language-server"]
-auto-format = true
-
-[[language]]
-name = "tsx"
-language-servers = ["typescript-language-server"]
-auto-format = true
-
-[[language]]
-name = "javascript"
-language-servers = ["typescript-language-server"]
-auto-format = true
-
-[[language]]
-name = "jsx"
-language-servers = ["typescript-language-server"]
-auto-format = true
-
-[[language]]
-name = "rust"
-language-servers = ["rust-analyzer"]
-auto-format = true
-
-[[language]]
-name = "go"
-language-servers = ["gopls"]
-auto-format = true
-
-[[language]]
-name = "json"
-auto-format = true
-
-[[language]]
-name = "yaml"
-auto-format = true
-
-[[language]]
-name = "toml"
-auto-format = true
-HELIX_LANG
-success "Helix configured (Dracula, ruff LSP, auto-format; managed block — edits outside the markers are kept)"
+# ---- micro editor config ----
+# micro is the $EDITOR: git/gh/lazygit commit messages, leaf's Ctrl+E, quick file edits.
+# Non-modal by design, so the settings below lean on discoverability and on matching the
+# code standards in the generated CLAUDE.md rather than on remapping keys.
+#   keymenu    - persistent key-binding strip along the bottom (the whole point)
+#   dracula-tc - built into micro; needs truecolor, which Ghostty advertises via COLORTERM
+#   rmtrailingws/eofnewline - match what prettier and ruff would do on save anyway
+# Indentation follows the house rules: 2 spaces, 4 for Python, real tabs for Go/Makefiles.
+MICRO_CONFIG_DIR="$HOME/.config/micro"
+info "Configuring micro (Dracula, on-screen key menu, house indent rules)..."
+mkdir -p "$MICRO_CONFIG_DIR"
+# NOT write_managed: settings.json is JSON, which has no comment syntax for the markers,
+# and micro rewrites this file itself whenever you change a setting from inside the editor
+# (`> set foo bar`). So merge instead of overwrite, with the on-disk file winning — your
+# in-editor tweaks survive re-runs, while options added in later releases still land.
+MICRO_DEFAULTS=$(cat <<'MICRO_CONF'
+{
+    "colorscheme": "dracula-tc",
+    "keymenu": true,
+    "infobar": true,
+    "statusline": true,
+    "mouse": true,
+    "clipboard": "external",
+    "ruler": true,
+    "scrollbar": true,
+    "cursorline": true,
+    "matchbrace": true,
+    "softwrap": true,
+    "wordwrap": true,
+    "diffgutter": true,
+    "hlsearch": true,
+    "incsearch": true,
+    "autoindent": true,
+    "eofnewline": true,
+    "rmtrailingws": true,
+    "hltrailingws": true,
+    "saveundo": true,
+    "savecursor": true,
+    "savehistory": true,
+    "autosave": 0,
+    "tabsize": 2,
+    "tabstospaces": true,
+    "ft:python": { "tabsize": 4 },
+    "ft:go": { "tabstospaces": false, "tabsize": 4 },
+    "ft:makefile": { "tabstospaces": false }
+}
+MICRO_CONF
+)
+if [[ "$DRY_RUN" == "true" ]]; then
+    info "[DRY RUN] Would write micro settings (Dracula, key menu, house indent rules)"
+elif [[ ! -f "$MICRO_CONFIG_DIR/settings.json" ]]; then
+    printf '%s\n' "$MICRO_DEFAULTS" > "$MICRO_CONFIG_DIR/settings.json"
+    success "micro configured (Dracula, key menu, 2-space default / 4 for Python / tabs for Go)"
+elif command -v jq &>/dev/null; then
+    _micro_tmp=$(mktemp)
+    if jq -s '.[0] * .[1]' <(printf '%s\n' "$MICRO_DEFAULTS") "$MICRO_CONFIG_DIR/settings.json" > "$_micro_tmp" 2>/dev/null; then
+        mv "$_micro_tmp" "$MICRO_CONFIG_DIR/settings.json"
+        success "micro settings merged (your in-editor changes kept; new defaults added)"
+    else
+        rm -f "$_micro_tmp"
+        warn "Could not merge micro settings — check $MICRO_CONFIG_DIR/settings.json"
+    fi
+    unset _micro_tmp
+else
+    warn "micro settings exist but jq is missing — not merging new defaults"
+fi
+unset MICRO_DEFAULTS
 
 # ---- MCP servers -> Claude Code (migrated from Kiro) ----
 # Claude Code stores user-scoped MCP servers in ~/.claude.json. We use the
@@ -3466,17 +3436,17 @@ SHELLCHECK_CONF
 # leaf is a viewer, not an editor: Ctrl+E hands the file off to an external
 # editor. leaf IGNORES $EDITOR — its priority is
 #   --editor flag > LEAF_EDITOR > config.toml > nano
-# so without this it falls back to nano. Point it at Helix to match the rest of
-# the setup. {$path}:{$line} opens hx at the first visible source line; pair
+# so without this it falls back to nano. Point it at micro to match the rest of
+# the setup. micro FILE +LINE opens at the first visible source line; pair
 # with `leaf --watch` for live reload. Path: $XDG_CONFIG_HOME/leaf/config.toml.
 LEAF_CONFIG="${XDG_CONFIG_HOME:-$HOME/.config}/leaf/config.toml"
 if ! is_done "config:leaf"; then
-    info "Configuring leaf (Ctrl+E opens Helix)..."
+    info "Configuring leaf (Ctrl+E opens micro)..."
     write_managed "$LEAF_CONFIG" "#" <<'LEAF_CONF'
-# Ctrl+E hands off editing to Helix (leaf ignores $EDITOR).
-editor = 'hx {$path}:{$line}'
+# Ctrl+E hands off editing to micro (leaf ignores $EDITOR).
+editor = 'micro {$path} +{$line}'
 LEAF_CONF
-    success "leaf configured (Ctrl+E opens Helix at the current line)"
+    success "leaf configured (Ctrl+E opens micro at the current line)"
     mark_done "config:leaf"
 fi
 
@@ -3804,7 +3774,7 @@ layout {
     pane split_direction="vertical" {
         pane {
             name "editor"
-            command "hx"
+            command "micro"
         }
         pane size="38%" {
             name "claude"
@@ -4099,11 +4069,11 @@ GLOBAL_GITIGNORE="$HOME/.gitignore_global"
 Icon?
 
 # -- Editors ------------------------------------------------------------------
-# VS Code layout (still common in shared repos even though local editor is Helix)
+# VS Code layout (still common in shared repos even though the local editor is croft/micro)
 .vscode/settings.json
 .vscode/launch.json
 *.code-workspace
-# Helix keeps no per-repo state by default (config lives in ~/.config/helix).
+# croft and micro keep no per-repo state (config lives in ~/.config).
 
 # JetBrains
 .idea/
@@ -4522,8 +4492,8 @@ if [[ -f /opt/homebrew/bin/brew ]]; then
 fi
 
 # Default editor
-export EDITOR="hx"
-export VISUAL="hx"
+export EDITOR="micro"
+export VISUAL="micro"
 
 # Default pager
 export PAGER="bat --style=plain --paging=always"
@@ -5246,7 +5216,7 @@ GH_CONFIG="$GH_CONFIG_DIR/config.yml"
     write_managed "$GH_CONFIG" "#" <<'GH_CONF'
 # GitHub CLI configuration
 git_protocol: ssh
-editor: hx
+editor: micro
 prompt: enabled
 pager: delta
 
@@ -5267,16 +5237,16 @@ aliases:
     pm: pr merge --squash --delete-branch
     rel: release create --generate-notes
 GH_CONF
-    success "GitHub CLI configured (SSH protocol, Helix editor, delta pager, aliases)"
+    success "GitHub CLI configured (SSH protocol, micro editor, delta pager, aliases)"
 
 # ---- glab (GitLab CLI) config — mirror the gh conveniences ----
 # GitLab uses merge requests, so the pr* aliases point at `mr` (same alias NAMES as
 # gh, so muscle memory carries over). glab owns its config schema, so drive it via
 # `glab config set` / `glab alias set` rather than hand-writing YAML.
 if [[ "$DRY_RUN" != "true" ]] && installed glab && ! is_done "config:glab"; then
-    info "Configuring glab (SSH, Helix, delta, gh-style aliases → merge requests)..."
+    info "Configuring glab (SSH, micro, delta, gh-style aliases → merge requests)..."
     glab config set git_protocol ssh >> "$LOG_FILE" 2>&1 || true
-    glab config set editor hx >> "$LOG_FILE" 2>&1 || true
+    glab config set editor micro >> "$LOG_FILE" 2>&1 || true
     glab config set glab_pager delta >> "$LOG_FILE" 2>&1 || true
     while IFS='|' read -r _glab_alias _glab_cmd; do
         [[ -z "$_glab_alias" ]] && continue
@@ -5300,7 +5270,7 @@ rel|release create
 GLAB_ALIASES
     unset _glab_alias _glab_cmd
     mark_done "config:glab"
-    success "glab configured (SSH, Helix, delta; gh-style aliases mapped to GitLab MRs/CI)"
+    success "glab configured (SSH, micro, delta; gh-style aliases mapped to GitLab MRs/CI)"
 fi
 
 # ---- pip config ----
@@ -7221,7 +7191,7 @@ write_managed "$CLAUDE_MD" "#" <<'CLAUDE_MD_CONF'
 
 ## Environment
 - Shell: zsh with starship prompt, atuin history, fzf fuzzy finder, zsh-autosuggestions, zsh-syntax-highlighting
-- Editor / IDE: **croft** is the primary editor (VS Code-style terminal IDE — `croft` to open a workspace, `croft pair` for the AI navigator). **Helix (`hx`)** is the fast fallback and the `EDITOR` for git/gh/lazygit commit messages (still Dracula, built-in LSP). Agentic coding via Claude Code (`claude`).
+- Editor / IDE: **croft** is the primary editor (VS Code-style terminal IDE — `croft` to open a workspace, `croft pair` for the AI navigator). **micro** is the `EDITOR` for git/gh/lazygit commit messages and quick edits — non-modal, Dracula, with an on-screen key menu (`Ctrl+G` for full help). Helix was retired in 7.6.0. Agentic coding via Claude Code (`claude`).
 - Terminal: Ghostty (Dracula theme)
 - Package managers: pnpm (preferred), npm, bun
 - Python: uv for packages (not pip), ruff for linting (not flake8/black)
@@ -8756,7 +8726,7 @@ echo "  [~/.config/atuin]       Fuzzy search, local-only"
 echo "  [leaf]                  Terminal Markdown previewer (live watch, fuzzy picker, Mermaid)"
 echo "  [~/.config/yt-dlp]      Best quality, aria2c downloader"
 echo "  [~/.config/gh-dash]     GitHub dashboard, Dracula theme"
-echo "  [~/.config/glab-cli]    GitLab CLI (mirrors gh: SSH, Helix, delta, aliases)"
+echo "  [~/.config/glab-cli]    GitLab CLI (mirrors gh: SSH, micro, delta, aliases)"
 echo "  [~/.config/stern]       K8s log tailing"
 echo "  [~/.config/zellij]      Modern terminal multiplexer with Dracula theme"
 echo "  [~/.config/mpv]         Video player (hardware accel, save position)"
@@ -8768,7 +8738,7 @@ echo "  [~/.config/sketchybar]  Dracula status bar (app, clock, battery/wifi/vpn
 echo "  [~/.herald]             herald email + calendar (self-configured on first run)"
 echo "  [~/.justfile]           Global task runner recipes"
 echo "  [~/.config/brewfile]    Brewfile snapshot for reproducibility"
-echo "  [~/.config/helix]       Helix — Dracula theme, ruff LSP, auto-format; MCP servers migrated to Claude Code"
+echo "  [~/.config/micro]       micro — Dracula, on-screen key menu, house indent rules"
 echo "  [lazygit]               Dracula theme, delta pager"
 echo "  [k9s]                   Dracula skin"
 echo "  [Finder]                Hidden files, path bar, list view"
@@ -8844,14 +8814,14 @@ the list, then delete this file.
 - [ ] **Mullvad:** `mullvad account login <ACCOUNT_NUMBER>` (CLI is bundled with the app at `/usr/local/bin/mullvad`).
 - [ ] **starlit** (weather): `starlit --setup` and paste a free OpenWeatherMap API key.
 - [ ] **surge** (download manager): the daemon service was installed by the script (if it didn't prompt, run `surge service install`). Install the browser extension so browser downloads route to surge: **Firefox** — one-click from the Mozilla Add-ons store; **Chrome** — download `extension-chrome.zip` from the [latest release](https://github.com/SurgeDM/Surge/releases) and load-unpacked at `chrome://extensions` (Developer mode). Then pair it with `surge service token` (or TUI → Settings → Extension).
-- [ ] **glab** (GitLab, only if you use it): `glab auth login` to authenticate against gitlab.com or a self-managed instance. Already configured with SSH + Helix + delta and the same alias names as gh (mapped to merge requests).
+- [ ] **glab** (GitLab, only if you use it): `glab auth login` to authenticate against gitlab.com or a self-managed instance. Already configured with SSH + micro + delta and the same alias names as gh (mapped to merge requests).
 - [ ] **GitHub CLI (`gh`):** run `gh auth login` (pick SSH or HTTPS). The whole PR workflow (`gh pr`, `gh issue`, `gh pm`) and the `gh ssh-key add` step below all need it — fresh machines start logged out.
 - [ ] **AWS auth:** the CLIs and TUIs (`awscli`, `granted`/`assume`, `steampipe`, `stu`/`e1s`/`e2c`, `s5cmd`) plus the AWS MCP servers are installed but have no credentials yet. SSO: `aws configure sso` (or `granted sso populate` then `assume <profile>`). Static keys: `aws configure`. If you'll query with SQL: `steampipe plugin install aws`.
 - [ ] **atuin history sync** (optional — keeps shell history in sync across the MacBook + Mac mini): `atuin register` (or `atuin login` on the 2nd machine), then `atuin sync`. Local searchable history (`Ctrl+r`) works without an account.
 - [ ] **MCP servers:** export tokens your Claude Code MCP servers need, e.g. `export GITHUB_TOKEN=...` (and `AWS_REGION` / `AWS_PROFILE` for the AWS servers). Requires `claude auth login` at least once.
 - [ ] **infracost** (IaC cost estimates): run `infracost auth login` for a free API key — `infracost breakdown` errors with "No INFRACOST_API_KEY" until then.
 - [ ] **borgmatic backups:** the setup scaffolds `~/.config/borgmatic/config.yaml`. Set `repositories`, store the passphrase in Keychain (`security add-generic-password -a "$USER" -s borg-passphrase -w`), run `borgmatic init --encryption repokey-blake2`, check with `borgmatic create --dry-run`, then enable a daily run (e.g. a LaunchAgent calling `borgmatic --verbosity -1`). ClamAV's virus DB downloads itself in the background after setup.
-- [ ] **Claude AI in croft:** set an Anthropic key — `export ANTHROPIC_API_KEY=sk-ant-...` in `~/.zshrc.local`. Used by **croft** (`croft pair` — the AI navigator in your primary IDE). For the Helix `llm` pipe bind (`A-a` on a selection), just run `llm keys set anthropic` — setup already installs the plugin (via uv) and sets the default model to `anthropic/claude-sonnet-4-5`. (Email/calendar AI is built into **herald** — configured separately above.)
+- [ ] **Claude AI in croft:** set an Anthropic key — `export ANTHROPIC_API_KEY=sk-ant-...` in `~/.zshrc.local`. Used by **croft** (`croft pair` — the AI navigator in your primary IDE). For one-off `llm` prompts (e.g. `> ! llm …` from micro's command bar), just run `llm keys set anthropic` — setup already installs the plugin (via uv) and sets the default model to `anthropic/claude-sonnet-4-5`. (Email/calendar AI is built into **herald** — configured separately above.)
 - [ ] **croft** (primary IDE): installed from git `main` via cargo — run `croft` in a project to open the workspace; re-run `cargo install --git https://github.com/vitali87/croft.git --locked` to upgrade.
 - [ ] **AI side-pane:** `zellij --layout dev` opens your editor + a Claude Code pane side by side (the strongest AI workflow).
 - [ ] **chezmoi:** `chezmoi init <your-dotfiles-repo>` to bring these configs under version control across the MacBook + Mac mini.
@@ -8880,22 +8850,24 @@ CHECKLIST_EOF
 | `s <query>` | Spotlight-index search (mdfind) |
 | `clip` | Clipboard history (clipse) |
 
-## Helix (`hx`) — modal editor
+## micro — the `$EDITOR` (non-modal)
+Every binding is on screen: the **key menu** sits along the bottom, and there are no modes.
 | Keys | Action |
 |------|--------|
-| `Space` | Open the command menu (leader) |
-| `Space + f` | File picker · `Space + b` buffer picker |
-| `Space + /` | Global search (ripgrep) |
-| `Space + k` | Hover docs · `g d` go to definition · `g r` references |
-| `Ctrl + s` | Save (added binding) |
-| `Alt + a` | Send selection to Claude (via `llm`), replace with the result |
-| `:w` `:q` | Write / quit |
+| `Ctrl + s` | Save · `Ctrl + q` quit |
+| `Ctrl + g` | Full help / key reference |
+| `Ctrl + e` | Command bar (`> set …`, `> replace …`) |
+| `Ctrl + o` | Open file · `Ctrl + w` next split |
+| `Ctrl + f` | Find · `Ctrl + n` next match |
+| `Ctrl + z` | Undo · `Ctrl + y` redo |
+| `Ctrl + c/v/x` | Copy / paste / cut (system clipboard) |
+| `Alt + click` | Add a cursor · `Ctrl + d` select next occurrence |
 
 ## Claude AI
 | Where | How |
 |-------|-----|
 | Side-pane (best) | `zellij --layout dev` — editor + Claude Code panes |
-| Helix inline | `Alt + a` on a selection (llm pipe) |
+| One-shot pipe | `llm 'explain this' < file` — or `> ! llm …` from micro's command bar |
 | herald | Built-in AI triage/summaries/compose styler + MCP server for Claude |
 
 ## Terminal multiplexer & tools
@@ -8926,9 +8898,9 @@ it doesn't cost real capability. Below: what each tool is for, then how it fits
 together.
 
 ## Editor & AI
-- **croft** — VS Code-style terminal IDE; the **primary editor** (`croft pair` for the AI navigator). **Helix (`hx`)** is the fast fallback and the `EDITOR` for git/gh/lazygit commit messages (modal, built-in LSP + tree-sitter, auto-format on save).
+- **croft** — VS Code-style terminal IDE; the **primary editor** (`croft pair` for the AI navigator). **micro** is the `EDITOR` for git/gh/lazygit commit messages and quick edits (non-modal, Dracula, on-screen key menu, trailing whitespace stripped on save).
 - **Claude Code (`claude`)** — agentic coding in the terminal; hosts the MCP servers. Best via `zellij --layout dev` (editor + Claude pane).
-- **Claude in croft/Helix** — croft's `croft pair` AI navigator (primary IDE); in Helix, `Alt+a` pipes a selection to Claude via `llm`. Powered by `ANTHROPIC_API_KEY` / `llm-anthropic`. Email/calendar AI lives in **herald** (built-in triage/summaries + MCP).
+- **Claude in croft** — croft's `croft pair` AI navigator (primary IDE); for one-off prompts use `llm` directly, or `> ! llm …` from micro's command bar. Powered by `ANTHROPIC_API_KEY` / `llm-anthropic`. Email/calendar AI lives in **herald** (built-in triage/summaries + MCP).
 
 ## Status bar & launcher
 - **SketchyBar** — Dracula status bar: app, clock, battery, wifi, volume, cpu, mem, bluetooth, VPN.
@@ -8962,7 +8934,7 @@ The whole thing is one keyboard-driven loop. **cmd+space** drops the Ghostty qui
 terminal from anywhere; `a`/`ff`/`rgf`/`s` make it a launcher and search bar, so
 Spotlight/Raycast aren't needed. **SketchyBar** shows
 state (VPN, battery) — the bar's clock even opens **herald**, and its VPN
-pill drives the **mullvad** CLI. Editing is **croft** (Helix as fallback); the agent is **Claude Code**,
+pill drives the **mullvad** CLI. Editing is **croft** (micro for quick edits); the agent is **Claude Code**,
 which reuses the same **MCP servers** the setup migrated over. The script writes
 these configs to `~/.config`; use **chezmoi** (`chezmoi add`, with **cheznav** as its
 TUI) to track them in git and keep the MacBook and Mac mini in sync — that step is
@@ -9029,7 +9001,7 @@ section below.
 ## Editors, AI & the shell
 
 ### `croft` — Croft
-A Rust-built, VS Code-style IDE that lives entirely in the terminal — panes for a file tree, editor, and terminal in one TUI. It's the primary editor in this setup, reached for over Helix when you want a fuller IDE experience (multi-pane layout, mouse support) without leaving the terminal. Run it from inside a project directory so it picks up the right root; `croft pair` adds an AI navigator alongside your normal editing session for pair-programming style assistance.
+A Rust-built, VS Code-style IDE that lives entirely in the terminal — panes for a file tree, editor, and terminal in one TUI. It's the primary editor in this setup, reached for over micro when you want a fuller IDE experience (multi-pane layout, mouse support) without leaving the terminal. Run it from inside a project directory so it picks up the right root; `croft pair` adds an AI navigator alongside your normal editing session for pair-programming style assistance.
 
 ```bash
 # launch croft in the current project
@@ -9040,19 +9012,18 @@ croft pair
 
 > Tip: Start it from the project root, not a subdirectory — croft indexes the tree from wherever it's launched.
 
-### `hx` — Helix
-A modal terminal text editor (in the vim/kakoune family) with built-in LSP and tree-sitter support out of the box — no plugin hunting required for syntax highlighting, diagnostics, or go-to-definition. It's selection-first: you select a range, then act on it, which is the opposite order from vim's verb-then-motion. Reach for it as the fast, always-there fallback editor, and it's set as `$EDITOR` for git, `gh`, and `lazygit` commit messages.
+### `micro` — micro
+A non-modal terminal editor: it behaves the way a GUI editor does, so there are no modes to enter or leave. `Ctrl+S` saves, `Ctrl+Q` quits, `Ctrl+C`/`Ctrl+V` use the system clipboard. It is the `$EDITOR` for git, gh, lazygit and leaf, and the right tool for a quick edit; croft is the full IDE. The **key menu** along the bottom lists the bindings as you work, and `Ctrl+G` opens the complete reference — no cheatsheet needed.
 
 ```bash
 # open a file
-hx src/main.rs
-# open a whole project directory
-hx .
+micro src/main.rs
+# jump straight to a line
+micro src/main.rs +42
+# open the command bar inside the editor, e.g. > set tabsize 4
 ```
 
-Inside Helix: `i` enters insert mode, `Esc` returns to normal mode, `:w` saves, and `Space` opens the command menu (file picker, LSP actions, etc.).
-
-> Tip: Because it's selection-first, `w` selects the next word rather than moving past it — get comfortable selecting before acting.
+> Configured with the Dracula theme, the key menu on, 2-space indents (4 for Python, real tabs for Go and Makefiles), and trailing whitespace stripped on save. Change anything from inside the editor with `> set <option> <value>` — it persists to `~/.config/micro/settings.json`, and re-running the setup script merges new defaults without discarding your changes.
 
 ### `claude` — Claude Code
 Anthropic's agentic coding CLI: it reads your codebase, edits files, runs commands, and can operate autonomously on multi-step tasks, all from the terminal. It's also the host for this machine's MCP servers (filesystem, GitHub, AWS, etc.), so it can reach beyond the local repo when needed. Run it inside a repo so it has real project context; it pairs well with `zellij --layout dev`, which opens it next to your editor.
@@ -9085,7 +9056,7 @@ A fast, cross-shell prompt written in Rust that shows contextual info — git br
 
 ```bash
 # edit the prompt configuration
-hx ~/.config/starship.toml
+micro ~/.config/starship.toml
 # print current config as a starting point
 starship print-config
 ```
@@ -9301,7 +9272,7 @@ fd . | fzf
 # preview file contents while selecting
 fzf --preview 'bat --color=always {}'
 # open the fuzzy-selected file in your editor
-hx $(fzf)
+micro $(fzf)
 ```
 
 > Tip: Ctrl+T (insert file path), Alt+C (cd into directory), and Ctrl+R (search shell history) work anywhere at the prompt without typing `fzf` explicitly.
@@ -9545,7 +9516,7 @@ tree -a -I 'node_modules'
 ```
 
 ### `nano` — nano
-A simple, beginner-friendly terminal text editor with on-screen keybinding hints, used as the quick fallback when you just need to edit a file without loading a modal editor like Helix. Reach for it for fast one-off edits — a config tweak, a commit message, a quick note — where remembering modal commands would slow you down.
+A simple, beginner-friendly terminal text editor with on-screen keybinding hints, used as the quick fallback when you just need to edit a file without loading a full IDE. micro is the better default for this now; nano remains for muscle memory and remote boxes — a config tweak, a commit message, a quick note — where remembering modal commands would slow you down.
 
 ```bash
 # open a file for editing
@@ -11419,7 +11390,7 @@ Finder Quick Look plugins: **QLMarkdown** renders `.md` files when you press
 space on them; **QLStephen** previews extension-less plain-text files (README,
 LICENSE, dotfiles). No commands — they work inside Finder.
 
-### Language servers (Helix / croft use these automatically)
+### Language servers (croft uses these automatically)
 Installed so the editors get completion, diagnostics, and go-to-definition with
 zero config — you never call them directly:
 `bash-language-server`, `marksman` (Markdown), `taplo` (TOML + formatter),
@@ -11576,7 +11547,7 @@ if [[ "$DRY_RUN" == "false" ]]; then
         "bun:bun --version"
         "uv:uv --version"
         "brew:brew --version"
-        "helix:hx --version"
+        "micro:micro -version"
         "docker/orbstack:docker --version || orbstack version"
         "starship:starship --version"
         "fzf:fzf --version"
