@@ -2,7 +2,9 @@
 
 > Release notes for 7.0.0–7.1.1 live in [GitHub Releases](https://github.com/vixygrey/vixygrey-dev-setup/releases) (auto-generated). This file resumes hand-written notes at 7.2.0.
 
-## [Unreleased]
+## [7.6.0] - 2026-08-12
+
+A Claude Code correctness release. An audit of everything this script generates for Claude found the same failure repeatedly: the generator was right, but provisioned machines never received the correction — most starkly, the `PostToolUse` hooks were schema-invalid and had **never run on any machine this script provisioned**, and the global `CLAUDE.md` was frozen 33 lines behind the generator with no mechanism to catch up. Both now migrate existing installs rather than only fresh ones. The shell aliases were breaking every agent-run `du -sh`, `rm -rf` and `pip install` and are now interactive-only. `--cleanup` grew from uninstalling packages to also reclaiming editor trees, config dirs, dead taps and orphaned dependencies (~1.5 GB on the maintainer's machine). Two tool changes: **reminders-cli** added so "remind me" reaches iPhone/Watch, and **Helix replaced by micro** — non-modal, with the key bindings kept on screen. No breaking changes; re-run the script to pick everything up.
 
 ### Added
 
