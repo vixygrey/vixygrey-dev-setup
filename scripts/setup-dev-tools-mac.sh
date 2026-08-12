@@ -246,7 +246,7 @@ declare -A CATEGORY_DESC=(
     [ux]="Lighthouse"
     [docs]="d2, Mermaid CLI"
     [mac-system]="Pearcleaner, Quick Look plugins, dockutil"
-    [mac-productivity]="tiki, Skim, LibreOffice"
+    [mac-productivity]="tiki, reminders-cli, Skim, LibreOffice"
     [mac-browsers]="Carbonyl, w3m"
     [mac-media]="mpv, oxipng, jpegoptim, 7zip, cliamp"
     [mac-cloud]="rclone, borg"
@@ -414,7 +414,7 @@ list_categories() {
     printf "  %-25s %s\n" "ux"                  "Lighthouse"
     printf "  %-25s %s\n" "docs"                "d2, Mermaid CLI"
     printf "  %-25s %s\n" "mac-system"          "Pearcleaner, Quick Look plugins, dockutil, terminal-notifier"
-    printf "  %-25s %s\n" "mac-productivity"    "tiki, Skim, LibreOffice"
+    printf "  %-25s %s\n" "mac-productivity"    "tiki, reminders-cli, Skim, LibreOffice"
     printf "  %-25s %s\n" "mac-browsers"        "Carbonyl, w3m, monolith"
     printf "  %-25s %s\n" "mac-media"           "mpv, oxipng, jpegoptim, 7zip, cliamp"
     printf "  %-25s %s\n" "mac-cloud"           "rclone, borg"
@@ -2160,6 +2160,13 @@ fi
 # self-configures via its own onboarding (no hand-written config); see the checklist.
 trust_tap herald-email/herald
 brew_install "herald" "herald (terminal email + calendar — Gmail + iCloud, AI triage, MCP server)"
+# reminders-cli — Apple Reminders (EventKit) from the terminal, so time/location alerts
+# that should reach iPhone/Watch via iCloud have a home. Complements rather than overlaps
+# the neighbours: tiki keeps notes/tasks in git, herald owns mail + calendar events.
+# First invocation triggers a macOS TCC consent prompt for Reminders access — a GUI
+# dialog this script cannot pre-grant, so the checklist covers it as a first-run step.
+trust_tap keith/formulae
+brew_install "reminders-cli" "reminders-cli (Apple Reminders from the terminal — 'reminders')"
 # google-workspace-cli (gws) — one CLI for Drive/Gmail/Docs/Sheets/Calendar/Chat with
 # structured JSON output, built for humans + AI agents (ships 95 Claude Code skills).
 # All company work is on Google Workspace, so this is Claude's read/query surface there.
@@ -6762,7 +6769,7 @@ if [[ -f "$CLAUDE_SETTINGS" ]]; then
     #   2. A "fileSuggestionSettings" key that Claude Code does not implement (ignored
     #      outright) — dropped; ~/.ignore below replaces it.
     #   3. A Linux-flavoured deny list (/dev/sda, mkfs) on a macOS-only target.
-    CLAUDE_ADD_ALLOW='["Bash(qalc *)","Bash(has *)","Bash(doxx *)","Bash(mdfind *)","Bash(atac *)","Bash(leaf *)","Bash(manly *)","Bash(soffice *)","Bash(office-py *)","Bash(pdftoppm *)","Bash(pdftotext *)","Bash(pdfinfo *)","Bash(tiki exec *)","Bash(git status *)","Bash(git diff *)","Bash(git log *)","Bash(git show *)","Bash(git branch *)","Bash(git remote -v)","Bash(git stash list)"]'
+    CLAUDE_ADD_ALLOW='["Bash(qalc *)","Bash(has *)","Bash(doxx *)","Bash(mdfind *)","Bash(atac *)","Bash(leaf *)","Bash(manly *)","Bash(soffice *)","Bash(office-py *)","Bash(pdftoppm *)","Bash(pdftotext *)","Bash(pdfinfo *)","Bash(tiki exec *)","Bash(reminders show*)","Bash(git status *)","Bash(git diff *)","Bash(git log *)","Bash(git show *)","Bash(git branch *)","Bash(git remote -v)","Bash(git stash list)"]'
     CLAUDE_DENY_ALLOW='["Bash(npm *)","Bash(npx *)","Bash(pnpm *)","Bash(bun *)","Bash(node *)","Bash(tsx *)","Bash(ts-node *)","Bash(python3 *)","Bash(pip *)","Bash(uv *)","Bash(uvx *)","Bash(cargo *)","Bash(go *)","Bash(just *)","Bash(make *)","Bash(nu *)","Bash(nushell *)","Bash(topgrade *)","Bash(watchexec *)","Bash(viddy *)","Bash(parallel *)","Bash(act *)","Bash(curl *)","Bash(xh *)","Bash(wget *)","Bash(curlie *)","Bash(aria2c *)","Bash(grpcurl *)","Bash(yt-dlp *)","Bash(aws *)","Bash(cdk *)","Bash(sam *)","Bash(docker *)","Bash(docker-compose *)","Bash(docker compose *)","Bash(kubectl *)","Bash(tofu *)","Bash(s5cmd *)","Bash(dynein *)","Bash(steampipe *)","Bash(iamlive *)","Bash(granted *)","Bash(assume *)","Bash(mitmproxy *)","Bash(mitmdump *)","Bash(nmap *)","Bash(chezmoi *)","Bash(dbmate *)","Bash(env *)","Bash(export *)","Bash(git *)","Bash(git-*)","Bash(gh *)","Bash(glab *)","Bash(cp *)","Bash(mv *)","Bash(trash *)","Bash(sd *)","Bash(sed *)","Bash(awk *)","Bash(find *)","Bash(npkill *)","Bash(ouch *)","Bash(7z *)","Write"]'
     # Allowlist entries that are dead rather than dangerous: renamed binaries or rules
     # already covered by a broader prefix. Stripped on re-run so they don't accumulate.
@@ -6878,6 +6885,7 @@ else
       "Bash(soffice *)",
       "Bash(office-py *)",
       "Bash(tiki exec *)",
+      "Bash(reminders show*)",
       "Bash(pdftoppm *)",
       "Bash(pdftotext *)",
       "Bash(pdfinfo *)",
@@ -7047,6 +7055,7 @@ else
 - Tunneling: ngrok
 - Notes, tasks & project boards → **use tiki** (git-backed Markdown workspace), not ad-hoc scratch files, for anything worth keeping. The `tiki` **skill is installed** (~/.claude/skills/tiki) — use it: CRUD via `tiki exec '<ruki>'` (SQL-like; auto-validates + git-stages), quick-capture via `echo "note" | tiki` (first line = title). Tikis live in the cwd as Markdown. Personal (non-project) notes/tasks go in **~/Documents/notes** (a git repo) — cd there for general notes; for project-specific tasks, use the project's cwd.
 - Email & calendar: **herald** (one terminal app for both — Gmail work + iCloud personal, unified CalDAV calendar, built-in AI triage/summaries). Herald exposes an **MCP server** (registered in Claude Code) — prefer its MCP tools for reading/searching mail and calendar. **Never send, reply, delete, archive, or modify mail or events without explicit user confirmation** (mutations also require `herald serve` running).
+- Reminders → **use `reminders`** (reminders-cli) for anything that should fire as an alert on the user's iPhone/Watch via iCloud. This is the deciding line between three neighbours: **tiki** holds notes/tasks worth keeping in git, **herald** owns mail and calendar *events*, and **`reminders`** owns time- and location-triggered *alerts*. When the user says "remind me", that is this tool — do not write it into a scratch file or a tiki task and call it done. Read freely (`reminders show-lists`, `reminders show <list>`); creating, completing, or deleting a reminder changes state on every synced device, so **do that only when the user actually asked for it**, and echo back what you created. Common forms: `reminders add <list> "<text>" --due-date "tomorrow 9am"`, `reminders complete <list> <index>`. First run triggers a one-time macOS Reminders permission prompt.
 - Cloud storage: rclone (Google Drive, S3, Dropbox, etc.); borg for versioned backups
 - Browser: Google Chrome (primary); Carbonyl / w3m in the terminal
 - Credentials → **never read, type, enter, or exfiltrate passwords, tokens, API keys, or secrets**, and never echo them into a terminal. Auth is handled by Apple Passwords (iCloud Keychain) and the OS credential tools; defer to the user for anything that needs a credential (no third-party password manager is installed)
@@ -7088,7 +7097,7 @@ else
 - **Terminal**: `zellij` for multiplexing (tmux is intentionally not installed), `mpv` for video playback, `cliamp` for a terminal music player, `asciinema` for recording
 - **Images/Media**: `imagemagick` for image processing, `oxipng` for PNG optimization, `yt-dlp` for video downloads
 - **Logs**: `lnav` for log file navigation
-- **Misc**: `qalc` for precise calculations + unit/currency conversions, `has` to check which tool versions are installed (e.g. `has node git jq`)
+- **Misc**: `qalc` for precise calculations + unit/currency conversions, `has` to check which tool versions are installed (e.g. `has node git jq`), `reminders` for Apple Reminders (see Environment above for when to use it)
 - **Modern replacements** (aliased over defaults): `bat`→cat, `eza`→ls, `procs`→ps, `dust`→du, `duf`→df, `btop`→top, `trash`→rm, `gping`→ping, `doggo`→dig, `viddy`→watch, `aria2c`→wget, `sd`→sed
 
 ## Code Standards
@@ -8559,6 +8568,7 @@ the list, then delete this file.
 - [ ] **Accessibility** — grant to **Ghostty** and **SketchyBar**: System Settings -> Privacy & Security -> Accessibility. (Ghostty: global launcher hotkey; SketchyBar: front-app observation + click actions.)
 - [ ] **Screen Recording** — grant to **Shottr**: System Settings -> Privacy & Security -> Screen Recording. Without it, screenshots capture only the desktop/menu bar, not app windows.
 - [ ] **Automation** — the first time you click the SketchyBar clock (it types `herald` into a Ghostty quick terminal), approve the prompt to let it control **System Events**. If the click does nothing, confirm SketchyBar also has Accessibility (above).
+- [ ] **Reminders** — run `reminders show-lists` once and approve the prompt. macOS gates Reminders behind a per-app consent dialog that only appears on first use, and it is granted to the **terminal** (Ghostty), not to `reminders` itself — so approve it from the terminal you actually use. Until then every `reminders` command returns an empty list rather than an error, which is easy to mistake for "no reminders". Claude uses this tool whenever you say "remind me".
 - [ ] **Spotlight's cmd+space** is disabled by the script (freed for the Ghostty quick terminal) — **log out/in** for it to take effect. To keep Spotlight on cmd+space instead, re-enable it (System Settings -> Keyboard -> Keyboard Shortcuts -> Spotlight) and change the Ghostty bind to `global:cmd+backquote` in `~/.config/ghostty/config`.
 - [ ] **Menu bar auto-hide** is set by the script (`_HIHideMenuBar`) so SketchyBar owns the top — **log out/in (or restart)** for it to take effect. If it doesn't stick, toggle System Settings -> Control Center -> "Automatically hide and show the menu bar" -> Always.
 
@@ -10959,6 +10969,19 @@ tiki
 echo "Follow up with client" | tiki
 # run a ruki query against the workspace and exit
 tiki exec 'select id, title where status = "ready"'
+```
+
+### `reminders` — Apple Reminders CLI
+Reads and writes the real Apple Reminders database through EventKit, so anything you add here syncs to iPhone and Watch via iCloud like it was typed into the Reminders app. This is the piece tiki and herald deliberately leave out: tiki keeps tasks in git, herald owns mail and calendar events, and `reminders` owns alerts that need to follow you off the machine. First run raises a one-time macOS consent prompt (granted to your terminal, not to the binary); until you approve it, commands return an empty list rather than an error.
+
+```bash
+# see which lists exist, then what's on one
+reminders show-lists
+reminders show Inbox
+# add a reminder, optionally with a natural-language due date
+reminders add Inbox "Renew domain" --due-date "friday 9am"
+# complete item 0 on a list
+reminders complete Inbox 0
 ```
 
 ### `newsboat` — Terminal RSS Reader
