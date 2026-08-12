@@ -1350,6 +1350,13 @@ fi
 brew_cask_install "orbstack" "OrbStack (Docker runtime — faster, 2-5x less memory than Docker Desktop)"
 
 # bun (fast JS runtime, bundler, test runner — alternative to Node for scripts)
+# Trust the tap explicitly. A fully-qualified `user/tap/formula` install auto-taps,
+# but Homebrew 6's trust gate is separate from tapping — every other tapped formula
+# here is preceded by trust_tap, and these two were the only ones relying on the
+# fully-qualified form instead. Already-provisioned machines have the trust recorded
+# from earlier runs, so the gap only bites a FRESH install. Redundant if brew treats
+# the qualified form as consent; correct either way.
+trust_tap oven-sh/bun
 brew_install "oven-sh/bun/bun" "bun (fast JS runtime/bundler/test runner)"
 
 # pnpm
@@ -1932,6 +1939,9 @@ uv_tool_install 'harlequin[postgres,mysql,s3]' harlequin \
 # usql — not in Homebrew, install via Go (@latest intentionally unpinned).
 # go_install is DRY_RUN-aware and lands the binary in GOBIN (on PATH).
 go_install github.com/xo/usql@latest usql "usql (universal SQL CLI)"
+# Trust the tap explicitly — see the bun install for why the fully-qualified
+# formula name is not sufficient on a fresh machine.
+trust_tap neilotoole/sq
 brew_install "neilotoole/sq/sq" "sq (jq for databases — query SQLite, Postgres, CSV from one tool)"
 brew_install "dbmate" "dbmate (lightweight DB migrations)"
 # DBeaver (GUI) removed — TUI/CLI coverage: harlequin (SQL IDE), lazysql,
