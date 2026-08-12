@@ -1188,6 +1188,108 @@ if [[ "$CLEANUP" == "true" ]]; then
     done
     unset _app _dir _pretty
 
+    # -- Orphaned config dirs -------------------------------------------------
+    # Uninstalling a tool above removes the binary, never its ~/.config tree, so
+    # replaced tools leave a working config behind forever — the aerc/khal/
+    # vdirsyncer trio is an entire stale mail+calendar setup for tools herald
+    # replaced in 7.3.0.
+    #
+    # The guard is binary PRESENCE, not a static list of what is retired. That
+    # matters twice: a tool still installed keeps its config (you may be using
+    # it), and because this sweep runs AFTER the uninstall loop above, anything
+    # retired earlier in this same invocation is already gone from PATH and gets
+    # swept in the same pass. hash -r first, or bash serves a cached path for a
+    # binary that was deleted moments ago.
+    #
+    # ~/.docker is deliberately ABSENT from this list even though Docker Desktop
+    # is in DEPRECATED_TOOLS. OrbStack took over that directory: config.json
+    # holds `currentContext: orbstack` and the registry `auths`, with daemon.json
+    # beside it. Removing it would break the docker CLI and destroy stored
+    # credentials. The presence guard already saves us (OrbStack provides
+    # `docker`), but do not "fix" this omission by adding the path.
+    hash -r 2>/dev/null || true
+    CONFIG_ORPHANS=(
+        "aerc|$HOME/.config/aerc|herald"
+        "khal|$HOME/.config/khal|herald"
+        "vdirsyncer|$HOME/.config/vdirsyncer|herald"
+        "cmus|$HOME/.config/cmus|cliamp"
+        "kew|$HOME/.config/kew|cliamp"
+        "glow|$HOME/.config/glow|leaf"
+        "yazi|$HOME/.config/yazi|rovr"
+        "tmux|$HOME/.tmux.conf|zellij"
+        "aerospace|$HOME/.aerospace.toml|native Spaces + tiling"
+        "nvm|$HOME/.nvm|mise"
+        "pyenv|$HOME/.pyenv|mise"
+    )
+    for entry in "${CONFIG_ORPHANS[@]}"; do
+        _tool="${entry%%|*}"
+        _rest="${entry#*|}"
+        _dir="${_rest%%|*}"
+        _repl="${_rest##*|}"
+        _pretty="${_dir/#$HOME/\~}"
+        if [[ ! -e "$_dir" ]]; then
+            ((CLEANUP_SKIPPED++))
+            continue
+        fi
+        if command -v "$_tool" &>/dev/null; then
+            info "Keeping $_pretty — $_tool is still installed"
+            ((CLEANUP_SKIPPED++))
+            continue
+        fi
+        if [[ "$DRY_RUN" == "true" ]]; then
+            info "[DRY RUN] Would remove orphaned config $_pretty ($_tool -> $_repl)"
+        else
+            info "Removing orphaned config $_pretty ($_tool -> $_repl)..."
+            if installed trash; then
+                if trash "$_dir" >> "$LOG_FILE" 2>&1; then
+                    ((CLEANUP_COUNT++)); success "$_pretty moved to Trash"
+                else
+                    error "Failed to remove $_pretty"
+                fi
+            elif rm -rf "$_dir"; then
+                ((CLEANUP_COUNT++)); success "$_pretty removed"
+            else
+                error "Failed to remove $_pretty"
+            fi
+        fi
+    done
+    unset _tool _rest _dir _repl _pretty
+
+    # -- Orphaned taps --------------------------------------------------------
+    # Uninstalling a formula leaves its tap cloned and trusted forever. Only taps
+    # THIS script previously used are listed — untapping anything that merely has
+    # zero installed packages would delete taps the user added by hand. The
+    # zero-package check is still enforced, so a tap the user has since installed
+    # something else from is left alone.
+    DEPRECATED_TAPS=(
+        "nikitabobko/tap|AeroSpace"
+        "snyk/tap|snyk"
+    )
+    for entry in "${DEPRECATED_TAPS[@]}"; do
+        _tap="${entry%%|*}"
+        _why="${entry#*|}"
+        if ! brew tap 2>/dev/null | grep -qix "$_tap"; then
+            ((CLEANUP_SKIPPED++))
+            continue
+        fi
+        if brew list --full-name 2>/dev/null | grep -qi "^${_tap}/"; then
+            info "Keeping tap $_tap — still provides installed packages"
+            ((CLEANUP_SKIPPED++))
+            continue
+        fi
+        if [[ "$DRY_RUN" == "true" ]]; then
+            info "[DRY RUN] Would untap $_tap (was $_why; provides nothing)"
+        else
+            info "Untapping $_tap (was $_why; provides nothing)..."
+            if brew untap "$_tap" >> "$LOG_FILE" 2>&1; then
+                ((CLEANUP_COUNT++)); success "$_tap untapped"
+            else
+                warn "Could not untap $_tap"
+            fi
+        fi
+    done
+    unset _tap _why
+
     echo ""
     if [[ "$DRY_RUN" != "true" ]]; then
         success "Cleanup complete: $CLEANUP_COUNT removed, $CLEANUP_SKIPPED not found (already clean)"
