@@ -230,13 +230,13 @@ declare -A CATEGORY_DESC=(
     [git]="Git, GitHub CLI, glab, delta, lazygit, pre-commit"
     [aws]="AWS CLI, CDK, SAM, Granted, cfn-lint, e1s/e2c/stu/claws (TUIs), s5cmd, steampipe, dynein, iamlive"
     [iac]="OpenTofu (Terraform), tflint, terraform-docs, checkov, infracost"
-    [security]="detect-secrets, gitleaks, trivy, semgrep, ClamAV"
-    [replacements]="eza, bat, fd, ripgrep, zoxide, btop, sd, dust, just, rovr"
+    [security]="detect-secrets, gitleaks, trivy, semgrep, ClamAV, Objective-See"
+    [replacements]="eza, bat, fd, ripgrep, zoxide, btop, sd, dust, just, rovr, fx, etc."
     [data-processing]="yq, miller, csvkit, pandoc, ffmpeg, ImageMagick"
-    [code-quality]="shellcheck, shfmt, act, hadolint, ruff, commitizen"
+    [code-quality]="shellcheck, shfmt, act, act3, hadolint, ruff, prettier, commitizen, ni"
     [perf-testing]="hyperfine, oha"
     [dev-servers]="ngrok, miniserve, caddy"
-    [terminal-productivity]="leaf, watchexec, gum, nushell, topgrade, fastfetch, doxx, taproom, qalc, vhs, lazyssh, lazyenv, keyward, bmm, manly, wiper, jolt"
+    [terminal-productivity]="leaf, watchexec, gum, nushell, topgrade, fastfetch, nnn, doxx, taproom, qalc, vhs, lazyssh/rsync/npm, lazyenv, keyward, bmm, manly, cheznav, apw, has, jolt, wiper, starlit"
     [k8s-github]="stern, gh-dash"
     [database]="pgcli, mycli, lazysql, harlequin, usql, sq"
     [containers]="lazydocker, dive, kubectl, k9s"
@@ -245,9 +245,9 @@ declare -A CATEGORY_DESC=(
     [dx]="fzf, starship, atuin, croft, Helix, Ghostty, zellij, llm"
     [ux]="Lighthouse"
     [docs]="d2, Mermaid CLI"
-    [mac-system]="Pearcleaner, Quick Look plugins, dockutil"
+    [mac-system]="Pearcleaner, Quick Look plugins, dockutil, terminal-notifier"
     [mac-productivity]="tiki, reminders-cli, Skim, LibreOffice"
-    [mac-browsers]="Carbonyl, w3m"
+    [mac-browsers]="Carbonyl, w3m, monolith"
     [mac-media]="mpv, oxipng, jpegoptim, 7zip, cliamp"
     [mac-cloud]="rclone, borg"
     [mac-focus]="newsboat"
@@ -393,38 +393,15 @@ list_categories() {
     echo ""
     echo -e "${BOLD}Available categories:${NC}"
     echo ""
-    printf "  %-25s %s\n" "prerequisites"       "Xcode CLI Tools, Homebrew, GNU coreutils"
-    printf "  %-25s %s\n" "core"                "mise (Node, Python), Go, Rust, OrbStack, bun, uv, pnpm"
-    printf "  %-25s %s\n" "git"                 "Git, GitHub CLI, glab, delta, lazygit, pre-commit"
-    printf "  %-25s %s\n" "aws"                 "AWS CLI, CDK, SAM, Granted, cfn-lint, e1s/e2c/stu/claws (TUIs), s5cmd, steampipe, dynein, iamlive"
-    printf "  %-25s %s\n" "iac"                 "OpenTofu (Terraform), tflint, terraform-docs, checkov, infracost"
-    printf "  %-25s %s\n" "security"            "detect-secrets, gitleaks, trivy, semgrep, ClamAV, Objective-See"
-    printf "  %-25s %s\n" "replacements"        "eza, bat, fd, ripgrep, zoxide, btop, sd, dust, just, rovr, fx, etc."
-    printf "  %-25s %s\n" "data-processing"     "yq, miller, csvkit, pandoc, ffmpeg, ImageMagick"
-    printf "  %-25s %s\n" "code-quality"        "shellcheck, shfmt, act, act3, hadolint, ruff, commitizen, ni"
-    printf "  %-25s %s\n" "perf-testing"        "hyperfine, oha"
-    printf "  %-25s %s\n" "dev-servers"         "ngrok, miniserve, caddy"
-    printf "  %-25s %s\n" "terminal-productivity" "leaf, watchexec, gum, nushell, topgrade, fastfetch, nnn, doxx, taproom, qalc, vhs, lazyssh/rsync/npm, lazyenv, keyward, bmm, manly, cheznav, apw, has, jolt, wiper, starlit"
-    printf "  %-25s %s\n" "k8s-github"          "stern, gh-dash"
-    printf "  %-25s %s\n" "database"            "pgcli, mycli, lazysql, harlequin, usql, sq"
-    printf "  %-25s %s\n" "containers"          "lazydocker, dive, kubectl, k9s"
-    printf "  %-25s %s\n" "api"                 "ATAC, grpcurl"
-    printf "  %-25s %s\n" "networking"          "mtr, bandwhich, nmap"
-    printf "  %-25s %s\n" "dx"                  "fzf, starship, atuin, croft, Helix, Ghostty, zellij, llm"
-    printf "  %-25s %s\n" "ux"                  "Lighthouse"
-    printf "  %-25s %s\n" "docs"                "d2, Mermaid CLI"
-    printf "  %-25s %s\n" "mac-system"          "Pearcleaner, Quick Look plugins, dockutil, terminal-notifier"
-    printf "  %-25s %s\n" "mac-productivity"    "tiki, reminders-cli, Skim, LibreOffice"
-    printf "  %-25s %s\n" "mac-browsers"        "Carbonyl, w3m, monolith"
-    printf "  %-25s %s\n" "mac-media"           "mpv, oxipng, jpegoptim, 7zip, cliamp"
-    printf "  %-25s %s\n" "mac-cloud"           "rclone, borg"
-    printf "  %-25s %s\n" "mac-focus"           "newsboat"
-    printf "  %-25s %s\n" "mac-bloat"           "Remove pre-installed Apple apps (GarageBand)"
-    printf "  %-25s %s\n" "dracula"             "Dracula theme for all tools"
-    printf "  %-25s %s\n" "configs"             "All dotfiles and tool configurations"
-    printf "  %-25s %s\n" "filesystem"          "Directory structure, helper scripts, git identity"
-    printf "  %-25s %s\n" "macos-defaults"      "Dock, Finder, keyboard, screenshots, Touch ID, DNS"
-    printf "  %-25s %s\n" "shell"               "$HOME/.zshrc, Brewfile export"
+    # Read from CATEGORY_DESC rather than a second hardcoded copy. The two lists had
+    # silently drifted apart in seven categories (act3, ni, Objective-See, monolith,
+    # terminal-notifier, fx, and most of terminal-productivity appeared in one and not
+    # the other), so --list-categories and the interactive picker described the same
+    # category differently. One source of truth means that can't recur.
+    local cat
+    for cat in "${ALL_CATEGORIES[@]}"; do
+        printf "  %-25s %s\n" "$cat" "${CATEGORY_DESC[$cat]:-}"
+    done
     echo ""
 }
 
@@ -1739,6 +1716,13 @@ brew_install "hadolint" "hadolint (Dockerfile linter — catches bad practices)"
 
 # Python linting (ruff — extremely fast, replaces flake8+black+isort)
 brew_install "ruff" "ruff (fast Python linter+formatter — replaces flake8+black+isort)"
+# prettier — the JS/TS/CSS/MD formatter the generated CLAUDE.md mandates and the
+# pre-push checklist runs. It was documented but never installed, so the Claude
+# format-on-edit hook found nothing on PATH and silently no-opped. Installed from
+# brew (single bottled binary) rather than npm so it survives mise Node switches.
+# NOTE: the hook still prefers a project's OWN prettier over this one — see the
+# format-on-edit heredoc — so a repo pinning prettier 2.x is not reformatted by 3.x.
+brew_install "prettier" "prettier (JS/TS/CSS/MD/YAML formatter — global fallback; projects pin their own)"
 brew_install "typos-cli" "typos (source code spell checker — fast, low false positives)"
 brew_install "ast-grep" "ast-grep (structural code search/replace using AST)"
 
@@ -7073,13 +7057,13 @@ else
 
 ## Available CLI Tools (use these instead of manual approaches)
 - **Search**: `rg` (ripgrep) for content, `fd` for files, `fzf` for interactive, `mdfind` for Spotlight/metadata search (filename, tags, content across the disk)
-- **Data**: `jq` for JSON, `yq` for YAML, `mlr` for CSV, `fx`/`jnv` for interactive JSON, `csvkit` for CSV
+- **Data**: `jq` for JSON, `yq` for YAML, `mlr` for CSV, `fx`/`jnv` for interactive JSON, `csvlook`/`in2csv`/`csvjson` for CSV (the csvkit suite)
 - **Git**: `lazygit` for interactive UI, `delta` for diffs, `difft` for syntax-aware diffs, `git-cliff` for changelogs, `git-absorb` for auto fixup commits, `git-lfs` for large files
 - **Docker**: `lazydocker` for UI, `dive` to inspect layers, `hadolint` for Dockerfile linting
 - **Testing**: `hyperfine` to benchmark, `oha` for load testing, `hurl` for HTTP test files, `act` for local GitHub Actions
 - **Code quality**: `typos` for spell checking, `ast-grep` for structural search/replace, `shellcheck`/`shfmt` for shell, `scc` to count lines of code by language with complexity + COCOMO cost, `manly` to explain a command's flags from its man page
 - **Security**: `trivy` to scan containers/IaC, `gitleaks` for secrets, `semgrep` for static analysis, `detect-secrets` for pre-commit secret detection, `sops` for secrets encryption
-- **IaC**: `tofu` (Terraform), `tflint` for linting, `terraform-docs` for module READMEs, `checkov` for static analysis, `infracost` for cost estimation, `cfn-lint` for CloudFormation, `aws-sam-cli` for SAM (note: `tfsec` checks live in `trivy config`)
+- **IaC**: `tofu` (Terraform), `tflint` for linting, `terraform-docs` for module READMEs, `checkov` for static analysis, `infracost` for cost estimation, `cfn-lint` for CloudFormation, `sam` for SAM (note: `tfsec` checks live in `trivy config`)
 - **AI / agentic**: `claude` (Claude Code) is the coding agent — do agentic, multi-file edits yourself. `llm` for one-shot prompts and embeddings.
 - **HTTP**: `xh` for colorized requests, `curlie` for curl with httpie output, `grpcurl` for gRPC
 - **Network**: `trip` (trippy) for traceroute TUI, `sudo mtr` (requires root, lives in sbin), `bandwhich` for bandwidth, `nmap` for scanning, `mkcert` for local TLS certs
@@ -7092,10 +7076,10 @@ else
 - **Database**: `pgcli`/`mycli` for auto-completing SQL, `lazysql` for TUI, `sq` for cross-database queries, `dbmate` for migrations
 - **File management**: `rovr` for the TUI file manager (`nnn` as a minimal fallback), `wiper` for interactive disk-usage cleanup (ncdu-like, Trash-safe), `watchexec` for running commands on file changes, `rclone` for cloud storage sync
 - **Kubernetes**: `k9s` for TUI, `stern` for log tailing (kubectl via OrbStack)
-- **AWS**: `granted`/`assume` for role switching; TUIs `e1s` (ECS), `stu` (S3), `e2c` (EC2), `claws` (broad, k9s-style); `steampipe` for SQL over AWS, `s5cmd` for fast S3 bulk ops, `dynein` for DynamoDB, `iamlive` to generate least-privilege IAM from observed calls
-- **Shell scripting**: `gum` for interactive prompts/spinners, `nushell` for structured data pipelines, `parallel` for parallel execution
+- **AWS**: `granted`/`assume` for role switching; TUIs `e1s` (ECS), `stu` (S3), `e2c` (EC2), `claws` (broad, k9s-style); `steampipe` for SQL over AWS, `s5cmd` for fast S3 bulk ops, `dy` for DynamoDB (dynein), `iamlive` to generate least-privilege IAM from observed calls
+- **Shell scripting**: `gum` for interactive prompts/spinners, `nu` for structured data pipelines (nushell), `parallel` for parallel execution
 - **Terminal**: `zellij` for multiplexing (tmux is intentionally not installed), `mpv` for video playback, `cliamp` for a terminal music player, `asciinema` for recording
-- **Images/Media**: `imagemagick` for image processing, `oxipng` for PNG optimization, `yt-dlp` for video downloads
+- **Images/Media**: `magick` for image processing (ImageMagick), `oxipng` for PNG optimization, `yt-dlp` for video downloads
 - **Logs**: `lnav` for log file navigation
 - **Misc**: `qalc` for precise calculations + unit/currency conversions, `has` to check which tool versions are installed (e.g. `has node git jq`), `reminders` for Apple Reminders (see Environment above for when to use it)
 - **Modern replacements** (aliased over defaults): `bat`→cat, `eza`→ls, `procs`→ps, `dust`→du, `duf`→df, `btop`→top, `trash`→rm, `gping`→ping, `doggo`→dig, `viddy`→watch, `aria2c`→wget, `sd`→sed
@@ -7398,12 +7382,16 @@ if [[ -n "$FILE" ]] && [[ "$FILE" =~ \.(ts|tsx|js|jsx|css|scss|json|md)$ ]]; the
                || [[ -f "$PROJECT_DIR/.prettierrc.yaml" ]] || [[ -f "$PROJECT_DIR/.prettierrc.yml" ]] \
                || [[ -f "$PROJECT_DIR/.prettierrc.js" ]] || [[ -f "$PROJECT_DIR/.prettierrc.mjs" ]] \
                || [[ -f "$PROJECT_DIR/prettier.config.js" ]] || [[ -f "$PROJECT_DIR/prettier.config.mjs" ]]; then
-                # This setup installs no global prettier, so fall back to the project's
-                # own copy. --no-install keeps npx offline: node_modules/.bin or nothing.
-                if command -v prettier &>/dev/null; then
+                # Prefer the PROJECT's own prettier over the global one: a repo that
+                # pins prettier 2.x must not be reformatted by the global 3.x (major
+                # versions disagree on trailing commas, etc., producing diff churn
+                # nobody asked for). --no-install keeps npx offline — it resolves
+                # node_modules/.bin or fails, never downloads. Global is the fallback
+                # for projects with a prettier config but no local install.
+                if command -v npx &>/dev/null && npx --no-install prettier --write "$FILE" 2>/dev/null; then
+                    :
+                elif command -v prettier &>/dev/null; then
                     prettier --write "$FILE" 2>/dev/null || true
-                elif command -v npx &>/dev/null; then
-                    npx --no-install prettier --write "$FILE" 2>/dev/null || true
                 fi
                 break
             fi

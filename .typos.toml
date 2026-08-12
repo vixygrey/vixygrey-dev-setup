@@ -6,7 +6,23 @@
 iterm = "iterm"
 iterm2 = "iterm2"
 iTerm2 = "iTerm2"
+# keyward — SSH-key manager (brew formula). typos reads it as a misspelling of
+# "keyword"; it is the upstream project name.
+keyward = "keyward"
+# clearn — the `cd ~/Code/learning` alias, named to match coss/cwork/cpersonal.
+# typos reads it as "clear"/"clean".
+clearn = "clearn"
+# PNGs — plural of the image format; typos reads the leading "PN" as "ON".
+PNGs = "PNGs"
+# SLQ — the actual name of sq's query language (neilotoole/sq), not a transposed SQL.
+SLQ = "SLQ"
+# wrk — the HTTP benchmarking tool we compare oha against, not "work".
+wrk = "wrk"
 
 [default.extend-words]
 # Same, as whole-word fallback.
 iterm = "iterm"
+keyward = "keyward"
+clearn = "clearn"
+SLQ = "SLQ"
+wrk = "wrk"
