@@ -10,6 +10,46 @@ A single idempotent Bash script, [`scripts/setup-dev-tools-mac.sh`](scripts/setu
 
 Config files, the user's `~/.claude/CLAUDE.md`, the pre-commit hook, and the Desktop docs are all **generated** by the script — usually inside a quoted heredoc. To change any of them, edit the heredoc **in the script**, not the produced file (which gets overwritten on the next run). Generated files carry a managed-block marker: `# >>> dev-setup managed block (do not edit between the markers) >>>`.
 
+## Two delivery paths — a fix that only lands on fresh installs is half a fix
+
+Most breakage found in this repo has the same shape: **the generator is correct, but the machine never receives the correction.** Before calling anything done, ask *how does this reach a machine that was already provisioned?*
+
+- **Files written with `write_managed`/`write_managed_script`** refresh on every run. Nothing more to do.
+- **`~/.claude/settings.json` is different** — the `configs` block only writes the full heredoc when the file is *absent*. Existing machines take the `jq` **merge branch**, which must be taught about the change explicitly. #206 fixed schema-invalid hooks in the heredoc; without the matching merge-branch migration, every already-provisioned machine would have kept the broken hooks forever.
+- **Anything guarded by `if [[ -f … ]]` / `if [[ -d … ]]` is create-once** and silently freezes. That is exactly how the global `CLAUDE.md` and `rules/` drifted 33 lines and eight tool names behind the generator (#226). Prefer `write_managed`.
+- **Retiring a tool is not the same as cleaning up after it.** `--cleanup` uninstalls the package; its config dir, its tap, and its orphaned dependencies each needed separate handling (#210, #214, #224).
+
+## Audit the generator, not your own machine
+
+The generated output on the machine you are working on may be **older than the script**, so a "bug" you find there may already be fixed. During #209 the local `CLAUDE.md` showed `kew`/`snyk`/`tmux` as stale references; all three had already been corrected upstream and the finding had to be retracted.
+
+Extract the heredoc and inspect *that*:
+
+```bash
+awk "/<<'CLAUDE_MD_CONF'/{f=1;next} /^CLAUDE_MD_CONF\$/{f=0} f" scripts/setup-dev-tools-mac.sh > /tmp/gen.md
+```
+
+The same applies to validating generated JSON/TOML — extract and run it through `jq`/`zsh -n` rather than trusting the heredoc by eye.
+
+## Generated config must match the consuming tool's real schema
+
+Unknown keys are often **silently ignored**, so "no error" is not evidence a setting works. `fileSuggestionSettings` sat in the generated `settings.json` for releases doing nothing — Claude Code has no such key (#206). Verify against the tool's documented schema, or grep its binary, before shipping a config block.
+
+Related: **name the binary, not the package.** `trippy`→`trip`, `nushell`→`nu`, `dynein`→`dy`, `imagemagick`→`magick`, `csvkit`→`csvlook`. A permission rule or doc line naming the package never matches (#206, #209).
+
+## Generated shell config is inherited by agents and scripts
+
+`~/.zshrc` is sourced by non-interactive shells, so anything defined there reaches Claude Code and any script. Aliases are an interactive convenience and **must be gated** — every modern replacement rejects the original's flags (`du -sh` prints dust's help, `rm -rf` is rejected by trash), and the quiet ones are worse (`ps aux`, `dig +short` silently ignore the argument). Gate the whole section on `[[ -o interactive && -z "$CLAUDECODE" && -z "$AI_AGENT" ]]` rather than enumerating hazards — the enumerate approach already failed once, letting `wget` through (#218, #220).
+
+## Removing user data needs two guards
+
+`--cleanup` deletes things people may still want. Every removal must:
+
+1. **Verify the owner is actually gone** — check the `.app` is absent or `command -v <tool>` fails, so a manual reinstall is never gutted.
+2. **Prefer `trash` over `rm -rf`** so a mistake is recoverable from Finder.
+
+And beware paths that *look* orphaned but aren't: `~/.docker` reads as Docker Desktop residue, but OrbStack took it over (`currentContext: orbstack`, registry `auths`). Removing it would break the docker CLI and destroy credentials — it is excluded with a comment saying why (#214).
+
 ## Conventions that are easy to get wrong
 
 - **Idempotency is mandatory.** Every run must be safe to repeat. Use the existing guards: `mark_done`/`is_done "<key>"`, and the `brew_install` / `brew_cask_install` / `npm_global_install` / `go_install` / `uv_tool_install` helpers (they snapshot installed state and skip work already done). Don't call `brew install` directly.
@@ -60,6 +100,9 @@ Releases are hand-prepared in a PR, then **a tag push triggers the GitHub releas
 
 - `rm` is aliased to **`trash`** (rejects `-rf`); use `/bin/rm` in test scripts that clean up temp dirs.
 - `bat` shadows `cat`; use `/bin/cat` in scripts/subshells that need raw output.
+- These aliases are **interactive-only as of 7.6.0** (#218/#220), so an agent shell gets the real POSIX tools. The two notes above still apply to *your own* interactive terminal, and to any session on a machine that has not re-run the script yet.
+- `sed` is **GNU sed** here (from the coreutils install), not BSD — `sed -i '' 's/…/…/' file` fails with "can't read". Use `sed -i 's/…/…/' file`.
+- `du` is `dust` interactively: `du -sh` prints dust's help text rather than a size. Use `/usr/bin/du -sh`.
 - Target platform is macOS + zsh; the script is bash and assumes Homebrew.
 
 ## What the script provisions for Claude (so you can reason about it)
