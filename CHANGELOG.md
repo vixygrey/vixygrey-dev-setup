@@ -4,6 +4,10 @@
 
 ## [Unreleased]
 
+### Added
+
+- **mac-productivity**: Install **`reminders-cli`** (`keith/formulae`, binary `reminders`) so Apple Reminders are reachable from the terminal — the one gap between the existing productivity tools, since `tiki` keeps tasks in git and `herald` owns mail and calendar events, but neither can create an alert that follows you to iPhone/Watch via iCloud. The generated `CLAUDE.md` now draws that three-way line explicitly and tells Claude that "remind me" means this tool, with reads free and mutations gated on explicit user intent. Only the read-only verb is auto-approved in `settings.json` (`Bash(reminders show*)`) — `add`/`complete`/`delete` still prompt. Ships a `TOOL_REFERENCE.md` entry and a checklist step for the one-time macOS Reminders consent prompt, which is granted to the terminal rather than to the binary and silently yields empty results until approved (#208)
+
 ### Fixed
 
 - **claude**: Repair the generated `settings.json` **PostToolUse hooks**, which were schema-invalid and therefore **never ran on any machine this script has provisioned**. Entries were emitted as `{matcher, command}`, but the schema requires a nested `hooks` array (`{matcher, hooks:[{type,command}]}`) — Claude Code reported `Expected array, but received undefined` and silently skipped all three hooks (auto-format, ruff, hadolint). The three entries now collapse into a single `Edit|Write` entry (#206)
