@@ -2,6 +2,12 @@
 
 > Release notes for 7.0.0–7.1.1 live in [GitHub Releases](https://github.com/vixygrey/vixygrey-dev-setup/releases) (auto-generated). This file resumes hand-written notes at 7.2.0.
 
+## [Unreleased]
+
+### Added
+
+- **dx**: Add a **Shottr capture menu to SketchyBar** — a camera glyph in the right cluster (just right of the clock) that stands in for Shottr's own menu-bar icon, which is otherwise hidden by the auto-hidden native menu bar (#231-followup). Left-click opens a vertical popup menu with **Area / Window / Fullscreen / Scrolling** entries; right-click is a quick area grab. Each entry drives Shottr through its `shottr://grab/*` URL scheme (verified against the app bundle's registered scheme and route table), so no keystroke simulation or Accessibility dependency beyond what SketchyBar already needs. The menu auto-closes on `mouse.exited.global`. Five new Nerd Font glyphs were added to `icons.sh` and confirmed to render in JetBrainsMono Nerd Font; two plugins (`shottr_click.sh` dispatcher, `shottr.sh` exit handler) follow the existing `click_script`/`script` pattern used by the bluetooth and vpn items. Screen Recording permission for Shottr (already in the post-setup checklist) is all that's required for captures to include app windows
+
 ## [7.6.0] - 2026-08-12
 
 A Claude Code correctness release. An audit of everything this script generates for Claude found the same failure repeatedly: the generator was right, but provisioned machines never received the correction — most starkly, the `PostToolUse` hooks were schema-invalid and had **never run on any machine this script provisioned**, and the global `CLAUDE.md` was frozen 33 lines behind the generator with no mechanism to catch up. Both now migrate existing installs rather than only fresh ones. The shell aliases were breaking every agent-run `du -sh`, `rm -rf` and `pip install` and are now interactive-only. `--cleanup` grew from uninstalling packages to also reclaiming editor trees, config dirs, dead taps and orphaned dependencies (~1.5 GB on the maintainer's machine). Two tool changes: **reminders-cli** added so "remind me" reaches iPhone/Watch, and **Helix replaced by micro** — non-modal, with the key bindings kept on screen. No breaking changes; re-run the script to pick everything up.
