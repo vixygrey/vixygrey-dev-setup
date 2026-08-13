@@ -1073,7 +1073,7 @@ if [[ "$CLEANUP" == "true" ]]; then
         appname="${appname:-$display}"
 
         case "$type" in
-            formula)
+            formula|brew)
                 if brew list "$name" &>/dev/null; then
                     if [[ "$DRY_RUN" == "true" ]]; then
                         info "[DRY RUN] Would remove: $display (replaced by $replacement)"
@@ -1135,6 +1135,15 @@ if [[ "$CLEANUP" == "true" ]]; then
                 else
                     ((CLEANUP_SKIPPED++))
                 fi
+                ;;
+            *)
+                # A deprecated-tool entry whose type field matches no branch would
+                # otherwise be a silent no-op (the tool never gets removed and the
+                # count is never touched). "brew" was exactly this bug — an alias
+                # for "formula" the case never handled. Fail loudly instead so a
+                # future typo can't quietly leave a retired tool installed.
+                warn "Cleanup: unknown entry type '$type' for $display — skipped (fix DEPRECATED_TOOLS)"
+                ((CLEANUP_SKIPPED++))
                 ;;
         esac
     done
