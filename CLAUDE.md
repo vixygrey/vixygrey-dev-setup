@@ -53,6 +53,15 @@ Same for **generated docs**: a checklist step, `TOOL_REFERENCE` entry, or `CLAUD
 
 And beware paths that *look* orphaned but aren't: `~/.docker` reads as Docker Desktop residue, but OrbStack took it over (`currentContext: orbstack`, registry `auths`). Removing it would break the docker CLI and destroy credentials — it is excluded with a comment saying why (#214).
 
+## A data-driven dispatch needs one vocabulary and a loud default
+
+`--cleanup` reads `DEPRECATED_TOOLS` — rows like `type:name:display:replacement:appname` — and dispatches on `type` through a `case`. For releases the array mixed **two type words for the same thing**: `formula:` *and* `brew:`, both meaning a Homebrew formula, but the `case` only had a `formula)` branch. All 12 `brew:` rows matched nothing, so they were **never uninstalled and never even counted** — the run cheerfully reported `0 removed, 104 not found (already clean)` while a dozen retired tools sat installed. It stayed invisible because a `case` with no `*)` default is a silent no-op on an unrecognized key (#241/#242).
+
+Two rules whenever you add or edit a table that is dispatched on a string field:
+
+- **One canonical vocabulary.** Don't let two spellings mean the same branch. If you add a row, its type must be a value the `case` actually matches — grep the branches, don't assume.
+- **Every dispatch gets a `*)` default that fails loudly** (`warn` + count as skipped), so the next typo'd or unhandled type is a visible warning, not a tool that quietly never gets touched. The same smell applies to any lookup keyed on data — a missing key should never be silently correct.
+
 ## Conventions that are easy to get wrong
 
 - **Idempotency is mandatory.** Every run must be safe to repeat. Use the existing guards: `mark_done`/`is_done "<key>"`, and the `brew_install` / `brew_cask_install` / `npm_global_install` / `go_install` / `uv_tool_install` helpers (they snapshot installed state and skip work already done). Don't call `brew install` directly.
@@ -82,6 +91,7 @@ The script installs a **global** hook (`git config --global core.hooksPath ~/.co
 
 ## Commits, PRs, CHANGELOG
 
+- **Open a GitHub issue FIRST — before creating a branch or writing a single line of code.** `gh issue create` with a clear title and a `bug`/`feature`/`chore`/`documentation`/`tech-debt`/`security` label (run `gh label list` if unsure — there is no `docs` label; it's `documentation`), then branch, implement, and reference it from the PR body (`Closes #N`) and a comment. This is not optional bookkeeping: the issue is where the problem and its root cause get recorded before the fix shapes your thinking. The only carve-outs are a pure `chore(release)` version bump and a trivial one-liner the user explicitly asked you to just do.
 - Trunk-based: branch off `main` (`feature/`, `fix/`, `chore/`, `docs/`), open a PR, squash-merge. Conventional commit messages.
 - **CHANGELOG.md** is hand-written from 7.2.0 onward. Add entries under `## [Unreleased]` (create it if absent) in `### Added` / `### Changed` / `### Fixed`, and reference the PR number, e.g. `(#193)`. Concurrent PRs both touching `[Unreleased]` will conflict — serialize merges or rebase.
 - When building `gh pr create --body`/`gh issue create --body`, prefer `--body-file`; if you must use a heredoc subshell, call `/bin/cat` (the user's `cat` is aliased to `bat`).
