@@ -16,6 +16,7 @@ Most breakage found in this repo has the same shape: **the generator is correct,
 
 - **Files written with `write_managed`/`write_managed_script`** refresh on every run. Nothing more to do.
 - **`~/.claude/settings.json` is different** — the `configs` block only writes the full heredoc when the file is *absent*. Existing machines take the `jq` **merge branch**, which must be taught about the change explicitly. #206 fixed schema-invalid hooks in the heredoc; without the matching merge-branch migration, every already-provisioned machine would have kept the broken hooks forever.
+- **The Claude `settings.json` allowlist is two lists, and they are not the same list.** The fresh-machine heredoc (`CLAUDE_SETTINGS_CONF`) is the actual grant set — read *that* to see what is auto-approved, and it already uses binary names (`Bash(trip *)`, not `Bash(trippy *)`). The merge branch's `CLAUDE_DENY_ALLOW` / `CLAUDE_STALE_ALLOW` variables are **removal** lists that *strip* dangerous or dead auto-approvals from already-provisioned machines. So a package-named entry like `Bash(dynein *)` sitting in those variables is a removal target, **not** a live dead grant — don't "fix" it. Extract the heredoc and run it through `jq` before flagging anything in the allowlist; a finding built on the strip lists was retracted mid-audit (the #209 pattern).
 - **Anything guarded by `if [[ -f … ]]` / `if [[ -d … ]]` is create-once** and silently freezes. That is exactly how the global `CLAUDE.md` and `rules/` drifted 33 lines and eight tool names behind the generator (#226). Prefer `write_managed`.
 - **Retiring a tool is not the same as cleaning up after it.** `--cleanup` uninstalls the package; its config dir, its tap, and its orphaned dependencies each needed separate handling (#210, #214, #224).
 
@@ -36,6 +37,8 @@ The same applies to validating generated JSON/TOML — extract and run it throug
 Unknown keys are often **silently ignored**, so "no error" is not evidence a setting works. `fileSuggestionSettings` sat in the generated `settings.json` for releases doing nothing — Claude Code has no such key (#206). Verify against the tool's documented schema, or grep its binary, before shipping a config block.
 
 Related: **name the binary, not the package.** `trippy`→`trip`, `nushell`→`nu`, `dynein`→`dy`, `imagemagick`→`magick`, `csvkit`→`csvlook`. A permission rule or doc line naming the package never matches (#206, #209).
+
+Same for **generated docs**: a checklist step, `TOOL_REFERENCE` entry, or `CLAUDE.md` line can promise a tool, backend, default provider, or example command that the script never installs or that does not exist. The docs advertised a local **Ollama** backend for herald's AI and `croft pair --provider ollama` that nothing installed — a "local, no-key" path that was dead until the install was added (#237); and the `ni` entry documented an `nx` command that `@antfu/ni` does not ship — the package-binary runner is `nlx` (#238). Cross-check every tool / backend / default / example command a generated doc names against the install calls (`brew_install`/`go_install`/`npm_global_install`/…) and, for commands, the package's real `bin` keys.
 
 ## Generated shell config is inherited by agents and scripts
 
