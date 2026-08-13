@@ -4,11 +4,15 @@
 
 ## [Unreleased]
 
-Herald's local AI was only half-provisioned: setup seeded a chat model (`llama3.2`) but no embedding model, so herald's semantic search had nothing to run on out of the box. This release swaps the default chat model to the newer `gemma3:4b` and adds `nomic-embed-text-v2-moe` as the embedding model, and refactors the pull step into an idempotent, `--dry-run`-honoring loop over a model list.
+Two local-AI/Workspace provisioning gaps closed. Herald's local AI was only half-provisioned: setup seeded a chat model (`llama3.2`) but no embedding model, so herald's semantic search had nothing to run on out of the box — this swaps the default chat model to the newer `gemma3:4b`, adds `nomic-embed-text-v2-moe` as the embedding model, and refactors the pull step into an idempotent loop. Separately, `gws auth setup` died with "gcloud CLI not found" on every fresh machine because the script never installed the Google Cloud SDK that `gws` depends on — now fixed.
 
 ### Changed
 
 - **dx**: Seed **two** default Ollama models instead of one. The chat model default moves from `llama3.2` to **`gemma3:4b`** (Gemma 3 4B — newer and more capable at a similar size), and **`nomic-embed-text-v2-moe`** (a ~0.96 GB, 768-dim embedding model) is now pulled as the backend for herald's semantic search, which previously had no model seeded at all. The pull step is now a data-driven loop over an `OLLAMA_DEFAULT_MODELS` list with an `ollama_model_present` helper that matches an installed model by exact name or its implicit `:latest` tag, so re-runs skip models already present. Generated docs (POST_SETUP_CHECKLIST, TOOL_REFERENCE, TOOLKIT_SUMMARY) were updated to name both models and describe the chat/embeddings split. Existing machines that already pulled `llama3.2` keep it — this changes the default pull set, not a forced removal; run `ollama rm llama3.2` to reclaim the space (#246)
+
+### Fixed
+
+- **gws**: Install the **`gcloud` CLI** (Homebrew cask, renamed from `google-cloud-sdk` to `gcloud-cli`) alongside `googleworkspace-cli`. `gws auth setup` shells out to `gcloud` to bootstrap its OAuth project, so without it the very first auth step failed with `gcloud CLI not found` and `gws` was unusable out of the box — the checklist told users to run a command that could not succeed. The install is idempotent, so already-provisioned machines pick up `gcloud` on their next re-run; the POST_SETUP_CHECKLIST now notes that setup provides the `gcloud` CLI `gws auth setup` needs (#248)
 
 ## [7.7.1] - 2026-08-13
 

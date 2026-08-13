@@ -2435,6 +2435,11 @@ if [[ "$DRY_RUN" != "true" ]] && brew list --formula gws >/dev/null 2>&1; then
     brew uninstall gws >> "$LOG_FILE" 2>&1 || warn "Could not remove git-workspace 'gws' (continuing)"
 fi
 brew_install "googleworkspace-cli" "google-workspace-cli (Drive/Gmail/Docs/Sheets/Calendar — JSON output, AI-agent-friendly)"
+# gcloud CLI — a hard prerequisite for `gws auth setup`, which shells out to gcloud to
+# bootstrap the OAuth project/credentials. Without it that first auth step dies with
+# "gcloud CLI not found" and gws is unusable. The Homebrew cask was renamed from
+# google-cloud-sdk to `gcloud-cli`, so install by the current name.
+brew_cask_install "gcloud-cli" "Google Cloud CLI (gcloud — required by 'gws auth setup')"
 # gws Claude skills — SCOPED to Drive / Docs / Slides / Sheets / Forms ONLY. Upstream
 # ships ~95 skills spanning Gmail, Calendar, Chat, Meet, Tasks, Contacts, admin, etc.;
 # we deliberately install just the file/document surface so Claude gets the recipes for
@@ -8938,7 +8943,7 @@ the list, then delete this file.
 - [ ] **No Anthropic API key is needed to use herald with Claude.** Reading or searching your mail/calendar from Claude Code goes through herald's MCP (set up above) and rides your existing `claude` login — no key. Separately, herald's *own* built-in AI (semantic search, triage, compose styler) is **optional** and runs on local **Ollama** models — setup installs Ollama, runs it as a login service on `127.0.0.1:11434`, and pulls `gemma3:4b` (chat/summaries) plus `nomic-embed-text-v2-moe` (the embedding model that powers semantic search), so it works offline with no key once you enable it in herald's onboarding (pick the **Ollama** provider + the `gemma3:4b` model, and `nomic-embed-text-v2-moe` for embeddings; `ollama pull <model>` adds others). Point it at an `ANTHROPIC_API_KEY` instead only if you'd rather that AI run on Claude.
 
 ## Google Workspace CLI — gws
-- [ ] Authorize `gws`: run `gws auth setup` (walks you through a Google Cloud OAuth project) then `gws auth login`. After that, Claude can work with your Workspace via `gws` (structured JSON) — it's instructed to confirm before sending/sharing/deleting/modifying anything.
+- [ ] Authorize `gws`: run `gws auth setup` (walks you through a Google Cloud OAuth project — setup installs the `gcloud` CLI it shells out to) then `gws auth login`. After that, Claude can work with your Workspace via `gws` (structured JSON) — it's instructed to confirm before sending/sharing/deleting/modifying anything.
 - [ ] **Scope the OAuth fence — this, not the skills, is what actually limits access.** The Claude skills installed below only give Claude *recipes* for Drive/Docs/Slides/Sheets/Forms; they do **not** restrict what `gws` can call. Any scope you grant during `gws auth setup` is reachable regardless of which skills exist. To keep Claude out of email/calendar/chat entirely, authorize **only** the Drive, Docs, Slides, Sheets, and Forms scopes there.
 - [ ] The Drive/Docs/Slides/Sheets/Forms **Claude skills are pre-installed** (`~/.claude/skills/gws-*` plus the matching `recipe-*`); Gmail/Calendar/Chat/Meet skills were deliberately left out. To add more later, copy them from github.com/googleworkspace/cli (`skills/`).
 
