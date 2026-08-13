@@ -2133,7 +2133,8 @@ brew_install "atuin" "atuin (replaces shell history — SQLite-backed, searchabl
 brew_install "micro" "micro (non-modal terminal editor — \$EDITOR for git; on-screen key menu)"
 # croft — VS Code-style terminal IDE (primary editor). Rust, not on Homebrew; installed
 # from git main via cargo. Build in a .noindex dir so macOS Spotlight doesn't churn/heat
-# during the compile. AI pairing via `croft pair` (uses ANTHROPIC_API_KEY).
+# during the compile. AI pairing via `croft pair` rides the existing `claude` CLI
+# auth by default (--provider claude); no separate ANTHROPIC_API_KEY needed.
 if command -v croft &>/dev/null; then
     warn "croft already installed"
     progress
@@ -8874,7 +8875,7 @@ the list, then delete this file.
 - [ ] **MCP servers:** export tokens your Claude Code MCP servers need, e.g. `export GITHUB_TOKEN=...` (and `AWS_REGION` / `AWS_PROFILE` for the AWS servers). Requires `claude auth login` at least once.
 - [ ] **infracost** (IaC cost estimates): run `infracost auth login` for a free API key — `infracost breakdown` errors with "No INFRACOST_API_KEY" until then.
 - [ ] **borgmatic backups:** the setup scaffolds `~/.config/borgmatic/config.yaml`. Set `repositories`, store the passphrase in Keychain (`security add-generic-password -a "$USER" -s borg-passphrase -w`), run `borgmatic init --encryption repokey-blake2`, check with `borgmatic create --dry-run`, then enable a daily run (e.g. a LaunchAgent calling `borgmatic --verbosity -1`). ClamAV's virus DB downloads itself in the background after setup.
-- [ ] **Claude AI in croft:** set an Anthropic key — `export ANTHROPIC_API_KEY=sk-ant-...` in `~/.zshrc.local`. Used by **croft** (`croft pair` — the AI navigator in your primary IDE). For one-off `llm` prompts (e.g. `> ! llm …` from micro's command bar), just run `llm keys set anthropic` — setup already installs the plugin (via uv) and sets the default model to `anthropic/claude-sonnet-4-5`. (Email/calendar AI is built into **herald** — configured separately above.)
+- [ ] **Claude AI in croft:** `croft pair` (the AI navigator in your primary IDE) defaults to `--provider claude`, which hands off to your existing `claude` CLI — so it just works on whatever auth that already has (a Claude Pro/Max subscription **or** an API key), no separate `ANTHROPIC_API_KEY` required. Want a fully local model with no key at all? Use `croft pair --provider ollama --model qwen3-coder:30b`. The one thing that genuinely needs an Anthropic key is the `llm` tool: for one-off `llm` prompts (e.g. `> ! llm …` from micro's command bar), run `llm keys set anthropic` — setup already installs the plugin (via uv) and sets the default model to `anthropic/claude-sonnet-4-5`. (Email/calendar AI is built into **herald** — configured separately above.)
 - [ ] **croft** (primary IDE): installed from git `main` via cargo — run `croft` in a project to open the workspace; re-run `cargo install --git https://github.com/vitali87/croft.git --locked` to upgrade.
 - [ ] **AI side-pane:** `zellij --layout dev` opens your editor + a Claude Code pane side by side (the strongest AI workflow).
 - [ ] **chezmoi:** `chezmoi init <your-dotfiles-repo>` to bring these configs under version control across the MacBook + Mac mini.
@@ -8953,7 +8954,7 @@ together.
 ## Editor & AI
 - **croft** — VS Code-style terminal IDE; the **primary editor** (`croft pair` for the AI navigator). **micro** is the `EDITOR` for git/gh/lazygit commit messages and quick edits (non-modal, Dracula, on-screen key menu, trailing whitespace stripped on save).
 - **Claude Code (`claude`)** — agentic coding in the terminal; hosts the MCP servers. Best via `zellij --layout dev` (editor + Claude pane).
-- **Claude in croft** — croft's `croft pair` AI navigator (primary IDE); for one-off prompts use `llm` directly, or `> ! llm …` from micro's command bar. Powered by `ANTHROPIC_API_KEY` / `llm-anthropic`. Email/calendar AI lives in **herald** (built-in triage/summaries + MCP).
+- **Claude in croft** — croft's `croft pair` AI navigator (primary IDE) defaults to `--provider claude`, riding your existing `claude` CLI auth (subscription or key, no separate `ANTHROPIC_API_KEY`); `--provider ollama` runs a local model with no key. For one-off prompts use `llm` directly, or `> ! llm …` from micro's command bar — that path is what needs `ANTHROPIC_API_KEY` / `llm-anthropic`. Email/calendar AI lives in **herald** (built-in triage/summaries + MCP).
 
 ## Status bar & launcher
 - **SketchyBar** — Dracula status bar: app, clock, battery, wifi, volume, cpu, mem, bluetooth, VPN.

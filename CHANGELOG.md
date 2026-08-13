@@ -2,6 +2,12 @@
 
 > Release notes for 7.0.0–7.1.1 live in [GitHub Releases](https://github.com/vixygrey/vixygrey-dev-setup/releases) (auto-generated). This file resumes hand-written notes at 7.2.0.
 
+## [Unreleased]
+
+### Fixed
+
+- **docs**: Correct the generated docs that presented `ANTHROPIC_API_KEY` as **required** for `croft pair`. It isn't — `croft pair` defaults to `--provider claude`, which `croft pair --help` describes as *"handed to the claude CLI on the default provider,"* so it shells out to the user's existing `claude` CLI and rides whatever auth that already has (a Claude Pro/Max subscription **or** an API key); `--provider ollama` runs a fully local model with no key at all. The API key is only genuinely needed for the `llm` tool (`llm-anthropic`), which stays documented as such. Reworded the POST_SETUP_CHECKLIST and TOOLKIT_SUMMARY heredocs plus the croft-install code comment in `setup-dev-tools-mac.sh`; the Desktop docs are regenerated fresh on every run, so a re-run picks the correction up with no migration needed (#235)
+
 ## [7.6.1] - 2026-08-12
 
 A small quality-of-life release for the status bar. Because the setup auto-hides the native macOS menu bar, Shottr's own menu-bar icon is normally out of reach — this release gives SketchyBar a camera glyph that stands in for it, opening a click-to-capture menu (Area / Window / Fullscreen / Scrolling) driven through Shottr's `shottr://` URL scheme. No breaking changes; re-run the script to pick it up.
