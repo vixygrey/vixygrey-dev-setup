@@ -2,7 +2,9 @@
 
 > Release notes for 7.0.0–7.1.1 live in [GitHub Releases](https://github.com/vixygrey/vixygrey-dev-setup/releases) (auto-generated). This file resumes hand-written notes at 7.2.0.
 
-## [Unreleased]
+## [7.7.1] - 2026-08-13
+
+A cleanup-correctness patch. `--cleanup` had been quietly under-removing: every `DEPRECATED_TOOLS` entry typed `brew:` (a synonym for `formula:` the dispatch never handled) fell through the removal `case`, so a dozen retired formulae were reported "already clean" while they sat installed. This release makes `--cleanup` actually remove them and adds a loud default so no future entry can silently no-op. No breaking changes; re-run the script (with `--cleanup`) to pick it up.
 
 ### Fixed
 
