@@ -2,6 +2,12 @@
 
 > Release notes for 7.0.0–7.1.1 live in [GitHub Releases](https://github.com/vixygrey/vixygrey-dev-setup/releases) (auto-generated). This file resumes hand-written notes at 7.2.0.
 
+## [Unreleased]
+
+### Fixed
+
+- **cleanup**: Fix `--cleanup` silently skipping every `brew:`-typed entry in `DEPRECATED_TOOLS`, so a dozen retired formulae (helix, tmux, aider, repomix, aerc, khal, vdirsyncer, yazi, cmus, kew, tokei, glow) were **never uninstalled** even when present. The removal loop's `case "$type"` only had branches for `formula`, `cask`, and `mas`; the 12 entries whose type field was `brew` (a synonym for `formula`) matched no branch and fell straight through — not removed, not even counted, so the run reported "0 removed, N not found (already clean)" while the tools sat installed. Added `brew` as an accepted alias (`formula|brew)`) and a `*)` default branch that warns loudly on any unknown type, so a future type typo can never again be a silent no-op. Fix is live script logic (not a create-once generated file), so any already-provisioned machine picks it up the next time it runs `--cleanup`
+
 ## [7.7.0] - 2026-08-13
 
 Herald and `croft pair` both advertised a local, no-key AI path backed by Ollama — but nothing installed Ollama, so that path was dead on every provisioned machine. This release makes it real: the script installs Ollama, runs it as a login service on `127.0.0.1:11434`, and pulls a small default model (`llama3.2`) for herald's triage/summaries/compose. Alongside it, a wave of documentation corrections untangles when an Anthropic API key is actually needed — `croft pair` rides your existing `claude` CLI auth, herald's MCP rides your `claude` login, and the `llm` CLI is the only thing that wants a key (and even that is optional) — plus a fix to the `ni` reference, which documented a non-existent `nx` command (it's `nlx`). No breaking changes; re-run the script to pick everything up.
