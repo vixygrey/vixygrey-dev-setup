@@ -2,11 +2,13 @@
 
 > Release notes for 7.0.0–7.1.1 live in [GitHub Releases](https://github.com/vixygrey/vixygrey-dev-setup/releases) (auto-generated). This file resumes hand-written notes at 7.2.0.
 
-## [Unreleased]
+## [7.6.1] - 2026-08-12
+
+A small quality-of-life release for the status bar. Because the setup auto-hides the native macOS menu bar, Shottr's own menu-bar icon is normally out of reach — this release gives SketchyBar a camera glyph that stands in for it, opening a click-to-capture menu (Area / Window / Fullscreen / Scrolling) driven through Shottr's `shottr://` URL scheme. No breaking changes; re-run the script to pick it up.
 
 ### Added
 
-- **dx**: Add a **Shottr capture menu to SketchyBar** — a camera glyph in the right cluster (just right of the clock) that stands in for Shottr's own menu-bar icon, which is otherwise hidden by the auto-hidden native menu bar (#231-followup). Left-click opens a vertical popup menu with **Area / Window / Fullscreen / Scrolling** entries; right-click is a quick area grab. Each entry drives Shottr through its `shottr://grab/*` URL scheme (verified against the app bundle's registered scheme and route table), so no keystroke simulation or Accessibility dependency beyond what SketchyBar already needs. The menu auto-closes on `mouse.exited.global`. Five new Nerd Font glyphs were added to `icons.sh` and confirmed to render in JetBrainsMono Nerd Font; two plugins (`shottr_click.sh` dispatcher, `shottr.sh` exit handler) follow the existing `click_script`/`script` pattern used by the bluetooth and vpn items. Screen Recording permission for Shottr (already in the post-setup checklist) is all that's required for captures to include app windows
+- **dx**: Add a **Shottr capture menu to SketchyBar** — a camera glyph in the right cluster (just right of the clock) that stands in for Shottr's own menu-bar icon, which is otherwise hidden by the auto-hidden native menu bar (#232). Left-click opens a vertical popup menu with **Area / Window / Fullscreen / Scrolling** entries; right-click is a quick area grab. Each entry drives Shottr through its `shottr://grab/*` URL scheme (verified against the app bundle's registered scheme and route table), so no keystroke simulation or Accessibility dependency beyond what SketchyBar already needs. The menu auto-closes on `mouse.exited.global`. Five new Nerd Font glyphs were added to `icons.sh` and confirmed to render in JetBrainsMono Nerd Font; two plugins (`shottr_click.sh` dispatcher, `shottr.sh` exit handler) follow the existing `click_script`/`script` pattern used by the bluetooth and vpn items. Screen Recording permission for Shottr (already in the post-setup checklist) is all that's required for captures to include app windows
 
 ## [7.6.0] - 2026-08-12
 
