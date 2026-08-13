@@ -2337,6 +2337,54 @@ fi
 # self-configures via its own onboarding (no hand-written config); see the checklist.
 trust_tap herald-email/herald
 brew_install "herald" "herald (terminal email + calendar — Gmail + iCloud, AI triage, MCP server)"
+# Ollama — local LLM runtime that backs herald's built-in AI (triage, summaries, compose
+# styler) and `croft pair --provider ollama`. Both default to a local Ollama server on
+# 127.0.0.1:11434, so without it that "local, no-key" AI path is dead. The formula (not the
+# GUI cask) gives the `ollama` CLI + server; it stores models under ~/.ollama and needs no
+# config file of its own. We run it as a login service so herald's default endpoint is always
+# live, then pull one small general model for herald's text tasks. Both steps are idempotent
+# and honor --dry-run.
+brew_install "ollama" "ollama (local LLM runtime — backs herald AI + croft pair --provider ollama)"
+if installed ollama; then
+    if [[ "$DRY_RUN" == "true" ]]; then
+        if brew services list 2>/dev/null | awk '$1=="ollama"{print $2}' | grep -qx started; then
+            warn "[DRY RUN] ollama service — already running"
+        else
+            info "[DRY RUN] Would run ollama as a login service (brew services start ollama)"
+        fi
+        if ollama list 2>/dev/null | grep -q '^llama3.2'; then
+            warn "[DRY RUN] ollama model llama3.2 — already pulled"
+        else
+            info "[DRY RUN] Would pull herald's default model (ollama pull llama3.2, ~2 GB one-time)"
+        fi
+    else
+        if brew services list 2>/dev/null | awk '$1=="ollama"{print $2}' | grep -qx started; then
+            warn "ollama service already running"
+        else
+            info "Starting ollama as a login service..."
+            if brew services start ollama >> "$LOG_FILE" 2>&1; then
+                success "ollama service started (127.0.0.1:11434)"
+            else
+                warn "Could not start ollama service — start it later with 'brew services start ollama'"
+            fi
+        fi
+        # Wait for the server to accept connections before pulling a model.
+        for _ in {1..15}; do
+            curl -fsS http://127.0.0.1:11434/api/tags >/dev/null 2>&1 && break
+            sleep 1
+        done
+        if ollama list 2>/dev/null | grep -q '^llama3.2'; then
+            warn "ollama model llama3.2 already pulled"
+        else
+            info "Pulling herald's default model llama3.2 (~2 GB, one-time)..."
+            if ollama pull llama3.2 >> "$LOG_FILE" 2>&1; then
+                success "ollama model llama3.2 pulled"
+            else
+                warn "Could not pull llama3.2 — pull it later with 'ollama pull llama3.2'"
+            fi
+        fi
+    fi
+fi
 # reminders-cli — Apple Reminders (EventKit) from the terminal, so time/location alerts
 # that should reach iPhone/Watch via iCloud have a home. Complements rather than overlaps
 # the neighbours: tiki keeps notes/tasks in git, herald owns mail + calendar events.
@@ -8790,6 +8838,7 @@ echo "  [~/.newsboat]           RSS reader (vim keys, Dracula colors, starter UR
 echo "  [~/.config/ghostty]     GPU-accelerated terminal + quick-terminal launcher (cmd+space)"
 echo "  [~/.config/sketchybar]  Dracula status bar (app, clock, battery/wifi/vpn/cpu/mem, Shottr menu)"
 echo "  [~/.herald]             herald email + calendar (self-configured on first run)"
+echo "  [~/.ollama]             Ollama local models (herald AI + croft pair --provider ollama)"
 echo "  [~/.justfile]           Global task runner recipes"
 echo "  [~/.config/brewfile]    Brewfile snapshot for reproducibility"
 echo "  [~/.config/micro]       micro — Dracula, on-screen key menu, house indent rules"
@@ -8856,7 +8905,7 @@ the list, then delete this file.
   - **iCloud (personal):** create an **app-specific password** at appleid.apple.com -> Sign-In & Security -> App-Specific Passwords; herald uses it for IMAP/SMTP + iCloud CalDAV.
   - **Gmail (work):** add the Gmail account in herald (OAuth or an app password) and its Google CalDAV calendar.
 - [ ] Start the background server so the **Claude MCP** (and mutations) work: `herald serve -config ~/.herald/conf.yaml` (add it to a login item / launchd if you want it always on). Read-only MCP works after the first sync.
-- [ ] **No Anthropic API key is needed to use herald with Claude.** Reading or searching your mail/calendar from Claude Code goes through herald's MCP (set up above) and rides your existing `claude` login — no key. Separately, herald's *own* built-in AI (semantic search, triage, compose styler) is **optional** and defaults to the local **Ollama** model; only if you want that AI to run on Claude instead do you point it at an `ANTHROPIC_API_KEY`.
+- [ ] **No Anthropic API key is needed to use herald with Claude.** Reading or searching your mail/calendar from Claude Code goes through herald's MCP (set up above) and rides your existing `claude` login — no key. Separately, herald's *own* built-in AI (semantic search, triage, compose styler) is **optional** and runs on a local **Ollama** model — setup installs Ollama, runs it as a login service on `127.0.0.1:11434`, and pulls `llama3.2`, so it works offline with no key once you enable it in herald's onboarding (pick the **Ollama** provider + the `llama3.2` model; `ollama pull <model>` adds others). Point it at an `ANTHROPIC_API_KEY` instead only if you'd rather that AI run on Claude.
 
 ## Google Workspace CLI — gws
 - [ ] Authorize `gws`: run `gws auth setup` (walks you through a Google Cloud OAuth project) then `gws auth login`. After that, Claude can work with your Workspace via `gws` (structured JSON) — it's instructed to confirm before sending/sharing/deleting/modifying anything.
@@ -8875,7 +8924,7 @@ the list, then delete this file.
 - [ ] **MCP servers:** export tokens your Claude Code MCP servers need, e.g. `export GITHUB_TOKEN=...` (and `AWS_REGION` / `AWS_PROFILE` for the AWS servers). Requires `claude auth login` at least once.
 - [ ] **infracost** (IaC cost estimates): run `infracost auth login` for a free API key — `infracost breakdown` errors with "No INFRACOST_API_KEY" until then.
 - [ ] **borgmatic backups:** the setup scaffolds `~/.config/borgmatic/config.yaml`. Set `repositories`, store the passphrase in Keychain (`security add-generic-password -a "$USER" -s borg-passphrase -w`), run `borgmatic init --encryption repokey-blake2`, check with `borgmatic create --dry-run`, then enable a daily run (e.g. a LaunchAgent calling `borgmatic --verbosity -1`). ClamAV's virus DB downloads itself in the background after setup.
-- [ ] **Claude AI in croft:** `croft pair` (the AI navigator in your primary IDE) defaults to `--provider claude`, which hands off to your existing `claude` CLI — so it just works on whatever auth that already has (a Claude Pro/Max subscription **or** an API key), no separate `ANTHROPIC_API_KEY` required. Want a fully local model with no key at all? Use `croft pair --provider ollama --model qwen3-coder:30b`. An Anthropic API key is **optional** here — the only thing that uses one is the `llm` CLI, and `llm` itself is optional: if Claude Code and the Claude desktop app already cover you, you can skip it entirely. If you do want `llm` for one-off prompts (e.g. `> ! llm …` from micro's command bar) or shell scripting, run `llm keys set anthropic` — setup already installs the plugin (via uv) and sets the default model to `anthropic/claude-sonnet-4-5`. (Email/calendar AI is built into **herald** — configured separately above.)
+- [ ] **Claude AI in croft:** `croft pair` (the AI navigator in your primary IDE) defaults to `--provider claude`, which hands off to your existing `claude` CLI — so it just works on whatever auth that already has (a Claude Pro/Max subscription **or** an API key), no separate `ANTHROPIC_API_KEY` required. Want a fully local model with no key at all? Ollama is installed and running — use the `llama3.2` that setup already pulled (`croft pair --provider ollama --model llama3.2`), or `ollama pull qwen3-coder:30b` first for a heavier coding-tuned model. An Anthropic API key is **optional** here — the only thing that uses one is the `llm` CLI, and `llm` itself is optional: if Claude Code and the Claude desktop app already cover you, you can skip it entirely. If you do want `llm` for one-off prompts (e.g. `> ! llm …` from micro's command bar) or shell scripting, run `llm keys set anthropic` — setup already installs the plugin (via uv) and sets the default model to `anthropic/claude-sonnet-4-5`. (Email/calendar AI is built into **herald** — configured separately above.)
 - [ ] **croft** (primary IDE): installed from git `main` via cargo — run `croft` in a project to open the workspace; re-run `cargo install --git https://github.com/vitali87/croft.git --locked` to upgrade.
 - [ ] **AI side-pane:** `zellij --layout dev` opens your editor + a Claude Code pane side by side (the strongest AI workflow).
 - [ ] **chezmoi:** `chezmoi init <your-dotfiles-repo>` to bring these configs under version control across the MacBook + Mac mini.
@@ -8954,7 +9003,7 @@ together.
 ## Editor & AI
 - **croft** — VS Code-style terminal IDE; the **primary editor** (`croft pair` for the AI navigator). **micro** is the `EDITOR` for git/gh/lazygit commit messages and quick edits (non-modal, Dracula, on-screen key menu, trailing whitespace stripped on save).
 - **Claude Code (`claude`)** — agentic coding in the terminal; hosts the MCP servers. Best via `zellij --layout dev` (editor + Claude pane).
-- **Claude in croft** — croft's `croft pair` AI navigator (primary IDE) defaults to `--provider claude`, riding your existing `claude` CLI auth (subscription or key, no separate `ANTHROPIC_API_KEY`); `--provider ollama` runs a local model with no key. The one path that uses an Anthropic key is the **`llm`** CLI (`llm-anthropic`) — and it's optional: reach for it only when you want Claude in a shell pipe or a `> ! llm …` one-off from micro's command bar, then run `llm keys set anthropic`. **herald** integrates with Claude two ways, neither needing a key: Claude Code reads and searches your mail/calendar through herald's **MCP** (it rides your `claude` login), and herald's *own* built-in AI (triage, summaries, compose styler) is optional and defaults to a local **Ollama** model.
+- **Claude in croft** — croft's `croft pair` AI navigator (primary IDE) defaults to `--provider claude`, riding your existing `claude` CLI auth (subscription or key, no separate `ANTHROPIC_API_KEY`); `--provider ollama` runs a local model with no key. The one path that uses an Anthropic key is the **`llm`** CLI (`llm-anthropic`) — and it's optional: reach for it only when you want Claude in a shell pipe or a `> ! llm …` one-off from micro's command bar, then run `llm keys set anthropic`. **herald** integrates with Claude two ways, neither needing a key: Claude Code reads and searches your mail/calendar through herald's **MCP** (it rides your `claude` login), and herald's *own* built-in AI (triage, summaries, compose styler) is optional and runs on a local **Ollama** model that setup installs, runs as a login service, and seeds with `llama3.2`.
 
 ## Status bar & launcher
 - **SketchyBar** — Dracula status bar: app, clock, battery, wifi, volume, cpu, mem, bluetooth, VPN.
@@ -9104,6 +9153,20 @@ llm chat
 ```
 
 > Tip: Set your key once with `llm keys set anthropic`; after that the model is available to every `llm` invocation without extra flags.
+
+### `ollama` — Local LLM Runtime
+Runs open-weight LLMs entirely on your Mac — no API key, no data leaving the machine. Setup installs it, runs it as a login service on `127.0.0.1:11434`, and pulls `llama3.2` (a small, fast general model). It's the local backend for **herald**'s built-in AI (triage, summaries, compose styler) and for `croft pair --provider ollama`; both talk to that same endpoint. Models live under `~/.ollama`, and there's no config file to maintain.
+
+```bash
+# list installed models
+ollama list
+# pull another model (e.g. a coding-tuned one for croft pair)
+ollama pull qwen3-coder:30b
+# quick one-off prompt against a local model
+ollama run llama3.2 "summarize this in one line: ..."
+```
+
+> Tip: The server runs as a login service. `brew services stop ollama` frees its RAM when you're not using local AI; `brew services start ollama` brings it back.
 
 ### `starship` — Starship Prompt
 A fast, cross-shell prompt written in Rust that shows contextual info — git branch/status, language versions, exit codes — without the lag some frameworks introduce. It replaces heavier prompt frameworks (like Powerlevel10k or Oh My Posh) with a single static binary and a TOML config. You mostly don't invoke it directly; it's wired into your shell init and just renders on every prompt.
