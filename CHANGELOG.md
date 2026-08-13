@@ -2,6 +2,14 @@
 
 > Release notes for 7.0.0–7.1.1 live in [GitHub Releases](https://github.com/vixygrey/vixygrey-dev-setup/releases) (auto-generated). This file resumes hand-written notes at 7.2.0.
 
+## [Unreleased]
+
+Herald's local AI was only half-provisioned: setup seeded a chat model (`llama3.2`) but no embedding model, so herald's semantic search had nothing to run on out of the box. This release swaps the default chat model to the newer `gemma3:4b` and adds `nomic-embed-text-v2-moe` as the embedding model, and refactors the pull step into an idempotent, `--dry-run`-honoring loop over a model list.
+
+### Changed
+
+- **dx**: Seed **two** default Ollama models instead of one. The chat model default moves from `llama3.2` to **`gemma3:4b`** (Gemma 3 4B — newer and more capable at a similar size), and **`nomic-embed-text-v2-moe`** (a ~0.96 GB, 768-dim embedding model) is now pulled as the backend for herald's semantic search, which previously had no model seeded at all. The pull step is now a data-driven loop over an `OLLAMA_DEFAULT_MODELS` list with an `ollama_model_present` helper that matches an installed model by exact name or its implicit `:latest` tag, so re-runs skip models already present. Generated docs (POST_SETUP_CHECKLIST, TOOL_REFERENCE, TOOLKIT_SUMMARY) were updated to name both models and describe the chat/embeddings split. Existing machines that already pulled `llama3.2` keep it — this changes the default pull set, not a forced removal; run `ollama rm llama3.2` to reclaim the space (#246)
+
 ## [7.7.1] - 2026-08-13
 
 A cleanup-correctness patch. `--cleanup` had been quietly under-removing: every `DEPRECATED_TOOLS` entry typed `brew:` (a synonym for `formula:` the dispatch never handled) fell through the removal `case`, so a dozen retired formulae were reported "already clean" while they sat installed. This release makes `--cleanup` actually remove them and adds a loud default so no future entry can silently no-op. No breaking changes; re-run the script (with `--cleanup`) to pick it up.
