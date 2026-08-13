@@ -10896,7 +10896,7 @@ bun add zod
 ```
 
 ### `ni` — ni
-A universal Node package-manager runner that detects which package manager a project uses (npm, yarn, pnpm, or bun) from its lockfile and runs the equivalent command, so you never have to remember which one a given repo wants. `ni` installs, `nr` runs a script, `nx` executes a package binary. Reach for it when jumping between projects that use different package managers.
+A universal Node package-manager runner that detects which package manager a project uses (npm, yarn, pnpm, or bun) from its lockfile and runs the equivalent command, so you never have to remember which one a given repo wants. `ni` installs, `nr` runs a script, `nlx` executes a package binary. Reach for it when jumping between projects that use different package managers.
 
 ```bash
 # install dependencies with whichever PM the lockfile implies
@@ -10904,7 +10904,7 @@ ni
 # run the "build" script
 nr build
 # execute a package binary without installing it globally
-nx eslint .
+nlx eslint .
 ```
 
 ### `go` — Go
