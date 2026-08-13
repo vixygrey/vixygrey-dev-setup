@@ -5684,6 +5684,11 @@ export ICON_VOL=$'\U000F057E'          # nf-md-volume-high
 export ICON_VOL_MUTE=$'\U000F0581'     # nf-md-volume-off
 export ICON_VPN_ON=$'\U000F0565'       # nf-md-shield-check
 export ICON_VPN_OFF=$'\U000F099D'      # nf-md-shield-off-outline
+export ICON_SHOT=$'\U000F0100'         # nf-md-camera (Shottr capture menu)
+export ICON_SHOT_AREA=$'\U000F0126'    # nf-md-crop (area selection)
+export ICON_SHOT_WINDOW=$'\U000F0379'  # nf-md-window-maximize (window capture)
+export ICON_SHOT_FULL=$'\U000F0293'    # nf-md-fullscreen (fullscreen capture)
+export ICON_SHOT_SCROLL=$'\U000F0619'  # nf-md-arrow-expand-vertical (scrolling capture)
 SBAR_ICONS
 
     write_managed_script "$SBAR_DIR/sketchybarrc" <<'SBAR_RC'
@@ -5741,6 +5746,37 @@ sketchybar --add item vpn right \
            --set vpn update_freq=15 \
                  click_script="$PLUGIN_DIR/vpn_toggle.sh" \
                  script="$PLUGIN_DIR/vpn.sh"
+
+# --- Right: Shottr capture menu (camera glyph -> click-to-open popup) ---
+# Native menu bar is auto-hidden, so this stands in for Shottr's own menu-bar icon.
+# Left-click toggles a capture menu; right-click is a quick area grab. Each entry
+# drives Shottr via its shottr:// URL scheme. Auto-closes on mouse.exited.global.
+sketchybar --add item shottr right \
+           --set shottr icon="$ICON_SHOT" icon.color=$CYAN icon.font="$FONT:Bold:14.0" \
+                 label.drawing=off \
+                 popup.horizontal=off popup.background.color=$BG \
+                 popup.background.corner_radius=8 popup.background.border_width=2 \
+                 popup.background.border_color=$LINE popup.background.shadow.drawing=on \
+                 click_script="$PLUGIN_DIR/shottr_click.sh" \
+                 script="$PLUGIN_DIR/shottr.sh" \
+           --subscribe shottr mouse.exited.global
+
+sketchybar --add item shottr.area popup.shottr \
+           --set shottr.area icon="$ICON_SHOT_AREA" icon.color=$CYAN label="Area" \
+                 background.drawing=off label.padding_right=14 \
+                 click_script="open 'shottr://grab/area'; sketchybar --set shottr popup.drawing=off"
+sketchybar --add item shottr.window popup.shottr \
+           --set shottr.window icon="$ICON_SHOT_WINDOW" icon.color=$CYAN label="Window" \
+                 background.drawing=off label.padding_right=14 \
+                 click_script="open 'shottr://grab/window'; sketchybar --set shottr popup.drawing=off"
+sketchybar --add item shottr.full popup.shottr \
+           --set shottr.full icon="$ICON_SHOT_FULL" icon.color=$CYAN label="Fullscreen" \
+                 background.drawing=off label.padding_right=14 \
+                 click_script="open 'shottr://grab/fullscreen'; sketchybar --set shottr popup.drawing=off"
+sketchybar --add item shottr.scroll popup.shottr \
+           --set shottr.scroll icon="$ICON_SHOT_SCROLL" icon.color=$CYAN label="Scrolling" \
+                 background.drawing=off label.padding_right=14 \
+                 click_script="open 'shottr://grab/scrolling'; sketchybar --set shottr popup.drawing=off"
 
 # --- Right: clock (leftmost of the right cluster, just right of the notch) ---
 # Click opens herald's calendar in a Ghostty quick terminal.
@@ -5838,6 +5874,23 @@ P_VPN
 command -v mullvad >/dev/null 2>&1 || exit 0
 if mullvad status 2>/dev/null | grep -qi 'Connected'; then mullvad disconnect; else mullvad connect; fi
 P_VPNT
+
+    write_managed_script "$SBAR_PLUGINS/shottr_click.sh" <<'P_SHOTC'
+#!/usr/bin/env bash
+# Left-click toggles the capture menu; right-click is a quick area grab.
+if [ "$BUTTON" = "right" ]; then
+    open "shottr://grab/area"
+    sketchybar --set shottr popup.drawing=off
+else
+    sketchybar --set shottr popup.drawing=toggle
+fi
+P_SHOTC
+
+    write_managed_script "$SBAR_PLUGINS/shottr.sh" <<'P_SHOT'
+#!/usr/bin/env bash
+# Close the capture menu when the pointer leaves the item and its popup.
+[ "$SENDER" = "mouse.exited.global" ] && sketchybar --set shottr popup.drawing=off
+P_SHOT
 
     if [[ "$DRY_RUN" != "true" ]] && installed sketchybar; then
         brew services restart sketchybar >> "$LOG_FILE" 2>&1 || warn "Could not start sketchybar service (grant it Accessibility if needed)"
@@ -8734,7 +8787,7 @@ echo "  [cliamp]                Music player (self-configured; point at ~/Media/
 echo "  [~/.config/git-cliff]   Changelog generator (conventional commits)"
 echo "  [~/.newsboat]           RSS reader (vim keys, Dracula colors, starter URLs)"
 echo "  [~/.config/ghostty]     GPU-accelerated terminal + quick-terminal launcher (cmd+space)"
-echo "  [~/.config/sketchybar]  Dracula status bar (app, clock, battery/wifi/vpn/cpu/mem)"
+echo "  [~/.config/sketchybar]  Dracula status bar (app, clock, battery/wifi/vpn/cpu/mem, Shottr menu)"
 echo "  [~/.herald]             herald email + calendar (self-configured on first run)"
 echo "  [~/.justfile]           Global task runner recipes"
 echo "  [~/.config/brewfile]    Brewfile snapshot for reproducibility"
