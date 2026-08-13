@@ -4,6 +4,10 @@
 
 ## [Unreleased]
 
+### Added
+
+- **dx**: Install **Ollama** (Homebrew formula) as the local LLM backend for **herald**'s built-in AI (triage, summaries, compose styler) and `croft pair --provider ollama`. Both default to a local Ollama server on `127.0.0.1:11434`, but nothing previously installed it — the only mentions of Ollama in the script were doc strings promising a "local, no-key" AI path that didn't actually exist. The install block runs `ollama` as a login service (`brew services start ollama`) so herald's default endpoint is always live, waits for the server to accept connections, then pulls a small general model (`llama3.2`, ~2 GB) for herald's text tasks — all idempotent and `--dry-run`-honoring (the pull skips when the model is already present). Ollama needs no config file (models live under `~/.ollama`), so nothing is hand-written; herald still self-configures its own `conf.yaml` through onboarding, where you pick the Ollama provider + model. Also reworded the herald/croft POST_SETUP_CHECKLIST and TOOLKIT_SUMMARY lines that referenced Ollama so they match reality, added a `~/.ollama` entry to the state-dir listing, and added a `TOOL_REFERENCE` section for `ollama`. Existing machines pick it all up on the next re-run (#237)
+
 ### Fixed
 
 - **docs**: Correct the generated docs that presented `ANTHROPIC_API_KEY` as **required** for `croft pair`. It isn't — `croft pair` defaults to `--provider claude`, which `croft pair --help` describes as *"handed to the claude CLI on the default provider,"* so it shells out to the user's existing `claude` CLI and rides whatever auth that already has (a Claude Pro/Max subscription **or** an API key); `--provider ollama` runs a fully local model with no key at all. The API key is only genuinely needed for the `llm` tool (`llm-anthropic`), which stays documented as such. Reworded the POST_SETUP_CHECKLIST and TOOLKIT_SUMMARY heredocs plus the croft-install code comment in `setup-dev-tools-mac.sh`; the Desktop docs are regenerated fresh on every run, so a re-run picks the correction up with no migration needed (#235)
