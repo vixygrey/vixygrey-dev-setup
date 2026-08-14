@@ -5675,30 +5675,42 @@ mouse-hide-while-typing = true
 # type `a` to fuzzy-launch an app, `ff` to find files, `s <q>` for Spotlight search.
 keybind = global:cmd+space=toggle_quick_terminal
 quick-terminal-position = top
-quick-terminal-screen = main
+# `mouse` puts the dropdown on the display the cursor is on (multi-monitor correct);
+# on a single display it is identical to `main`.
+quick-terminal-screen = mouse
 quick-terminal-animation-duration = 0.15
 quick-terminal-autohide = true
+
+# Global "new Ghostty window on the current Space". The `a` launcher uses `open`, which
+# for an already-running app just re-activates its existing window (yanking you to whatever
+# Space that window is on) instead of making a new one where you are. A freshly-created
+# window lands on the active Space, so this hotkey reliably drops a Ghostty window onto the
+# Space you're actually looking at. Rebind the chord to taste.
+keybind = global:cmd+alt+t=new_window
 GHOSTTY_CONF
 success "Ghostty configured (JetBrainsMono Nerd Font, Dracula theme, transparent titlebar)"
 
-# ---- Ghostty auto-start (launchd agent) ----
-# Ghostty's global cmd+space quick-terminal keybind only registers once Ghostty has
-# fully initialized a window — a fresh login with no Ghostty, OR one launched HIDDEN,
-# leaves the hotkey dead. Register a LaunchAgent that opens Ghostty in the BACKGROUND
-# (`open -g`, NOT `-gj`): it doesn't steal focus at login but does create a window so
-# the hotkey registers (and stays registered even if you then close it). Still needs
-# Accessibility permission for Ghostty (see the post-setup checklist).
+# ---- Ghostty auto-start + keep-alive (launchd agent) ----
+# Ghostty's global cmd+space quick-terminal keybind only works while Ghostty is running:
+# a fresh login with no Ghostty leaves the hotkey dead, and if you later quit Ghostty the
+# hotkey stays dead until you relaunch it by hand. This agent keeps Ghostty alive.
+# `open -gW -a Ghostty` launches it in the BACKGROUND (`-g`, no focus steal at login) and
+# WAITS for it to exit (`-W`), so launchd can track the process and — with KeepAlive —
+# relaunch it within seconds whenever it quits. Because `-W` also attaches to an
+# already-running Ghostty, re-loading the agent never spawns a duplicate window. To stop
+# Ghostty for good, unload the agent:
+#   launchctl unload ~/Library/LaunchAgents/com.ghostty.autostart.plist
+# Refreshed on every run (content-diffed, not create-once) so existing machines pick up
+# plist changes. Still needs Accessibility permission for Ghostty (see the checklist).
 GHOSTTY_APP="/Applications/Ghostty.app"
 GHOSTTY_PLIST="$HOME/Library/LaunchAgents/com.ghostty.autostart.plist"
-if ! is_done "config:ghostty-autostart"; then
 if [[ ! -d "$GHOSTTY_APP" ]]; then
-    warn "Ghostty.app not found in /Applications — skipping login auto-start agent"
-elif [[ -f "$GHOSTTY_PLIST" ]]; then
-    warn "Ghostty auto-start agent already exists"
+    warn "Ghostty.app not found in /Applications — skipping keep-alive launch agent"
+elif [[ "$DRY_RUN" == "true" ]]; then
+    info "[DRY RUN] Would (re)write Ghostty keep-alive launch agent (open -gW, KeepAlive)"
 else
-    info "Creating Ghostty auto-start launch agent (starts in the background at login)..."
     mkdir -p "$HOME/Library/LaunchAgents"
-    cat > "$GHOSTTY_PLIST" <<'GHOSTTY_PLIST_EOF'
+    _ghostty_plist_new="$(cat <<'GHOSTTY_PLIST_EOF'
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
@@ -5707,21 +5719,24 @@ else
     <key>ProgramArguments</key>
     <array>
         <string>/usr/bin/open</string>
-        <string>-g</string>
+        <string>-gW</string>
         <string>-a</string>
         <string>Ghostty</string>
     </array>
     <key>RunAtLoad</key><true/>
+    <key>KeepAlive</key><true/>
 </dict>
 </plist>
 GHOSTTY_PLIST_EOF
-    if [[ "$DRY_RUN" != "true" ]]; then
+)"
+    if [[ ! -f "$GHOSTTY_PLIST" ]] || ! printf '%s\n' "$_ghostty_plist_new" | diff -q - "$GHOSTTY_PLIST" >/dev/null 2>&1; then
+        printf '%s\n' "$_ghostty_plist_new" > "$GHOSTTY_PLIST"
         launchctl unload "$GHOSTTY_PLIST" >> "$LOG_FILE" 2>&1 || true
         launchctl load "$GHOSTTY_PLIST" >> "$LOG_FILE" 2>&1 || warn "Could not load Ghostty launch agent"
+        success "Ghostty keep-alive agent (re)written and reloaded (open -gW, KeepAlive)"
+    else
+        warn "Ghostty keep-alive agent already current"
     fi
-    success "Ghostty auto-start registered (starts in the background at login)"
-fi
-mark_done "config:ghostty-autostart"
 fi
 
 # ---- SketchyBar config (Dracula status bar) ----
@@ -5793,7 +5808,14 @@ sketchybar --default updates=when_shown \
                      padding_left=6 padding_right=6 \
                      background.color=$LINE background.corner_radius=6 background.height=22
 
-# --- Left: focused app ---
+# --- Left: date/time (far left), then focused app ---
+# Click the clock to open herald's calendar in a Ghostty quick terminal.
+sketchybar --add item clock left \
+           --set clock update_freq=10 icon="$ICON_CLOCK" icon.color=$PURPLE \
+                 label.padding_left=6 \
+                 click_script="open -a Ghostty; sleep 0.2; osascript -e 'tell application \"System Events\" to keystroke \"herald\" & return' >/dev/null 2>&1" \
+                 script="$PLUGIN_DIR/clock.sh"
+
 sketchybar --add item front_app left \
            --subscribe front_app front_app_switched \
            --set front_app icon.drawing=off label.color=$PURPLE label.font="$FONT:Bold:13.0" \
@@ -5861,13 +5883,6 @@ sketchybar --add item shottr.scroll popup.shottr \
            --set shottr.scroll icon="$ICON_SHOT_SCROLL" icon.color=$CYAN label="Scrolling" \
                  background.drawing=off label.padding_right=14 \
                  click_script="open 'shottr://grab/scrolling'; sketchybar --set shottr popup.drawing=off"
-
-# --- Right: clock (leftmost of the right cluster, just right of the notch) ---
-# Click opens herald's calendar in a Ghostty quick terminal.
-sketchybar --add item clock right \
-           --set clock update_freq=10 icon="$ICON_CLOCK" icon.color=$PURPLE \
-                 click_script="open -a Ghostty; sleep 0.2; osascript -e 'tell application \"System Events\" to keystroke \"herald\" & return' >/dev/null 2>&1" \
-                 script="$PLUGIN_DIR/clock.sh"
 
 sketchybar --update
 SBAR_RC
