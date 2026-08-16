@@ -2,7 +2,9 @@
 
 > Release notes for 7.0.0–7.1.1 live in [GitHub Releases](https://github.com/vixygrey/vixygrey-dev-setup/releases) (auto-generated). This file resumes hand-written notes at 7.2.0.
 
-## [Unreleased]
+## [7.8.1] - 2026-08-15
+
+A single critical stability fix. The clipse clipboard listener installed by 7.8.0 and earlier leaked a ~110 MB process every 10 seconds and eventually hard-crashed the machine — `WindowServer` watchdog `forceReset`, preceded by hours of stutter and beachballs as RAM ran out. If you are on any earlier version, **re-run the script**: the repair is applied automatically to already-provisioned machines, and orphaned listeners are reaped in the process. To stop the bleeding immediately without re-running, `launchctl unload ~/Library/LaunchAgents/com.clipse.listener.plist && clipse -kill`. No breaking changes.
 
 ### Fixed
 
