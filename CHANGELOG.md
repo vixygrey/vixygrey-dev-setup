@@ -2,6 +2,12 @@
 
 > Release notes for 7.0.0–7.1.1 live in [GitHub Releases](https://github.com/vixygrey/vixygrey-dev-setup/releases) (auto-generated). This file resumes hand-written notes at 7.2.0.
 
+## [Unreleased]
+
+### Fixed
+
+- **clipse**: The clipboard-listener LaunchAgent leaked a ~110 MB `clipse` process **every 10 seconds**, exhausting RAM and ending in a `WindowServer` watchdog hard reset (68 orphans holding 7.4 GB after 15 minutes of uptime on a 24 GB machine). The agent ran `clipse -listen`, which *daemonizes* — it forks a detached listener and the supervised parent exits immediately — so `KeepAlive` made launchd respawn the job on its 10 s throttle while every previously detached listener kept running, unreaped. The generated plist now uses **`-listen-darwin`**, the foreground variant, which is what launchd needs in order to supervise a single listener. The crash chain ran: RAM exhaustion → `JetsamEvent` and compressor thrash (the stutter) → `System Events` wedges → stuck `osascript` AppleEvents pile up → `launchservicesd` hits its 512 dispatch-thread hard limit → `WindowServer`'s *synchronous* LaunchServices call blocks → watchdog `forceReset`. **This also fixes already-provisioned machines**: the block was `is_done` + `[[ -f ]]` create-once, so every existing install had the broken plist frozen on disk and re-running the script would never have repaired it — it now rewrites in place whenever the content differs and reaps orphans with `clipse -kill` (#254, closes #253)
+
 ## [7.8.0] - 2026-08-14
 
 Local-AI/Workspace provisioning gaps closed plus a round of Ghostty/SketchyBar desktop-UX fixes. Herald's local AI was only half-provisioned: setup seeded a chat model (`llama3.2`) but no embedding model, so herald's semantic search had nothing to run on out of the box — this swaps the default chat model to the newer `gemma3:4b`, adds `nomic-embed-text-v2-moe` as the embedding model, and refactors the pull step into an idempotent loop. Separately, `gws auth setup` died with "gcloud CLI not found" on every fresh machine because the script never installed the Google Cloud SDK that `gws` depends on. And the Ghostty quick-terminal launcher got three fixes — a global new-window keybind that lands on the current Space, a keep-alive agent so the cmd+space hotkey survives quitting Ghostty, and `quick-terminal-screen = mouse` for multi-display — alongside moving the SketchyBar clock to the far left of the bar. No breaking changes; re-run the script to pick everything up.

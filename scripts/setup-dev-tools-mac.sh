@@ -5999,17 +5999,25 @@ P_SHOT
 # ---- clipse clipboard listener (launchd agent) ----
 # clipse runs a background listener to capture clipboard history. Register a
 # LaunchAgent so it starts at login.
+#
+# The subcommand matters: `-listen` DAEMONIZES (forks a detached listener and
+# the supervised parent exits immediately). Paired with KeepAlive that made
+# launchd respawn the job every 10s while the previously detached listener kept
+# running — ~110 MB orphaned per respawn, ~40 GB/hour, until the machine ran out
+# of RAM and WindowServer missed its watchdog check-in and hard-reset the Mac.
+# `-listen-darwin` stays in the foreground, which is what launchd needs in order
+# to actually supervise (and restart) a single listener. See #253.
+#
+# This block deliberately does NOT use is_done/`[[ -f ]]` create-once guards:
+# machines provisioned before the fix already have the broken plist on disk, so
+# a create-once block would leave them leaking forever. It rewrites in place
+# whenever the desired content differs, and reaps orphans with `clipse -kill`.
 CLIPSE_BIN="$(command -v clipse || echo "$GOBIN/clipse")"
 CLIPSE_PLIST="$HOME/Library/LaunchAgents/com.clipse.listener.plist"
-if ! is_done "config:clipse"; then
 if [[ ! -x "$CLIPSE_BIN" ]]; then
     warn "clipse not installed — skipping clipboard listener agent"
-elif [[ -f "$CLIPSE_PLIST" ]]; then
-    warn "clipse launch agent already exists"
 else
-    info "Creating clipse clipboard-listener launch agent..."
-    mkdir -p "$HOME/Library/LaunchAgents"
-    cat > "$CLIPSE_PLIST" <<CLIPSE_PLIST_EOF
+    CLIPSE_PLIST_WANT="$(cat <<CLIPSE_PLIST_EOF
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
@@ -6018,21 +6026,34 @@ else
     <key>ProgramArguments</key>
     <array>
         <string>$CLIPSE_BIN</string>
-        <string>-listen</string>
+        <string>-listen-darwin</string>
     </array>
     <key>RunAtLoad</key><true/>
     <key>KeepAlive</key><true/>
 </dict>
 </plist>
 CLIPSE_PLIST_EOF
-    if [[ "$DRY_RUN" != "true" ]]; then
+)"
+    if [[ -f "$CLIPSE_PLIST" ]] && [[ "$(cat "$CLIPSE_PLIST")" == "$CLIPSE_PLIST_WANT" ]]; then
+        info "clipse clipboard listener already up to date"
+    elif [[ "$DRY_RUN" == "true" ]]; then
+        info "[DRY RUN] Would (re)install clipse clipboard-listener launch agent"
+    else
+        if [[ -f "$CLIPSE_PLIST" ]]; then
+            info "Repairing clipse clipboard-listener launch agent (respawn leak, #253)..."
+        else
+            info "Creating clipse clipboard-listener launch agent..."
+        fi
+        mkdir -p "$HOME/Library/LaunchAgents"
         launchctl unload "$CLIPSE_PLIST" >> "$LOG_FILE" 2>&1 || true
+        # Reap any listeners orphaned by the old `-listen` respawn loop.
+        "$CLIPSE_BIN" -kill >> "$LOG_FILE" 2>&1 || true
+        printf '%s\n' "$CLIPSE_PLIST_WANT" > "$CLIPSE_PLIST"
         launchctl load "$CLIPSE_PLIST" >> "$LOG_FILE" 2>&1 || warn "Could not load clipse launch agent"
+        success "clipse clipboard listener registered (starts at login)"
     fi
-    success "clipse clipboard listener registered (starts at login)"
 fi
 mark_done "config:clipse"
-fi
 
 # ---- email + calendar (herald) ----
 # herald self-configures through its own onboarding (accounts, calendars, themes) —
