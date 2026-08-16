@@ -5248,10 +5248,23 @@ fi
 # space/ref that real `<<<<<<< `, `||||||| `, `>>>>>>> ` markers always carry, so a
 # markdown setext heading underline (`=======`) or an ASCII rule doesn't false-flag.
 # The angle/pipe markers are unambiguous; a genuine conflict always contains them.
-if git diff --cached --name-only --diff-filter=d -z \
-    | xargs -0 -r grep -lE '^(<{7}|>{7}|\|{7}) ' 2>/dev/null; then
+#
+# Loop rather than `... | xargs -0 -r grep -l`: an `if` on that pipeline tests xargs's
+# status, not grep's, and with an empty staged set `-r` makes xargs run nothing and exit 0
+# — so it reported a conflict precisely when there was nothing to check, blocking every
+# `git commit --amend` that staged no new changes. Same idiom as the two checks above.
+conflict_files=""
+while IFS= read -r -d '' f; do
+    if grep -qE '^(<{7}|>{7}|\|{7}) ' "$f" 2>/dev/null; then
+        conflict_files="${conflict_files}  ${f}"$'\n'
+    fi
+done < <(git diff --cached --name-only --diff-filter=d -z)
+if [ -n "$conflict_files" ]; then
     echo ""
-    echo "ERROR: Merge conflict markers found in staged files."
+    echo "ERROR: Merge conflict markers found in staged files:"
+    printf '%s' "$conflict_files"
+    echo ""
+    echo "Resolve them, or commit with --no-verify to bypass."
     exit 1
 fi
 
