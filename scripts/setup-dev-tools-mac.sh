@@ -9128,6 +9128,10 @@ alias sd="sd"          # sd (fast sed)
 alias dft="difft"      # difftastic
 alias y="rovr"         # rovr file manager (mouse-first TUI; nnn 'n' is the minimal fallback)
 alias jx="fx"          # fx interactive JSON viewer
+# The global ~/.justfile is only reachable with -g: plain `just` searches upward
+# from the CWD and reports "no justfile found" anywhere outside $HOME, which left
+# its recipes effectively unusable (#271). `jg --list` shows them.
+alias jg="just -g"     # recipes from the global ~/.justfile
 
 # -- Download & Transfer ------------------------------------------------------
 # `dl` is a shortcut for a tool that IS installed. There is deliberately no
@@ -9342,7 +9346,7 @@ echo "  [~/.config/ghostty]     GPU-accelerated terminal + quick-terminal launch
 echo "  [~/.config/sketchybar]  Dracula status bar (app, clock, battery/wifi/vpn/cpu/mem, Shottr menu)"
 echo "  [~/.herald]             herald email + calendar (self-configured on first run)"
 echo "  [~/.ollama]             Ollama local models (herald AI + croft pair --provider ollama)"
-echo "  [~/.justfile]           Global task runner recipes"
+echo "  [~/.justfile]           Global task runner recipes (run them with: jg --list)"
 echo "  [~/.config/brewfile]    Brewfile snapshot for reproducibility"
 echo "  [~/.config/micro]       micro — Dracula, on-screen key menu, house indent rules"
 echo "  [lazygit]               Dracula theme, delta pager"
@@ -9434,6 +9438,9 @@ the list, then delete this file.
 - [ ] **tiki** (notes): your personal notes repo is pre-created and git-initialized at `~/Documents/notes`. Run `cd ~/Documents/notes && tiki` to start. Claude can manage tikis there — its skill is installed at `~/.claude/skills/tiki/` (CRUD via `tiki exec`, quick-capture via `echo "note" | tiki`).
 - [ ] **cliamp** (music): drop music into `~/Media/music`, then run `cliamp ~/Media/music` (or set the folder in its UI). Streaming (YouTube/SoundCloud/Spotify/radio) + EQ + 20+ visualizers are built in.
 - [ ] **leaf** (Markdown): if tab-completion isn't working, run `leaf --auto-complete` and restart your shell (the script attempts this automatically).
+
+## Worth knowing (nothing to do — 2 minutes)
+- [ ] **Global task recipes** — this setup wrote `~/.justfile` with machine-wide one-liners (`flush-dns`, `docker-clean`, `ports`, `standup`, `loc`, `ip`, `ds-clean`, …). Plain `just` will not find it: it searches upward from the current directory, so anywhere outside `$HOME` you get `error: no justfile found`. Use `-g` (aliased to `jg`): run **`jg --list`** once to see what is there, then e.g. `jg flush-dns`.
 
 ## Standard machine setup
 - [ ] Generate an SSH key if needed: `ssh-keygen -t ed25519 -C "you@example.com"` and `gh ssh-key add ~/.ssh/id_ed25519.pub`.
@@ -11294,6 +11301,21 @@ just test
 # run a recipe with arguments
 just deploy staging
 ```
+
+**This setup also writes a global `~/.justfile`** with machine-wide recipes (`flush-dns`,
+`docker-clean`, `ports`, `standup`, `loc`, `ip`, `ds-clean`, …). Plain `just` will **not** find
+it — outside `$HOME` it reports `error: no justfile found`, because `just` only searches upward
+from the current directory. Reach it with `-g` / `--global-justfile`:
+
+```bash
+# list the global recipes (works from any directory)
+just -g --list
+# run one
+just -g flush-dns
+just -g docker-clean
+```
+
+The `jg` alias is set up as a shorthand for `just -g`, so `jg --list` works too.
 
 ### `act` — act
 Runs your GitHub Actions workflows locally in Docker containers, so you can debug a CI pipeline without committing, pushing, and waiting on GitHub's runners. It reads `.github/workflows/*.yml` and simulates the triggering event locally. Reach for it while iterating on a workflow file — much faster than the push-wait-check loop.
