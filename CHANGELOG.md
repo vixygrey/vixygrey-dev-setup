@@ -2,6 +2,16 @@
 
 > Release notes for 7.0.0–7.1.1 live in [GitHub Releases](https://github.com/vixygrey/vixygrey-dev-setup/releases) (auto-generated). This file resumes hand-written notes at 7.2.0.
 
+## [Unreleased]
+
+### Added
+
+- **convention**: Adopt one agent-instructions convention machine-wide: **`AGENTS.md`** tracked and public, **`CLAUDE.md`** untracked and private. `AGENTS.md` is written for whoever contributes — short, no personal preference, pointing at the documents that already exist rather than restating them; `CLAUDE.md` holds personal lessons and preferences and is never committed. Verified before adopting rather than assumed: **Claude Code 2.1.220 discovers `AGENTS.md`** (its binary carries the literal string `Claude Code hardcodes CLAUDE.md / AGENTS.md discovery` alongside 7 `AGENTS.md` references), and it is the name the wider agent ecosystem converged on, so one public file serves every tool. Four changes carry it: the generated global `~/.claude/CLAUDE.md` documents the split so any session applies it unprompted; `~/.gitignore_global` gains `CLAUDE.md`, because a forgotten per-repo line publishes private notes and that cannot be undone once pushed (a repo that genuinely wants it tracked can still `git add -f`); `~/Scripts/bin/new-project` now scaffolds `AGENTS.md` — previously it wrote a **public** `CLAUDE.md` containing Overview/Tech Stack/Development/Conventions, which is exactly the content the convention says must be public, under the name the convention says must not be — and appends the `CLAUDE.md` line to the new repo's own `.gitignore` so the rule is visible to collaborators; and the `/init-project` slash command's step 3 was rewritten to match. `~/Code/personal/qud-mods/qud-expanded/AGENTS.md` is cited as the reference for the file's shape (#283, closes #282)
+
+### Changed
+
+- **repo**: This repository now follows the convention it defines: `CLAUDE.md` is renamed to `AGENTS.md` (tracked) and `CLAUDE.md` is gitignored here for private notes. The project instructions still load — Claude Code reads `AGENTS.md` by the same discovery path. Live references to the `/init-project` scaffold in `README.md`, `docs/SHORTCUTS.md` and `docs/GUIDE.md` were updated; `CHANGELOG.md` mentions of `CLAUDE.md` are left untouched as a historical record, as are the many references to the generated global `~/.claude/CLAUDE.md`, which keeps its name (#283)
+
 ## [7.8.4] - 2026-08-17
 
 A release about things this setup was doing to your machine on your behalf that it had no business doing. It reformatted repositories that never opted into prettier and rewrote Python — deleting imports — in repositories that never opted into ruff. It asked for your admin password on every run, `--dry-run` included, without naming a single step it needed the password for. And it froze the Claude agents and slash commands it generates behind a create-once guard, so corrections never reached a machine that already had them: `dep-audit` was still telling Claude to run bare `pip` where the generator says `uv pip`. Three of these hid behind swallowed output or a guard that made the bug unobservable. Re-running applies all of it, and the run now tells you which generated files it refreshed. No breaking changes.

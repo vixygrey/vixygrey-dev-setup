@@ -393,7 +393,7 @@ Run from anywhere with `gj <recipe>` (or `just --justfile ~/.justfile <recipe>`)
 | `/new-feature` | Full trunk-based workflow: issue, branch, implement, tests, PR |
 | `/fix-bug` | Full trunk-based workflow: issue, branch, test-first fix, PR |
 | `/create-readme` | Analyze codebase and generate comprehensive README |
-| `/init-project` | Scaffold project with git, README, CLAUDE.md, CI, Docker, templates |
+| `/init-project` | Scaffold project with git, README, AGENTS.md, CI, Docker, templates |
 | `/refactor` | Refactor with tests preserved, SOLID principles |
 | `/add-endpoint` | Add API endpoint: types, handler, validation, tests, docs |
 | `/add-component` | Add React component: TSX, tests, accessibility |

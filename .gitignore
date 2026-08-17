@@ -22,3 +22,6 @@ Icon?
 
 # Claude Code
 .claude/
+
+# Private agent notes (personal; AGENTS.md holds the public ones)
+CLAUDE.md
