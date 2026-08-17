@@ -2,6 +2,12 @@
 
 > Release notes for 7.0.0–7.1.1 live in [GitHub Releases](https://github.com/vixygrey/vixygrey-dev-setup/releases) (auto-generated). This file resumes hand-written notes at 7.2.0.
 
+## [Unreleased]
+
+### Fixed
+
+- **aws**: The `common-fate/granted` tap was never trusted on a machine that already had granted, so Homebrew **silently ignored every formula and cask in it** — including updates to granted itself — and `brew doctor` reported it on every run. `trust_tap common-fate/granted` sat inside the `else` of an `if installed granted || installed assume` guard, so the only path that trusted the tap was the one taken when granted was *absent*. Any machine that installed it before Homebrew 6 introduced the trust gate kept an untrusted tap permanently, with no way for a re-run to repair it. It was the only one of the **21** `trust_tap` calls placed inside a conditional; the other twenty run unconditionally, which is why nothing else was affected. Now hoisted above the guard — trusting is idempotent, so doing it every run costs nothing. Verified by stubbing the helpers and running the block with granted present: the trust call fires where it previously printed only `Granted already installed`. Surfaced by asking what the preflight's `brew doctor found issues` line was actually reporting, which is worth noting: two of those warnings (non-prefixed `coreutils`/`findutils`) are permanent by design, so the line fires on every run and a genuine finding sat inside it unread (#300, closes #298)
+
 ## [7.10.0] - 2026-08-17
 
 Closes out the last of the open issues. Python finally gets full language-server coverage — `ty` and `basedpyright`, the two servers croft's own built-in manifest names and neither of which was installed, leaving croft to fall through to `ruff` alone. And CI now hands every generated config to the tool that will actually read it: `just`, `zsh`, `jq` and `yq` across twelve files. That gate exists because 7.9.1 shipped a justfile the `just` parser rejected while ShellCheck passed and a generator-vs-disk comparison agreed with itself — the kind of failure only the real parser catches. No breaking changes.
