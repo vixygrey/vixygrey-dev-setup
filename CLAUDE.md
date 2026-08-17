@@ -96,6 +96,28 @@ Two rules whenever you add or edit a table that is dispatched on a string field:
 
 Useful flags: `--dry-run`, `--list`, `--list-categories`, `--only <cats>`, `--skip <cats>`, `--interactive/-i`, `--resume`, `--cleanup`, `--uninstall`, `--version`.
 
+## The global hooks directory is shared, and `--git-path` lies inside it
+
+`core.hooksPath` makes git read **only** `~/.config/git/hooks`; per-repo `.git/hooks` is never
+consulted, for any type. So the script writes a **delegator for every hook type**, each sourcing
+`dev-setup-chain.sh`, which runs the repo's own hook and then anything in `<type>.d/`.
+
+Two traps to respect when touching this (#260):
+
+- **Never resolve the per-repo hook with `git rev-parse --git-path hooks/<type>`.** That call is
+  itself `core.hooksPath` aware, so it returns the *delegator's own path* — the hook then runs
+  itself forever and every `git commit` on the machine hangs. Use `--git-common-dir` (common, not
+  absolute: a linked worktree shares the main repo's `hooks/`), and keep the guard that refuses to
+  re-enter the global directory.
+- **This directory is not ours alone.** git-lfs is `core.hooksPath` aware and installs
+  `pre-push`/`post-checkout`/`post-merge`/`post-commit` here from any repo. A delegator that only
+  ran the per-repo hook would silently disable LFS, so the chain must run `<type>.d/` too, and
+  `preserve_foreign_hook` must move a foreign hook aside before a delegator takes its name.
+  It re-runs on every setup, because `git lfs install` re-creates its hooks.
+
+Hooks fed data on stdin (`pre-push`, `post-rewrite`, `push-to-checkout`) need it buffered and
+replayed per link — the first reader would otherwise consume it and the rest would see nothing.
+
 ## The generated pre-commit hook
 
 The script installs a **global** hook (`git config --global core.hooksPath ~/.config/git/hooks`) that runs on all repos. It checks for debug statements (language-scoped: JS/TS `console.log`/`debugger`, Python pdb/`breakpoint()`, Ruby `binding.pry`), files >5 MB, and merge-conflict markers. Two things to know:
