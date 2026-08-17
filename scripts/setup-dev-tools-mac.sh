@@ -5791,13 +5791,23 @@ GH_CONF
 # gh, so muscle memory carries over). glab owns its config schema, so drive it via
 # `glab config set` / `glab alias set` rather than hand-writing YAML.
 if [[ "$DRY_RUN" != "true" ]] && installed glab && ! is_done "config:glab"; then
-    info "Configuring glab (SSH, micro, delta, gh-style aliases → merge requests)..."
-    glab config set git_protocol ssh >> "$LOG_FILE" 2>&1 || true
-    glab config set editor micro >> "$LOG_FILE" 2>&1 || true
-    glab config set glab_pager delta >> "$LOG_FILE" 2>&1 || true
+    info "Configuring glab (SSH, micro, gh-style aliases → merge requests)..."
+    _glab_failed=0
+    glab config set git_protocol ssh >> "$LOG_FILE" 2>&1 || _glab_failed=$((_glab_failed + 1))
+    glab config set editor micro >> "$LOG_FILE" 2>&1 || _glab_failed=$((_glab_failed + 1))
+    # No pager is set here. `glab config set glab_pager delta` is REJECTED by glab
+    # 1.113.0 ("not a recognized glab config key") even though `glab config` help
+    # documents the key, and plain `pager` is refused too — so the call could only ever
+    # print an error and configure nothing (#285). The binary does carry a GLAB_PAGER
+    # env var; it is exported from ~/.zshrc instead, where a failure costs nothing.
+    # NOTE: the heredoc below is a DATA table — every line is parsed as
+    # "<alias>|<command>", so it cannot carry comments. gh's `rc` (repo clone) is not
+    # mirrored because `glab rc` is a real command (runner controllers); `rcl` is the
+    # nearest free name (#285).
     while IFS='|' read -r _glab_alias _glab_cmd; do
         [[ -z "$_glab_alias" ]] && continue
-        glab alias set "$_glab_alias" "$_glab_cmd" >> "$LOG_FILE" 2>&1 || true
+        glab alias set "$_glab_alias" "$_glab_cmd" >> "$LOG_FILE" 2>&1 \
+            || { warn "glab alias '$_glab_alias' not set (name taken by a glab command?)"; _glab_failed=$((_glab_failed + 1)); }
     done <<'GLAB_ALIASES'
 co|mr checkout
 pv|mr view --web
@@ -5808,7 +5818,7 @@ il|issue list
 iv|issue view --web
 ic|issue create --web
 rv|repo view --web
-rc|repo clone
+rcl|repo clone
 rl|repo list
 runs|ci list
 watch|ci view
@@ -5817,7 +5827,12 @@ rel|release create
 GLAB_ALIASES
     unset _glab_alias _glab_cmd
     mark_done "config:glab"
-    success "glab configured (SSH, micro, delta; gh-style aliases mapped to GitLab MRs/CI)"
+    if [[ "$_glab_failed" -eq 0 ]]; then
+        success "glab configured (SSH, micro; gh-style aliases mapped to GitLab MRs/CI)"
+    else
+        warn "glab configured with $_glab_failed problem(s) — see $LOG_FILE"
+    fi
+    unset _glab_failed
 fi
 
 # ---- pip config ----
@@ -5958,6 +5973,11 @@ JUSTFILE_GLOBAL="$HOME/.justfile"
 # Global Justfile — available from any directory via: just --justfile ~/.justfile
 # =============================================================================
 # Tip: alias gj="just --justfile ~/.justfile --working-directory ."
+
+# glab has no working pager CONFIG key — `glab config set glab_pager` is rejected by
+# 1.113.0 despite being documented — but the binary reads GLAB_PAGER. Best-effort: if
+# glab ignores it, nothing is lost, since no pager is configured either way (#285).
+export GLAB_PAGER="delta"
 
 # List all recipes
 default:
