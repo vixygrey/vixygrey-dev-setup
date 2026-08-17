@@ -2,7 +2,9 @@
 
 > Release notes for 7.0.0–7.1.1 live in [GitHub Releases](https://github.com/vixygrey/vixygrey-dev-setup/releases) (auto-generated). This file resumes hand-written notes at 7.2.0.
 
-## [Unreleased]
+## [7.8.3] - 2026-08-17
+
+One fix, for a failure mode 7.8.2 made easy to hit: after a run finishes, the script asks whether to reload your shell — and while it waited there it kept holding the lock, so the next run was refused with `Another instance is running`. The prompt comes after the success banner, so it reads as finished; one run sat on it for five and a half hours and blocked everything after it. The lock is now released when the work ends rather than when the process exits, the refusal says how long the holder has been idle and how to clear it, and a new `--no-prompt` flag lets callers that cannot answer a question — CI, a detached pane, an editor's run-in-terminal button — run without ever blocking. No breaking changes.
 
 ### Fixed
 
