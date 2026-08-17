@@ -2,7 +2,9 @@
 
 > Release notes for 7.0.0–7.1.1 live in [GitHub Releases](https://github.com/vixygrey/vixygrey-dev-setup/releases) (auto-generated). This file resumes hand-written notes at 7.2.0.
 
-## [Unreleased]
+## [7.11.0] - 2026-08-17
+
+Prompted by asking what the preflight's `brew doctor found issues` line was actually reporting — a line that fires on every run because two of the warnings it counts are permanent by design, and which therefore had a genuine finding sitting inside it unread. Three things came out: the `common-fate/granted` tap was never trusted on a machine that already had granted, so Homebrew was silently ignoring every formula in it; the `tldr` formula is **disabled** upstream, meaning a fresh machine could not install it at all; and both Quick Look plugins are gone, Finder preview not being part of this workflow. **Re-run with `--cleanup`** to retire the old `tldr` formula and the two casks. No breaking changes — `tlrc` provides the same `tldr` command.
 
 ### Changed
 
