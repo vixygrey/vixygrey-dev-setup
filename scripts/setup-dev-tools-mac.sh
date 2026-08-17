@@ -8140,9 +8140,20 @@ FILE=$(echo "$INPUT" | jq -r '.tool_input.file_path // empty' 2>/dev/null)
 
 if [[ -n "$FILE" ]] && [[ "$FILE" =~ \.(ts|tsx|js|jsx|css|scss|json|md)$ ]]; then
     if [[ -f "$FILE" ]]; then
-        # Only format if a prettier config exists in the project
+        # Only format if a prettier config exists in the project.
+        #
+        # The walk stops BEFORE $HOME. It used to run all the way to /, which meant
+        # it passed through $HOME — where this same setup installs a global
+        # ~/.prettierrc. Every path under $HOME therefore looked like "a project that
+        # uses prettier", so the guard was unconditionally true and this hook
+        # reformatted repos that had never opted in. It went unnoticed because a
+        # duplicated ~/.prettierrc made prettier fail on every file (failures are
+        # swallowed below); repairing that config in 7.8.2 brought the hook to life
+        # and the behaviour with it (#268).
+        #
+        # A file directly in $HOME is not a project, so it is left alone too.
         PROJECT_DIR=$(dirname "$FILE")
-        while [[ "$PROJECT_DIR" != "/" ]]; do
+        while [[ "$PROJECT_DIR" != "/" && "$PROJECT_DIR" != "$HOME" ]]; do
             if [[ -f "$PROJECT_DIR/.prettierrc" ]] || [[ -f "$PROJECT_DIR/.prettierrc.json" ]] \
                || [[ -f "$PROJECT_DIR/.prettierrc.yaml" ]] || [[ -f "$PROJECT_DIR/.prettierrc.yml" ]] \
                || [[ -f "$PROJECT_DIR/.prettierrc.js" ]] || [[ -f "$PROJECT_DIR/.prettierrc.mjs" ]] \
