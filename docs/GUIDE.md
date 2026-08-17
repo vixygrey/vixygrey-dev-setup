@@ -942,8 +942,6 @@ Preview files in Finder by pressing Space:
 
 | Plugin | Description |
 |--------|-------------|
-| QLMarkdown | Preview Markdown files |
-| QLStephen | Preview extensionless plain text files |
 
 Installed automatically by the setup script via Homebrew Cask.
 
