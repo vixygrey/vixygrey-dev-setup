@@ -2,7 +2,9 @@
 
 > Release notes for 7.0.0–7.1.1 live in [GitHub Releases](https://github.com/vixygrey/vixygrey-dev-setup/releases) (auto-generated). This file resumes hand-written notes at 7.2.0.
 
-## [Unreleased]
+## [7.9.0] - 2026-08-17
+
+Establishes one convention for agent instructions across every repo on the machine: **`AGENTS.md` is tracked and public, `CLAUDE.md` is private and never committed.** The public file is written for whoever contributes — short, free of personal preference, pointing at documents that already exist; the private one holds personal lessons and preferences. `new-project` had this exactly inverted, scaffolding a *public* `CLAUDE.md` full of project context, so every project it created committed the wrong file. The global gitignore now backs the per-repo rule, because a forgotten line publishes private notes and that cannot be undone once pushed. This repo follows the convention it defines. Minor rather than patch: `new-project` and `/init-project` scaffold a different file than before. Nothing breaks — the generated global `~/.claude/CLAUDE.md` keeps its name and its role.
 
 ### Added
 
