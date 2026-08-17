@@ -239,7 +239,7 @@ ALL_CATEGORIES=(
 declare -A CATEGORY_DESC=(
     [prerequisites]="Xcode CLI Tools, Homebrew, GNU coreutils"
     [core]="mise (Node, Python), Go, Rust, OrbStack, bun, uv, pnpm"
-    [git]="Git, GitHub CLI, glab, delta, lazygit, pre-commit"
+    [git]="Git, GitHub CLI, glab, delta, lazygit, pre-commit framework (hooks + config: configs)"
     [aws]="AWS CLI, CDK, SAM, Granted, cfn-lint, e1s/e2c/stu/claws (TUIs), s5cmd, steampipe, dynein, iamlive"
     [iac]="OpenTofu (Terraform), tflint, terraform-docs, checkov, infracost"
     [security]="detect-secrets, gitleaks, trivy, semgrep, ClamAV, Objective-See"
@@ -265,11 +265,79 @@ declare -A CATEGORY_DESC=(
     [mac-focus]="newsboat"
     [mac-bloat]="Remove pre-installed Apple apps (GarageBand)"
     [dracula]="Dracula theme for all tools"
-    [configs]="All dotfiles and tool configurations"
+    [configs]="EVERY tool's generated config + git hooks + Claude setup (not in the tool's own category)"
     [filesystem]="Directory structure, helper scripts, git identity"
     [macos-defaults]="Dock, Finder, keyboard, screenshots, Touch ID, DNS"
     [shell]="\$HOME/.zshrc, Brewfile export"
 )
+
+# -- Install-vs-config split --------------------------------------------------
+# A category INSTALLS its tools; it does not CONFIGURE them. Every generated config
+# file lives in one ordered `configs` segment (with starship in `dracula`, ~/Scripts
+# in `filesystem` and ~/.zshrc in `shell`), so `--only git` installs git tooling and
+# refreshes NONE of its configuration — including the global pre-commit hook — while
+# still reporting "Failed: 0". That silent half-run is #258.
+#
+# This table is what `--only` uses to say so out loud. It is descriptive text only —
+# no control flow keys off it — but a typo'd category name would make a notice
+# silently never appear, so the keys are validated against ALL_CATEGORIES below.
+declare -A CONFIG_LIVES_IN_CONFIGS=(
+    [core]="mise, direnv, ~/.npmrc, pip, gemrc"
+    [git]="the global pre-commit hook, lazygit, gh, git-cliff, the commit template, global gitignore"
+    [aws]="the AWS CLI config (\$HOME/.aws/config)"
+    [iac]="tflint"
+    [code-quality]="shellcheck, act, prettier, editorconfig"
+    [replacements]="btop, ripgreprc, fdignore, aria2"
+    [data-processing]="yt-dlp, miller"
+    [terminal-productivity]="leaf, nushell, topgrade, fastfetch, asciinema"
+    [k8s-github]="stern, gh-dash"
+    [database]="pgcli, mycli, harlequin"
+    [containers]="lazydocker, k9s (config + Dracula skin)"
+    [networking]="trippy"
+    [dx]="atuin, zellij, Ghostty — and starship, which is in the \`dracula\` category"
+    [mac-focus]="newsboat"
+    [mac-media]="mpv"
+    [mac-browsers]="w3m"
+)
+
+# Loud default: a key here that is not a real category is a notice that can never
+# fire. Fail at startup rather than silently doing nothing (the #241/#242 lesson).
+for _cat in "${!CONFIG_LIVES_IN_CONFIGS[@]}"; do
+    _known=false
+    for _known_cat in "${ALL_CATEGORIES[@]}"; do
+        [[ "$_cat" == "$_known_cat" ]] && _known=true && break
+    done
+    if [[ "$_known" != "true" ]]; then
+        echo "INTERNAL ERROR: CONFIG_LIVES_IN_CONFIGS has unknown category '$_cat'" >&2
+        exit 1
+    fi
+done
+unset _cat _known _known_cat
+
+# Print the notice when --only would skip the configuration for what was selected.
+# Called early (before the work) and again in the completion summary, because the
+# whole failure mode is a run that looks successful.
+config_split_notice() {
+    [[ ${#ONLY_CATEGORIES[@]} -gt 0 ]] || return 0
+    local c
+    for c in "${ONLY_CATEGORIES[@]}"; do
+        [[ "$c" == "configs" ]] && return 0   # they asked for it; nothing to warn about
+    done
+    local affected=()
+    for c in "${ONLY_CATEGORIES[@]}"; do
+        [[ -n "${CONFIG_LIVES_IN_CONFIGS[$c]:-}" ]] && affected+=("$c")
+    done
+    [[ ${#affected[@]} -gt 0 ]] || return 0
+    echo ""
+    echo -e "${YELLOW}${BOLD}  Note: this run installs tools but refreshes no configuration.${NC}"
+    for c in "${affected[@]}"; do
+        echo -e "${YELLOW}    ${c}:${NC} ${CONFIG_LIVES_IN_CONFIGS[$c]}"
+    done
+    echo -e "${YELLOW}  Generated config lives in the ${BOLD}configs${NC}${YELLOW} category, not in the category that${NC}"
+    echo -e "${YELLOW}  installs the tool. To refresh it too:${NC}"
+    echo -e "      ${DIM}$0 --only $(IFS=,; echo "${ONLY_CATEGORIES[*]}"),configs${NC}"
+    echo ""
+}
 
 # -- Interactive category picker -----------------------------------------------
 interactive_select() {
@@ -384,6 +452,8 @@ show_help() {
     echo "  --interactive, -i   Interactively pick which categories to install"
     echo "  --skip <cats>       Skip categories (comma-separated)"
     echo "  --only <cats>       Only run these categories (comma-separated)"
+    echo "                      Add 'configs' to also refresh generated config —"
+    echo "                      a category installs its tools but does not configure them"
     echo "  --list-categories   List all available categories"
     echo "  --list              List all tools that would be installed"
     echo "  --version           Show script version"
@@ -398,12 +468,22 @@ show_help() {
     echo "  ./setup-dev-tools-mac.sh --cleanup                # Remove dropped tools from previous versions"
     echo "  ./setup-dev-tools-mac.sh --skip mac-media,mac-cloud"
     echo "  ./setup-dev-tools-mac.sh --only core,git,aws,dx"
+    echo "  ./setup-dev-tools-mac.sh --only git,configs      # git tooling AND its config/hooks"
+    echo "  ./setup-dev-tools-mac.sh --only configs          # regenerate every config file"
     echo ""
 }
 
 list_categories() {
     echo ""
     echo -e "${BOLD}Available categories:${NC}"
+    echo ""
+    # This note is FIRST on purpose. `configs` sorts last in a ~32-entry list, so
+    # anyone skimming — or piping through `head` — never learns that a category
+    # installs tools without configuring them (#258).
+    echo -e "  ${YELLOW}Note:${NC} a category INSTALLS its tools; it does not CONFIGURE them."
+    echo -e "        Generated config lives in ${BOLD}configs${NC} (plus starship in ${BOLD}dracula${NC},"
+    echo -e "        ~/Scripts in ${BOLD}filesystem${NC}, ~/.zshrc in ${BOLD}shell${NC}), so pair them:"
+    echo -e "        ${DIM}--only git,configs${NC}   not   ${DIM}--only git${NC}"
     echo ""
     # Read from CATEGORY_DESC rather than a second hardcoded copy. The two lists had
     # silently drifted apart in seven categories (act3, ni, Objective-See, monolith,
@@ -518,6 +598,10 @@ for cat in "${SKIP_CATEGORIES[@]}" "${ONLY_CATEGORIES[@]}"; do
         exit 1
     fi
 done
+
+# Say up front when --only will install without configuring (#258); repeated in the
+# completion summary, since by then this notice has scrolled away.
+config_split_notice
 
 # -- Category filtering -------------------------------------------------------
 should_run() {
@@ -11919,6 +12003,11 @@ if [[ -n "$MANAGED_OUTSIDE_LIST" ]]; then
     echo -e "${DIM}  If unexpected, it may be a pre-7.x duplicate that has since drifted — see issue #259.${NC}"
     echo ""
 fi
+
+# Repeat the install-vs-config notice here (#258). "Installed: 10, Failed: 0" is
+# exactly what made a half-run look complete, so the caveat belongs beside it —
+# and last, so it is the final thing read before the run ends.
+config_split_notice
 
 if [[ "$DRY_RUN" == "true" ]]; then
     echo -e "${YELLOW}${BOLD}  This was a dry run — no changes were made.${NC}"
