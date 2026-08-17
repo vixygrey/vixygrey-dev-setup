@@ -837,6 +837,32 @@ write_managed_script() {
     chmod +x "$file"
 }
 
+# write_generated <file>   (content on stdin)
+# For script-owned files that CANNOT carry managed-block markers:
+#   - Claude agents start with YAML frontmatter, which must be on line 1
+#   - Claude slash commands are prompts — the whole file is fed to the model, so a
+#     marker line would end up as part of the instruction
+# Refreshes only when the content differs, and backs up whatever it replaces, so an
+# edit made on the machine is recoverable. The alternative in use before this was a
+# create-once guard ("directory already has agents"), under which one pre-existing
+# file froze the entire set and no later addition or edit ever arrived (#277).
+write_generated() {
+    local file="$1"
+    local tmp; tmp="$(mktemp)"
+    cat > "$tmp"
+    if [[ "$DRY_RUN" == "true" ]]; then
+        [[ -f "$file" ]] && ! cmp -s "$tmp" "$file" && info "[DRY RUN] Would refresh $file"
+        rm -f "$tmp"; return 0
+    fi
+    mkdir -p "$(dirname "$file")"
+    if [[ -f "$file" ]] && cmp -s "$tmp" "$file"; then rm -f "$tmp"; return 0; fi
+    if [[ -f "$file" ]]; then
+        cp "$file" "${file}.replaced.$(date +%Y%m%d%H%M%S)" 2>/dev/null || true
+        managed_note refreshed "$file"
+    fi
+    mv "$tmp" "$file"
+}
+
 # Membership checks against a ONE-TIME snapshot of installed formulae/casks, instead
 # of booting Ruby via `brew list <name>` ~200 times (that cost ~80-150s per re-run).
 # The snapshot is populated lazily on first use (after Homebrew is installed) and
@@ -3792,6 +3818,11 @@ fi
 # ---- ngrok config ----
 NGROK_CONFIG_DIR="$HOME/.config/ngrok"
 if ! is_done "config:ngrok"; then
+# Deliberately create-once (#277): this is a SEED TEMPLATE, not managed config.
+# `ngrok config add-authtoken <TOKEN>` — which POST_SETUP_CHECKLIST tells you to run —
+# rewrites this same file to store the token, so refreshing it on every run would
+# clobber the user's credential. Changes to the template below only reach fresh
+# machines, and that is the correct trade here.
 if [[ ! -d "$NGROK_CONFIG_DIR" ]]; then
     info "Creating ngrok config directory..."
     mkdir -p "$NGROK_CONFIG_DIR"
@@ -3850,6 +3881,9 @@ YTDLP_CONF
 # ---- caddy config ----
 CADDY_CONFIG_DIR="$HOME/.config/caddy"
 if ! is_done "config:caddy"; then
+# Deliberately create-once (#277): a commented-out starting point ("uncomment and
+# adjust as needed") that the user is expected to edit into their own site config.
+# Refreshing it on every run would discard their edits.
 if [[ ! -d "$CADDY_CONFIG_DIR" ]]; then
     info "Creating Caddy config template..."
     mkdir -p "$CADDY_CONFIG_DIR"
@@ -8264,12 +8298,12 @@ success "Claude Code Dracula statusline created (model, dir, git branch)"
 
 # ---- Claude Code subagents ----
 CLAUDE_AGENTS_DIR="$HOME/.claude/agents"
-if [[ -d "$CLAUDE_AGENTS_DIR" ]] && [[ -n "$(ls -A "$CLAUDE_AGENTS_DIR" 2>/dev/null)" ]]; then
-    warn "Claude Code agents directory already has agents"
-else
-    info "Creating Claude Code subagents (code-reviewer, aws-helper)..."
-    mkdir -p "$CLAUDE_AGENTS_DIR"
-    cat > "$CLAUDE_AGENTS_DIR/code-reviewer.md" <<'AGENT_REVIEWER'
+# Refreshed every run via write_generated. This used to be gated on "directory
+# already has agents", so a single pre-existing file froze the whole set and no
+# later edit or addition ever reached a provisioned machine (#277).
+info "Writing Claude Code subagents (code-reviewer, aws-helper)..."
+mkdir -p "$CLAUDE_AGENTS_DIR"
+write_generated "$CLAUDE_AGENTS_DIR/code-reviewer.md" <<'AGENT_REVIEWER'
 ---
 name: code-reviewer
 description: Reviews changed code for bugs, security issues, and adherence to this setup's conventions (ruff, strict TypeScript, conventional commits, parameterized SQL, no hardcoded secrets). Use after writing or modifying code, or when asked for a review.
@@ -8288,7 +8322,7 @@ Review priorities (most important first):
 
 Method: read the diff/files, then report findings ranked most-severe first. For each: file:line, the concrete problem, and a specific fix. Cite exact lines. If unsure a finding is real, say so. End with a one-line verdict. Point precisely; don't rewrite large sections unasked.
 AGENT_REVIEWER
-    cat > "$CLAUDE_AGENTS_DIR/aws-helper.md" <<'AGENT_AWS'
+write_generated "$CLAUDE_AGENTS_DIR/aws-helper.md" <<'AGENT_AWS'
 ---
 name: aws-helper
 description: AWS specialist for this setup — knows the installed AWS tooling and prefers read-only, least-privilege, cost-aware operations. Use for AWS resource inspection, IaC (CDK/SAM/Terraform), IAM, and cost questions.
@@ -8310,19 +8344,16 @@ Operating rules:
 3. Be cost-aware — mention `infracost` for IaC changes and pricing implications for new resources.
 4. Prefer the installed TUIs/CLIs over manual console steps; give exact commands.
 AGENT_AWS
-    success "Claude Code subagents created (code-reviewer, aws-helper)"
-fi
+success "Claude Code subagents created (code-reviewer, aws-helper)"
 
 # ---- Claude Code custom slash commands ----
 CLAUDE_COMMANDS_DIR="$HOME/.claude/commands"
-if [[ -d "$CLAUDE_COMMANDS_DIR" ]] && [[ "$(ls -A "$CLAUDE_COMMANDS_DIR" 2>/dev/null)" ]]; then
-    warn "Claude Code commands directory already has commands"
-else
-    info "Creating Claude Code custom slash commands..."
-    mkdir -p "$CLAUDE_COMMANDS_DIR"
+# Refreshed every run via write_generated — same reasoning as the agents block (#277).
+info "Writing Claude Code custom slash commands..."
+mkdir -p "$CLAUDE_COMMANDS_DIR"
 
-    # /pr-review — review the current branch's changes
-    cat > "$CLAUDE_COMMANDS_DIR/pr-review.md" <<'CMD_PR_REVIEW'
+# /pr-review — review the current branch's changes
+write_generated "$CLAUDE_COMMANDS_DIR/pr-review.md" <<'CMD_PR_REVIEW'
 Review the changes on the current branch compared to main. For each file changed:
 1. Summarize what changed and why
 2. Flag any security issues, bugs, or performance concerns
@@ -8332,8 +8363,8 @@ Review the changes on the current branch compared to main. For each file changed
 Use `git diff main...HEAD` to see all changes. Be concise — focus on issues, not praise.
 CMD_PR_REVIEW
 
-    # /test-plan — generate a test plan for recent changes
-    cat > "$CLAUDE_COMMANDS_DIR/test-plan.md" <<'CMD_TEST_PLAN'
+# /test-plan — generate a test plan for recent changes
+write_generated "$CLAUDE_COMMANDS_DIR/test-plan.md" <<'CMD_TEST_PLAN'
 Look at the recent changes in this repo (use git diff or git log) and generate a test plan:
 1. List what should be tested (unit, integration, e2e)
 2. Identify edge cases and error scenarios
@@ -8343,8 +8374,8 @@ Look at the recent changes in this repo (use git diff or git log) and generate a
 Output as a Markdown checklist.
 CMD_TEST_PLAN
 
-    # /dep-audit — audit dependencies
-    cat > "$CLAUDE_COMMANDS_DIR/dep-audit.md" <<'CMD_DEP_AUDIT'
+# /dep-audit — audit dependencies
+write_generated "$CLAUDE_COMMANDS_DIR/dep-audit.md" <<'CMD_DEP_AUDIT'
 Audit the project dependencies:
 1. Check for known vulnerabilities (run npm audit or uv pip audit)
 2. Identify outdated packages (run npm outdated or uv pip list --outdated)
@@ -8355,8 +8386,8 @@ Audit the project dependencies:
 Summarize findings with severity (critical/high/medium/low) and recommended actions.
 CMD_DEP_AUDIT
 
-    # /quick-doc — generate docs for a file or function
-    cat > "$CLAUDE_COMMANDS_DIR/quick-doc.md" <<'CMD_QUICK_DOC'
+# /quick-doc — generate docs for a file or function
+write_generated "$CLAUDE_COMMANDS_DIR/quick-doc.md" <<'CMD_QUICK_DOC'
 Generate documentation for the file or function I specify: $ARGUMENTS
 
 Include:
@@ -8369,8 +8400,8 @@ Include:
 Format as JSDoc/docstring appropriate for the language.
 CMD_QUICK_DOC
 
-    # /cleanup — find dead code, unused imports, etc.
-    cat > "$CLAUDE_COMMANDS_DIR/cleanup.md" <<'CMD_CLEANUP'
+# /cleanup — find dead code, unused imports, etc.
+write_generated "$CLAUDE_COMMANDS_DIR/cleanup.md" <<'CMD_CLEANUP'
 Scan the project for cleanup opportunities:
 1. Unused imports and variables
 2. Dead code (unreachable functions, unused exports)
@@ -8381,8 +8412,8 @@ Scan the project for cleanup opportunities:
 List each finding with file path and line number. Don't fix anything — just report.
 CMD_CLEANUP
 
-    # /security-scan — run all security tools
-    cat > "$CLAUDE_COMMANDS_DIR/security-scan.md" <<'CMD_SECURITY'
+# /security-scan — run all security tools
+write_generated "$CLAUDE_COMMANDS_DIR/security-scan.md" <<'CMD_SECURITY'
 Run a comprehensive security scan of this project using the available tools:
 
 1. **Secrets**: Run `gitleaks detect --source .` to check for leaked credentials
@@ -8395,8 +8426,8 @@ For each finding, report: severity, file, line, description, and recommended fix
 Prioritize: critical > high > medium > low. Skip informational findings.
 CMD_SECURITY
 
-    # /perf-check — benchmark and profile
-    cat > "$CLAUDE_COMMANDS_DIR/perf-check.md" <<'CMD_PERF'
+# /perf-check — benchmark and profile
+write_generated "$CLAUDE_COMMANDS_DIR/perf-check.md" <<'CMD_PERF'
 Analyze the performance of this project: $ARGUMENTS
 
 1. If a command/script is given, benchmark it with `hyperfine`
@@ -8408,8 +8439,8 @@ Analyze the performance of this project: $ARGUMENTS
 Report findings with concrete numbers and suggested optimizations.
 CMD_PERF
 
-    # /docker-lint — lint and optimize Docker setup
-    cat > "$CLAUDE_COMMANDS_DIR/docker-lint.md" <<'CMD_DOCKER'
+# /docker-lint — lint and optimize Docker setup
+write_generated "$CLAUDE_COMMANDS_DIR/docker-lint.md" <<'CMD_DOCKER'
 Analyze the Docker setup in this project:
 
 1. Lint all Dockerfiles with `hadolint`
@@ -8421,8 +8452,8 @@ Analyze the Docker setup in this project:
 Fix any issues found and explain the changes.
 CMD_DOCKER
 
-    # /iac-review — review infrastructure code
-    cat > "$CLAUDE_COMMANDS_DIR/iac-review.md" <<'CMD_IAC'
+# /iac-review — review infrastructure code
+write_generated "$CLAUDE_COMMANDS_DIR/iac-review.md" <<'CMD_IAC'
 Review the infrastructure-as-code in this project:
 
 1. Run `tflint` on any Terraform/OpenTofu files
@@ -8436,8 +8467,8 @@ Review the infrastructure-as-code in this project:
 Report findings with severity and recommended fixes.
 CMD_IAC
 
-    # /convert — convert between formats using pandoc
-    cat > "$CLAUDE_COMMANDS_DIR/convert.md" <<'CMD_CONVERT'
+# /convert — convert between formats using pandoc
+write_generated "$CLAUDE_COMMANDS_DIR/convert.md" <<'CMD_CONVERT'
 Convert files between formats: $ARGUMENTS
 
 Use the available tools:
@@ -8451,8 +8482,8 @@ Parse the user's intent from the arguments and run the appropriate conversion co
 Examples: "convert README.md to pdf", "resize logo.png to 200x200", "diagram from architecture.d2"
 CMD_CONVERT
 
-    # /new-feature — full trunk-based feature workflow
-    cat > "$CLAUDE_COMMANDS_DIR/new-feature.md" <<'CMD_NEW_FEATURE'
+# /new-feature — full trunk-based feature workflow
+write_generated "$CLAUDE_COMMANDS_DIR/new-feature.md" <<'CMD_NEW_FEATURE'
 Implement a new feature following trunk-based development: $ARGUMENTS
 
 Follow this workflow in order:
@@ -8465,8 +8496,8 @@ Follow this workflow in order:
 Make each commit small and atomic. Write tests alongside the implementation, not after.
 CMD_NEW_FEATURE
 
-    # /fix-bug — full trunk-based bug fix workflow
-    cat > "$CLAUDE_COMMANDS_DIR/fix-bug.md" <<'CMD_FIX_BUG'
+# /fix-bug — full trunk-based bug fix workflow
+write_generated "$CLAUDE_COMMANDS_DIR/fix-bug.md" <<'CMD_FIX_BUG'
 Fix a bug following trunk-based development: $ARGUMENTS
 
 Follow this workflow in order:
@@ -8478,8 +8509,8 @@ Follow this workflow in order:
 6. **Push and PR**: Run `git push -u origin HEAD` then `gh pr create --title "fix: <title>" --body "## Bug\n<what was broken>\n\n## Root Cause\n<why it happened>\n\n## Fix\n<what changed>\n\n## Test Plan\n- [ ] Repro test passes\n- [ ] No regressions\n\nFixes #<issue-number>"`
 CMD_FIX_BUG
 
-    # /create-readme — generate a comprehensive README
-    cat > "$CLAUDE_COMMANDS_DIR/create-readme.md" <<'CMD_README'
+# /create-readme — generate a comprehensive README
+write_generated "$CLAUDE_COMMANDS_DIR/create-readme.md" <<'CMD_README'
 Generate a comprehensive README.md for this project.
 
 Analyze the codebase to determine:
@@ -8498,8 +8529,8 @@ Analyze the codebase to determine:
 Use clean Markdown formatting. Be concise but complete. If information isn't available, leave a placeholder with a TODO comment.
 CMD_README
 
-    # /init-project — set up a new project with all best practices
-    cat > "$CLAUDE_COMMANDS_DIR/init-project.md" <<'CMD_INIT'
+# /init-project — set up a new project with all best practices
+write_generated "$CLAUDE_COMMANDS_DIR/init-project.md" <<'CMD_INIT'
 Initialize a new project with industry best practices: $ARGUMENTS
 
 Set up the following in order:
@@ -8628,8 +8659,8 @@ labels: bug
 - Push: `git push -u origin main`
 CMD_INIT
 
-    # /refactor — refactor code with tests preserved
-    cat > "$CLAUDE_COMMANDS_DIR/refactor.md" <<'CMD_REFACTOR'
+# /refactor — refactor code with tests preserved
+write_generated "$CLAUDE_COMMANDS_DIR/refactor.md" <<'CMD_REFACTOR'
 Refactor the specified code: $ARGUMENTS
 
 Follow this process:
@@ -8648,8 +8679,8 @@ Follow this process:
 If tests don't exist, write them FIRST before refactoring.
 CMD_REFACTOR
 
-    # /add-endpoint — add an API endpoint with full stack
-    cat > "$CLAUDE_COMMANDS_DIR/add-endpoint.md" <<'CMD_ENDPOINT'
+# /add-endpoint — add an API endpoint with full stack
+write_generated "$CLAUDE_COMMANDS_DIR/add-endpoint.md" <<'CMD_ENDPOINT'
 Add a new API endpoint: $ARGUMENTS
 
 Implement the full vertical slice:
@@ -8668,8 +8699,8 @@ Follow REST conventions:
 Commit with: `feat(api): add <METHOD> <path> endpoint`
 CMD_ENDPOINT
 
-    # /add-component — add a React component with tests and stories
-    cat > "$CLAUDE_COMMANDS_DIR/add-component.md" <<'CMD_COMPONENT'
+# /add-component — add a React component with tests and stories
+write_generated "$CLAUDE_COMMANDS_DIR/add-component.md" <<'CMD_COMPONENT'
 Add a new React component: $ARGUMENTS
 
 Create the full component package:
@@ -8690,8 +8721,8 @@ Place in: `src/components/ComponentName/` (colocated structure)
 Commit with: `feat(ui): add <ComponentName> component`
 CMD_COMPONENT
 
-    # /ci-fix — diagnose and fix CI failures
-    cat > "$CLAUDE_COMMANDS_DIR/ci-fix.md" <<'CMD_CIFIX'
+# /ci-fix — diagnose and fix CI failures
+write_generated "$CLAUDE_COMMANDS_DIR/ci-fix.md" <<'CMD_CIFIX'
 Diagnose and fix the CI/CD pipeline failure.
 
 Steps:
@@ -8710,8 +8741,8 @@ Common CI issues to check:
 - ESLint/Prettier formatting differences
 CMD_CIFIX
 
-    # /changelog — generate changelog from git history
-    cat > "$CLAUDE_COMMANDS_DIR/changelog.md" <<'CMD_CHANGELOG'
+# /changelog — generate changelog from git history
+write_generated "$CLAUDE_COMMANDS_DIR/changelog.md" <<'CMD_CHANGELOG'
 Generate a changelog from git history: $ARGUMENTS
 
 Use `git-cliff` if available (preferred — uses ~/.config/git-cliff/cliff.toml config).
@@ -8740,8 +8771,8 @@ Fall back to manual parsing if git-cliff is not installed.
 Format: Keep it concise — one line per change, no fluff.
 CMD_CHANGELOG
 
-    # /commit-msg — generate commit message from staged changes
-    cat > "$CLAUDE_COMMANDS_DIR/commit-msg.md" <<'CMD_COMMIT'
+# /commit-msg — generate commit message from staged changes
+write_generated "$CLAUDE_COMMANDS_DIR/commit-msg.md" <<'CMD_COMMIT'
 Generate a conventional commit message for the currently staged changes.
 
 1. Run `git diff --cached --stat` to see what files changed
@@ -8765,8 +8796,7 @@ Generate a conventional commit message for the currently staged changes.
 Keep the first line under 72 characters. Use imperative mood ("add" not "added").
 CMD_COMMIT
 
-    success "Claude Code commands created (20 commands: /pr-review, /test-plan, /dep-audit, /quick-doc, /cleanup, /security-scan, /perf-check, /docker-lint, /iac-review, /convert, /new-feature, /fix-bug, /create-readme, /init-project, /refactor, /add-endpoint, /add-component, /ci-fix, /changelog, /commit-msg)"
-fi
+success "Claude Code commands created (20 commands: /pr-review, /test-plan, /dep-audit, /quick-doc, /cleanup, /security-scan, /perf-check, /docker-lint, /iac-review, /convert, /new-feature, /fix-bug, /create-readme, /init-project, /refactor, /add-endpoint, /add-component, /ci-fix, /changelog, /commit-msg)"
 
 # ---- Claude Code first-party skills (authored here) ----
 # Skills that teach Claude to use tools THIS script installs, written fresh each run
@@ -12314,6 +12344,17 @@ fi
 # a single quiet line rather than a per-file warning that trains you to ignore it.
 MANAGED_REPAIRED_LIST=$(managed_list repaired)
 MANAGED_OUTSIDE_LIST=$(managed_list outside)
+MANAGED_REFRESHED_LIST=$(managed_list refreshed)
+
+# Files rewritten by write_generated because their content changed (Claude agents and
+# slash commands). Worth naming: the previous copy is kept alongside as *.replaced.*
+if [[ -n "$MANAGED_REFRESHED_LIST" ]]; then
+    echo -e "${GREEN}${BOLD}Refreshed $(echo "$MANAGED_REFRESHED_LIST" | wc -l | tr -d ' ') generated file(s)${NC} (previous copies kept as .replaced.<timestamp>):"
+    while IFS= read -r item; do
+        echo -e "  ${GREEN}•${NC} ${item/#$HOME/\~}"
+    done <<< "$MANAGED_REFRESHED_LIST"
+    echo ""
+fi
 
 if [[ -n "$MANAGED_REPAIRED_LIST" ]]; then
     _verb="Repaired"; [[ "$DRY_RUN" == "true" ]] && _verb="Would repair"
