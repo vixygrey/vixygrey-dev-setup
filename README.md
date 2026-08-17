@@ -387,9 +387,9 @@ Faster, prettier, smarter replacements for standard Unix utilities.
 | **atuin** | Replaces shell history with SQLite-backed, fuzzy-searchable database |
 | **mise** | Universal version manager -- Node, Python, Go, Ruby all in one (replaces nvm + pyenv + rbenv) |
 | **croft** | Primary editor -- VS Code-style terminal IDE (Rust; `cargo install --git`). Three-pane workspace, LSP/DAP, integrated terminal; `croft pair` runs an AI navigator (Anthropic/local). Installed from git `main` |
-| **Helix (`hx`)** | Fast fallback editor + the `EDITOR` for git/gh/lazygit commit messages -- modal, built-in LSP + tree-sitter, auto-format on save, Dracula theme |
+| **micro** | The `$EDITOR` -- git/gh/lazygit commit messages, leaf's Ctrl+E, quick edits. Non-modal, on-screen key menu (`Ctrl+G` for help), Dracula theme |
 | **Claude Code (`claude`)** | Agentic coding in the terminal; hosts the migrated MCP servers |
-| **llm** | Simon Willison's CLI -- one-shot prompts, plugin ecosystem, SQLite logging, embeddings. Installed via `uv tool` with the Anthropic plugin; default model `anthropic/claude-sonnet-4-5` (powers the Helix `Alt+a` pipe) |
+| **llm** | Simon Willison's CLI -- one-shot prompts, plugin ecosystem, SQLite logging, embeddings. Installed via `uv tool` with the Anthropic plugin; default model `anthropic/claude-sonnet-4-5` |
 | **chezmoi** | Dotfile manager -- backup and restore configs across machines |
 | **mitmproxy** | Free HTTP debugging proxy -- inspect and modify API calls from any app |
 | **Ghostty** | Fast GPU-accelerated terminal -- daily driver, native macOS feel |
@@ -539,7 +539,7 @@ Applied consistently across all tools:
 
 | Tool | How |
 |------|-----|
-| **Helix** | Dracula theme bundled and set in `config.toml` |
+| **micro** | Dracula (`dracula-tc`) set in `settings.json` |
 | **bat** | Dracula syntax theme in config |
 | **delta** | Dracula syntax theme for git diffs |
 | **Ghostty** | Full 16-color Dracula palette in config |
@@ -778,7 +778,7 @@ The script generates config files with sensible defaults:
 | `~/.config/ngrok/ngrok.yml` | ngrok | Base config (add authtoken) |
 | `~/.config/caddy/Caddyfile` | Caddy | Development server template |
 | `~/.config/asciinema/config` | asciinema | 2s idle limit, no keystroke recording |
-| `~/.config/helix/config.toml` + `languages.toml` | Helix | Dracula theme, relative line numbers, LSP inlay hints, auto-format on save (ruff for Python, taplo/marksman/TS/CSS/bash/yaml servers, rust-analyzer, gopls) |
+| `~/.config/micro/settings.json` | micro | Dracula (`dracula-tc`), the $EDITOR for git/gh/lazygit and leaf's Ctrl+Ents, auto-format on save (ruff for Python, taplo/marksman/TS/CSS/bash/yaml servers, rust-analyzer, gopls) |
 | `~/.config/sketchybar/` | SketchyBar | Dracula bar: app, clock, battery, wifi, volume, cpu, mem, bluetooth, VPN |
 | _(cliamp)_ | cliamp | Music player — self-configured on first run (point at `~/Media/music`) |
 | `~/.herald/conf.yaml` | herald | Email + calendar — **self-configured** by herald on first run (not written by setup) |
@@ -798,15 +798,15 @@ The script generates config files with sensible defaults:
 | `~/.config/pip/pip.conf` | pip | Require virtualenv, no telemetry |
 | `~/.config/pgcli/config` | pgcli | Multi-line, auto-expand, destructive warnings, bat pager |
 | `~/.config/harlequin/config.toml` | harlequin | Dracula theme, vscode keymap, file tree on |
-| `~/.config/gh/config.yml` | GitHub CLI | SSH protocol, Helix editor, delta pager, aliases (co, pv, pc, pl, il, pm, rel) |
+| `~/.config/gh/config.yml` | GitHub CLI | SSH protocol, micro editor, delta pager, aliases (co, pv, pc, pl, il, pm, rel) |
 | `~/.config/glab-cli/config.yml` | GitLab CLI | SSH, micro; same alias names as gh mapped to GitLab merge requests + CI |
 | `~/.aws/config` | AWS CLI | Default region, json output, bat pager, auto-prompt, SSO template |
 | `~/.config/git/hooks/` | git | Global pre-commit hooks (debug statements, large files >5MB, conflict markers) |
 | `~/.config/brewfile/Brewfile` | Homebrew | Snapshot of all installed packages with descriptions |
 | `~/.justfile` | just | 26 global task-runner recipes (system, git, Docker, network, cleanup, info) |
 | `~/.shellcheckrc` | shellcheck | External sources, disabled false positives |
-| `~/.config/k9s/config.yaml` + skin | k9s | Dracula skin, `$EDITOR=hx` for edit-resource |
-| `~/.config/leaf/config.toml` | leaf | Ctrl+E hands off to Helix at the current line |
+| `~/.config/k9s/config.yaml` + skin | k9s | Dracula skin (edit-resource uses your `$EDITOR`) |
+| `~/.config/leaf/config.toml` | leaf | Ctrl+E hands off to micro at the current line |
 | `~/.config/trippy/trippy.toml` | trippy | Dracula theme-colors |
 | `~/.tflint.hcl` | tflint | Recommended preset + AWS ruleset (fetched via `tflint --init`) |
 | `~/.czrc` | commitizen | Points `cz` at the cz-conventional-changelog adapter |
@@ -825,7 +825,7 @@ The script generates config files with sensible defaults:
 | `~/.myclirc` | mycli | Multi-line, auto-expand, destructive warnings |
 | `~/.gemrc` | Ruby | No docs on gem install |
 | `~/.claude.json` (mcpServers) | Claude Code MCP | User-scope MCP servers (migrated from Kiro via `claude mcp add`) — filesystem, github, git, fetch, context7, aws-docs, aws-pricing, aws-iac, aws-knowledge, cloudwatch, iam. Opt-in per project: playwright, postgres, several AWS servers. (Notion server dropped.) |
-| `~/Library/.../lazygit/config.yml` | lazygit | Dracula theme, delta pager, nerd fonts, auto-fetch, Helix editor (`hx`), rounded borders |
+| `~/Library/.../lazygit/config.yml` | lazygit | Dracula theme, delta pager, nerd fonts, auto-fetch, micro editor (`hx`), rounded borders |
 | `~/Library/.../k9s/skins/dracula.yaml` | k9s | Full Dracula skin |
 
 ---
@@ -941,11 +941,11 @@ All aliases are auto-written to `~/.zshrc`:
 
 ---
 
-## Helix Language Servers
+## Language Servers
 
-Helix has **built-in LSP** — no editor extensions. The script installs the language
-servers Helix auto-detects on `PATH`, so `hx` has completion, diagnostics, go-to-def,
-and format-on-save out of the box:
+The script installs language servers on `PATH` for **croft**, the primary editor, so it has
+completion, diagnostics, go-to-definition and format-on-save out of the box. They are plain
+LSP binaries, so any editor that speaks LSP picks them up:
 
 | Language | Server | Install |
 |----------|--------|---------|
@@ -959,11 +959,10 @@ and format-on-save out of the box:
 | Rust | rust-analyzer | rustup component |
 | Go | gopls | go install |
 
-Run `hx --health` to see what Helix detects. Config lives in `~/.config/helix/config.toml`
-(Dracula theme, relative line numbers, inlay hints, auto-format, `Ctrl-s` to save) and
-`languages.toml` (per-language formatters).
+Python is covered by **ruff's** built-in server, which handles linting, formatting and code
+actions — not type checking or go-to-definition ([#288](https://github.com/vixygrey/vixygrey-dev-setup/issues/288)).
 
-### AI agent — Claude Code (+ croft/Helix integration)
+### AI agent — Claude Code (+ croft integration)
 
 Agentic coding is handled by **Claude Code** (`claude`) in the terminal, which reuses
 the MCP servers below. (Kiro's agent/specs/steering/hooks are gone with Kiro; Claude
@@ -975,7 +974,7 @@ Claude is wired into the terminal tools in four tiers:
 |------|-----|----------|
 | **1. Side-pane** | `zellij --layout dev` — editor + a `claude` pane | Real, multi-file, agentic work (strongest) |
 | **2. croft pair** | `croft pair` — AI navigator inside the primary IDE | In-editor pairing while you code |
-| **3. `llm` pipe** | Helix `Alt+a` on a selection | Quick in-place edits |
+| **3. `llm` pipe** | `llm` from the shell — pipe a file or selection | Quick one-shot edits |
 | **4. herald** | Built-in AI triage/summaries + MCP server (email/calendar) | Reading + triaging mail/events |
 
 Set `ANTHROPIC_API_KEY` (for `croft pair`) and run `llm keys set anthropic` (for the
