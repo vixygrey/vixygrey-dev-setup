@@ -2,6 +2,18 @@
 
 > Release notes for 7.0.0–7.1.1 live in [GitHub Releases](https://github.com/vixygrey/vixygrey-dev-setup/releases) (auto-generated). This file resumes hand-written notes at 7.2.0.
 
+## [Unreleased]
+
+### Fixed
+
+- **dx**: **VS Code no longer runs Pylance.** Installing `ms-python.python` in 7.12.0 silently pulled in three more extensions through its `extensionPack` — `debugpy`, `vscode-python-envs`, and **`vscode-pylance`**, Microsoft's *proprietary*, closed-source Python type server, licensed for use only with Microsoft products. That contradicted a decision this repo had already made on purpose: 7.10.0 installed **basedpyright** for croft precisely because it is the same server with the closed-source parts restored as open source (#296). Pylance is the thing that choice rejected, and it arrived through a dependency rather than a decision.
+
+  It was not inert, either. `python.languageServer` defaults to `Default`, which resolves **to Pylance** whenever Pylance is installed — so Pylance, not basedpyright or ruff, was what actually analysed Python in VS Code, with its own telemetry. The two editors were running different Python toolchains, which is the exact outcome matching the extension set to the installed CLIs was meant to prevent.
+
+  Now: `detachhead.basedpyright` is installed, Pylance is uninstalled, and the settings pin `python.languageServer: "None"` so ms-python starts no server of its own, plus `basedpyright.importStrategy: "fromEnvironment"` so it uses the `uv`-installed basedpyright already on PATH rather than its bundled copy (that is already the upstream default; setting it explicitly guards against a future change and records the intent). `debugpy` and `vscode-python-envs` are kept — both MIT and genuinely useful.
+
+  The removal runs **at the install site on every run**, not through `DEPRECATED_TOOLS`, following the `tlrc` precedent from 7.11.0: a swap left to `--cleanup` only ever reaches fresh machines. Pylance ships as a pack member to every machine that installs `ms-python.python`, so the removal has to run where the install runs. Verified from the installed manifest that it is an `extensionPack` and not `extensionDependencies`, so Pylance can be removed independently without VS Code refusing or breaking `ms-python.python`; and that the `python.languageServer` enum really is `Default, Jedi, Pylance, None` (#308)
+
 ## [7.12.0] - 2026-08-17
 
 A GUI editor comes back. croft has been the only editor here since Helix was retired, and it is a good one — but a terminal IDE is not the right tool for every job, and the 7.x declutter had left the machine with **zero** GUI options after removing all three Electron editors at once. The objection was to running VS Code *and* Cursor *and* Kiro; dropping to none overshot it. croft stays primary and is unchanged; VS Code returns beside it, carrying the same rules through 26 extensions and a merged `settings.json` so the two editors cannot disagree with each other or with the CLI.

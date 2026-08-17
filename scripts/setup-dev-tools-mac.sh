@@ -986,7 +986,7 @@ npm_global_install() {
 # Two details worth keeping:
 #   - The installed-extension list is read ONCE into _VSCODE_EXTS (see the dx section)
 #     rather than shelling out per extension. `code --list-extensions` boots Electron
-#     and takes ~1s; at 26 extensions that is ~26s of nothing on an already-provisioned
+#     and takes ~1s; at 27 extensions that is ~27s of nothing on an already-provisioned
 #     machine. The cached list is compared case-insensitively because the marketplace
 #     is case-preserving but `code` matches IDs case-insensitively.
 #   - Extension IDs must be verified against the marketplace before being added here.
@@ -2545,7 +2545,7 @@ brew_cask_install "visual-studio-code" "Visual Studio Code (GUI editor — croft
 #
 # Read the installed list ONCE: `code --list-extensions` boots Electron (~1s), so the
 # per-extension check inside vscode_ext_install reads this cache instead of shelling out
-# 26 times on an already-provisioned machine.
+# 27 times on an already-provisioned machine.
 if installed code && [[ "$DRY_RUN" != "true" ]]; then
     _VSCODE_EXTS=$(code --list-extensions 2>/dev/null || true)
 fi
@@ -2563,6 +2563,7 @@ vscode_ext_install "streetsidesoftware.code-spell-checker" "Code Spell Checker (
 vscode_ext_install "mikestead.dotenv" ".env syntax highlighting"
 # Languages — pairs with the language servers installed above for croft
 vscode_ext_install "ms-python.python" "Python"
+vscode_ext_install "detachhead.basedpyright" "basedpyright (Python type server — the same one croft uses)"
 vscode_ext_install "charliermarsh.ruff" "Ruff (Astral — the linter/formatter this setup mandates)"
 vscode_ext_install "rust-lang.rust-analyzer" "rust-analyzer (Rust)"
 vscode_ext_install "golang.go" "Go"
@@ -2580,6 +2581,35 @@ vscode_ext_install "foxundermoon.shell-format" "shell-format (shfmt-backed)"
 vscode_ext_install "terrastruct.d2" "D2 (diagram syntax + preview)"
 vscode_ext_install "bierner.markdown-mermaid" "Mermaid in Markdown preview"
 vscode_ext_install "nefrob.vscode-just-syntax" "just (Justfile syntax)"
+
+# Pylance — remove it (#308). `ms-python.python` declares an `extensionPack` of
+# [vscode-pylance, debugpy, vscode-python-envs], so installing Python silently also
+# installs Microsoft's *proprietary* type server. That contradicts the decision made in
+# #296, which chose basedpyright for croft precisely because it is the same server with
+# the closed-source parts restored as open source. Worse, it is not inert: with Pylance
+# installed, `python.languageServer: "Default"` resolves TO Pylance, so it — not
+# basedpyright — is what actually analyses Python in VS Code. The settings block pins
+# `python.languageServer: "None"` so ms-python starts no server of its own.
+#
+# Done HERE rather than in DEPRECATED_TOOLS, following the tlrc precedent from 7.11.0: a
+# swap left to `--cleanup` only ever reaches fresh machines. Pylance ships as a pack
+# member to every machine that installs ms-python.python, so the removal has to run where
+# the install runs, on every run, idempotently.
+#
+# debugpy and vscode-python-envs are kept — both MIT, and genuinely useful.
+if installed code && [[ "$DRY_RUN" != "true" ]]; then
+    if printf '%s\n' "$_VSCODE_EXTS" | grep -qix -- "ms-python.vscode-pylance" \
+       || code --list-extensions 2>/dev/null | grep -qix -- "ms-python.vscode-pylance"; then
+        info "Removing Pylance (proprietary — basedpyright is the type server here)..."
+        if code --uninstall-extension ms-python.vscode-pylance >> "$LOG_FILE" 2>&1; then
+            success "Pylance removed (VS Code now uses basedpyright, same as croft)"
+        else
+            warn "Could not remove Pylance — uninstall it manually from the Extensions pane"
+        fi
+    fi
+elif [[ "$DRY_RUN" == "true" ]]; then
+    info "[DRY RUN] Would remove Pylance if present (proprietary; basedpyright replaces it)"
+fi
 unset _VSCODE_EXTS
 
 brew_cask_install "ghostty" "Ghostty (fast GPU-accelerated terminal)"
@@ -3897,6 +3927,8 @@ VSCODE_DEFAULTS=$(cat <<'VSCODE_CONF'
     "git.confirmSync": false,
     "explorer.confirmDragAndDrop": false,
     "telemetry.telemetryLevel": "off",
+    "python.languageServer": "None",
+    "basedpyright.importStrategy": "fromEnvironment",
     "[python]": {
         "editor.defaultFormatter": "charliermarsh.ruff",
         "editor.tabSize": 4,
@@ -8122,7 +8154,7 @@ Rules that follow from this:
 
 ## Environment
 - Shell: zsh with starship prompt, atuin history, fzf fuzzy finder, zsh-autosuggestions, zsh-syntax-highlighting
-- Editor / IDE: **croft** is the primary editor (VS Code-style terminal IDE — `croft` to open a workspace, `croft pair` for the AI navigator). **Visual Studio Code** is installed as the **GUI** editor for when a TUI is the wrong tool (`code .`) — secondary to croft, not a replacement; it carries the same rules via extensions (Dracula, ruff, prettier, ESLint, shellcheck/shfmt, EditorConfig) so it cannot disagree with the CLI. **micro** is the `EDITOR` for git/gh/lazygit commit messages and quick edits — non-modal, Dracula, with an on-screen key menu (`Ctrl+G` for full help). Helix was retired in 7.6.0. Agentic coding via Claude Code (`claude`).
+- Editor / IDE: **croft** is the primary editor (VS Code-style terminal IDE — `croft` to open a workspace, `croft pair` for the AI navigator). **Visual Studio Code** is installed as the **GUI** editor for when a TUI is the wrong tool (`code .`) — secondary to croft, not a replacement; it carries the same rules via extensions (Dracula, ruff, **basedpyright** — the same Python type server croft uses, never Microsoft's proprietary Pylance, which the setup removes — prettier, ESLint, shellcheck/shfmt, EditorConfig) so it cannot disagree with the CLI. **micro** is the `EDITOR` for git/gh/lazygit commit messages and quick edits — non-modal, Dracula, with an on-screen key menu (`Ctrl+G` for full help). Helix was retired in 7.6.0. Agentic coding via Claude Code (`claude`).
 - **croft does not support EditorConfig** (verified in croft 0.1.700 — no reference anywhere in its source). Its indentation is a language default (2 spaces for YAML, 4 otherwise) plus a per-buffer status-bar override that does not persist. VS Code *does* honour `.editorconfig`, so on a repo with one, the two editors will disagree unless you flip croft's status-bar pill. Croft's extensions are declarative `extension.toml` manifests (languages, LSP servers, themes, debug adapters, test runners, MCP sidecars) under `~/.config/croft/extensions/` — pure data, no code, no marketplace, so an EditorConfig reader cannot be added as one.
 - Terminal: Ghostty (Dracula theme)
 - Package managers: pnpm (preferred), npm, bun
