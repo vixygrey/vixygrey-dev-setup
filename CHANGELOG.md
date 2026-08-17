@@ -2,7 +2,15 @@
 
 > Release notes for 7.0.0–7.1.1 live in [GitHub Releases](https://github.com/vixygrey/vixygrey-dev-setup/releases) (auto-generated). This file resumes hand-written notes at 7.2.0.
 
-## [Unreleased]
+## [7.12.0] - 2026-08-17
+
+A GUI editor comes back. croft has been the only editor here since Helix was retired, and it is a good one — but a terminal IDE is not the right tool for every job, and the 7.x declutter had left the machine with **zero** GUI options after removing all three Electron editors at once. The objection was to running VS Code *and* Cursor *and* Kiro; dropping to none overshot it. croft stays primary and is unchanged; VS Code returns beside it, carrying the same rules through 26 extensions and a merged `settings.json` so the two editors cannot disagree with each other or with the CLI.
+
+The question that started it also produced a finding worth recording: **croft has no EditorConfig support** — verified against croft 0.1.700, no reference to it anywhere in the source. Its indentation is a language default (2 spaces for YAML, 4 otherwise) plus a per-buffer status-bar override that does not persist, and because croft's extensions are pure-data `extension.toml` manifests, a reader cannot be added as one. On a repo with an `.editorconfig`, the two editors will disagree until you flip croft's status-bar pill. That is now written into the generated `CLAUDE.md` and `TOOL_REFERENCE` rather than left to be rediscovered.
+
+The reinstatement was also not just an install. VS Code was being *actively removed* — it sat in `DEPRECATED_TOOLS` so `--cleanup` uninstalled the cask, and both its per-user trees sat in `ORPHANED_EDITOR_DIRS` so cleanup trashed `~/.vscode` and `~/Library/Application Support/Code`. Adding the install alone would have shipped a script that installs VS Code and then deletes its extensions on the next `--cleanup`.
+
+**Re-run the script** to get VS Code, its extensions, and the settings file. No breaking changes. Cursor and Kiro stay retired.
 
 ### Added
 
