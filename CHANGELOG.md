@@ -2,7 +2,9 @@
 
 > Release notes for 7.0.0–7.1.1 live in [GitHub Releases](https://github.com/vixygrey/vixygrey-dev-setup/releases) (auto-generated). This file resumes hand-written notes at 7.2.0.
 
-## [Unreleased]
+## [7.9.2] - 2026-08-17
+
+Repairs a regression 7.9.1 introduced: an invalid line was written into `~/.justfile`, so it stopped parsing and **every global `gj` recipe was unusable**. If you ran 7.9.1, re-run the script — `~/.justfile` is a managed block and is rewritten in place. The cause is worth recording: the offending edit was anchored on a string that appears twice in the generator and landed in the wrong heredoc, and three separate checks passed while the file was broken — including a generator-vs-disk comparison, because the broken file on disk matched the broken generator exactly. Agreement with the generator is not correctness. Both generated artifacts are now parse-checked directly.
 
 ### Fixed
 
