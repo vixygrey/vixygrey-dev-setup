@@ -5343,15 +5343,168 @@ GIT_TEMPLATE
 GIT_HOOKS_DIR="$HOME/.config/git/hooks"
 info "Configuring global git hooks..."
 
-# Pre-commit hook: check for common issues
+# Setting core.hooksPath makes git read ONLY this directory: per-repo .git/hooks is
+# never consulted, for any hook type. Shipping just a `pre-commit` here therefore
+# killed every other per-repo hook on the machine — husky's commit-msg, a
+# .pre-commit-config.yaml's pre-push, lint-staged, all of it — silently (#260).
+#
+# So every hook type gets a delegator, and the delegator CHAINS rather than execs:
+# third-party tools write into this same directory (git-lfs 3.7.1 is core.hooksPath
+# aware and installs its four hooks here, globally, from any repo), so a delegator
+# that only ran the per-repo hook would silently disable them instead.
+#
+# Deliberately not covered: the server-side hooks (pre-receive, update, post-update,
+# proc-receive), and the hot-path ones where a wrapper costs more than it delivers
+# (reference-transaction, post-index-change, fsmonitor-watchman).
+GIT_HOOK_TYPES=(
+    applypatch-msg pre-applypatch post-applypatch
+    pre-commit pre-merge-commit prepare-commit-msg commit-msg post-commit
+    pre-rebase post-checkout post-merge pre-push post-rewrite
+    sendemail-validate
+)
+
+# Shared chain logic, sourced by every delegator. Not named after a hook, so git
+# ignores it; keeping it in one file means the chain semantics can't drift per type.
+write_managed_script "$GIT_HOOKS_DIR/dev-setup-chain.sh" <<'HOOK_CHAIN_LIB'
+#!/usr/bin/env bash
+# Sourced by every hook in this directory. Runs, in order:
+#   1. the repository's own hook (.git/hooks/<type>)
+#   2. any third-party hook preserved in <type>.d/ (e.g. git-lfs)
+# aborting on the first non-zero status, which is the hook contract.
+
+run_hook_chain() {
+    local hook="$1"; shift
+    local hooks_dir status=0 stdin_file="" repo_hook f
+    hooks_dir="$(dirname "${BASH_SOURCE[0]}")"
+    DEV_SETUP_REPO_HOOK_RAN=0
+
+    # These hook types are fed data on stdin. Buffer it once, then hand every link in
+    # the chain its own copy — stdin can only be consumed by the first reader, so
+    # without this a chained git-lfs pre-push would see an empty ref list.
+    case "$hook" in
+        pre-push|post-rewrite|push-to-checkout)
+            stdin_file="$(mktemp)"
+            cat > "$stdin_file"
+            ;;
+    esac
+
+    _chain_run() {
+        local script="$1"; shift
+        if [ -n "$stdin_file" ]; then
+            "$script" "$@" < "$stdin_file"
+        else
+            "$script" "$@"
+        fi
+    }
+
+    # 1. The repository's own hook.
+    #
+    #    NOT `git rev-parse --git-path hooks/<type>`: that is itself core.hooksPath
+    #    aware, so with this directory configured it resolves right back to THIS
+    #    delegator, which then runs itself forever — every `git commit` on the machine
+    #    hangs. Use the common git dir instead (common, not absolute: a linked worktree
+    #    has its own gitdir but shares the main repo's hooks/).
+    local common candidate_dir hooks_real
+    common="$(git rev-parse --path-format=absolute --git-common-dir 2>/dev/null)"
+    [ -n "$common" ] || common="$(git rev-parse --git-common-dir 2>/dev/null)"
+    repo_hook=""
+    if [ -n "$common" ]; then
+        # Belt and braces: if the repo's hooks dir IS this directory, there is no
+        # per-repo hook to run — only this delegator, and re-entering it recurses.
+        hooks_real="$(cd "$hooks_dir" 2>/dev/null && pwd -P)"
+        candidate_dir="$(cd "$common/hooks" 2>/dev/null && pwd -P)"
+        if [ -n "$candidate_dir" ] && [ "$candidate_dir" != "$hooks_real" ]; then
+            repo_hook="$common/hooks/$hook"
+        fi
+    fi
+    if [ -n "$repo_hook" ] && [ -x "$repo_hook" ]; then
+        DEV_SETUP_REPO_HOOK_RAN=1
+        _chain_run "$repo_hook" "$@" || status=$?
+        if [ "$status" -ne 0 ]; then
+            [ -n "$stdin_file" ] && rm -f "$stdin_file"
+            return "$status"
+        fi
+    fi
+
+    # 2. Third-party hooks that were already installed in this directory and moved
+    #    aside so a delegator could take the name (git-lfs, most likely).
+    if [ -d "$hooks_dir/$hook.d" ]; then
+        for f in "$hooks_dir/$hook.d"/*; do
+            [ -x "$f" ] || continue
+            _chain_run "$f" "$@" || status=$?
+            if [ "$status" -ne 0 ]; then
+                [ -n "$stdin_file" ] && rm -f "$stdin_file"
+                return "$status"
+            fi
+        done
+    fi
+
+    [ -n "$stdin_file" ] && rm -f "$stdin_file"
+    return 0
+}
+HOOK_CHAIN_LIB
+
+# Move a pre-existing third-party hook out of the way so a delegator can take its
+# name, preserving it in <type>.d/ where the chain will still run it. Idempotent:
+# git-lfs re-installs its hooks on every `git lfs install`, so an identical copy that
+# is already preserved is dropped rather than stacked up.
+preserve_foreign_hook() {
+    local type="$1"
+    local path="$GIT_HOOKS_DIR/$type" dest_dir="$GIT_HOOKS_DIR/$type.d" name f
+    [[ -f "$path" ]] || return 0
+    grep -qF "dev-setup managed block" "$path" 2>/dev/null && return 0   # already ours
+    if grep -qE 'git[- ]lfs' "$path" 2>/dev/null; then name="10-git-lfs"; else name="10-preexisting"; fi
+    if [[ "$DRY_RUN" == "true" ]]; then
+        info "[DRY RUN] Would preserve third-party $type hook as $type.d/$name"
+        return 0
+    fi
+    mkdir -p "$dest_dir"
+    for f in "$dest_dir"/*; do
+        [[ -f "$f" ]] || continue
+        if cmp -s "$path" "$f"; then rm -f "$path"; return 0; fi   # already preserved
+    done
+    [[ -e "$dest_dir/$name" ]] && name="${name}.$(date +%Y%m%d%H%M%S)"
+    mv "$path" "$dest_dir/$name"
+    chmod +x "$dest_dir/$name"
+    info "Preserved third-party $type hook as $type.d/$name (#260)"
+}
+
+# Delegators for every type except pre-commit, which carries this script's own checks
+# after the chain. The body is identical for all of them: the hook derives its own
+# name from $0, so one quoted heredoc serves the whole list.
+for _hook_type in "${GIT_HOOK_TYPES[@]}"; do
+    [[ "$_hook_type" == "pre-commit" ]] && continue
+    preserve_foreign_hook "$_hook_type"
+    write_managed_script "$GIT_HOOKS_DIR/$_hook_type" <<'HOOK_DELEGATOR'
+#!/usr/bin/env bash
+# Global hook delegator — core.hooksPath means git reads only this directory, so this
+# runs the repo's own hook of the same name plus any third-party hook in <type>.d/.
+_lib="$(dirname "$0")/dev-setup-chain.sh"
+# Never block a git operation because the helper is missing.
+[ -r "$_lib" ] || exit 0
+# shellcheck source=/dev/null
+. "$_lib"
+run_hook_chain "$(basename "$0")" "$@"
+HOOK_DELEGATOR
+done
+unset _hook_type
+
+# Pre-commit hook: chain first, then this script's own checks
+preserve_foreign_hook pre-commit
 write_managed_script "$GIT_HOOKS_DIR/pre-commit" <<'HOOK_PRECOMMIT'
 #!/usr/bin/env bash
 # Global pre-commit hook — runs on ALL repos
-# Note: core.hooksPath overrides per-repo .git/hooks — this hook delegates to per-repo hooks if they exist
+# Note: core.hooksPath overrides per-repo .git/hooks, so this delegates first (#260)
 
-# Delegate to per-repo hook if it exists
-if [ -x ".git/hooks/pre-commit" ]; then
-    exec .git/hooks/pre-commit "$@"
+_lib="$(dirname "$0")/dev-setup-chain.sh"
+if [ -r "$_lib" ]; then
+    # shellcheck source=/dev/null
+    . "$_lib"
+    run_hook_chain pre-commit "$@" || exit $?
+    # A repo with its own pre-commit hook owns the policy: this hook used to `exec` it,
+    # so its checks never ran alongside. Preserved deliberately — running the generic
+    # checks too would start blocking commits that were fine yesterday.
+    [ "${DEV_SETUP_REPO_HOOK_RAN:-0}" = "1" ] && exit 0
 fi
 
 # Check for leftover debug statements — scoped per language so shell/markdown/config
@@ -5424,7 +5577,7 @@ HOOK_PRECOMMIT
 # Register global hooks directory
 git config --global core.hooksPath "$GIT_HOOKS_DIR"
 
-success "Global git hooks created (debug check, large file check, conflict markers)"
+success "Global git hooks created (${#GIT_HOOK_TYPES[@]} delegators + debug/large-file/conflict checks)"
 
 # ---- AWS config ----
 AWS_CONFIG="$HOME/.aws/config"
@@ -10129,6 +10282,27 @@ pre-commit run --all-files
 # update hook versions to their latest releases
 pre-commit autoupdate
 ```
+
+**`pre-commit install` refuses to run on this machine**, and the error does not explain itself:
+
+```
+[ERROR] Cowardly refusing to install hooks with `core.hooksPath` set.
+```
+
+This setup points `core.hooksPath` at `~/.config/git/hooks` (global hooks that run in every
+repo). `pre-commit` will not write into `.git/hooks` while that is set, because git would
+normally ignore what it wrote. Here it would not — the global hooks **delegate** to the
+per-repo hook of the same name — but `pre-commit` has no way to know that. Unset it for the
+length of the install:
+
+```bash
+saved=$(git config --global --get core.hooksPath)
+git config --global --unset core.hooksPath
+pre-commit install --install-hooks
+git config --global core.hooksPath "$saved"
+```
+
+The hooks it writes then run normally, chained after the global checks.
 
 ### `scc` — Source Code Counter
 Counts lines of code by language across a codebase, along with cyclomatic complexity and COCOMO cost/effort estimates — a much faster, more informative replacement for `cloc` or `wc -l`. Use it to get a quick sense of a new codebase's size and language mix, or to track complexity trends over time. It's fast enough to run on large monorepos without waiting.
