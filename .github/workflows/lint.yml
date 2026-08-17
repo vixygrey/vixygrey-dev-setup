@@ -80,6 +80,7 @@ jobs:
           MANAGED_ZSHRC|zsh -n /tmp/generated
           CLAUDE_SETTINGS_CONF|jq empty /tmp/generated
           PRETTIER_CONF|jq empty /tmp/generated
+          VSCODE_CONF|jq empty /tmp/generated
           LAZYGIT_CONF|yq eval '.' /tmp/generated
           K9S_DRACULA|yq eval '.' /tmp/generated
           GHDASH_CONF|yq eval '.' /tmp/generated

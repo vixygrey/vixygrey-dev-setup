@@ -18,6 +18,9 @@ PNGs = "PNGs"
 SLQ = "SLQ"
 # wrk — the HTTP benchmarking tool we compare oha against, not "work".
 wrk = "wrk"
+# HashiCorp — the company, and the publisher half of the `hashicorp.terraform`
+# extension ID. typos reads "Hashi" as "Hash".
+HashiCorp = "HashiCorp"
 
 [default.extend-words]
 # Same, as whole-word fallback.
