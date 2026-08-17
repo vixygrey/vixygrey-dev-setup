@@ -8189,8 +8189,29 @@ FILE=$(echo "$INPUT" | jq -r '.tool_input.file_path // empty' 2>/dev/null)
 
 if [[ -n "$FILE" ]] && [[ "$FILE" =~ \.py$ ]]; then
     if [[ -f "$FILE" ]] && command -v ruff &>/dev/null; then
-        ruff check --fix "$FILE" 2>/dev/null || true
-        ruff format "$FILE" 2>/dev/null || true
+        # Only touch a project that opted into ruff.
+        #
+        # `ruff check --fix` REWRITES code — it deletes imports it judges unused, so an
+        # import kept for its side effects (plugin/codec registration, `matplotlib.use`,
+        # Django signals, `import readline`) is removed and the program breaks at runtime.
+        # In a repo that never chose ruff that is not a formatting convenience, it is an
+        # unrequested edit — and with output swallowed below, an invisible one. A repo
+        # that DID configure ruff has asked for exactly this behaviour.
+        #
+        # The walk stops before $HOME for the same reason as format-on-edit: a config
+        # sitting in $HOME is not a project opting in, and treating it as one is what
+        # made that hook reformat every repo on the machine (#268, #276).
+        PROJECT_DIR=$(dirname "$FILE")
+        while [[ "$PROJECT_DIR" != "/" && "$PROJECT_DIR" != "$HOME" ]]; do
+            if [[ -f "$PROJECT_DIR/ruff.toml" ]] || [[ -f "$PROJECT_DIR/.ruff.toml" ]] \
+               || { [[ -f "$PROJECT_DIR/pyproject.toml" ]] \
+                    && grep -q '^\[tool\.ruff' "$PROJECT_DIR/pyproject.toml" 2>/dev/null; }; then
+                ruff check --fix "$FILE" 2>/dev/null || true
+                ruff format "$FILE" 2>/dev/null || true
+                break
+            fi
+            PROJECT_DIR=$(dirname "$PROJECT_DIR")
+        done
     fi
 fi
 
