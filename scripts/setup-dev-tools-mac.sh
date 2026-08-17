@@ -2463,6 +2463,20 @@ if installed npm; then
 else
     progress; progress; progress; progress  # keep progress bar accurate when npm unavailable
 fi
+
+# Python language servers. croft ships a built-in manifest — "Python (ty +
+# basedpyright + ruff)" — that expects these by exact command name, with `ty` at
+# priority 0 ("wins every capability it advertises"), basedpyright as the fallback
+# for what ty does not yet cover, and ruff for lint. Without them croft falls
+# through to ruff alone: lint and format, no type checking or go-to-definition,
+# which left Python the one language here without full coverage (#288). PyPI, so
+# uv rather than npm — and basedpyright rather than Microsoft's pyright, which is
+# the same server with the closed-source parts removed.
+uv_tool_install ty ty "ty (Astral Python type server — croft LSP, priority 0)" \
+    "ty installed (Python type checking in croft)"
+uv_tool_install basedpyright basedpyright-langserver \
+    "basedpyright (open-source pyright fork — croft LSP fallback)" \
+    "basedpyright installed (Python completion + go-to-definition)"
 if [[ "$DRY_RUN" != "true" ]]; then
     # rust-analyzer (Rust LSP) via rustup component; gopls (Go LSP) via go install.
     if installed rustup; then
