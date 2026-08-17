@@ -113,6 +113,17 @@ INSTALL_FAILED=0
 INSTALL_CURRENT=0
 FAILED_ITEMS=()
 
+# Managed-block bookkeeping (see write_managed): 'repaired<TAB>path' for files where
+# a duplicate pre-managed copy of our own block was removed, 'outside<TAB>path' for
+# files that still carry content outside the markers. Reported once at the end.
+# A FILE rather than an array on purpose — write_managed is normally fed by a heredoc,
+# but a caller feeding it through a PIPE runs it in a subshell, where array appends are
+# discarded while the on-disk repair still happens. That is exactly the silent-no-op
+# shape this script keeps getting bitten by, so the state has to outlive a subshell.
+MANAGED_STATE="$(mktemp)"
+managed_note() { printf '%s\t%s\n' "$1" "$2" >> "$MANAGED_STATE"; }
+managed_list() { [[ -s "$MANAGED_STATE" ]] && awk -F'\t' -v k="$1" '$1 == k { print $2 }' "$MANAGED_STATE" | sort -u; }
+
 # Dynamic total — count all install calls in this script so the progress bar stays accurate
 # when tools are added or removed. Counts brew_install, brew_cask_install, npm_global_install,
 # including those inside conditionals.
@@ -183,6 +194,7 @@ acquire_lock() {
 release_lock() {
     rm -rf "$LOCKFILE"
     kill "$SUDO_KEEPALIVE_PID" 2>/dev/null || true
+    [[ -n "${MANAGED_STATE:-}" ]] && rm -f "$MANAGED_STATE"
 }
 
 SUDO_KEEPALIVE_PID=""
@@ -530,11 +542,25 @@ should_run() {
 # -- Utility functions --------------------------------------------------------
 installed() { command -v "$1" &>/dev/null; }
 
+# _trim_blank_edges <file>   (trimmed content on stdout)
+# The file's content with leading and trailing blank lines removed, so two regions
+# can be compared for equality without tripping over surrounding spacing.
+_trim_blank_edges() {
+    awk '{ l[NR] = $0 }
+         END { s = 1; e = NR
+               while (s <= e && l[s] ~ /^[[:space:]]*$/) s++
+               while (e >= s && l[e] ~ /^[[:space:]]*$/) e--
+               for (i = s; i <= e; i++) print l[i] }' "$1"
+}
+
+# _has_content <file>   -> 0 when the file holds anything other than whitespace
+_has_content() { grep -q '[^[:space:]]' "$1" 2>/dev/null; }
+
 # write_managed <file> [comment-prefix]   (config content on stdin)
 # Idempotent config writer that MERGES on re-run instead of overwriting:
-#   - new file            -> create it wrapped in dev-setup markers
-#   - file has our markers -> replace ONLY the block between markers (edits outside survive)
-#   - file exists, no markers -> append our block (preserves the existing file)
+#   - new file                -> create it wrapped in dev-setup markers
+#   - file has our markers    -> replace ONLY the block between markers (edits outside survive)
+#   - file exists, no markers -> back up and REPLACE (see the branch below for why)
 # Comment prefix defaults to '#'. Honors DRY_RUN. This is the .zshrc managed-block
 # pattern generalized so re-running the setup pulls config updates without clobbering
 # personal edits placed outside the markers.
@@ -542,19 +568,59 @@ write_managed() {
     local file="$1" cp="${2:-#}"
     local mb="$cp >>> dev-setup managed block (do not edit between the markers) >>>"
     local me="$cp <<< dev-setup managed block <<<"
+    local body; body="$(mktemp)"
+    cat > "$body"
     local tmp; tmp="$(mktemp)"
-    { printf '%s\n' "$mb"; cat; printf '%s\n' "$me"; } > "$tmp"
-    if [[ "$DRY_RUN" == "true" ]]; then rm -f "$tmp"; return 0; fi
-    mkdir -p "$(dirname "$file")"
+    { printf '%s\n' "$mb"; cat "$body"; printf '%s\n' "$me"; } > "$tmp"
+    if [[ "$DRY_RUN" != "true" ]]; then mkdir -p "$(dirname "$file")"; fi
     if [[ ! -f "$file" ]]; then
-        cp "$tmp" "$file"
+        [[ "$DRY_RUN" == "true" ]] || cp "$tmp" "$file"
     elif grep -qF "$mb" "$file" 2>/dev/null; then
-        local out; out="$(mktemp)"
-        awk -v mb="$mb" -v me="$me" -v blk="$tmp" '
-            index($0, mb) { while ((getline line < blk) > 0) print line; close(blk); inb=1; next }
-            index($0, me) { inb=0; next }
-            !inb { print }
-        ' "$file" > "$out" && mv "$out" "$file"
+        # Split the file around our markers so the regions OUTSIDE them can be
+        # inspected rather than blindly preserved. A pre-#130 write_managed APPENDED
+        # its block to marker-less files, so upgraded machines can carry a stray copy
+        # of the block above ours — which the marker-to-marker rewrite below could
+        # never reach, freezing the file duplicated forever. Fatal for ~/.prettierrc,
+        # which is parsed as YAML and rejects a second document; merely redundant for
+        # the ~18 other configs affected, whose formats happen to be last-key-wins
+        # (~/.aws/config, ~/.npmrc, ~/.editorconfig, ~/.vimrc, …). See #259.
+        local pre post oldblk; pre="$(mktemp)"; post="$(mktemp)"; oldblk="$(mktemp)"
+        awk -v mb="$mb" 'index($0, mb) { exit } { print }' "$file" > "$pre"
+        awk -v me="$me" 'seen { print } index($0, me) { seen = 1 }' "$file" > "$post"
+        awk -v mb="$mb" -v me="$me" '
+            index($0, me) { inb = 0 } inb { print } index($0, mb) { inb = 1 }' "$file" > "$oldblk"
+        # Drop an outside region ONLY when it is an exact duplicate of content we know
+        # to be ours: either the block we are about to write, or the block already
+        # between the markers (which this script wrote on an earlier run, so a stray
+        # copy of it is ours too — that is what catches a duplicate left by an OLDER
+        # version whose content has since drifted). Deleting outside content on any
+        # looser test would eat real user config: ~/.ssh/config Host entries,
+        # ~/.aws/config profiles, ~/.npmrc tokens and ~/.zshrc edits all legitimately
+        # live out there, and none of them match our own generated block.
+        local repaired=false region
+        for region in "$pre" "$post"; do
+            _has_content "$region" || continue
+            if cmp -s <(_trim_blank_edges "$region") <(_trim_blank_edges "$body") ||
+               { _has_content "$oldblk" && cmp -s <(_trim_blank_edges "$region") <(_trim_blank_edges "$oldblk"); }; then
+                : > "$region"
+                repaired=true
+            fi
+        done
+        [[ "$repaired" == "true" ]] && managed_note repaired "$file"
+        # Whatever is still outside the markers is either a deliberate user edit or a
+        # duplicate left by an older script version that has since drifted. Either way
+        # it is not ours to delete — record it for the one-line notice at the end.
+        if _has_content "$pre" || _has_content "$post"; then managed_note outside "$file"; fi
+        if [[ "$DRY_RUN" == "true" ]]; then
+            [[ "$repaired" == "true" ]] && info "[DRY RUN] Would remove a duplicate pre-managed copy of the block from $file"
+        else
+            local out; out="$(mktemp)"
+            cat "$pre" "$tmp" "$post" > "$out" && mv "$out" "$file"
+            [[ "$repaired" == "true" ]] && info "Removed a duplicate pre-managed copy of the block from $file (#259)"
+        fi
+        rm -f "$pre" "$post" "$oldblk"
+    elif [[ "$DRY_RUN" == "true" ]]; then
+        info "[DRY RUN] Would back up and replace the unmarked $file"
     else
         # File exists but has none of our markers — e.g. written whole by a
         # pre-managed-block version of this script. APPENDING our block would
@@ -564,7 +630,7 @@ write_managed() {
         cp "$file" "${file}.pre-managed.$(date +%Y%m%d%H%M%S)" 2>/dev/null || true
         cp "$tmp" "$file"
     fi
-    rm -f "$tmp"
+    rm -f "$tmp" "$body"
 }
 
 # write_managed_script <file>   (script body on stdin, may start with a #! shebang)
@@ -11826,6 +11892,31 @@ if [[ ${#FAILED_ITEMS[@]} -gt 0 ]]; then
     done
     echo ""
     echo -e "  Review errors: ${DIM}cat $ERROR_LOG${NC}"
+    echo ""
+fi
+
+# Managed-block repairs and leftovers (#259). A repair is a fix worth announcing;
+# leftover outside-marker content is expected for files you edit yourself, so it stays
+# a single quiet line rather than a per-file warning that trains you to ignore it.
+MANAGED_REPAIRED_LIST=$(managed_list repaired)
+MANAGED_OUTSIDE_LIST=$(managed_list outside)
+
+if [[ -n "$MANAGED_REPAIRED_LIST" ]]; then
+    _verb="Repaired"; [[ "$DRY_RUN" == "true" ]] && _verb="Would repair"
+    echo -e "${GREEN}${BOLD}${_verb} $(echo "$MANAGED_REPAIRED_LIST" | wc -l | tr -d ' ') config(s)${NC} carrying a duplicate pre-managed copy of the block:"
+    while IFS= read -r item; do
+        echo -e "  ${GREEN}•${NC} ${item/#$HOME/\~}"
+    done <<< "$MANAGED_REPAIRED_LIST"
+    echo ""
+fi
+
+if [[ -n "$MANAGED_OUTSIDE_LIST" ]]; then
+    echo -e "${DIM}$(echo "$MANAGED_OUTSIDE_LIST" | wc -l | tr -d ' ') managed file(s) carry content outside the markers:${NC}"
+    while IFS= read -r item; do
+        echo -e "${DIM}  • ${item/#$HOME/\~}${NC}"
+    done <<< "$MANAGED_OUTSIDE_LIST"
+    echo -e "${DIM}  Expected for files you edit yourself (~/.zshrc, ~/.ssh/config, ~/.aws/config).${NC}"
+    echo -e "${DIM}  If unexpected, it may be a pre-7.x duplicate that has since drifted — see issue #259.${NC}"
     echo ""
 fi
 
