@@ -29,6 +29,7 @@ Quick reference for all **209+ shortcuts** configured by the setup scripts.
 | `dft` | `difft` | Syntax-aware structural diff |
 | `y` | `yazi` | Terminal file manager |
 | `jx` | `fx` | Interactive JSON viewer |
+| `jg` | `just -g` | Recipes from the global `~/.justfile` (`jg --list`) |
 
 ### Downloads & Network
 
