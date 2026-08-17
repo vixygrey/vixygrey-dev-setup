@@ -21,3 +21,62 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y shellcheck
       - name: Run ShellCheck
         run: shellcheck -x -S warning scripts/setup-dev-tools-mac.sh
+
+  generated-config:
+    name: Generated config parses
+    runs-on: ubuntu-latest
+    # The generator can be syntactically perfect bash and still emit a file the
+    # consuming tool cannot read. 7.9.1 wrote `export GLAB_PAGER="delta"` into the
+    # global justfile — invalid `just` syntax — and every one of its ~18 recipes was
+    # lost. ShellCheck passed, and so did a generator-vs-disk comparison, because the
+    # broken file on disk matched the broken generator exactly (#291). The only check
+    # that catches this class is handing the generated text to the real parser.
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install parsers
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y zsh
+          curl --proto '=https' --tlsv1.2 -sSf https://just.systems/install.sh \
+            | bash -s -- --to /usr/local/bin
+          just --version && zsh --version && jq --version
+
+      - name: Parse every generated config
+        run: |
+          set -euo pipefail
+
+          # Pull one quoted heredoc body out of the script by its tag.
+          extract() {
+            awk -v tag="$1" '$0 ~ "<<'"'"'" tag "'"'"'" {f=1; next} f && $0 == tag {exit} f' \
+              scripts/setup-dev-tools-mac.sh
+          }
+
+          # tag|validator — add a row when a new generated file has a real parser.
+          fail=0
+          while IFS='|' read -r tag validator; do
+            [ -z "$tag" ] && continue
+            extract "$tag" > /tmp/generated
+            # An empty extraction would make every check below vacuously pass, which
+            # is precisely the silent no-op this job exists to prevent. Fail loudly
+            # if a tag stops matching because a heredoc was renamed.
+            if [ ! -s /tmp/generated ]; then
+              echo "::error::$tag produced no content — was the heredoc renamed or removed?"
+              fail=1
+              continue
+            fi
+            if eval "$validator" > /tmp/parse.out 2>&1; then
+              echo "  ok    $tag ($(wc -l < /tmp/generated) lines)"
+            else
+              echo "::error::$tag does not parse"
+              sed 's/^/        /' /tmp/parse.out
+              fail=1
+            fi
+          done <<'CHECKS'
+          JUSTFILE_CONF|just --justfile /tmp/generated --working-directory /tmp --list
+          MANAGED_ZSHRC|zsh -n /tmp/generated
+          CLAUDE_SETTINGS_CONF|jq empty /tmp/generated
+          PRETTIER_CONF|jq empty /tmp/generated
+          CHECKS
+
+          exit "$fail"

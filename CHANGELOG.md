@@ -2,6 +2,12 @@
 
 > Release notes for 7.0.0–7.1.1 live in [GitHub Releases](https://github.com/vixygrey/vixygrey-dev-setup/releases) (auto-generated). This file resumes hand-written notes at 7.2.0.
 
+## [Unreleased]
+
+### Added
+
+- **ci**: `lint.yml` gains a **generated-config parse gate**. The generator can be syntactically perfect bash and still emit a file the consuming tool cannot read — 7.9.1 wrote `export GLAB_PAGER="delta"` into the global justfile, invalid `just` syntax, and lost all ~18 recipes (#291). ShellCheck passed. So did a generator-vs-disk comparison, because the broken file on disk matched the broken generator exactly; **agreement with the generator is not correctness**. The only check that catches this class is handing the generated text to the real parser, which is what the job now does: `just --list` on the extracted `JUSTFILE_CONF`, `zsh -n` on `MANAGED_ZSHRC`, and `jq empty` on `CLAUDE_SETTINGS_CONF` and `PRETTIER_CONF`. Checks are a `tag|validator` table, so covering a new generated file is one row. An **empty extraction is a hard failure** rather than a silent pass — a renamed heredoc would otherwise make every check below it vacuously succeed, which is exactly the silent no-op this repo keeps getting bitten by. Verified by reintroducing four real breakages and confirming each is caught: the #291 justfile export, an unbalanced `if` in the zshrc block, a malformed `settings.json`, and a renamed heredoc tag (#294)
+
 ## [7.9.2] - 2026-08-17
 
 Repairs a regression 7.9.1 introduced: an invalid line was written into `~/.justfile`, so it stopped parsing and **every global `gj` recipe was unusable**. If you ran 7.9.1, re-run the script — `~/.justfile` is a managed block and is rewritten in place. The cause is worth recording: the offending edit was anchored on a string that appears twice in the generator and landed in the wrong heredoc, and three separate checks passed while the file was broken — including a generator-vs-disk comparison, because the broken file on disk matched the broken generator exactly. Agreement with the generator is not correctness. Both generated artifacts are now parse-checked directly.
