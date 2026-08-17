@@ -27,9 +27,8 @@ Quick reference for all **209+ shortcuts** configured by the setup scripts.
 | `make` | `just` | Simpler task runner |
 | `f` | `fd` | Fast file finder |
 | `dft` | `difft` | Syntax-aware structural diff |
-| `y` | `yazi` | Terminal file manager |
+| `y` | `rovr` | Terminal file manager (mouse-first TUI; `n` = nnn, the minimal fallback) |
 | `jx` | `fx` | Interactive JSON viewer |
-| `jg` | `just -g` | Recipes from the global `~/.justfile` (`jg --list`) |
 
 ### Downloads & Network
 
@@ -74,7 +73,7 @@ Quick reference for all **209+ shortcuts** configured by the setup scripts.
 
 | Alias | Runs | What it does |
 |-------|------|-------------|
-| `md` | `glow` | Render Markdown in terminal |
+| `md` | `leaf` | Render Markdown in the terminal |
 | `serve` | `miniserve --color-scheme-dark dracula -qr .` | Quick file server |
 | `csvp` | `csvlook` | Pretty-print CSV as table |
 | `ytdl` | `yt-dlp` | Download video |
