@@ -949,7 +949,7 @@ LSP binaries, so any editor that speaks LSP picks them up:
 
 | Language | Server | Install |
 |----------|--------|---------|
-| Python | ruff (`ruff server`) | already installed |
+| Python | ty (types) + basedpyright (fallback) + ruff (lint) | uv tool |
 | TypeScript / JS | typescript-language-server | npm |
 | HTML / CSS / JSON / ESLint | vscode-langservers-extracted | npm |
 | YAML | yaml-language-server | npm |
@@ -959,8 +959,10 @@ LSP binaries, so any editor that speaks LSP picks them up:
 | Rust | rust-analyzer | rustup component |
 | Go | gopls | go install |
 
-Python is covered by **ruff's** built-in server, which handles linting, formatting and code
-actions — not type checking or go-to-definition ([#288](https://github.com/vixygrey/vixygrey-dev-setup/issues/288)).
+Python runs three servers at once, which is croft's own built-in arrangement — `ty` (Astral's type
+server) at priority 0, `basedpyright` as the fallback for what `ty` does not yet advertise, and
+`ruff` for lint. Previously only `ruff` was installed, so Python had lint and formatting but no
+type checking or go-to-definition.
 
 ### AI agent — Claude Code (+ croft integration)
 
