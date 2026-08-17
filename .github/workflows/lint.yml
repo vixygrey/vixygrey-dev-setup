@@ -40,7 +40,10 @@ jobs:
           sudo apt-get install -y zsh
           curl --proto '=https' --tlsv1.2 -sSf https://just.systems/install.sh \
             | bash -s -- --to /usr/local/bin
-          just --version && zsh --version && jq --version
+          sudo curl -fsSL -o /usr/local/bin/yq \
+            https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
+          sudo chmod +x /usr/local/bin/yq
+          just --version && zsh --version && jq --version && yq --version
 
       - name: Parse every generated config
         run: |
@@ -77,6 +80,14 @@ jobs:
           MANAGED_ZSHRC|zsh -n /tmp/generated
           CLAUDE_SETTINGS_CONF|jq empty /tmp/generated
           PRETTIER_CONF|jq empty /tmp/generated
+          LAZYGIT_CONF|yq eval '.' /tmp/generated
+          K9S_DRACULA|yq eval '.' /tmp/generated
+          GHDASH_CONF|yq eval '.' /tmp/generated
+          STERN_CONF|yq eval '.' /tmp/generated
+          LAZYDOCKER_CONF|yq eval '.' /tmp/generated
+          GH_CONF|yq eval '.' /tmp/generated
+          NGROK_CONF|yq eval '.' /tmp/generated
+          BORGMATIC_CONF|yq eval '.' /tmp/generated
           CHECKS
 
           exit "$fail"
