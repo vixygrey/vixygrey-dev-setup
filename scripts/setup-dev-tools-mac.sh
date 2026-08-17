@@ -126,11 +126,13 @@ managed_list() { [[ -s "$MANAGED_STATE" ]] && awk -F'\t' -v k="$1" '$1 == k { pr
 
 # Dynamic total — count all install calls in this script so the progress bar stays accurate
 # when tools are added or removed. Counts brew_install, brew_cask_install, npm_global_install,
-# including those inside conditionals.
+# go_install, uv_tool_install and vscode_ext_install, including those inside conditionals.
+# A new install helper MUST be added to this pattern or its calls run un-counted and the
+# bar overshoots 100%.
 # Count all install calls + standalone progress calls for accurate progress bar
 # Note: `grep -c` prints "0" AND exits 1 on zero matches, so `|| echo 0` would append
 # a SECOND "0" ("0\n0") and break the arithmetic. Use `|| true` + a default instead.
-_INSTALL_CALLS=$(grep -cE '^\s*(brew_install|brew_cask_install|npm_global_install|go_install|uv_tool_install) ' "$0" 2>/dev/null || true)
+_INSTALL_CALLS=$(grep -cE '^\s*(brew_install|brew_cask_install|npm_global_install|go_install|uv_tool_install|vscode_ext_install) ' "$0" 2>/dev/null || true)
 _PROGRESS_CALLS=$(grep -cE '^\s*progress\s*$' "$0" 2>/dev/null || true)
 INSTALL_TOTAL=$(( ${_INSTALL_CALLS:-0} + ${_PROGRESS_CALLS:-0} ))
 [[ "$INSTALL_TOTAL" -eq 0 ]] && INSTALL_TOTAL=200
@@ -292,7 +294,7 @@ declare -A CATEGORY_DESC=(
     [containers]="lazydocker, dive, kubectl, k9s"
     [api]="ATAC, grpcurl"
     [networking]="mtr, bandwhich, nmap"
-    [dx]="fzf, starship, atuin, croft, micro, Ghostty, zellij, llm"
+    [dx]="fzf, starship, atuin, croft, micro, VS Code (+ extensions), Ghostty, zellij, llm"
     [ux]="Lighthouse"
     [docs]="d2, Mermaid CLI"
     [mac-system]="Pearcleaner, dockutil, terminal-notifier"
@@ -332,7 +334,7 @@ declare -A CONFIG_LIVES_IN_CONFIGS=(
     [database]="pgcli, mycli, harlequin"
     [containers]="lazydocker, k9s (config + Dracula skin)"
     [networking]="trippy"
-    [dx]="atuin, zellij, Ghostty — and starship, which is in the \`dracula\` category"
+    [dx]="atuin, zellij, Ghostty, VS Code settings — and starship, which is in the \`dracula\` category"
     [mac-focus]="newsboat"
     [mac-media]="mpv"
     [mac-browsers]="w3m"
@@ -976,6 +978,55 @@ npm_global_install() {
     fi
 }
 
+# vscode_ext_install <publisher.extension-id> <description>
+# Installs a VS Code extension via the `code` CLI. The visual-studio-code cask ships
+# `code` as a Binary artifact, so it lands on PATH with the app — no in-app "Shell
+# Command: Install 'code' command" step needed.
+#
+# Two details worth keeping:
+#   - The installed-extension list is read ONCE into _VSCODE_EXTS (see the dx section)
+#     rather than shelling out per extension. `code --list-extensions` boots Electron
+#     and takes ~1s; at 26 extensions that is ~26s of nothing on an already-provisioned
+#     machine. The cached list is compared case-insensitively because the marketplace
+#     is case-preserving but `code` matches IDs case-insensitively.
+#   - Extension IDs must be verified against the marketplace before being added here.
+#     A wrong ID is not a loud failure — `code` prints "not found" and exits non-zero,
+#     which lands as one red line in a 300-line run. See CONTRIBUTING/AGENTS on naming
+#     the real thing rather than the plausible thing.
+vscode_ext_install() {
+    local ext="$1"
+    local name="${2:-$1}"
+    progress
+    is_done "vscode-ext:$ext" && { warn "$name already completed (resume)"; return 0; }
+    # DRY_RUN is checked BEFORE the `code` guard on purpose. A dry run reports what a real
+    # run would do, and a real run installs the cask (which provides `code`) a few lines
+    # above this. Guarding first made a fresh-machine dry run say it would install VS Code
+    # and then refuse to preview a single extension — the preview was useless exactly where
+    # it matters most.
+    if [[ "$DRY_RUN" == "true" ]]; then
+        info "[DRY RUN] Would install VS Code extension: $name ($ext)"
+        return 0
+    fi
+    if ! installed code; then
+        warn "Skipping $name — the 'code' CLI is not available (cask install failed?)"
+        return 0
+    fi
+    # Cached list from the dx section; falls back to a live query if unset.
+    [[ -z "${_VSCODE_EXTS+x}" ]] && _VSCODE_EXTS=$(code --list-extensions 2>/dev/null || true)
+    if printf '%s\n' "$_VSCODE_EXTS" | grep -qix -- "$ext"; then
+        warn "$name already installed"
+        mark_done "vscode-ext:$ext"
+    else
+        info "Installing VS Code extension: $name..."
+        if code --install-extension "$ext" --force >> "$LOG_FILE" 2>&1; then
+            success "$name installed"
+            mark_done "vscode-ext:$ext"
+        else
+            error "Failed to install VS Code extension: $name ($ext)"
+        fi
+    fi
+}
+
 # go_install <import-path@ver> <cmd-name> <description>
 # Installs a Go tool into $GOBIN (the dir the login shell puts on PATH), so it's
 # reachable both during this run and in new shells. Skips if already present,
@@ -1213,6 +1264,10 @@ if [[ "$UNINSTALL" == "true" ]]; then
     echo "  rm -f ~/.local/share/go/bin/helix-assist  # dropped Claude LSP for Helix"
     echo "  cargo uninstall croft                    # the terminal IDE (if you want it gone)"
     echo ""
+    echo "# Remove VS Code's per-user trees (the cask uninstall leaves these behind):"
+    echo "  rm -rf ~/.vscode                          # installed extensions"
+    echo "  rm -rf \"\$HOME/Library/Application Support/Code\"   # settings, state, workspace storage"
+    echo ""
     echo "# Remove Claude Code config (CAREFUL — contains your custom rules):"
     echo "  rm -rf ~/.claude/settings.json ~/.claude/CLAUDE.md ~/.claude/rules ~/.claude/hooks ~/.claude/commands ~/.claude/agents ~/.claude/statusline.sh"
     echo ""
@@ -1266,7 +1321,10 @@ if [[ "$CLEANUP" == "true" ]]; then
         "cask:iterm2:iTerm2:Ghostty:iTerm"
         "cask:cursor:Cursor (AI editor):croft + Claude Code:Cursor"
         "cask:kiro:Kiro:croft + Claude Code:Kiro"
-        "cask:visual-studio-code:Visual Studio Code:croft:Visual Studio Code"
+        # NOTE: visual-studio-code is deliberately NOT here. It was retired in favour of
+        # croft and reinstated as the GUI editor alongside it (#303) — croft is still
+        # primary. Cursor and Kiro stay retired; the objection was to three overlapping
+        # Electron editors, not to having one.
         "cask:bruno:Bruno:ATAC:Bruno"
         "cask:dbeaver-community:DBeaver Community:harlequin + lazysql:DBeaver"
         "cask:cyberduck:Cyberduck:rclone:Cyberduck"
@@ -1442,9 +1500,12 @@ if [[ "$CLEANUP" == "true" ]]; then
     # Guarded two ways: only touch a tree whose .app is genuinely absent (so a
     # manual reinstall is never gutted), and prefer `trash` over `rm -rf` so a
     # mistake is recoverable from the Finder Trash rather than final.
+    # VS Code is absent from this list by design: the script now installs it
+    # (#303), so `~/.vscode` holds extensions we put there and Application Support holds
+    # settings we merge into. The `.app`-present guard below would spare them on a normal
+    # machine, but a failed cask install or an app moved out of /Applications would make
+    # cleanup eat a managed tree. Only genuinely retired editors belong here.
     ORPHANED_EDITOR_DIRS=(
-        "Visual Studio Code|$HOME/.vscode"
-        "Visual Studio Code|$HOME/Library/Application Support/Code"
         "Kiro|$HOME/.kiro"
         "Kiro|$HOME/Library/Application Support/Kiro"
         "Cursor|$HOME/.cursor"
@@ -2465,6 +2526,62 @@ else
     warn "Skipping croft — Rust/cargo not installed (rustup provides it)"
     progress
 fi
+# Visual Studio Code — the GUI editor, secondary to croft (#303). croft covers the
+# terminal case and stays primary; this is the escape hatch for the things a TUI still
+# loses at (long refactors across many tabs, graphical diffs, extension-backed previews)
+# and for .editorconfig repos, which croft does not read at all. Reinstated after the 7.x
+# declutter removed all three Electron editors: the objection was to running VS Code *and*
+# Cursor *and* Kiro, not to having one.
+#
+# The cask ships `code` as a Binary artifact, so the CLI is on PATH straight after
+# install — the extension loop below depends on that.
+brew_cask_install "visual-studio-code" "Visual Studio Code (GUI editor — croft stays primary)"
+
+# Extensions. Every entry mirrors a CLI this script already installs, so the GUI editor
+# enforces the same rules as the terminal: ruff not black, taplo for TOML, shellcheck +
+# shfmt for shell, d2 for diagrams, EditorConfig honoured (which croft itself does not
+# support). Verified against the marketplace before landing — a wrong ID is a single red
+# line in a long run, not a loud failure.
+#
+# Read the installed list ONCE: `code --list-extensions` boots Electron (~1s), so the
+# per-extension check inside vscode_ext_install reads this cache instead of shelling out
+# 26 times on an already-provisioned machine.
+if installed code && [[ "$DRY_RUN" != "true" ]]; then
+    _VSCODE_EXTS=$(code --list-extensions 2>/dev/null || true)
+fi
+# Core — the ones that apply regardless of language
+vscode_ext_install "anthropic.claude-code" "Claude Code for VS Code"
+vscode_ext_install "dracula-theme.theme-dracula" "Dracula Official (theme — matches every other tool here)"
+vscode_ext_install "editorconfig.editorconfig" "EditorConfig (per-repo indent rules)"
+vscode_ext_install "esbenp.prettier-vscode" "Prettier (JS/TS/CSS/MD formatter)"
+vscode_ext_install "dbaeumer.vscode-eslint" "ESLint"
+vscode_ext_install "eamodio.gitlens" "GitLens (blame, history, authorship)"
+vscode_ext_install "github.vscode-pull-request-github" "GitHub Pull Requests (matches the gh PR workflow)"
+vscode_ext_install "github.vscode-github-actions" "GitHub Actions (workflow syntax + run status)"
+vscode_ext_install "usernamehw.errorlens" "Error Lens (inline diagnostics)"
+vscode_ext_install "streetsidesoftware.code-spell-checker" "Code Spell Checker (GUI counterpart to typos)"
+vscode_ext_install "mikestead.dotenv" ".env syntax highlighting"
+# Languages — pairs with the language servers installed above for croft
+vscode_ext_install "ms-python.python" "Python"
+vscode_ext_install "charliermarsh.ruff" "Ruff (Astral — the linter/formatter this setup mandates)"
+vscode_ext_install "rust-lang.rust-analyzer" "rust-analyzer (Rust)"
+vscode_ext_install "golang.go" "Go"
+vscode_ext_install "tamasfe.even-better-toml" "Even Better TOML (taplo-backed)"
+vscode_ext_install "redhat.vscode-yaml" "YAML"
+vscode_ext_install "bradlc.vscode-tailwindcss" "Tailwind CSS IntelliSense"
+# Infrastructure
+vscode_ext_install "ms-azuretools.vscode-docker" "Docker"
+vscode_ext_install "hashicorp.terraform" "HashiCorp Terraform (reads OpenTofu .tf files)"
+vscode_ext_install "ms-vscode-remote.remote-containers" "Dev Containers (OrbStack provides the runtime)"
+# Shell — the editors' half of shellcheck + shfmt
+vscode_ext_install "timonwong.shellcheck" "ShellCheck"
+vscode_ext_install "foxundermoon.shell-format" "shell-format (shfmt-backed)"
+# Docs & tasks
+vscode_ext_install "terrastruct.d2" "D2 (diagram syntax + preview)"
+vscode_ext_install "bierner.markdown-mermaid" "Mermaid in Markdown preview"
+vscode_ext_install "nefrob.vscode-just-syntax" "just (Justfile syntax)"
+unset _VSCODE_EXTS
+
 brew_cask_install "ghostty" "Ghostty (fast GPU-accelerated terminal)"
 brew_install "zellij" "zellij (modern terminal multiplexer — discoverable UI, layouts)"
 
@@ -3733,6 +3850,101 @@ else
     warn "micro settings exist but jq is missing — not merging new defaults"
 fi
 unset MICRO_DEFAULTS
+
+# ---- Visual Studio Code ----
+# Same shape as the micro block above, and for the same reasons: NOT write_managed,
+# because JSON has no comment syntax for the managed markers and VS Code rewrites this
+# file itself every time a setting is changed from the UI or the Settings editor. So
+# merge with the ON-DISK FILE WINNING (`.[0] * .[1]` — defaults first, yours second):
+# your hand edits and anything Settings Sync pulls down survive a re-run, while options
+# added in later releases still land on an existing machine.
+#
+# One VS Code-specific trap: settings.json is JSONC, so a file with `//` comments or a
+# trailing comma is valid to VS Code and INVALID to jq. That merge fails, and the right
+# response is to warn and leave the file completely alone — never to overwrite, which
+# would silently eat a config the user considers valid.
+#
+# Every default here is one the terminal side already enforces, so the GUI editor cannot
+# disagree with the CLI: ruff for Python (not black), prettier for web, shfmt for shell,
+# tabs for Go, LF endings, trailing whitespace stripped. The EditorConfig extension is
+# installed too and outranks all of it per-repo, which is the intended precedence.
+VSCODE_USER_DIR="$HOME/Library/Application Support/Code/User"
+VSCODE_SETTINGS="$VSCODE_USER_DIR/settings.json"
+# "Dracula Theme" is the exact `contributes.themes[].label` from the extension manifest —
+# not "Dracula", which silently does nothing (an unknown theme name leaves the default).
+VSCODE_DEFAULTS=$(cat <<'VSCODE_CONF'
+{
+    "workbench.colorTheme": "Dracula Theme",
+    "workbench.startupEditor": "none",
+    "editor.fontFamily": "'JetBrains Mono', Menlo, monospace",
+    "editor.fontLigatures": true,
+    "editor.fontSize": 13,
+    "editor.formatOnSave": true,
+    "editor.tabSize": 2,
+    "editor.insertSpaces": true,
+    "editor.rulers": [100],
+    "editor.renderWhitespace": "boundary",
+    "editor.bracketPairColorization.enabled": true,
+    "editor.linkedEditing": true,
+    "editor.inlineSuggest.enabled": true,
+    "files.trimTrailingWhitespace": true,
+    "files.insertFinalNewline": true,
+    "files.trimFinalNewlines": true,
+    "files.eol": "\n",
+    "terminal.integrated.fontFamily": "JetBrainsMono Nerd Font",
+    "terminal.integrated.defaultProfile.osx": "zsh",
+    "git.autofetch": true,
+    "git.confirmSync": false,
+    "explorer.confirmDragAndDrop": false,
+    "telemetry.telemetryLevel": "off",
+    "[python]": {
+        "editor.defaultFormatter": "charliermarsh.ruff",
+        "editor.tabSize": 4,
+        "editor.codeActionsOnSave": {
+            "source.fixAll": "explicit",
+            "source.organizeImports": "explicit"
+        }
+    },
+    "[javascript]": { "editor.defaultFormatter": "esbenp.prettier-vscode" },
+    "[javascriptreact]": { "editor.defaultFormatter": "esbenp.prettier-vscode" },
+    "[typescript]": { "editor.defaultFormatter": "esbenp.prettier-vscode" },
+    "[typescriptreact]": { "editor.defaultFormatter": "esbenp.prettier-vscode" },
+    "[json]": { "editor.defaultFormatter": "esbenp.prettier-vscode" },
+    "[jsonc]": { "editor.defaultFormatter": "esbenp.prettier-vscode" },
+    "[css]": { "editor.defaultFormatter": "esbenp.prettier-vscode" },
+    "[html]": { "editor.defaultFormatter": "esbenp.prettier-vscode" },
+    "[markdown]": { "editor.defaultFormatter": "esbenp.prettier-vscode" },
+    "[yaml]": { "editor.defaultFormatter": "esbenp.prettier-vscode" },
+    "[go]": { "editor.defaultFormatter": "golang.go", "editor.insertSpaces": false, "editor.tabSize": 4 },
+    "[rust]": { "editor.defaultFormatter": "rust-lang.rust-analyzer" },
+    "[shellscript]": { "editor.defaultFormatter": "foxundermoon.shell-format" },
+    "[terraform]": { "editor.defaultFormatter": "hashicorp.terraform" },
+    "[toml]": { "editor.defaultFormatter": "tamasfe.even-better-toml" }
+}
+VSCODE_CONF
+)
+if [[ "$DRY_RUN" == "true" ]]; then
+    info "[DRY RUN] Would write VS Code settings (Dracula, format-on-save, ruff/prettier/shfmt)"
+elif [[ ! -f "$VSCODE_SETTINGS" ]]; then
+    mkdir -p "$VSCODE_USER_DIR"
+    printf '%s\n' "$VSCODE_DEFAULTS" > "$VSCODE_SETTINGS"
+    success "VS Code configured (Dracula, format-on-save, ruff for Python, prettier for web)"
+elif command -v jq &>/dev/null; then
+    _vscode_tmp=$(mktemp)
+    if jq -s '.[0] * .[1]' <(printf '%s\n' "$VSCODE_DEFAULTS") "$VSCODE_SETTINGS" > "$_vscode_tmp" 2>/dev/null; then
+        mv "$_vscode_tmp" "$VSCODE_SETTINGS"
+        success "VS Code settings merged (your changes kept; new defaults added)"
+    else
+        rm -f "$_vscode_tmp"
+        # Almost always JSONC: comments or a trailing comma, which VS Code accepts and jq
+        # does not. Leave the file untouched and say so.
+        warn "Could not merge VS Code settings (comments or trailing commas?) — left as-is: $VSCODE_SETTINGS"
+    fi
+    unset _vscode_tmp
+else
+    warn "VS Code settings exist but jq is missing — not merging new defaults"
+fi
+unset VSCODE_DEFAULTS
 
 # ---- MCP servers -> Claude Code (migrated from Kiro) ----
 # Claude Code stores user-scoped MCP servers in ~/.claude.json. We use the
@@ -7910,7 +8122,8 @@ Rules that follow from this:
 
 ## Environment
 - Shell: zsh with starship prompt, atuin history, fzf fuzzy finder, zsh-autosuggestions, zsh-syntax-highlighting
-- Editor / IDE: **croft** is the primary editor (VS Code-style terminal IDE — `croft` to open a workspace, `croft pair` for the AI navigator). **micro** is the `EDITOR` for git/gh/lazygit commit messages and quick edits — non-modal, Dracula, with an on-screen key menu (`Ctrl+G` for full help). Helix was retired in 7.6.0. Agentic coding via Claude Code (`claude`).
+- Editor / IDE: **croft** is the primary editor (VS Code-style terminal IDE — `croft` to open a workspace, `croft pair` for the AI navigator). **Visual Studio Code** is installed as the **GUI** editor for when a TUI is the wrong tool (`code .`) — secondary to croft, not a replacement; it carries the same rules via extensions (Dracula, ruff, prettier, ESLint, shellcheck/shfmt, EditorConfig) so it cannot disagree with the CLI. **micro** is the `EDITOR` for git/gh/lazygit commit messages and quick edits — non-modal, Dracula, with an on-screen key menu (`Ctrl+G` for full help). Helix was retired in 7.6.0. Agentic coding via Claude Code (`claude`).
+- **croft does not support EditorConfig** (verified in croft 0.1.700 — no reference anywhere in its source). Its indentation is a language default (2 spaces for YAML, 4 otherwise) plus a per-buffer status-bar override that does not persist. VS Code *does* honour `.editorconfig`, so on a repo with one, the two editors will disagree unless you flip croft's status-bar pill. Croft's extensions are declarative `extension.toml` manifests (languages, LSP servers, themes, debug adapters, test runners, MCP sidecars) under `~/.config/croft/extensions/` — pure data, no code, no marketplace, so an EditorConfig reader cannot be added as one.
 - Terminal: Ghostty (Dracula theme)
 - Package managers: pnpm (preferred), npm, bun
 - Python: uv for packages (not pip), ruff for linting (not flake8/black)
@@ -9657,7 +9870,7 @@ it doesn't cost real capability. Below: what each tool is for, then how it fits
 together.
 
 ## Editor & AI
-- **croft** — VS Code-style terminal IDE; the **primary editor** (`croft pair` for the AI navigator). **micro** is the `EDITOR` for git/gh/lazygit commit messages and quick edits (non-modal, Dracula, on-screen key menu, trailing whitespace stripped on save).
+- **croft** — VS Code-style terminal IDE; the **primary editor** (`croft pair` for the AI navigator). **Visual Studio Code** (`code .`) is the GUI editor alongside it, preconfigured with Dracula and the same formatters. **micro** is the `EDITOR` for git/gh/lazygit commit messages and quick edits (non-modal, Dracula, on-screen key menu, trailing whitespace stripped on save).
 - **Claude Code (`claude`)** — agentic coding in the terminal; hosts the MCP servers. Best via `zellij --layout dev` (editor + Claude pane).
 - **Claude in croft** — croft's `croft pair` AI navigator (primary IDE) defaults to `--provider claude`, riding your existing `claude` CLI auth (subscription or key, no separate `ANTHROPIC_API_KEY`); `--provider ollama` runs a local model with no key. The one path that uses an Anthropic key is the **`llm`** CLI (`llm-anthropic`) — and it's optional: reach for it only when you want Claude in a shell pipe or a `> ! llm …` one-off from micro's command bar, then run `llm keys set anthropic`. **herald** integrates with Claude two ways, neither needing a key: Claude Code reads and searches your mail/calendar through herald's **MCP** (it rides your `claude` login), and herald's *own* built-in AI (triage, summaries, compose styler, semantic search) is optional and runs on local **Ollama** models that setup installs, runs as a login service, and seeds with `gemma3:4b` (chat) + `nomic-embed-text-v2-moe` (embeddings).
 
@@ -9767,6 +9980,22 @@ A Rust-built, VS Code-style IDE that lives entirely in the terminal — panes fo
 croft
 # launch with the AI pairing navigator active
 croft pair
+```
+
+Croft's extension system is declarative `extension.toml` manifests — languages, LSP servers, themes, debug adapters, test runners, and MCP sidecars — browsable at `Cmd+Shift+X` and installable by dropping a manifest in `~/.config/croft/extensions/<id>/`. There is deliberately no marketplace; the MCP catalog is curated, signed, and hash-checked. Because manifests are pure data, croft has **no EditorConfig support** — indentation is a language default (2 spaces YAML, 4 otherwise) with a per-buffer status-bar override. Use VS Code below on repos where `.editorconfig` matters.
+
+### `code` — Visual Studio Code
+The GUI editor, secondary to croft. It exists for the cases a terminal IDE still loses at — long refactors across many tabs, graphical diffs and merge conflicts, extension-backed previews — and for `.editorconfig` repos, which croft ignores. It is preconfigured to agree with the terminal rather than fight it: Dracula theme, format-on-save, ruff for Python, prettier for web, shfmt for shell, tabs for Go, LF endings.
+
+Settings live at `~/Library/Application Support/Code/User/settings.json` and are **merged, not overwritten** — your own keys and anything Settings Sync pulls down win over the defaults, so re-running the setup script is safe.
+
+```bash
+# open the current directory
+code .
+# open a specific file at a line
+code -g src/main.ts:42
+# list what's installed
+code --list-extensions
 ```
 
 > Tip: Start it from the project root, not a subdirectory — croft indexes the tree from wherever it's launched.
