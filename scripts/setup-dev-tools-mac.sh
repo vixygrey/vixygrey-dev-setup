@@ -22,7 +22,7 @@ fi
 #           --interactive/-i, --resume, --cleanup, --uninstall, --version, --help
 # =============================================================================
 
-SCRIPT_VERSION="7.9.0"
+SCRIPT_VERSION="7.9.1"
 SCRIPT_START=$(date +%s)
 PYTHON_VERSION="3.12"
 
