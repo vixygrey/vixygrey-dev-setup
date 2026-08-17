@@ -135,7 +135,7 @@ chmod +x scripts/setup-dev-tools-mac.sh
 |------|-------------|
 | **git** | Distributed version control |
 | **gh** | GitHub CLI -- PRs, issues, Actions from the terminal |
-| **glab** | GitLab CLI -- mirrors the gh conveniences (SSH, Helix, delta, same alias names → merge requests) for client repos on GitLab. GitHub stays primary |
+| **glab** | GitLab CLI -- mirrors the gh conveniences (SSH, micro, same alias names → merge requests; `rc` becomes `rcl`, since glab already has an `rc` command) for client repos on GitLab. GitHub stays primary |
 | **delta** | Beautiful git diffs with syntax highlighting and side-by-side view |
 | **git-lfs** | Git Large File Storage for binary assets |
 | **gpg** | GNU Privacy Guard for commit signing and encryption |
@@ -799,7 +799,7 @@ The script generates config files with sensible defaults:
 | `~/.config/pgcli/config` | pgcli | Multi-line, auto-expand, destructive warnings, bat pager |
 | `~/.config/harlequin/config.toml` | harlequin | Dracula theme, vscode keymap, file tree on |
 | `~/.config/gh/config.yml` | GitHub CLI | SSH protocol, Helix editor, delta pager, aliases (co, pv, pc, pl, il, pm, rel) |
-| `~/.config/glab-cli/config.yml` | GitLab CLI | SSH, Helix, delta; same alias names as gh mapped to GitLab merge requests + CI |
+| `~/.config/glab-cli/config.yml` | GitLab CLI | SSH, micro; same alias names as gh mapped to GitLab merge requests + CI |
 | `~/.aws/config` | AWS CLI | Default region, json output, bat pager, auto-prompt, SSO template |
 | `~/.config/git/hooks/` | git | Global pre-commit hooks (debug statements, large files >5MB, conflict markers) |
 | `~/.config/brewfile/Brewfile` | Homebrew | Snapshot of all installed packages with descriptions |
