@@ -1871,11 +1871,16 @@ brew_cask_install "session-manager-plugin" "AWS SSM Session Manager Plugin"
 
 # Granted (multi-account credential switching) — provides `granted` + `assume`.
 # Trust its tap, then install via the helper (honors DRY_RUN + existence checks).
+# Trust the tap OUTSIDE the installed-check. It used to sit in the `else`, so on a
+# machine that already had granted the branch never ran, the tap stayed untrusted
+# forever, and Homebrew silently ignored every formula and cask in it — including
+# updates to granted itself. `brew doctor` reported it on every run (#298). Trusting
+# is idempotent, so doing it unconditionally costs nothing.
+trust_tap common-fate/granted
 if installed granted || installed assume; then
     warn "Granted already installed"
     progress
 else
-    trust_tap common-fate/granted
     brew_install "granted" "Granted (AWS SSO credential switching — granted + assume)"
 fi
 
