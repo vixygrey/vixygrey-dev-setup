@@ -2,6 +2,12 @@
 
 > Release notes for 7.0.0–7.1.1 live in [GitHub Releases](https://github.com/vixygrey/vixygrey-dev-setup/releases) (auto-generated). This file resumes hand-written notes at 7.2.0.
 
+## [Unreleased]
+
+### Fixed
+
+- **just**: 7.9.1 wrote an invalid line into `~/.justfile`, so `gj` failed to parse and **all ~18 global recipes were unusable** (`error: expected '*', ':', '$', identifier, or '+', but found end of line`). #286 added `export GLAB_PAGER="delta"` intended for the `~/.zshrc` managed block, but anchored the edit on `alias gj="just --justfile ~/.justfile --working-directory ."` — a string that appears **twice** in the generator, once as a "Tip:" comment inside the `JUSTFILE_CONF` heredoc and once in the real alias list. A single-occurrence replace took the first, so the export landed in the justfile, where `export X="y"` is not valid syntax (just uses `export X := "y"`). The export now sits in the zshrc block, anchored on a string unique to it, with a comment recording why it must not move. Two lessons went into the verification rather than the prose: #286 tested the `glab` block thoroughly and never re-parsed the two files it had actually edited, and a generator-vs-disk sweep reported **110/112 matching** the whole time — because the broken `~/.justfile` on disk faithfully matched the broken generator. Agreement with the generator is not correctness. Both artifacts are now parse-checked directly: `just --justfile <generated> --list` (18 recipes) and `zsh -n` on the extracted zshrc block (#292, closes #291)
+
 ## [7.9.1] - 2026-08-17
 
 Two corrections to things that claimed to work and did not. Configuring `glab` failed twice on every run — the pager key it set is rejected by glab, and one alias name collides with a real glab command — while the script printed an unconditional success line naming both. And `README.md` still documented **Helix** as an installed, configured editor a dozen releases after it was deliberately retired, naming it as the editor for gh, lazygit and leaf where the script sets `micro`. Both were found by reading a normal run's output and then checking each claim against the generator. No breaking changes.

@@ -5974,10 +5974,6 @@ JUSTFILE_GLOBAL="$HOME/.justfile"
 # =============================================================================
 # Tip: alias gj="just --justfile ~/.justfile --working-directory ."
 
-# glab has no working pager CONFIG key — `glab config set glab_pager` is rejected by
-# 1.113.0 despite being documented — but the binary reads GLAB_PAGER. Best-effort: if
-# glab ignores it, nothing is lost, since no pager is configured either way (#285).
-export GLAB_PAGER="delta"
 
 # List all recipes
 default:
@@ -9314,6 +9310,12 @@ alias clip="clipse"    # clipboard-history TUI (replaces Raycast clipboard)
 
 # -- Dracula theming for tools that theme via env/flags (config-file tools themed elsewhere) --
 alias claws="claws --theme dracula"    # claws AWS TUI — built-in Dracula theme
+# glab has no working pager CONFIG key — `glab config set glab_pager` is rejected by
+# 1.113.0 despite being documented — but the binary carries a GLAB_PAGER env var.
+# Best-effort: if glab ignores it nothing is lost, since no pager is set either way.
+# It must live HERE and not in the justfile heredoc — `export X="y"` is invalid just
+# syntax and breaks every recipe in ~/.justfile (#291).
+export GLAB_PAGER="delta"
 export D2_THEME=200                     # d2 diagrams — dark theme (d2 has no exact Dracula; 200 = Dark Mauve)
 export D2_DARK_THEME=200
 
