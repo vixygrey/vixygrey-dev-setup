@@ -154,8 +154,27 @@ RESUME=false
 UNINSTALL=false
 CLEANUP=false
 INTERACTIVE=false
+NO_PROMPT=false
 SKIP_CATEGORIES=()
 ONLY_CATEGORIES=()
+
+# prompt_ask <prompt> <answer-when-no-prompt>   (answer on stdout)
+# Ask, or take the given answer without blocking when --no-prompt is set. Every
+# prompt this script owns goes through here: a run launched where nobody is
+# watching (an editor's "run in terminal" button, a detached pane, a scheduled
+# job) otherwise parks on a prompt forever (#265).
+# Usable in a command substitution because `read -p` writes its prompt to stderr,
+# so the prompt still reaches the terminal while only the answer is captured.
+prompt_ask() {
+    local __prompt="$1" __auto="$2" __reply
+    if [[ "$NO_PROMPT" == "true" ]]; then
+        printf '%s' "$__auto"
+        log "--no-prompt: answered '$__auto' to: $__prompt"
+        return 0
+    fi
+    read -r -p "$__prompt" __reply
+    printf '%s' "$__reply"
+}
 
 # -- State file for --resume --------------------------------------------------
 STATE_DIR="$HOME/.local/share/dev-setup"
@@ -182,7 +201,26 @@ acquire_lock() {
     local old_pid
     old_pid=$(cat "$LOCKFILE/pid" 2>/dev/null)
     if [[ -n "$old_pid" ]] && kill -0 "$old_pid" 2>/dev/null; then
-        error "Another instance is running (PID: $old_pid)"
+        # Say enough to tell a working run from one parked on a prompt. "Another
+        # instance is running" alone reads as "work in progress" even when that
+        # instance finished hours ago and is only waiting on a question (#265).
+        local age last_log
+        age=$(ps -o etime= -p "$old_pid" 2>/dev/null | tr -d ' ')
+        error "Another instance is running (PID: $old_pid${age:+, started ${age} ago})"
+        # Newest log that is NOT this run's own — that is the other instance's.
+        # Log names are timestamped (setup-YYYYMMDD-HHMMSS.log), so glob order is
+        # chronological and the last match is the newest.
+        local f
+        for f in "$STATE_DIR"/setup-2*.log; do
+            [[ -f "$f" ]] || continue
+            [[ "$f" == "${LOG_FILE:-}" ]] && continue   # skip this run's own log
+            last_log="$f"
+        done
+        if [[ -n "$last_log" ]]; then
+            echo "  Its last activity: $(date -r "$last_log" '+%Y-%m-%d %H:%M:%S')"
+            echo "  Tail it with: tail -5 \"$last_log\""
+        fi
+        echo "  If that run has finished and is only waiting at a prompt, end it: kill $old_pid"
         exit 1
     fi
     warn "Removing stale lock (PID: ${old_pid:-unknown})"
@@ -450,6 +488,10 @@ show_help() {
     echo "  --uninstall         Show commands to remove everything (no changes made)"
     echo "  --cleanup           Remove tools from previous versions no longer in this script"
     echo "  --interactive, -i   Interactively pick which categories to install"
+    echo "  --no-prompt         Never wait for input — decline every optional prompt."
+    echo "                      Use when nothing can answer (CI, a detached pane, an"
+    echo "                      editor's run-in-terminal button), so the run cannot park"
+    echo "                      on a question and hold the lock"
     echo "  --skip <cats>       Skip categories (comma-separated)"
     echo "  --only <cats>       Only run these categories (comma-separated)"
     echo "                      Add 'configs' to also refresh generated config —"
@@ -527,6 +569,10 @@ while [[ $# -gt 0 ]]; do
             INTERACTIVE=true
             shift
             ;;
+        --no-prompt)
+            NO_PROMPT=true
+            shift
+            ;;
         --skip)
             if [[ -z "${2:-}" ]] || [[ "$2" == --* ]]; then
                 echo -e "${RED}ERROR: --skip requires a comma-separated list of categories${NC}"
@@ -577,6 +623,13 @@ while [[ $# -gt 0 ]]; do
             ;;
     esac
 done
+
+# --interactive is a prompt; --no-prompt says never prompt. Must be checked BEFORE
+# interactive_select runs, or the picker asks the question we just promised not to.
+if [[ "$INTERACTIVE" == "true" && "$NO_PROMPT" == "true" ]]; then
+    echo -e "${RED}[ ERR]${NC} --interactive and --no-prompt are mutually exclusive."
+    exit 1
+fi
 
 # -- Interactive mode (must run before validation, populates ONLY_CATEGORIES) --
 if [[ "$INTERACTIVE" == "true" ]]; then
@@ -942,7 +995,7 @@ preflight() {
     if [[ "$macos_major" -lt 13 ]]; then
         error "macOS 13 (Ventura) or later required. You have: $macos_version"
         echo "  Some tools may not work on older versions."
-        read -r -p "Continue anyway? [y/N] " confirm
+        confirm=$(prompt_ask "Continue anyway? [y/N] " "n")
         [[ "$confirm" =~ ^[Yy]$ ]] || exit 1
     else
         success "macOS $macos_version detected"
@@ -972,7 +1025,7 @@ preflight() {
     fi
     if [[ -n "$free_space" ]] && [[ "$free_space" -lt 15 ]]; then
         error "Low disk space: ${free_space}GB free (15GB+ recommended)"
-        read -r -p "Continue anyway? [y/N] " confirm
+        confirm=$(prompt_ask "Continue anyway? [y/N] " "n")
         [[ "$confirm" =~ ^[Yy]$ ]] || exit 1
     else
         success "Disk space: ${free_space:-unknown}GB free"
@@ -11963,9 +12016,9 @@ banner "First-Run Setup"
 # ---- SSH Key Generation ----
 if [[ ! -f "$HOME/.ssh/id_ed25519" ]]; then
     echo ""
-    read -r -p "Generate an SSH key? [Y/n] " ssh_confirm
+    ssh_confirm=$(prompt_ask "Generate an SSH key? [Y/n] " "n")
     if [[ ! "$ssh_confirm" =~ ^[Nn]$ ]]; then
-        read -r -p "Email for SSH key: " ssh_email
+        ssh_email=$(prompt_ask "Email for SSH key: " "")
         if [[ -n "$ssh_email" ]]; then
             mkdir -p "$HOME/.ssh"
             chmod 700 "$HOME/.ssh"
@@ -11983,13 +12036,13 @@ fi
 if installed gh; then
     if ! gh auth status &>/dev/null; then
         echo ""
-        read -r -p "Authenticate with GitHub? [Y/n] " gh_confirm
+        gh_confirm=$(prompt_ask "Authenticate with GitHub? [Y/n] " "n")
         if [[ ! "$gh_confirm" =~ ^[Nn]$ ]]; then
             info "Opening GitHub authentication..."
             gh auth login
             # Add SSH key to GitHub if it was just generated
             if [[ -f "$HOME/.ssh/id_ed25519.pub" ]]; then
-                read -r -p "Add SSH key to GitHub? [Y/n] " ssh_gh_confirm
+                ssh_gh_confirm=$(prompt_ask "Add SSH key to GitHub? [Y/n] " "n")
                 if [[ ! "$ssh_gh_confirm" =~ ^[Nn]$ ]]; then
                     gh ssh-key add "$HOME/.ssh/id_ed25519.pub" --title "$(hostname) $(date +%Y-%m-%d)"
                     success "SSH key added to GitHub"
@@ -12008,10 +12061,10 @@ GITCONFIG_PERSONAL="$HOME/.gitconfig-personal"
 # Work identity
 if [[ -f "$GITCONFIG_WORK" ]] && grep -q "^    # name = " "$GITCONFIG_WORK" 2>/dev/null; then
     echo ""
-    read -r -p "Set up your work git identity? [Y/n] " work_confirm
+    work_confirm=$(prompt_ask "Set up your work git identity? [Y/n] " "n")
     if [[ ! "$work_confirm" =~ ^[Nn]$ ]]; then
-        read -r -p "Work name: " work_name
-        read -r -p "Work email: " work_email
+        work_name=$(prompt_ask "Work name: " "")
+        work_email=$(prompt_ask "Work email: " "")
         if [[ -n "$work_name" ]] && [[ -n "$work_email" ]]; then
             cat > "$GITCONFIG_WORK" <<GIT_WORK_ID
 [user]
@@ -12026,10 +12079,10 @@ fi
 # Personal identity
 if [[ -f "$GITCONFIG_PERSONAL" ]] && grep -q "^    # name = " "$GITCONFIG_PERSONAL" 2>/dev/null; then
     echo ""
-    read -r -p "Set up your personal git identity? [Y/n] " personal_confirm
+    personal_confirm=$(prompt_ask "Set up your personal git identity? [Y/n] " "n")
     if [[ ! "$personal_confirm" =~ ^[Nn]$ ]]; then
-        read -r -p "Personal name: " personal_name
-        read -r -p "Personal email: " personal_email
+        personal_name=$(prompt_ask "Personal name: " "")
+        personal_email=$(prompt_ask "Personal email: " "")
         if [[ -n "$personal_name" ]] && [[ -n "$personal_email" ]]; then
             cat > "$GITCONFIG_PERSONAL" <<GIT_PERSONAL_ID
 [user]
@@ -12196,9 +12249,18 @@ else
     fi
 fi
 
+# All work is done; everything below is a convenience prompt. Release the lock HERE
+# rather than leaving it to the EXIT trap: a run parked on this question is finished,
+# but it used to keep the lock for as long as it sat there — and since the prompt
+# comes after the success banner, it is easy to walk away from. One such run held the
+# lock for 5.5 hours and every later run was refused with "Another instance is
+# running", which was true but read as "work in progress" (#265).
+release_lock
+trap - EXIT
+
 if [[ "$DRY_RUN" == "false" ]]; then
     echo ""
-    read -r -p "Source ~/.zshrc now to activate everything? [Y/n] " source_confirm
+    source_confirm=$(prompt_ask "Source ~/.zshrc now to activate everything? [Y/n] " "n")
     if [[ ! "$source_confirm" =~ ^[Nn]$ ]]; then
         # Use exec to replace the current shell so the new zshrc takes effect
         echo -e "${GREEN}${BOLD}  Reloading shell...${NC}"
