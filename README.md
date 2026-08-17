@@ -602,7 +602,7 @@ The script sets up Claude Code with a comprehensive configuration for full-stack
 | `/new-feature` | Full trunk-based workflow: create issue, branch, implement with tests, PR |
 | `/fix-bug` | Full trunk-based workflow: create issue, branch, test-first fix, PR |
 | `/create-readme` | Analyze codebase and generate comprehensive README.md |
-| `/init-project` | Scaffold new project with git, README, CLAUDE.md, linting, CI, Docker, templates |
+| `/init-project` | Scaffold new project with git, README, AGENTS.md, linting, CI, Docker, templates |
 | `/refactor` | Refactor code with tests preserved, SOLID principles, verify tests pass |
 | `/add-endpoint` | Add full API endpoint: types, handler, validation, tests, docs |
 | `/add-component` | Add React component: TSX, tests, props interface, accessibility |

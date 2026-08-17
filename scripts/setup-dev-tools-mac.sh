@@ -4505,6 +4505,14 @@ coverage/
 Thumbs.db
 ehthumbs.db
 Desktop.ini
+
+# -- Private agent instructions -----------------------------------------------
+# The convention on this machine: AGENTS.md is tracked and public (written for
+# anyone's agent), CLAUDE.md is private and holds personal preferences and notes.
+# Ignored globally rather than per-repo because forgetting the per-repo line
+# publishes private notes, and that cannot be undone once pushed. A repo that
+# genuinely wants a tracked CLAUDE.md can still `git add -f CLAUDE.md`.
+CLAUDE.md
 GITIGNORE_GLOBAL
     git config --global core.excludesfile "$GLOBAL_GITIGNORE"
     success "Global .gitignore created and registered with git"
@@ -6739,16 +6747,27 @@ pnpm dev
 \`\`\`
 README
 
-# Create project-level CLAUDE.md for AI context
+# Create AGENTS.md — the PUBLIC agent instructions. This is tracked: it is written
+# for whoever contributes, not for you. Personal preferences and private notes go in
+# CLAUDE.md, which is gitignored below and never committed.
 mkdir -p .claude
-cat > CLAUDE.md <<CLAUDEMD
-# $NAME
+cat > AGENTS.md <<AGENTSMD
+# Notes for coding agents — $NAME
+
+If you're an AI assistant working in this repository, start here. Keep this file short and
+free of personal preference: point at the documents that already exist rather than
+restating them.
 
 ## Overview
-<!-- Describe what this project does -->
+<!-- What this project does, in two or three sentences -->
 
 ## Tech Stack
 <!-- Languages, frameworks, key libraries -->
+
+## Read these first
+<!-- | File | What it settles | -->
+<!-- |---|---| -->
+<!-- | \`README.md\` | Setup and usage | -->
 
 ## Development
 - Install: \`pnpm install\`
@@ -6756,9 +6775,19 @@ cat > CLAUDE.md <<CLAUDEMD
 - Test: \`pnpm test\`
 - Build: \`pnpm build\`
 
-## Conventions
-<!-- Project-specific conventions not in the global CLAUDE.md -->
-CLAUDEMD
+## The things most likely to trip you
+<!-- Repo-specific traps: silent failures, things that look wrong but aren't -->
+
+## Before you commit
+<!-- The command that must pass. Never commit to main — branch, then open a PR. -->
+AGENTSMD
+
+# CLAUDE.md is private: personal preferences, lessons, anything not for the public.
+# It is in the global gitignore too, but the per-repo line makes the rule visible to
+# anyone reading the repo.
+if ! grep -qxF 'CLAUDE.md' .gitignore 2>/dev/null; then
+    printf '\n# Private agent notes (personal; see AGENTS.md for the public ones)\nCLAUDE.md\n' >> .gitignore
+fi
 
 # Create GitHub PR template
 mkdir -p .github
@@ -7811,6 +7840,28 @@ write_managed "$CLAUDE_MD" "#" <<'CLAUDE_MD_CONF'
 - **README-driven development** — every project and significant module gets a README
 - **Industry best practices** — follow established patterns, OWASP, 12-factor, SOLID, DRY
 
+## Agent instructions in a repo: public `AGENTS.md`, private `CLAUDE.md`
+Two files, two audiences. Keep them separate in every repository.
+
+- **`AGENTS.md` — tracked, public, for anyone's agent.** Short. It points at the documents that
+  already exist (`CONTRIBUTING.md`, `docs/*`) rather than restating them, and names the traps
+  specific to that repo. Read it first in any repo that has one. Claude Code discovers it the
+  same way it discovers `CLAUDE.md`, and other agents read it too, so it is the file a
+  contributor's tooling will find.
+- **`CLAUDE.md` — untracked, private, mine.** Personal preferences, lessons, and anything not
+  relevant to the public. It is in the global gitignore, so it will not appear in `git status`.
+
+Rules that follow from this:
+
+- **Never commit `CLAUDE.md`.** If a repo needs it tracked (rare — this setup's own repo used to),
+  that is a deliberate `git add -f`, not an accident.
+- **Never put personal preferences in `AGENTS.md`.** It is written for someone else's contributor,
+  who has their own way of working. Describe the repo, not the maintainer.
+- When asked to "write the agent instructions" for a public repo, that means `AGENTS.md`. Offer a
+  private `CLAUDE.md` separately if there is anything personal to record.
+- `~/Code/personal/qud-mods/qud-expanded/AGENTS.md` is the reference for the shape: purpose line,
+  a table of *file → what it settles*, a short list of traps, the pre-commit command.
+
 ## This machine's config is GENERATED — edit the generator, not the output
 - `~/.zshrc`, `~/.claude/` (this file, `rules/`, `agents/`, `commands/`, `hooks/`, `settings.json`), `~/.config/*` and the Desktop docs are all written by **`~/Code/personal/vixygrey-dev-setup-main/scripts/setup-dev-tools-mac.sh`**, and refreshed on every run.
 - **Never hand-edit those files to make a change stick** — anything between the `>>> dev-setup managed block` markers is overwritten on the next run. Edit the matching heredoc in that script instead, then re-run it. A direct edit is fine as a temporary local patch, but say so explicitly, because it will be reverted.
@@ -8546,8 +8597,10 @@ Set up the following in order:
 - Project structure overview
 - Environment variables (with descriptions, not values)
 
-## 3. Project-Level CLAUDE.md
-Create a `.claude/CLAUDE.md` with project-specific context:
+## 3. AGENTS.md (public agent instructions)
+Create a tracked `AGENTS.md` at the repo root. It is written for whoever contributes, so
+keep it free of personal preference and point at documents rather than restating them.
+Add `CLAUDE.md` to `.gitignore` — that file is private, for personal notes only:
 ```markdown
 # <Project Name>
 
@@ -8566,7 +8619,7 @@ Create a `.claude/CLAUDE.md` with project-specific context:
 - Build: `just build` or `npm run build`
 
 ## Conventions
-<Any project-specific conventions not in the global CLAUDE.md>
+<Any project-specific conventions not in the global instructions>
 ```
 
 ## 4. Code Quality

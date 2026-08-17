@@ -1,6 +1,10 @@
-# CLAUDE.md — vixygrey-dev-setup
+# AGENTS.md — vixygrey-dev-setup
 
 Guidance for AI agents working in this repo. Read this before editing.
+
+This file is **public and tracked**: it describes the repo, not the maintainer. Personal
+preferences and private notes belong in `CLAUDE.md`, which is gitignored here and machine-wide.
+Nothing in a private `CLAUDE.md` binds a contribution you are helping someone else write.
 
 ## What this repo is
 

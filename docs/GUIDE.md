@@ -1018,7 +1018,7 @@ npm run build && terminal-notifier -title "Build" -message "Done" -sound Glass
 | `/new-feature` | Full trunk-based workflow: issue, branch, implement, tests, PR |
 | `/fix-bug` | Full trunk-based workflow: issue, branch, test-first fix, PR |
 | `/create-readme` | Analyze codebase and generate comprehensive README |
-| `/init-project` | Scaffold project with git, README, CLAUDE.md, CI, Docker |
+| `/init-project` | Scaffold project with git, README, AGENTS.md, CI, Docker |
 | `/refactor` | Refactor with tests preserved, SOLID principles |
 | `/add-endpoint` | Add API endpoint: types, handler, validation, tests, docs |
 | `/add-component` | Add React component: TSX, tests, accessibility |
