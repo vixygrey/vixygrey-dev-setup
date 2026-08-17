@@ -20,6 +20,20 @@ Most breakage found in this repo has the same shape: **the generator is correct,
 - **Anything guarded by `if [[ -f … ]]` / `if [[ -d … ]]` is create-once** and silently freezes. That is exactly how the global `CLAUDE.md` and `rules/` drifted 33 lines and eight tool names behind the generator (#226). Prefer `write_managed`.
 - **Retiring a tool is not the same as cleaning up after it.** `--cleanup` uninstalls the package; its config dir, its tap, and its orphaned dependencies each needed separate handling (#210, #214, #224).
 
+## Categories install; `configs` configures
+
+`should_run "<category>"` gates only the **install** sections. Every generated config
+file is written in one ordered `configs` segment further down the script — with three
+exceptions: starship is in `dracula`, `~/Scripts/*` in `filesystem`, `~/.zshrc` in
+`shell`. So `--only git` installs git tooling, refreshes **no** git configuration
+(the global pre-commit hook included), and still reports `Failed: 0` (#258).
+
+When you add a config block, it goes in the `configs` segment with everything else —
+and if it belongs to a category a user would plausibly try to refresh on its own, add
+that category to **`CONFIG_LIVES_IN_CONFIGS`** so `--only <cat>` names what it is not
+refreshing. The keys of that table are validated against `ALL_CATEGORIES` at startup,
+so a typo fails loudly instead of producing a notice that can never fire.
+
 ## Audit the generator, not your own machine
 
 The generated output on the machine you are working on may be **older than the script**, so a "bug" you find there may already be fixed. During #209 the local `CLAUDE.md` showed `kew`/`snyk`/`tmux` as stale references; all three had already been corrected upstream and the finding had to be retracted.

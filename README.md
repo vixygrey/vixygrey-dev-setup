@@ -44,6 +44,13 @@ chmod +x scripts/setup-dev-tools-mac.sh
 
 > macOS-only categories use the `mac-*` prefix (e.g., `--skip mac-bloat`).
 
+> **A category installs its tools; it does not configure them.** Every generated
+> config file is written in the `configs` category (plus starship in `dracula`,
+> `~/Scripts` in `filesystem`, `~/.zshrc` in `shell`) — so `--only git` installs git
+> tooling but refreshes none of its configuration, including the global pre-commit
+> hook. Pair them: `--only git,configs`. The run prints a reminder when `--only`
+> would skip the configuration for what you selected.
+
 ## What It Does
 
 1. **Pre-flight checks** -- verifies macOS version, disk space, internet, admin privileges
@@ -1107,8 +1114,8 @@ brew doctor
 # Preview without changes
 ./scripts/setup-dev-tools-mac.sh --dry-run
 
-# Run only specific categories
-./scripts/setup-dev-tools-mac.sh --only core,git,dx
+# Run only specific categories (add `configs` to refresh their config too)
+./scripts/setup-dev-tools-mac.sh --only core,git,dx,configs
 
 # Show removal commands
 ./scripts/setup-dev-tools-mac.sh --uninstall
