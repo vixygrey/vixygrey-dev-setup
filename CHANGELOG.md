@@ -2,7 +2,15 @@
 
 > Release notes for 7.0.0–7.1.1 live in [GitHub Releases](https://github.com/vixygrey/vixygrey-dev-setup/releases) (auto-generated). This file resumes hand-written notes at 7.2.0.
 
-## [Unreleased]
+## [7.13.0] - 2026-08-17
+
+A same-day follow-up to 7.12.0, because that release shipped something nobody chose. Installing `ms-python.python` for VS Code silently pulled in **Pylance** through its `extensionPack` — Microsoft's proprietary, closed-source Python type server — and Pylance does not sit quietly: `python.languageServer` defaults to `Default`, which resolves *to Pylance* whenever it is installed. So VS Code was analysing Python with the exact server this setup had already rejected in 7.10.0, when it chose **basedpyright** for croft on the grounds that it is the same code with the closed-source parts restored as open source.
+
+The result was two editors running two different Python toolchains, which is precisely what 7.12.0's premise — match the extension set to the CLIs already installed, so the GUI editor cannot disagree with the terminal — was supposed to rule out. Fixed by installing basedpyright, removing Pylance, and pinning `python.languageServer` to `None` so the setting, not the mere absence of a package, is what keeps basedpyright in place.
+
+The lesson generalises past this one extension: **an `extensionPack` is a supply chain**. Vetting the 26 IDs added in 7.12.0 was not the same as vetting what they install, and the four extras only surfaced because the installed list was read back and compared against the intended one. Worth doing again the next time a pack-style dependency enters the setup.
+
+**Re-run the script** (`--only dx` then `--only configs`, or a full run) to swap the server. No breaking changes.
 
 ### Fixed
 
@@ -40,7 +48,7 @@ The reinstatement was also not just an install. VS Code was being *actively remo
 
   The VS Code-specific trap is that `settings.json` is **JSONC**: a file with `//` comments or a trailing comma is valid to VS Code and invalid to `jq`. That merge fails, and the script **warns and leaves the file completely alone** rather than overwriting — verified both ways, that a user's theme/fontSize/custom keys survive a merge and that a JSONC file comes through byte-identical (#303)
 
-- **ci**: **`MICRO_CONF`** joins the generated-config parse gate, closing a blind spot in the check that exists precisely to catch it. The gate hands each generated heredoc to the real parser that will read it, and `~/.config/micro/settings.json` — valid JSON, `jq` available — was never in the table; it predates the gate, which is why. micro's failure mode is the quiet kind that makes the gap worth closing rather than shrugging at: an unparseable settings file means micro falls back to defaults, so the first symptom is the Dracula theme and the house indent rules silently not applying, not an error. Verified with the same `extract()` snippet the workflow uses (30 lines, parses clean, `colorscheme=dracula-tc`) and by injecting a trailing comma to confirm the gate fails on it. Spotted while adding `VSCODE_CONF` to the same table in #304 and deliberately kept out of that PR (#305)
+- **ci**: **`MICRO_CONF`** joins the generated-config parse gate, closing a blind spot in the check that exists precisely to catch it. The gate hands each generated heredoc to the real parser that will read it, and `~/.config/micro/settings.json` — valid JSON, `jq` available — was never in the table; it predates the gate, which is why. micro's failure mode is the quiet kind that makes the gap worth closing rather than shrugging at: an unparsable settings file means micro falls back to defaults, so the first symptom is the Dracula theme and the house indent rules silently not applying, not an error. Verified with the same `extract()` snippet the workflow uses (30 lines, parses clean, `colorscheme=dracula-tc`) and by injecting a trailing comma to confirm the gate fails on it. Spotted while adding `VSCODE_CONF` to the same table in #304 and deliberately kept out of that PR (#305)
 
 ## [7.11.0] - 2026-08-17
 
