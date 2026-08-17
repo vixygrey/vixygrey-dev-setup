@@ -387,7 +387,7 @@ Faster, prettier, smarter replacements for standard Unix utilities.
 | **atuin** | Replaces shell history with SQLite-backed, fuzzy-searchable database |
 | **mise** | Universal version manager -- Node, Python, Go, Ruby all in one (replaces nvm + pyenv + rbenv) |
 | **croft** | Primary editor -- VS Code-style terminal IDE (Rust; `cargo install --git`). Three-pane workspace, LSP/DAP, integrated terminal; `croft pair` runs an AI navigator (Anthropic/local). Installed from git `main` |
-| **Visual Studio Code** | The GUI editor, secondary to croft -- for long multi-tab refactors, graphical diffs, and `.editorconfig` repos (croft has no EditorConfig support). Ships 26 extensions and a merged `settings.json` that mirrors the terminal's rules |
+| **Visual Studio Code** | The GUI editor, secondary to croft -- for long multi-tab refactors, graphical diffs, and `.editorconfig` repos (croft has no EditorConfig support). Ships 27 extensions and a merged `settings.json` that mirrors the terminal's rules -- including basedpyright as the Python type server, matching croft |
 | **micro** | The `$EDITOR` -- git/gh/lazygit commit messages, leaf's Ctrl+E, quick edits. Non-modal, on-screen key menu (`Ctrl+G` for help), Dracula theme |
 | **Claude Code (`claude`)** | Agentic coding in the terminal; hosts the migrated MCP servers |
 | **llm** | Simon Willison's CLI -- one-shot prompts, plugin ecosystem, SQLite logging, embeddings. Installed via `uv tool` with the Anthropic plugin; default model `anthropic/claude-sonnet-4-5` |
@@ -778,7 +778,7 @@ The script generates config files with sensible defaults:
 | `~/.config/caddy/Caddyfile` | Caddy | Development server template |
 | `~/.config/asciinema/config` | asciinema | 2s idle limit, no keystroke recording |
 | `~/.config/micro/settings.json` | micro | Dracula (`dracula-tc`), the $EDITOR for git/gh/lazygit and leaf's Ctrl+Ents, auto-format on save (ruff for Python, taplo/marksman/TS/CSS/bash/yaml servers, rust-analyzer, gopls) |
-| `~/Library/.../Code/User/settings.json` | VS Code | Dracula, format-on-save, ruff (Python), prettier (web), shfmt (shell), tabs for Go, LF, telemetry off. **Merged, not overwritten** — your keys and Settings Sync win |
+| `~/Library/.../Code/User/settings.json` | VS Code | Dracula, format-on-save, ruff + basedpyright (Python; Pylance disabled), prettier (web), shfmt (shell), tabs for Go, LF, telemetry off. **Merged, not overwritten** — your keys and Settings Sync win |
 | `~/.config/sketchybar/` | SketchyBar | Dracula bar: app, clock, battery, wifi, volume, cpu, mem, bluetooth, VPN |
 | _(cliamp)_ | cliamp | Music player — self-configured on first run (point at `~/Media/music`) |
 | `~/.herald/conf.yaml` | herald | Email + calendar — **self-configured** by herald on first run (not written by setup) |
