@@ -2,7 +2,9 @@
 
 > Release notes for 7.0.0–7.1.1 live in [GitHub Releases](https://github.com/vixygrey/vixygrey-dev-setup/releases) (auto-generated). This file resumes hand-written notes at 7.2.0.
 
-## [Unreleased]
+## [7.10.0] - 2026-08-17
+
+Closes out the last of the open issues. Python finally gets full language-server coverage — `ty` and `basedpyright`, the two servers croft's own built-in manifest names and neither of which was installed, leaving croft to fall through to `ruff` alone. And CI now hands every generated config to the tool that will actually read it: `just`, `zsh`, `jq` and `yq` across twelve files. That gate exists because 7.9.1 shipped a justfile the `just` parser rejected while ShellCheck passed and a generator-vs-disk comparison agreed with itself — the kind of failure only the real parser catches. No breaking changes.
 
 ### Added
 
