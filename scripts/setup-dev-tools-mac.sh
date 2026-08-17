@@ -352,6 +352,42 @@ for _cat in "${!CONFIG_LIVES_IN_CONFIGS[@]}"; do
 done
 unset _cat _known _known_cat
 
+# -- Which categories actually need sudo --------------------------------------
+# Asking for a password up front is only defensible if something in THIS run will
+# use it. `--only configs` uses none: the one `sudo` in that segment is inside the
+# generated Justfile's `flush-dns` recipe, which the user may run later — the setup
+# script never executes it. Every other category is unprivileged too (#269).
+declare -A SUDO_CATEGORY_REASON=(
+    [macos-defaults]="system settings (display sleep, DNS servers, startup chime, network time) and Touch ID for sudo"
+    [mac-bloat]="removing pre-installed Apple apps from /Applications"
+)
+
+# Same loud-default discipline as CONFIG_LIVES_IN_CONFIGS: a typo'd key here would
+# silently drop a category's sudo requirement, and the run would fail later with a
+# password prompt from the middle of the work instead of once, up front.
+for _cat in "${!SUDO_CATEGORY_REASON[@]}"; do
+    _known=false
+    for _known_cat in "${ALL_CATEGORIES[@]}"; do
+        [[ "$_cat" == "$_known_cat" ]] && _known=true && break
+    done
+    if [[ "$_known" != "true" ]]; then
+        echo "INTERNAL ERROR: SUDO_CATEGORY_REASON has unknown category '$_cat'" >&2
+        exit 1
+    fi
+done
+unset _cat _known _known_cat
+
+# Reasons this run needs sudo, one per line; empty when it does not need it at all.
+# --cleanup is not considered here: it exits before preflight and prompts at the
+# point of use. --dry-run never needs it, because it changes nothing.
+sudo_reasons() {
+    [[ "$DRY_RUN" == "true" ]] && return 0
+    local c
+    for c in "${!SUDO_CATEGORY_REASON[@]}"; do
+        should_run "$c" && printf '%s (%s)\n' "${SUDO_CATEGORY_REASON[$c]}" "$c"
+    done
+}
+
 # Print the notice when --only would skip the configuration for what was selected.
 # Called early (before the work) and again in the completion summary, because the
 # whole failure mode is a run that looks successful.
@@ -1031,16 +1067,32 @@ preflight() {
         success "Disk space: ${free_space:-unknown}GB free"
     fi
 
-    # Admin check (some steps need sudo)
-    # Prompt for password ONCE here so it's cached for all later sudo calls
-    if sudo -n true 2>/dev/null; then
+    # Admin check — only when a step in THIS run will actually use sudo, and saying
+    # what for. Asking unconditionally meant `--dry-run` demanded a password to
+    # produce a preview that changes nothing, and the message named no step, so the
+    # only way to judge the request was to trust it (#269).
+    local reasons
+    reasons=$(sudo_reasons)
+    if [[ -z "$reasons" ]]; then
+        if [[ "$DRY_RUN" == "true" ]]; then
+            success "No admin privileges needed (dry run changes nothing)"
+        else
+            success "No admin privileges needed for the selected categories"
+        fi
+    elif sudo -n true 2>/dev/null; then
         success "Admin privileges available"
     else
-        info "Some steps require admin privileges. Enter your password once now:"
+        info "Admin privileges are needed for:"
+        while IFS= read -r reason; do
+            [[ -n "$reason" ]] && echo "         • $reason"
+        done <<< "$reasons"
+        info "Enter your password once now:"
         sudo -v
         success "Admin privileges granted"
-        # Keep sudo alive in background for the duration of the script
-        ( while true; do sudo -n true; sleep 50; kill -0 "$$" || exit; done 2>/dev/null ) &
+        # Keep sudo alive for the duration of the script. Test liveness BEFORE each
+        # refresh, not only after the sleep: the old order could refresh the sudo
+        # timestamp once more after the parent had already exited.
+        ( while kill -0 "$$" 2>/dev/null; do sudo -n true; sleep 50; done 2>/dev/null ) &
         SUDO_KEEPALIVE_PID=$!
     fi
 
