@@ -295,7 +295,7 @@ declare -A CATEGORY_DESC=(
     [dx]="fzf, starship, atuin, croft, micro, Ghostty, zellij, llm"
     [ux]="Lighthouse"
     [docs]="d2, Mermaid CLI"
-    [mac-system]="Pearcleaner, Quick Look plugins, dockutil, terminal-notifier"
+    [mac-system]="Pearcleaner, dockutil, terminal-notifier"
     [mac-productivity]="tiki, reminders-cli, Skim, LibreOffice"
     [mac-browsers]="Carbonyl, w3m, monolith"
     [mac-media]="mpv, oxipng, jpegoptim, 7zip, cliamp"
@@ -1254,6 +1254,9 @@ if [[ "$CLEANUP" == "true" ]]; then
         "brew:aerc:aerc:herald"
         "brew:khal:khal:herald"
         "brew:vdirsyncer:vdirsyncer:herald"
+        "brew:tldr:tldr (unmaintained, disabled upstream):tlrc"
+        "cask:qlmarkdown:QLMarkdown (Quick Look):removed"
+        "cask:qlstephen:QLStephen (Quick Look):removed"
         "cask:protonvpn:Proton VPN:Mullvad VPN"
         "cask:proton-mail:Proton Mail:removed"
         "cask:proton-pass:Proton Pass:removed"
@@ -2049,8 +2052,18 @@ brew_install "zoxide" "zoxide (replaces cd — smart frecency-based jumping)"
 # (already installed in Git section, just noting the replacement)
 warn "delta (replaces diff — already installed in Git section)"
 
-# man -> tldr: community-driven simplified man pages with examples
-brew_install "tldr" "tldr (replaces man — simplified with examples)"
+# man -> tldr: community-driven simplified man pages with examples.
+# The `tldr` FORMULA is deprecated and DISABLED upstream (unmaintained), so a fresh
+# machine cannot install it at all. `tlrc` is the official Rust client and provides
+# the same `tldr` command — but it `conflicts_with` the old formula, so an existing
+# install has to go first or brew refuses. Doing that here rather than leaving it to
+# --cleanup means the swap reaches machines that already have the old one (#299).
+if [[ "$DRY_RUN" != "true" ]] && brew list --formula tldr &>/dev/null; then
+    info "Removing the disabled tldr formula (replaced by tlrc, same command)..."
+    brew uninstall --formula tldr >> "$LOG_FILE" 2>&1 \
+        || warn "Could not uninstall the old tldr formula — tlrc may refuse to install"
+fi
+brew_install "tlrc" "tlrc (official tldr client — replaces man with examples)"
 
 # top/htop -> btop: modern resource monitor with graphs
 brew_install "btop" "btop (replaces top/htop — graphs, mouse support)"
@@ -2599,19 +2612,11 @@ brew_cask_install "pearcleaner" "Pearcleaner (open-source deep app uninstaller)"
 brew_install "dockutil" "dockutil (manage Dock pins programmatically)"
 brew_install "terminal-notifier" "terminal-notifier (send macOS notifications from shell scripts)"
 
-# Quick Look plugins (preview files in Finder with spacebar)
-brew_cask_install "qlmarkdown" "QLMarkdown (preview Markdown in Finder)"
-brew_cask_install "qlstephen" "QLStephen (preview plain text files without extension)"
-# QuickLookJSON — removed from Homebrew (disabled 2025-12); macOS handles JSON preview natively now
-# Homebrew-cask Quick Look generators stay inert until the QL daemon is reloaded —
-# otherwise Finder keeps showing plain icons for .md / extension-less files until the
-# next login. Reload it now. (If previews are still blank, the plugin may need approval
-# or a quarantine clear under System Settings -> Privacy & Security.)
-if [[ "$DRY_RUN" != "true" ]]; then
-    qlmanage -r >/dev/null 2>&1 || true
-    qlmanage -r cache >/dev/null 2>&1 || true
-    success "Quick Look plugins registered (qlmanage reloaded)"
-fi
+# No Quick Look plugins. QLMarkdown and QLStephen were dropped in 7.11.0 — Finder
+# preview is not part of this workflow (files get read in the terminal), qlstephen was
+# deprecated upstream, and QuickLookJSON had already been disabled. The qlmanage reload
+# that registered them went with them; both are retired via DEPRECATED_TOOLS so
+# --cleanup removes them from machines that have them (#299).
 
 fi  # mac-system
 
@@ -11931,7 +11936,7 @@ manly tar -xzf archive.tar.gz
 ```
 
 ### `tldr` — Community Cheat Sheets
-Pulls up short, example-first cheat sheets for a command instead of a full man page — a handful of the most common real-world invocations rather than an exhaustive flag reference. Use it when you just want to remember "how do I usually run this thing."
+Installed as **tlrc**, the official Rust client; the command is still `tldr`. Pulls up short, example-first cheat sheets for a command instead of a full man page — a handful of the most common real-world invocations rather than an exhaustive flag reference. Use it when you just want to remember "how do I usually run this thing."
 
 ```bash
 # show simplified examples for a command
@@ -12189,11 +12194,6 @@ the VPN pill drives `mullvad`; the bluetooth pill drives `blueutil`. Needs
 ### Pearcleaner — App Uninstaller
 An open-source deep uninstaller that removes an app *and* its leftover support
 files, caches, and preferences — a free AppCleaner replacement.
-
-### QLMarkdown & QLStephen — Quick Look Plugins
-Finder Quick Look plugins: **QLMarkdown** renders `.md` files when you press
-space on them; **QLStephen** previews extension-less plain-text files (README,
-LICENSE, dotfiles). No commands — they work inside Finder.
 
 ### Language servers (croft uses these automatically)
 Installed so the editors get completion, diagnostics, and go-to-definition with

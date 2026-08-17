@@ -212,7 +212,7 @@ Faster, prettier, smarter replacements for standard Unix utilities.
 | `cd` | **zoxide** | Learns your most-used directories, fuzzy jump |
 | `diff` | **delta** | Syntax-highlighted diffs with side-by-side view |
 | `diff` (code) | **difftastic** | Structural diff that understands code syntax |
-| `man` | **tldr** | Community-driven simplified man pages with examples |
+| `man` | **tldr** (tlrc) | Community-driven simplified man pages with examples |
 | `top` | **btop** | Modern resource monitor with graphs and mouse support |
 | `sed` | **sd** | Intuitive find and replace with simpler regex syntax |
 | `cut`/`awk` | **choose** | Simple column selection with negative indexing |
@@ -439,10 +439,7 @@ Preview files in Finder by pressing spacebar.
 
 | Plugin | Description |
 |--------|-------------|
-| **QLMarkdown** | Preview Markdown files with rendered formatting |
-| **QLStephen** | Preview plain text files that have no file extension |
 
-The setup runs `qlmanage -r` after install so the generators activate immediately -- no manual reload or re-login needed.
 
 ---
 
