@@ -113,11 +113,27 @@ Two traps to respect when touching this (#260):
   itself forever and every `git commit` on the machine hangs. Use `--git-common-dir` (common, not
   absolute: a linked worktree shares the main repo's `hooks/`), and keep the guard that refuses to
   re-enter the global directory.
-- **This directory is not ours alone.** git-lfs is `core.hooksPath` aware and installs
-  `pre-push`/`post-checkout`/`post-merge`/`post-commit` here from any repo. A delegator that only
-  ran the per-repo hook would silently disable LFS, so the chain must run `<type>.d/` too, and
-  `preserve_foreign_hook` must move a foreign hook aside before a delegator takes its name.
-  It re-runs on every setup, because `git lfs install` re-creates its hooks.
+- **This directory is not ours alone.** Third-party tools install hooks here, so the chain must
+  run `<type>.d/` too, and `preserve_foreign_hook` must move a foreign hook aside before a
+  delegator takes its name. It re-runs on every setup, because tools re-create their hooks.
+- **git-lfs is the one tool deliberately NOT chained (#311).** It is `core.hooksPath` aware and
+  installs `pre-push`/`post-checkout`/`post-merge`/`post-commit` here from any repo, which made
+  `git lfs pre-push` run on every push on the machine — including repos with no LFS object in
+  them. Against a GitHub wiki remote its lock verification cannot succeed (an account with push
+  access still gets `You must have push access to verify locks`), the hook exits non-zero, and the
+  chain aborts: every wiki push blocked by an error naming authentication rather than LFS. So
+  `preserve_foreign_hook` *discards* git-lfs hooks instead of preserving them, and purges copies
+  left in `<type>.d/` by earlier versions. Per-repo opt-in is `git-lfs-enable-repo`, which writes
+  the hooks to `.git/hooks` where the chain runs them as link 1.
+  - Note `git lfs install --local` **cannot** be used for that: `--local` governs the config, not
+    the hooks, so with `core.hooksPath` set it writes the hooks globally anyway. Verified against
+    git-lfs 3.7.1.
+  - git-lfs refuses to overwrite a foreign hook (`Hook already exists`, exit 2), so the delegators
+    hold their names once installed — this arrangement is self-maintaining, not a race.
+  - **The tradeoff is real and belongs in any change here:** a repo that uses LFS and never runs
+    `git-lfs-enable-repo` pushes pointer files without their objects, and the push *succeeds*.
+    That failure is silent, which is why the opt-in is documented at the point of use rather than
+    left to be discovered.
 
 Hooks fed data on stdin (`pre-push`, `post-rewrite`, `push-to-checkout`) need it buffered and
 replayed per link — the first reader would otherwise consume it and the rest would see nothing.

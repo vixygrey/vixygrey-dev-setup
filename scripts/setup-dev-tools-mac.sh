@@ -5764,9 +5764,19 @@ info "Configuring global git hooks..."
 # .pre-commit-config.yaml's pre-push, lint-staged, all of it — silently (#260).
 #
 # So every hook type gets a delegator, and the delegator CHAINS rather than execs:
-# third-party tools write into this same directory (git-lfs 3.7.1 is core.hooksPath
-# aware and installs its four hooks here, globally, from any repo), so a delegator
-# that only ran the per-repo hook would silently disable them instead.
+# third-party tools write into this same directory, so a delegator that only ran the
+# per-repo hook would silently disable them instead.
+#
+# git-lfs is the exception, and is deliberately NOT chained (#311). It is
+# core.hooksPath aware, so `git lfs install` writes its four hooks here from any
+# repo — which made `git lfs pre-push` run on EVERY push on the machine, including
+# in repositories that have never held an LFS object. That is normally just a wasted
+# lock-verification round-trip, but against a GitHub wiki remote the lock API cannot
+# authorise a wiki push at all, so it fails, and the chain aborts on the first
+# non-zero status: every wiki push blocked, with an error naming authentication
+# rather than LFS. A global hook cannot know which repositories use LFS, so LFS is
+# opted into per repository instead — see `git-lfs-enable-repo`, which writes the
+# hooks to .git/hooks, where the chain runs them as the repo's own hook.
 #
 # Deliberately not covered: the server-side hooks (pre-receive, update, post-update,
 # proc-receive), and the hot-path ones where a wrapper costs more than it delivers
@@ -5860,15 +5870,45 @@ run_hook_chain() {
 HOOK_CHAIN_LIB
 
 # Move a pre-existing third-party hook out of the way so a delegator can take its
-# name, preserving it in <type>.d/ where the chain will still run it. Idempotent:
-# git-lfs re-installs its hooks on every `git lfs install`, so an identical copy that
-# is already preserved is dropped rather than stacked up.
+# name, preserving it in <type>.d/ where the chain will still run it. Idempotent: a
+# tool that re-creates its hooks on every invocation would otherwise stack up
+# identical copies, so one that is already preserved is dropped rather than added.
+#
+# git-lfs is the exception — its hooks are DISCARDED rather than preserved (#311).
+# Nothing is lost by deleting them: `git lfs install` re-creates them on demand, and
+# a repository that actually uses LFS opts in with `git-lfs-enable-repo`, which
+# installs them where the chain runs them as the repo's own hook. Copies preserved
+# by earlier versions are purged too, so a machine provisioned while LFS was still
+# chained is repaired on the next run rather than keeping the hook forever.
 preserve_foreign_hook() {
     local type="$1"
     local path="$GIT_HOOKS_DIR/$type" dest_dir="$GIT_HOOKS_DIR/$type.d" name f
+
+    for f in "$dest_dir"/10-git-lfs*; do
+        [[ -f "$f" ]] || continue
+        if [[ "$DRY_RUN" == "true" ]]; then
+            info "[DRY RUN] Would unchain preserved git-lfs hook $type.d/${f##*/} (#311)"
+        else
+            rm -f "$f"
+            info "Unchained preserved git-lfs $type hook — LFS is per-repo now (#311)"
+        fi
+    done
+    rmdir "$dest_dir" 2>/dev/null || true   # tidy up if that was the only link
+
     [[ -f "$path" ]] || return 0
     grep -qF "dev-setup managed block" "$path" 2>/dev/null && return 0   # already ours
-    if grep -qE 'git[- ]lfs' "$path" 2>/dev/null; then name="10-git-lfs"; else name="10-preexisting"; fi
+
+    if grep -qE 'git[- ]lfs' "$path" 2>/dev/null; then
+        if [[ "$DRY_RUN" == "true" ]]; then
+            info "[DRY RUN] Would remove global git-lfs $type hook (LFS is per-repo, #311)"
+        else
+            rm -f "$path"
+            info "Removed global git-lfs $type hook — enable LFS per repo with git-lfs-enable-repo (#311)"
+        fi
+        return 0
+    fi
+
+    name="10-preexisting"
     if [[ "$DRY_RUN" == "true" ]]; then
         info "[DRY RUN] Would preserve third-party $type hook as $type.d/$name"
         return 0
@@ -7399,8 +7439,51 @@ echo "Restore on a new machine:"
 echo "  brew bundle install --file=$BREWFILE"
 SCRIPT
 
+# -- git-lfs-enable-repo: opt one repository into Git LFS hooks --
+write_managed_script "$HOME/Scripts/bin/git-lfs-enable-repo" <<'SCRIPT'
+#!/usr/bin/env bash
+# Enable Git LFS hooks for THIS repository only.
+# Usage: git-lfs-enable-repo [path-to-repo]
+#
+# `git lfs install` cannot do this job on a machine with core.hooksPath set: git-lfs
+# is core.hooksPath aware, so it writes its hooks to the GLOBAL directory even when
+# asked for --local, which would put them back on every push in every repo (#311).
+# This writes them to .git/hooks instead, where the global delegator runs them as the
+# repository's own hook.
+set -euo pipefail
+
+cd "${1:-.}"
+command -v git-lfs >/dev/null 2>&1 || { echo "git-lfs is not installed." >&2; exit 1; }
+
+GIT_DIR="$(git rev-parse --path-format=absolute --git-common-dir)"
+HOOKS="$GIT_DIR/hooks"
+mkdir -p "$HOOKS"
+
+for hook in pre-push post-checkout post-commit post-merge; do
+    target="$HOOKS/$hook"
+    if [ -e "$target" ] && ! grep -q "git lfs $hook" "$target" 2>/dev/null; then
+        echo "Refusing to overwrite existing hook: $target" >&2
+        echo "Merge 'git lfs $hook \"\$@\"' into it by hand." >&2
+        continue
+    fi
+    cat > "$target" <<HOOK
+#!/bin/sh
+command -v git-lfs >/dev/null 2>&1 || {
+    printf >&2 '\n%s\n\n' "This repository is configured for Git LFS but 'git-lfs' was not found on your path."
+    exit 2
+}
+git lfs $hook "\$@"
+HOOK
+    chmod +x "$target"
+done
+
+git lfs install --local --skip-repo >/dev/null 2>&1 || true
+echo "Git LFS hooks enabled for $(basename "$PWD") (.git/hooks)."
+echo "Track files with: git lfs track '*.psd'"
+SCRIPT
+
 # (write_managed_script sets +x on each script; no blanket chmod needed.)
-success "Helper scripts written (clean-downloads, new-project, clone-work, clone-personal, backup-dotfiles, project-stats, health-check, setup-ssh, export-brewfile — merged, edits outside the markers are kept)"
+success "Helper scripts written (clean-downloads, new-project, clone-work, clone-personal, backup-dotfiles, project-stats, health-check, setup-ssh, export-brewfile, git-lfs-enable-repo — merged, edits outside the markers are kept)"
 
 # ---- Per-directory Git Config (work vs personal identity) ----
 info "Setting up per-directory git config..."
@@ -9634,6 +9717,7 @@ alias cleandl="clean-downloads"
 alias hc="health-check"
 alias sshsetup="setup-ssh"
 alias brewsnap="export-brewfile"
+alias lfsinit="git-lfs-enable-repo"
 
 # -- System -------------------------------------------------------------------
 alias update="topgrade"
@@ -10756,11 +10840,15 @@ git rebase -i --autosquash main
 ```
 
 ### `git-lfs` [git lfs] — Large File Storage
-Git Large File Storage replaces large binaries (PSDs, datasets, video) in the repo with lightweight text pointers, storing the actual content separately so clones and fetches stay fast. Use it for any file type that's large and changes often enough that Git's normal delta compression doesn't help. Set it up once per repo, then it works transparently on every commit.
+Git Large File Storage replaces large binaries (PSDs, datasets, video) in the repo with lightweight text pointers, storing the actual content separately so clones and fetches stay fast. Use it for any file type that's large and changes often enough that Git's normal delta compression doesn't help.
+
+**On this machine, LFS is enabled per repository — `git lfs install` is not enough.** This setup points `core.hooksPath` at a global hooks directory, and git-lfs is `core.hooksPath` aware: `git lfs install` writes its hooks *globally*, so `git lfs pre-push` would run on every push in every repo, including ones with no LFS objects. Against a GitHub wiki remote that fails outright and blocks the push, with an error that names authentication rather than LFS. So the global LFS hooks are removed, and each repo opts in instead (#311).
+
+**If you skip this step in a repo that uses LFS, `git push` uploads the pointer files without the objects behind them** — the push succeeds and the remote is left broken. Run it once per LFS repo, right after `git lfs track`.
 
 ```bash
-# enable LFS in a repo (once per machine)
-git lfs install
+# enable LFS hooks for THIS repo (once per repo — do this first)
+git-lfs-enable-repo
 # track a file type
 git lfs track "*.psd"
 # check status of LFS-tracked files

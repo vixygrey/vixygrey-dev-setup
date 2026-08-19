@@ -1136,6 +1136,7 @@ Use `/bin/rm` for permanent deletion.
 | `hc` | System health overview |
 | `sshsetup` | Generate SSH key + add to GitHub |
 | `brewsnap` | Export Brewfile snapshot |
+| `lfsinit` | Enable Git LFS hooks for this repo |
 
 ### Global Justfile Recipes (`gj <recipe>`)
 

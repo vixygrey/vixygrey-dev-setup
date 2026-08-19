@@ -127,6 +127,7 @@ Quick reference for all **209+ shortcuts** configured by the setup scripts.
 | `hc` | `health-check` | System health overview |
 | `sshsetup` | `setup-ssh` | Generate SSH key + add to GitHub |
 | `brewsnap` | `export-brewfile` | Export Brewfile snapshot |
+| `lfsinit` | `git-lfs-enable-repo` | Enable Git LFS hooks for this repo |
 
 ### System
 
