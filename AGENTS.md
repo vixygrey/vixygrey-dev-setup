@@ -130,10 +130,14 @@ Two traps to respect when touching this (#260):
     git-lfs 3.7.1.
   - git-lfs refuses to overwrite a foreign hook (`Hook already exists`, exit 2), so the delegators
     hold their names once installed — this arrangement is self-maintaining, not a race.
-  - **The tradeoff is real and belongs in any change here:** a repo that uses LFS and never runs
-    `git-lfs-enable-repo` pushes pointer files without their objects, and the push *succeeds*.
-    That failure is silent, which is why the opt-in is documented at the point of use rather than
-    left to be discovered.
+  - **That tradeoff is guarded, not just documented (#313).** A repo that uses LFS and never
+    runs `git-lfs-enable-repo` would push pointer files without their objects, and the push would
+    *succeed* — so the `pre-push` chain refuses it instead. The check is `git ls-files
+    ':(attr:filter=lfs)'` (one git call, ~20ms, no `git-lfs` fork) plus a grep for an LFS
+    `pre-push` hook. It **aborts** rather than warns, deliberately: a warning would not stop the
+    bad push, which is the whole point. Unlike #311's wiki case it cannot misfire on a healthy
+    repo — LFS-tracked paths with no LFS hook is always wrong. Escapes are `--no-verify` and
+    `git config dev-setup.lfsguard false`.
 
 Hooks fed data on stdin (`pre-push`, `post-rewrite`, `push-to-checkout`) need it buffered and
 replayed per link — the first reader would otherwise consume it and the rest would see nothing.

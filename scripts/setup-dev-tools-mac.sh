@@ -5842,6 +5842,34 @@ run_hook_chain() {
             repo_hook="$common/hooks/$hook"
         fi
     fi
+    # 1a. Git LFS is not chained globally (#311), so it is possible to have a repo
+    #     that tracks paths through the lfs filter but has no LFS pre-push hook. That
+    #     pushes the POINTER FILES WITHOUT THE OBJECTS behind them, and the push
+    #     SUCCEEDS — the breakage lands on whoever clones next. It is the one failure
+    #     this arrangement can produce silently, so it is refused here rather than
+    #     discovered later (#313).
+    #
+    #     Aborting rather than warning is deliberate: a warning scrolls past in push
+    #     output and would not stop the bad push, which is the entire point. Unlike
+    #     the wiki case in #311 this cannot misfire on a healthy repo — LFS-tracked
+    #     paths with no LFS hook is always wrong. `--no-verify` still bypasses it,
+    #     and `dev-setup.lfsguard false` disables it for a repo that pushes its LFS
+    #     objects some other way (CI, a mirror).
+    if [ "$hook" = "pre-push" ] && command -v git-lfs >/dev/null 2>&1 &&
+       [ -n "$(git ls-files ':(attr:filter=lfs)' 2>/dev/null | head -n 1)" ] &&
+       ! grep -qs 'git lfs pre-push' "$common/hooks/pre-push" &&
+       [ "$(git config --bool --get dev-setup.lfsguard 2>/dev/null)" != "false" ]; then
+        echo "ERROR: this repository tracks files with Git LFS, but has no LFS pre-push hook." >&2
+        echo "       Pushing now would upload the pointer files WITHOUT the objects behind" >&2
+        echo "       them, and the push would succeed — leaving the remote broken." >&2
+        echo "" >&2
+        echo "  Fix:      git-lfs-enable-repo" >&2
+        echo "  Bypass:   git push --no-verify" >&2
+        echo "  Disable:  git config dev-setup.lfsguard false" >&2
+        [ -n "$stdin_file" ] && rm -f "$stdin_file"
+        return 1
+    fi
+
     if [ -n "$repo_hook" ] && [ -x "$repo_hook" ]; then
         DEV_SETUP_REPO_HOOK_RAN=1
         _chain_run "$repo_hook" "$@" || status=$?
@@ -10844,7 +10872,7 @@ Git Large File Storage replaces large binaries (PSDs, datasets, video) in the re
 
 **On this machine, LFS is enabled per repository — `git lfs install` is not enough.** This setup points `core.hooksPath` at a global hooks directory, and git-lfs is `core.hooksPath` aware: `git lfs install` writes its hooks *globally*, so `git lfs pre-push` would run on every push in every repo, including ones with no LFS objects. Against a GitHub wiki remote that fails outright and blocks the push, with an error that names authentication rather than LFS. So the global LFS hooks are removed, and each repo opts in instead (#311).
 
-**If you skip this step in a repo that uses LFS, `git push` uploads the pointer files without the objects behind them** — the push succeeds and the remote is left broken. Run it once per LFS repo, right after `git lfs track`.
+**If you skip this step in a repo that uses LFS, `git push` would upload the pointer files without the objects behind them** — so the `pre-push` hook refuses the push and tells you to run this, rather than letting it succeed and leave the remote broken (#313). Run it once per LFS repo, right after `git lfs track`. To push LFS objects some other way (CI, a mirror), turn the check off with `git config dev-setup.lfsguard false`.
 
 ```bash
 # enable LFS hooks for THIS repo (once per repo — do this first)
