@@ -2,7 +2,17 @@
 
 > Release notes for 7.0.0–7.1.1 live in [GitHub Releases](https://github.com/vixygrey/vixygrey-dev-setup/releases) (auto-generated). This file resumes hand-written notes at 7.2.0.
 
-## [Unreleased]
+## [7.14.0] - 2026-08-19
+
+One bug, its fix, and the hole the fix left — all in Git LFS.
+
+Setting `core.hooksPath` hands this setup a directory it does not own: **git-lfs is `core.hooksPath` aware**, so `git lfs install` writes its four hooks into it from any repository. 7.5.0's hook delegator then preserved that hook and ran it faithfully everywhere, which meant `git lfs pre-push` executed on **every push on the machine** — including in repositories that have never held a single LFS object. Usually that costs nothing but a wasted lock-verification round-trip. Against a **GitHub wiki** it costs the push: the lock API cannot authorise a wiki push at all, so an account with full push access still gets `You must have push access to verify locks`, the hook exits non-zero, and the chain aborts exactly as the hook contract requires. Every wiki push, on every machine this script had run on, with an error naming authentication — sending you after a token you did not need.
+
+The delegator was never wrong; the question was only whether git-lfs should be chained *unconditionally*. A global hook cannot know which repositories use LFS, so it no longer tries: the LFS hooks are discarded, and repositories that actually use LFS opt in with a new **`git-lfs-enable-repo`**. That helper exists because `git lfs install --local` **cannot** do the job — `--local` governs where the *config* goes, not the hooks, so with `core.hooksPath` set git-lfs writes them globally regardless.
+
+Which left one thing worse than the bug it replaced. A repository that uses LFS and never runs the opt-in has no hook to upload its objects, so `git push` uploads the **pointer files alone — and succeeds**, leaving the remote broken for whoever clones next. A trap that fails silently is not an improvement on one that fails loudly, so the `pre-push` chain now refuses that push outright. Warning was considered and rejected: a warning scrolls past and does not stop the bad push, which is the whole point.
+
+**Re-run the script** (`--only configs,filesystem,shell`, or a full run) — already-provisioned machines have their chained LFS hooks purged automatically. No breaking changes, unless you were relying on the global LFS hooks, in which case run `git-lfs-enable-repo` once per LFS repository.
 
 ### Added
 
