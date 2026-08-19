@@ -692,6 +692,7 @@ Spotlight to find things) rather than agonizing over where it "should" go.
 | `health-check` | `hc` | Quick system health overview (disk, memory, battery, brew, Docker, node_modules) |
 | `setup-ssh` | `sshsetup` | Generate an Ed25519 SSH key and optionally add it to GitHub via gh CLI |
 | `export-brewfile` | `brewsnap` | Export a Brewfile snapshot with descriptions for reproducibility |
+| `git-lfs-enable-repo` | `lfsinit` | Enable Git LFS hooks for one repo (LFS is per-repo here, not global) |
 
 ### Global Justfile (~/.justfile)
 
@@ -926,6 +927,7 @@ All aliases are auto-written to `~/.zshrc`:
 | `hc` | `health-check` | System health overview |
 | `sshsetup` | `setup-ssh` | Generate SSH key + add to GitHub |
 | `brewsnap` | `export-brewfile` | Export Brewfile snapshot |
+| `lfsinit` | `git-lfs-enable-repo` | Enable Git LFS hooks for this repo |
 
 ### Shell Extras
 

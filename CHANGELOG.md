@@ -2,6 +2,22 @@
 
 > Release notes for 7.0.0–7.1.1 live in [GitHub Releases](https://github.com/vixygrey/vixygrey-dev-setup/releases) (auto-generated). This file resumes hand-written notes at 7.2.0.
 
+## [Unreleased]
+
+### Fixed
+
+- **git**: **Git LFS is no longer chained into the global hook directory**, because chaining it ran `git lfs pre-push` on *every* push on the machine. git-lfs 3.7.1 is `core.hooksPath` aware, so `git lfs install` writes its four hooks into the same global directory this setup manages, from any repository; 7.5.0's delegator then dutifully preserved that hook and ran it everywhere — including in repositories that have never held a single LFS object. Usually that only costs a wasted lock-verification round-trip. Against a **GitHub wiki** it costs the push: the lock API cannot authorise a wiki push at all, so an account with full push access still gets `Authentication error: Authentication required: You must have push access to verify locks`, the hook exits non-zero, and `run_hook_chain` aborts on the first non-zero status exactly as the hook contract requires. Every wiki push on every machine this script had run on was blocked, and the error named authentication — so the natural response was to go hunting for a token, which is the wrong subsystem entirely.
+
+  The delegator was not at fault and is unchanged; the question was only whether git-lfs should be chained unconditionally, and the answer is no. A *global* hook cannot know which repositories use LFS, so `preserve_foreign_hook` now **discards** git-lfs hooks rather than preserving them, and purges copies left in `<type>.d/` by earlier versions — so a machine provisioned while LFS was still chained is repaired on the next run instead of keeping the hook forever. Nothing is lost by deleting them: `git lfs install` re-creates them on demand, and git-lfs *refuses* to overwrite an existing foreign hook (`Hook already exists`, exit 2), so the delegators keep their names and the arrangement is self-maintaining rather than a race. Foreign hooks that are not git-lfs are still preserved and chained exactly as before.
+
+  Verified with a seven-case suite over the real `preserve_foreign_hook` — previously-preserved `10-git-lfs` purged, a fresh global git-lfs hook discarded, a **non**-LFS hook still preserved as `10-preexisting`, a co-resident non-LFS link untouched by the purge, `--dry-run` mutating nothing, our own delegator skipped, and the empty case a no-op — plus an end-to-end test driving real `git push` operations through the generated delegator against a local remote, confirming the chain still runs a repository's own `pre-push` as link 1 (#312, closes #311)
+
+### Added
+
+- **git**: **`git-lfs-enable-repo`** (alias `lfsinit`) — opts a single repository into Git LFS by writing the four LFS hooks into `.git/hooks`, where the global delegator runs them as the repository's own hook. This exists because **`git lfs install --local` cannot do it**: `--local` governs where the *config* is written, not the hooks, so with `core.hooksPath` set git-lfs writes the hooks globally anyway — which is the behaviour that caused the bug above (verified against git-lfs 3.7.1). The helper is idempotent, sets the repo-local `filter.lfs.*` config, and refuses to overwrite an unrelated existing hook rather than clobbering husky or lint-staged, printing the line to merge by hand instead.
+
+  **This step is required in any repository that uses LFS.** Skipping it means `git push` uploads the pointer files without the objects behind them, and the push *succeeds* — leaving the remote broken. That is the cost of not running LFS globally, and it is called out in the generated `TOOL_REFERENCE` entry at the point of use, in `AGENTS.md`, and here, precisely because the failure is silent (#312, closes #311)
+
 ## [7.13.0] - 2026-08-17
 
 A same-day follow-up to 7.12.0, because that release shipped something nobody chose. Installing `ms-python.python` for VS Code silently pulled in **Pylance** through its `extensionPack` — Microsoft's proprietary, closed-source Python type server — and Pylance does not sit quietly: `python.languageServer` defaults to `Default`, which resolves *to Pylance* whenever it is installed. So VS Code was analysing Python with the exact server this setup had already rejected in 7.10.0, when it chose **basedpyright** for croft on the grounds that it is the same code with the closed-source parts restored as open source.
