@@ -4,6 +4,14 @@
 
 ## [Unreleased]
 
+### Added
+
+- **git**: **The `pre-push` chain now refuses a push that would upload LFS pointers without their objects.** Not chaining git-lfs globally (see below) left exactly one failure mode that is *silent*: a repository that tracks paths through the lfs filter but never ran `git-lfs-enable-repo` has no hook to upload its LFS objects, so `git push` uploads the pointer files alone — and **succeeds**. Nothing reports it; the breakage surfaces later, to whoever clones next and gets `Encountered 1 file that should have been a pointer, but wasn't`.
+
+  The check is `git ls-files ':(attr:filter=lfs)'` — one git call, no `git-lfs` fork, ~20ms on a 365-file repo and empty (so short-circuiting) on any repo that does not use LFS — plus a grep for an LFS `pre-push` hook. It **aborts** rather than warns, which is the deliberate answer to the open question the issue was filed with: a warning scrolls past in push output and would not stop the bad push, which is the entire point of catching it. Unlike the wiki case in #311 this cannot misfire on a healthy repository — LFS-tracked paths with no LFS hook is always a misconfiguration — so the abort has no false-positive class to trade against. `git push --no-verify` still bypasses it, and `git config dev-setup.lfsguard false` disables it per repo for anyone pushing their LFS objects some other way (CI, a mirror).
+
+  Verified with eight cases driving real `git push` operations against local remotes: a plain repo unaffected, an LFS repo with no hook refused, the same repo allowed after `git-lfs-enable-repo`, the per-repo opt-out honoured, `--no-verify` bypassing, the guard scoped to `pre-push` only (a `post-checkout` delegator is untouched), an LFS repo whose repo hook is husky's still refused, and the short-circuit cost measured (#314, closes #313)
+
 ### Fixed
 
 - **git**: **Git LFS is no longer chained into the global hook directory**, because chaining it ran `git lfs pre-push` on *every* push on the machine. git-lfs 3.7.1 is `core.hooksPath` aware, so `git lfs install` writes its four hooks into the same global directory this setup manages, from any repository; 7.5.0's delegator then dutifully preserved that hook and ran it everywhere — including in repositories that have never held a single LFS object. Usually that only costs a wasted lock-verification round-trip. Against a **GitHub wiki** it costs the push: the lock API cannot authorise a wiki push at all, so an account with full push access still gets `Authentication error: Authentication required: You must have push access to verify locks`, the hook exits non-zero, and `run_hook_chain` aborts on the first non-zero status exactly as the hook contract requires. Every wiki push on every machine this script had run on was blocked, and the error named authentication — so the natural response was to go hunting for a token, which is the wrong subsystem entirely.
