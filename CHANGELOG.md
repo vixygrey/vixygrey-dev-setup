@@ -2,7 +2,17 @@
 
 > Release notes for 7.0.0–7.1.1 live in [GitHub Releases](https://github.com/vixygrey/vixygrey-dev-setup/releases) (auto-generated). This file resumes hand-written notes at 7.2.0.
 
-## [Unreleased]
+## [7.14.1] - 2026-08-19
+
+A one-line PATH fix, for a path that was already there and had never worked.
+
+`dotnet tool install -g` puts binaries in `~/.dotnet/tools`, and the .NET installer ships a PATH entry for it — `/etc/paths.d/dotnet-cli-tools`, containing the **literal string** `~/.dotnet/tools`. `path_helper` copies entries out of that directory verbatim and does not expand `~`, so the entry resolves to a directory named `~`, relative to wherever you happen to be, and matches nothing anywhere. The path is plainly visible in `echo $PATH` while every binary under it is unreachable — which is precisely why this survived: the evidence you would check first says it is configured.
+
+Found through the failure this repo treats as the worst kind. A `snapshot-check` pre-commit hook in another repository needs `ilspycmd`, could not resolve it, and skipped — on every commit, on the machine the hook was written for. It skips *loudly*, by deliberate design, so it was a visible no-op rather than a false pass; it was still a guard that had never once run.
+
+`$HOME/.dotnet/tools` is now asserted in `~/.zprofile` and `~/.zshrc`, the same two places Go, bun and pnpm are already handled, guarded on the directory existing. Microsoft's dead `/etc/paths.d` entry is left alone — this setup does not edit system PATH files it did not write, and a broken entry behind a working one is harmless.
+
+**Re-run the script** (`--only configs,shell`, or a full run) and open a new shell. This does **not** install the .NET SDK; whether it should is [#318](https://github.com/vixygrey/vixygrey-dev-setup/issues/318). No breaking changes.
 
 ### Fixed
 
