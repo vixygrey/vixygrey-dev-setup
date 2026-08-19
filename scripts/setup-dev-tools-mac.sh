@@ -5179,6 +5179,20 @@ if [[ -d "$HOME/.bun" ]]; then
     export PATH="$BUN_INSTALL/bin:$PATH"
 fi
 
+# .NET global tools — `dotnet tool install -g` puts binaries here (ilspycmd and
+# friends). The .NET installer does ship a PATH entry for this, and it does not
+# work: /etc/paths.d/dotnet-cli-tools contains the LITERAL string `~/.dotnet/tools`,
+# and `path_helper` copies entries verbatim without expanding `~`, so the entry
+# points at a directory named `~` and has never resolved. The result is a tool that
+# installs "successfully" and stays invisible to every shell, script and git hook —
+# which is exactly how a pre-commit guard came to skip silently (#316). Re-asserting
+# it with $HOME is the fix; the dead /etc/paths.d entry is Microsoft's and is left
+# alone. Guarded, so this is inert on a machine with no .NET. This setup does not
+# install the .NET SDK — it only makes tools that are already there reachable.
+if [[ -d "$HOME/.dotnet/tools" ]]; then
+    export PATH="$HOME/.dotnet/tools:$PATH"
+fi
+
 # Increase max open files (Node.js/webpack/vite need many file handles)
 ulimit -n 65536 2>/dev/null || true
 
@@ -9475,6 +9489,12 @@ export PATH="$HOME/.local/bin:$PATH"
 
 # Personal scripts
 export PATH="$HOME/Scripts/bin:$PATH"
+
+# .NET global tools (`dotnet tool install -g`). .zprofile sets this too —
+# re-asserting here for non-login interactive shells. Not redundant with
+# /etc/paths.d/dotnet-cli-tools: that file holds a literal `~` that never
+# expands (#316). Guarded: inert without .NET.
+[[ -d "$HOME/.dotnet/tools" ]] && export PATH="$HOME/.dotnet/tools:$PATH"
 
 # -- Environment Variables ----------------------------------------------------
 
