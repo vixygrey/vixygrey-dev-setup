@@ -10,7 +10,7 @@
 
   Found when a `snapshot-check` pre-commit hook in another repository skipped on every commit because `ilspycmd` could not be resolved — a guard that never fired on the machine it was written for, which is the failure mode this setup treats as worse than a loud error. Re-asserted with `$HOME` in both `~/.zprofile` and `~/.zshrc`, matching how Go, bun and pnpm are already handled, and guarded on the directory existing so it is inert on a machine with no .NET.
 
-  The dead `/etc/paths.d/dotnet-cli-tools` entry belongs to Microsoft's installer and is deliberately left alone — this setup does not edit system PATH files it did not create. **This does not install the .NET SDK**; it only makes tools that are already installed reachable. Whether the SDK itself belongs in this setup is a separate question, filed separately (#317, closes #316)
+  The dead `/etc/paths.d/dotnet-cli-tools` entry belongs to Microsoft's installer and is deliberately left alone — this setup does not edit system PATH files it did not create. **This does not install the .NET SDK**; it only makes tools that are already installed reachable. Whether the SDK itself belongs in this setup is a separate question, tracked in #318 (#317, closes #316)
 
 ## [7.14.0] - 2026-08-19
 
