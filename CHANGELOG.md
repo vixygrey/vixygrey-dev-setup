@@ -2,7 +2,19 @@
 
 > Release notes for 7.0.0–7.1.1 live in [GitHub Releases](https://github.com/vixygrey/vixygrey-dev-setup/releases) (auto-generated). This file resumes hand-written notes at 7.2.0.
 
-## [Unreleased]
+## [7.14.3] - 2026-08-21
+
+Both fixes here came from **auditing for a bug class rather than chasing a symptom**.
+
+7.14.0 through 7.14.2 fixed three unrelated-looking things that turned out to share a shape: a pre-commit guard that skipped on every commit, a `PATH` entry that had never resolved, and two branch aliases that deleted nothing. None of them errored. Each failed by doing nothing and saying nothing, which is why all three survived months of daily use. So the script was searched for more of the same, and two were found.
+
+`--skip prerequisites` was accepted and then discarded in silence — `prerequisites` was the only member of `ALL_CATEGORIES` whose section had no gate, so the flag validated (the "Unknown category" error even lists it as valid) and Xcode, Homebrew and `brew update` ran anyway. Notably the obvious fix was wrong: gating on `should_run` would have stopped `--only core` from installing Homebrew, so `--only core` on a fresh machine would refuse rather than bootstrap. Prerequisites are a precondition, not a peer category, and the gate now says so.
+
+The second is smaller and the same family. Two of the pre-commit hook's three checks announced themselves as `WARNING` and then aborted the commit; a warning that blocks reads as advisory, so the line that actually stopped you is the one skimmed past. All three now say `ERROR`, which is what they all do.
+
+The audit's negative results are worth as much as its findings: literal-`~` paths, all 59 shell alias targets, the git alias bodies, the cleanup dispatch from #242, every `should_run` category, and all eight pre-commit branches came back clean.
+
+**Re-run the script** (`--only configs`, or a full run) for the hook labels; the `--skip` fix is in the script itself and applies immediately. No breaking changes.
 
 ### Fixed
 
