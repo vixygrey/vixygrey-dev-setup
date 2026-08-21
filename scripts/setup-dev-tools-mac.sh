@@ -3475,8 +3475,54 @@ git config --global alias.standup "!git log --oneline --since='yesterday' --auth
 
 # Branch management
 git config --global alias.recent "branch --sort=-committerdate --format='%(committerdate:relative)%09%(refname:short)' -n 15"
-git config --global alias.cleanup "!git branch --merged main | grep -v '\\*\\|main\\|master' | xargs -n 1 git branch -d"
-git config --global alias.gone "!git fetch -p && git branch -vv | grep ': gone]' | awk '{print \$1}' | xargs -r git branch -d"
+# `gone` deletes local branches whose upstream is gone — which is exactly what a
+# squash merge plus `--delete-branch` leaves behind. Two things it must NOT do,
+# both of which the pre-#321 one-liners did:
+#
+#   * Select by ancestry. `git branch --merged main` is an ancestry test, and a
+#     squash merge writes a NEW commit that the branch tip is not an ancestor of.
+#     Every squash-merged branch is invisible to it, so `cleanup` selected
+#     nothing, forever, on a workflow that squash-merges everything — then died
+#     on `xargs` with `fatal: branch name required`, which reads as a usage error
+#     rather than "nothing to do".
+#   * Delete with `-d`. That applies the same ancestry test and refuses a
+#     squash-merged branch, so `gone` — whose SELECTION was always correct —
+#     failed at the last step instead of the first.
+#
+# So: select on upstream `[gone]`, delete with `-D`, and print each deleted
+# branch with the SHA to restore it from. `-D` gives up git's safety net, and the
+# echoed SHA is what replaces it: recovery is `git branch <name> <sha>`, with the
+# reflog behind that. Silence is the bug here, not politeness — an alias that
+# finds nothing says so.
+#
+# Single-quoted so the body reaches git verbatim; keep single quotes OUT of it.
+# `for-each-ref` rather than `branch -vv | awk` so that no `$1` has to survive
+# three levels of quoting.
+git config --global alias.gone '!f() {
+    git fetch --prune --quiet
+    current=$(git branch --show-current)
+    stale=$(git for-each-ref --format="%(refname:short) %(upstream:track)" refs/heads | grep "\[gone\]$" | cut -d" " -f1)
+    if [ -z "$stale" ]; then
+        echo "No local branches whose upstream is gone - nothing to delete."
+        return 0
+    fi
+    echo "$stale" | while read -r b; do
+        if [ "$b" = "$current" ]; then
+            echo "skipped  $b - checked out, switch away first"
+            continue
+        fi
+        sha=$(git rev-parse --short "$b")
+        if git branch -D "$b" >/dev/null 2>&1; then
+            echo "deleted  $b ($sha) - restore with: git branch $b $sha"
+        else
+            echo "FAILED   $b ($sha)" >&2
+        fi
+    done
+}; f'
+
+# cleanup delegates: ancestry selection is the bug above, so there is only one
+# correct implementation and this is a second name for it (#321).
+git config --global alias.cleanup "!git gone"
 
 # Diff
 git config --global alias.dft "!git -c diff.external=difft diff"
