@@ -2,6 +2,20 @@
 
 > Release notes for 7.0.0–7.1.1 live in [GitHub Releases](https://github.com/vixygrey/vixygrey-dev-setup/releases) (auto-generated). This file resumes hand-written notes at 7.2.0.
 
+## [Unreleased]
+
+### Fixed
+
+- **git**: **`git cleanup` and `git gone` now actually delete branches.** Both were broken by squash merging, which is what `gh pm` (`pr merge --squash --delete-branch`) does and therefore what every repository here uses — so between them they have very likely never deleted a single branch. Found on a repo carrying **21** stale local branches that `git cleanup` declined to touch.
+
+  A squash merge writes a **new** commit to `main` that the branch tip is not an ancestor of, and both aliases leaned on ancestry, in two different places. `cleanup` failed at *selection*: `git branch --merged main` is an ancestry test, so a squash-merged branch is never listed — and with no input, `xargs -n 1 git branch -d` ran with no argument and died on `fatal: branch name required`, which reads as a usage error rather than "nothing to do". `gone` failed at *deletion*: its selection was always right, because `--delete-branch` really does leave the local branch tracking a `[gone]` upstream, but it then passed the branch to `-d`, which applies the same ancestry test and refuses with `not fully merged`.
+
+  Neither said so. The failure was a **silent no-op** — a clean repo and a repo with 20 dead branches produced near-identical output — which is why it survived months of daily use.
+
+  `gone` now selects on the upstream being `[gone]` (via `for-each-ref`, so no `$1` has to survive three levels of quoting) and deletes with `-D`, printing each branch with the short SHA to restore it from: `deleted feature/x (ab2956c) - restore with: git branch feature/x ab2956c`. `-D` gives up git's ancestry safety net, and that echoed SHA is what replaces it. Finding nothing now says so. `cleanup` delegates to `gone` — ancestry selection is the bug, so there is only one correct implementation and `cleanup` is a second name for it.
+
+  Care was taken over what `-D` must **not** eat. Verified against a repo built with one squash-merged-and-deleted branch, one never-pushed branch holding real work, one pushed branch whose remote is alive, and one gone branch that is currently checked out: only the first is deleted, the unpushed work survives with its content intact, the live branch survives, the checked-out one is skipped with `switch away first`, and the printed restore command was run and does restore the branch and its content (#322, closes #321)
+
 ## [7.14.1] - 2026-08-19
 
 A one-line PATH fix, for a path that was already there and had never worked.
