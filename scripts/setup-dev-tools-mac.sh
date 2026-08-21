@@ -1689,8 +1689,29 @@ if [[ "$RESUME" != "true" ]]; then
 fi
 
 # =============================================================================
-# PREREQUISITES (always runs — required for everything else)
+# PREREQUISITES
 # =============================================================================
+# Gated like every other category (#324). It was the ONE member of ALL_CATEGORIES
+# with no `should_run` call, so `--skip prerequisites` passed validation — the
+# error message even lists it as valid — and was then discarded in silence:
+# Xcode, Homebrew and `brew update` all ran anyway, with nothing said. `--only
+# prerequisites` worked, but only by accident of the section always running.
+#
+# Skipping is refused when the machine does not already HAVE them, because
+# everything below needs `brew` and the failure would otherwise land much later
+# as a wall of confusing errors. That refusal is loud, which is the whole point.
+#
+# NOT `should_run "prerequisites"`, deliberately — prerequisites are a
+# PRECONDITION, not a peer category. Under `should_run`, `--only core` would stop
+# installing Homebrew, so `--only core` on a fresh machine would refuse to run at
+# all instead of bootstrapping itself as it does today. The rule is narrower than
+# should_run's: run unless the user *explicitly* asked to skip.
+_prereqs_skipped=false
+for _c in "${SKIP_CATEGORIES[@]}"; do
+    [[ "$_c" == "prerequisites" ]] && _prereqs_skipped=true
+done
+unset _c
+if [[ "$_prereqs_skipped" != "true" ]]; then
 banner "Prerequisites"
 
 # Xcode Command Line Tools (required for git, homebrew, compilers, etc.)
@@ -1740,6 +1761,26 @@ brew_install "gnu-sed" "gnu-sed (Linux-compatible sed)"
 brew_install "gnu-tar" "gnu-tar (Linux-compatible tar)"
 brew_install "gawk" "gawk (GNU awk)"
 brew_install "findutils" "findutils (GNU find, xargs)"
+
+else
+    # --skip prerequisites, honoured — but only on a machine that already has them.
+    _missing_prereqs=()
+    xcode-select -p &>/dev/null || _missing_prereqs+=("Xcode Command Line Tools")
+    command -v brew &>/dev/null || _missing_prereqs+=("Homebrew")
+    if (( ${#_missing_prereqs[@]} )); then
+        error "Cannot skip prerequisites: ${_missing_prereqs[*]} not installed."
+        echo "  Everything after this point needs them. Re-run without"
+        echo "  '--skip prerequisites' once, then skip it on later runs."
+        exit 1
+    fi
+    unset _missing_prereqs
+    info "Skipping prerequisites — Xcode CLI Tools and Homebrew already present"
+    # Normally exported by the section above. Without it every brew_install below
+    # triggers an auto-update, which is the slow networked work that skipping
+    # prerequisites is most often meant to avoid — so skipping it must not cause
+    # MORE of it.
+    export HOMEBREW_NO_AUTO_UPDATE=1
+fi
 
 # =============================================================================
 if should_run "core"; then

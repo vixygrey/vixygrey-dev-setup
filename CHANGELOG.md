@@ -2,6 +2,16 @@
 
 > Release notes for 7.0.0–7.1.1 live in [GitHub Releases](https://github.com/vixygrey/vixygrey-dev-setup/releases) (auto-generated). This file resumes hand-written notes at 7.2.0.
 
+## [Unreleased]
+
+### Fixed
+
+- **cli**: **`--skip prerequisites` is honoured instead of silently ignored.** `prerequisites` was the only member of `ALL_CATEGORIES` with no gate on its section, so the flag passed validation — the "Unknown category" error even lists it as valid — and was then discarded without a word: Xcode CLI Tools, Homebrew and `brew update` all ran anyway. An *unknown* category is rejected loudly and correctly, which is what made this stand out: it was the one value that validated and was then thrown away in silence. Found by auditing for the class shared by #311, #316 and #321.
+
+  The gate is deliberately **not** `should_run "prerequisites"`, because prerequisites are a precondition rather than a peer category: under `should_run`, `--only core` would stop installing Homebrew, so `--only core` on a fresh machine would refuse to run at all instead of bootstrapping itself as it does today. The rule is narrower — run unless the user *explicitly* asked to skip. Verified across the matrix: no flags, `--only core`, `--only prerequisites` and `--skip docs` all still run them; only `--skip prerequisites` does not.
+
+  Skipping is refused when the machine does not already have them — `Cannot skip prerequisites: Homebrew not installed`, exit 1 — because everything afterwards needs `brew` and the failure would otherwise arrive much later as a wall of unrelated errors. And the skip path still exports `HOMEBREW_NO_AUTO_UPDATE=1`, which the skipped section used to set: without it every later `brew_install` would auto-update, so skipping the slow networked step would have caused *more* of it (#326, closes #324)
+
 ## [7.14.2] - 2026-08-21
 
 Two branch-cleanup aliases that have probably never once done anything.
