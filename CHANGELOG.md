@@ -2,7 +2,17 @@
 
 > Release notes for 7.0.0–7.1.1 live in [GitHub Releases](https://github.com/vixygrey/vixygrey-dev-setup/releases) (auto-generated). This file resumes hand-written notes at 7.2.0.
 
-## [Unreleased]
+## [7.14.2] - 2026-08-21
+
+Two branch-cleanup aliases that have probably never once done anything.
+
+`git cleanup` and `git gone` both leaned on **ancestry**, and squash merging breaks that: it writes a *new* commit to `main` that the branch tip is not an ancestor of. Since `gh pm` is `pr merge --squash --delete-branch`, and this setup's own standards mandate squash merging, that is every repository here. `cleanup` failed at selection and then died on `xargs` with `fatal: branch name required`; `gone` selected correctly and then failed at deletion, because `-d` applies the same ancestry test and refuses. Neither said so — a clean repo and a repo with twenty dead branches looked alike, which is how this survived months of daily use. It surfaced on a repo carrying 21 stale local branches that `git cleanup` declined to touch.
+
+The fix follows the signal that is actually correct for this workflow: **the remote branch is gone**, which is precisely what `--delete-branch` leaves behind. That is what `gone` now selects on, deleting with `-D` and printing the short SHA to restore each branch from, since `-D` gives up git's safety net and the echoed SHA is what replaces it. `cleanup` delegates to it.
+
+The care went into what a force delete must *not* eat, and the answer is structural rather than defensive: a branch with no upstream has no `[gone]` marker, so unpushed local work is never selected at all. Verified against a repo holding one squash-merged-and-deleted branch, one never-pushed branch with real work in it, one pushed branch whose remote is alive, and one gone branch that is currently checked out.
+
+**Re-run the script** (`--only configs`, or a full run) to pick up the aliases. The first `git cleanup` afterwards may delete a lot at once on a long-lived repo — the restore SHAs it prints are the undo. No breaking changes, though `cleanup` no longer covers the merge-commit workflow, deliberately.
 
 ### Fixed
 
