@@ -6108,7 +6108,7 @@ while IFS= read -r -d '' f; do
 done < <(git diff --cached --name-only --diff-filter=d -z)
 if [ -n "$debug_hits" ]; then
     echo ""
-    echo "WARNING: Debug statements found in staged files:"
+    echo "ERROR: Debug statements found in staged files:"
     printf '%s' "$debug_hits"
     echo ""
     echo "Remove them, add a trailing 'debug-ok' comment, or commit with --no-verify to bypass."
@@ -6124,7 +6124,7 @@ large_files=$(git diff --cached --name-only --diff-filter=d -z | while IFS= read
 done)
 if [[ -n "$large_files" ]]; then
     echo ""
-    echo "WARNING: Large files detected (>5MB):"
+    echo "ERROR: Large files detected (>5MB):"
     echo "$large_files"
     echo ""
     echo "Consider using git-lfs or commit with --no-verify to bypass."
