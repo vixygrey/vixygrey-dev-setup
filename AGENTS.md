@@ -97,8 +97,12 @@ Two rules whenever you add or edit a table that is dispatched on a string field:
 2. `shellcheck -S warning scripts/setup-dev-tools-mac.sh` — **this is what CI runs** (`.github/workflows/lint.yml`). Keep it clean.
 3. `./scripts/setup-dev-tools-mac.sh --dry-run` (or `--only <category>`) — preview without mutating the machine.
 4. When you change a generated file, extract and exercise it in a throwaway dir rather than trusting the heredoc by eye (e.g. the pre-commit hook was tested against sample staged files in a temp `git init`).
+5. `./scripts/setup-dev-tools-mac.sh --verify` — asks each installed tool whether it
+   actually reads what we generate. Steps 1-3 and CI all check the file is *well-formed*;
+   none of them can tell you it is at an address the tool looks at. Run this after touching
+   any config path, and read a `FAIL` as "the file is fine, the tool is ignoring it".
 
-Useful flags: `--dry-run`, `--list`, `--list-categories`, `--only <cats>`, `--skip <cats>`, `--interactive/-i`, `--resume`, `--cleanup`, `--uninstall`, `--version`.
+Useful flags: `--dry-run`, `--list`, `--list-categories`, `--only <cats>`, `--skip <cats>`, `--interactive/-i`, `--resume`, `--cleanup`, `--verify`, `--uninstall`, `--version`.
 
 ## The global hooks directory is shared, and `--git-path` lies inside it
 

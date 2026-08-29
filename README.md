@@ -36,6 +36,7 @@ chmod +x scripts/setup-dev-tools-mac.sh
 ./scripts/setup-dev-tools-mac.sh --resume            # Continue from where a previous run left off
 ./scripts/setup-dev-tools-mac.sh --uninstall         # Show commands to remove everything (no changes made)
 ./scripts/setup-dev-tools-mac.sh --cleanup           # Remove tools from previous versions no longer in script
+./scripts/setup-dev-tools-mac.sh --verify            # Check every tool actually reads the config we generate
 ./scripts/setup-dev-tools-mac.sh --list-categories   # List all available categories
 ./scripts/setup-dev-tools-mac.sh --skip mac-media,mac-cloud  # Skip specific categories
 ./scripts/setup-dev-tools-mac.sh --only core,git,aws,dx      # Only install specific categories
@@ -77,6 +78,7 @@ chmod +x scripts/setup-dev-tools-mac.sh
 | **Resume** | Continue after a failure with `--resume` -- skips previously completed items |
 | **Uninstall guide** | Show removal commands with `--uninstall` (no destructive actions taken) |
 | **Cleanup** | Remove tools from previous versions with `--cleanup` (auto-detects deprecated tools) |
+| **Verify** | Check with `--verify` that each tool reads the config we write, and accepts it. CI proves these files parse; only a machine with the tools installed can prove anything *reads* them. Exits 1 on a mismatch |
 | **Lockfile** | Prevents concurrent runs via atomic directory-based lock |
 | **Category filtering** | Install only what you need with `--only` / `--skip` (validates category names) |
 | **List tools** | See everything that would be installed with `--list` |

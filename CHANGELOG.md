@@ -4,6 +4,21 @@
 
 ## [Unreleased]
 
+### Added
+
+- **cli**: **`--verify` — does each tool actually read the config we generate?** CI proves every generated file *parses*, which is necessary and caught #291. It cannot prove anything *reads* one. #329 (asciinema) and #332 (ngrok) were both well-formed files sitting at paths their tool never looks at, and both passed CI for releases — one of them printing a warning on every single invocation the whole time.
+
+  That question can only be answered where the tools are installed, so this is a script mode rather than a CI job. Each target declares how it can be checked:
+
+  - **`validate`** — run the tool's own validator with **no path argument**. Success proves the tool found our file at *its* default location and accepted it: the path question and the format question answered in one shot. Ghostty's own docs describe the shape — "when executed without any arguments, this will load the config from the default location". Covers ghostty, zellij, ngrok and asciinema.
+  - **`path`** — no validator, but the tool will say where it looks (`k9s info`, `mise config ls`, `lazygit --print-config-dir`, `atuin info`, `bat --config-file`, `nu -c '$nu.env-path'`). Compare that with where we write. This is the cheap check that catches the whole drift class: every instance found so far has been path drift, not syntax.
+  - **`template`** — the file is a deliberately incomplete seed. A borgmatic config with no `repositories` cannot validate until the user fills it in, so that is reported as `SEED`, not as a failure. A check that always fails is one people learn to skim past, which is exactly how the blocking `WARNING` in #327 survived.
+  - **`unchecked`** — neither is available. Listed by name so the gap stays visible instead of being quietly counted as a pass.
+
+  An unrecognized mode warns loudly rather than matching no branch, following the rule #242 was written for: a row that silently matches nothing reads as "verified". `--verify` exits 1 when any tool is ignoring our config.
+
+  It found three on its first run — k9s, lazygit and nushell, all sharing one root cause, filed as #333 (#335, closes #331)
+
 ### Fixed
 
 - **network**: **The ngrok seed config is written where ngrok actually reads it.** The script wrote `~/.config/ngrok/ngrok.yml`; ngrok on macOS reads `~/Library/Application Support/ngrok/ngrok.yml` and nothing else. Verified against ngrok 3.39.11 with a temp `HOME` in both directions — with only the XDG file present, `ngrok config check` reports the Library path missing; add that file and it validates.
