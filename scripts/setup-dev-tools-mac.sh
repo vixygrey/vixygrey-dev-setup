@@ -155,6 +155,7 @@ DRY_RUN=false
 RESUME=false
 UNINSTALL=false
 CLEANUP=false
+VERIFY=false
 INTERACTIVE=false
 NO_PROMPT=false
 SKIP_CATEGORIES=()
@@ -525,6 +526,10 @@ show_help() {
     echo "  --resume            Skip items that succeeded in a previous run"
     echo "  --uninstall         Show commands to remove everything (no changes made)"
     echo "  --cleanup           Remove tools from previous versions no longer in this script"
+    echo "  --verify            Check each generated config is at the path its tool reads"
+    echo "                      and that the tool accepts it. CI proves these files parse;"
+    echo "                      only a machine with the tools installed can prove anything"
+    echo "                      reads them. Exits 1 if any tool is ignoring our config"
     echo "  --interactive, -i   Interactively pick which categories to install"
     echo "  --no-prompt         Never wait for input — decline every optional prompt."
     echo "                      Use when nothing can answer (CI, a detached pane, an"
@@ -546,6 +551,7 @@ show_help() {
     echo "  ./setup-dev-tools-mac.sh --resume                 # Continue after a failure"
     echo "  ./setup-dev-tools-mac.sh --uninstall              # Show removal commands"
     echo "  ./setup-dev-tools-mac.sh --cleanup                # Remove dropped tools from previous versions"
+    echo "  ./setup-dev-tools-mac.sh --verify                 # Is each tool reading our config?"
     echo "  ./setup-dev-tools-mac.sh --skip mac-media,mac-cloud"
     echo "  ./setup-dev-tools-mac.sh --only core,git,aws,dx"
     echo "  ./setup-dev-tools-mac.sh --only git,configs      # git tooling AND its config/hooks"
@@ -601,6 +607,10 @@ while [[ $# -gt 0 ]]; do
             ;;
         --cleanup)
             CLEANUP=true
+            shift
+            ;;
+        --verify)
+            VERIFY=true
             shift
             ;;
         --interactive|-i)
@@ -1674,6 +1684,155 @@ if [[ "$CLEANUP" == "true" ]]; then
             info "Running brew cleanup..."
             brew cleanup >> "$LOG_FILE" 2>&1 || true
         fi
+    fi
+    exit 0
+fi
+
+# -- Handle --verify (does each tool actually READ what we generate?) ---------
+# CI proves every generated file PARSES (.github/workflows/lint.yml). It cannot
+# prove anything READS it. #329 (asciinema) and #332 (ngrok) were both well-formed
+# files sitting at paths their tool never looks at, and both sailed through CI for
+# releases — one of them printing a warning on every invocation the whole time.
+# That question can only be answered where the tools are installed, which is why
+# this is a script mode and not a CI job (#331).
+#
+# VERIFY_TARGETS rows: mode|label|path|command
+#
+#   validate  Run the tool's own validator with NO path argument. Success proves
+#             the tool found our file at ITS default location and accepted it —
+#             the path question and the format question answered in one shot.
+#             This is the strongest form; prefer it whenever a tool offers one.
+#   template  Same command, but the file is a deliberately incomplete seed. A
+#             borgmatic config with no `repositories` cannot validate until the
+#             user fills it in, so a failure there is the design, not a fault.
+#             Reported as SEED — a check that always fails is one people learn to
+#             skim past, which is how the blocking WARNING in #327 survived.
+#   path      No validator, but the tool will say where it looks. Capture that and
+#             compare it with where we write. This is the cheap check that catches
+#             the whole drift class: #329, #332 and the k9s skin were all path
+#             drift, none of them syntax.
+#   unchecked Neither is available. Listed by name so the gap stays visible rather
+#             than being quietly counted as a pass.
+#
+# The command field may contain '|' — `read` puts the remainder in the last var.
+if [[ "$VERIFY" == "true" ]]; then
+    echo ""
+    echo -e "${BOLD}${CYAN}Verifying generated config against the installed tools${NC}"
+    echo ""
+
+    # asciinema has no `config check`. It does fail loudly on a config it cannot
+    # read, so drive its cheapest subcommand and look for a CONFIG complaint —
+    # not the unrelated "Device not configured" that a non-tty play always emits.
+    _verify_asciinema() {
+        local out cast; cast="$(mktemp)"
+        printf '{"version":2,"width":80,"height":24}\n' > "$cast"
+        out="$(asciinema play "$cast" 2>&1)"
+        rm -f "$cast"
+        ! grep -qiE 'TOML parse error|asciinema 2\.x|invalid type' <<<"$out"
+    }
+
+    VERIFY_TARGETS=(
+        "validate|ghostty|$HOME/.config/ghostty/config|ghostty +validate-config"
+        "validate|zellij|$HOME/.config/zellij/config.kdl|zellij setup --check 2>&1 | grep -q 'Well defined'"
+        "validate|ngrok|$HOME/Library/Application Support/ngrok/ngrok.yml|ngrok config check"
+        "validate|asciinema|$HOME/.config/asciinema/config.toml|_verify_asciinema"
+        "template|borgmatic|$HOME/.config/borgmatic/config.yaml|borgmatic config validate"
+        "path|k9s|$HOME/Library/Application Support/k9s/config.yaml|k9s info 2>/dev/null | sed 's/\x1b\[[0-9;]*m//g' | sed -n 's/^Config: *//p'"
+        "path|mise|$HOME/.config/mise/config.toml|mise config ls 2>/dev/null | awk 'NR==1 {print \$1}' | sed \"s|^~|\$HOME|\""
+        "path|lazygit|$HOME/Library/Application Support/lazygit/config.yml|echo \"\$(lazygit --print-config-dir)/config.yml\""
+        "path|nu|$HOME/Library/Application Support/nushell/env.nu|nu -c '\$nu.env-path' 2>/dev/null | tail -1"
+        "path|atuin|$HOME/.config/atuin/config.toml|atuin info 2>/dev/null | awk -F'\"' '/client config:/ {print \$2}'"
+        "path|bat|$(bat --config-file 2>/dev/null)|bat --config-file"
+        "unchecked|starship|$HOME/.config/starship.toml|"
+        "unchecked|topgrade|$HOME/.config/topgrade.toml|"
+        "unchecked|trippy|$HOME/.config/trippy/trippy.toml|"
+        "unchecked|git-cliff|$HOME/.config/git-cliff/cliff.toml|"
+        "unchecked|harlequin|$HOME/.config/harlequin/config.toml|"
+        "unchecked|gh-dash|$HOME/.config/gh-dash/config.yml|"
+        "unchecked|stern|$HOME/.config/stern/config.yaml|"
+        "unchecked|lazydocker|$HOME/.config/lazydocker/config.yml|"
+        "unchecked|yt-dlp|$HOME/.config/yt-dlp/config|"
+        "unchecked|micro|$HOME/.config/micro/settings.json|"
+    )
+
+    VERIFY_OK=0 VERIFY_BAD=0 VERIFY_SEED=0 VERIFY_SKIP=0 VERIFY_GAP=0
+
+    for entry in "${VERIFY_TARGETS[@]}"; do
+        IFS='|' read -r mode label path cmd <<< "$entry"
+
+        # A config for a tool that isn't installed is not a finding — the category
+        # may simply have been skipped. Say so and move on.
+        if ! installed "$label" && [[ "$mode" != "unchecked" ]]; then
+            printf "  ${DIM}%-12s %s${NC}\n" "SKIP" "$label — not installed"
+            ((VERIFY_SKIP++)); continue
+        fi
+
+        if [[ -n "$path" && ! -e "$path" ]]; then
+            printf "  ${RED}%-12s${NC} %s — nothing at %s\n" "MISSING" "$label" "$path"
+            printf "               ${DIM}re-run the script to generate it${NC}\n"
+            ((VERIFY_BAD++)); continue
+        fi
+
+        case "$mode" in
+            validate)
+                if eval "$cmd" >/dev/null 2>&1; then
+                    printf "  ${GREEN}%-12s${NC} %s — its own validator accepts the file it found\n" "OK" "$label"
+                    ((VERIFY_OK++))
+                else
+                    printf "  ${RED}%-12s${NC} %s — %s rejected or never found its config\n" "FAIL" "$label" "$label"
+                    printf "               ${DIM}we write: %s${NC}\n" "$path"
+                    ((VERIFY_BAD++))
+                fi
+                ;;
+            template)
+                if eval "$cmd" >/dev/null 2>&1; then
+                    printf "  ${GREEN}%-12s${NC} %s — validates\n" "OK" "$label"
+                    ((VERIFY_OK++))
+                else
+                    printf "  ${YELLOW}%-12s${NC} %s — seed template, incomplete until you fill it in\n" "SEED" "$label"
+                    ((VERIFY_SEED++))
+                fi
+                ;;
+            path)
+                _vp="$(eval "$cmd" 2>/dev/null | head -1)"
+                if [[ -z "$_vp" ]]; then
+                    printf "  ${YELLOW}%-12s${NC} %s — could not read its config path back\n" "UNKNOWN" "$label"
+                    ((VERIFY_GAP++))
+                elif [[ "$_vp" == "$path" ]]; then
+                    printf "  ${GREEN}%-12s${NC} %s — reads the path we write\n" "OK" "$label"
+                    ((VERIFY_OK++))
+                else
+                    printf "  ${RED}%-12s${NC} %s — reads a DIFFERENT path than we write\n" "FAIL" "$label"
+                    printf "               ${DIM}we write:  %s${NC}\n" "$path"
+                    printf "               ${DIM}%s reads: %s${NC}\n" "$label" "$_vp"
+                    ((VERIFY_BAD++))
+                fi
+                ;;
+            unchecked)
+                printf "  ${DIM}%-12s %s — no validator and no way to ask; syntax only (CI)${NC}\n" "UNVERIFIED" "$label"
+                ((VERIFY_GAP++))
+                ;;
+            *)
+                # Same rule as DEPRECATED_TOOLS (#242): an unrecognized mode must be
+                # loud. A row that silently matches no branch reads as "verified".
+                warn "Verify: unknown mode '$mode' for $label — skipped (fix VERIFY_TARGETS)"
+                ((VERIFY_SKIP++))
+                ;;
+        esac
+    done
+
+    echo ""
+    echo -e "  ${GREEN}${BOLD}Verified:${NC}    $VERIFY_OK"
+    echo -e "  ${RED}${BOLD}Failed:${NC}      $VERIFY_BAD"
+    echo -e "  ${YELLOW}${BOLD}Seed:${NC}        $VERIFY_SEED"
+    echo -e "  ${DIM}Unverified:  $VERIFY_GAP${NC}"
+    echo -e "  ${DIM}Skipped:     $VERIFY_SKIP${NC}"
+    echo ""
+    if [[ "$VERIFY_BAD" -gt 0 ]]; then
+        echo -e "${RED}A FAIL means the file is fine and the tool is not reading it.${NC}"
+        echo -e "${DIM}That is the #329/#332 shape: valid config, wrong address, no error anywhere.${NC}"
+        echo ""
+        exit 1
     fi
     exit 0
 fi
