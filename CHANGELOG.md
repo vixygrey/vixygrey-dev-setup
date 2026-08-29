@@ -2,15 +2,19 @@
 
 > Release notes for 7.0.0–7.1.1 live in [GitHub Releases](https://github.com/vixygrey/vixygrey-dev-setup/releases) (auto-generated). This file resumes hand-written notes at 7.2.0.
 
-## [Unreleased]
+## [7.15.0] - 2026-08-29
 
-### Changed
+Five fixes here, and they are all one bug: **a generated config file can be perfectly well-formed and sit at an address its tool never reads.**
 
-- **docs**: **AGENTS.md gains a section for the bug class behind #329, #332 and #333** — "A config can be valid and still be read by nobody". Four PRs in one session fixed the same defect and there was nothing written down that would have made anyone look for it. It records the symptoms, why no check in the repo catches it (the CI job proves a file parses; a file that parses and is read by nobody passes every time), and the fix: ask the tool for its path rather than hardcoding, pinning `XDG_CONFIG_HOME` on the query so the answer describes the post-setup machine. Plus the counter-rule that stops the obvious over-correction — VS Code is genuinely Library-based and ngrok ignores XDG, so the rule is per-tool, never per-directory.
+The releases before this one chased failures that were silent. This class is quieter still, because it is not even a failure — the tool starts, finds nothing, falls back to its defaults, and works. asciinema had been ignoring its config since the 2.x/3.x format change. ngrok's seed template had never once been read. And the generated `~/.zshrc` exports `XDG_CONFIG_HOME`, which relocated k9s, lazygit and nushell config out from under the `~/Library/Application Support` paths this script kept writing — so the Dracula skin k9s advertises had never applied to anything.
 
-  Also corrects the testing loop, which gave step 2 as `shellcheck -S warning` when CI runs it with `-x`, and notes that a green local ShellCheck is not proof CI is green: 0.11.0 passed a dead variable the runner's older build flagged as SC2034 (#339, closes #338)
+Two of the five *did* announce themselves. asciinema and nushell each printed a banner on every invocation, across releases, and both survived anyway: a banner naming a config file reads as advisory noise from a tool you use occasionally, not as "your settings are off". That is the shape of the blocking `WARNING` skimmed past in #327, and it is why the centrepiece here is a check rather than five patches.
 
-- **internal**: **The "this config moved, clear the old copy" guard is one helper, `remove_superseded_managed`.** A path change is only half-delivered without it — writing the new file fixes fresh installs while every provisioned machine keeps the old one, and in each case so far that cost something visible (asciinema and nushell both printed a banner). #329, #333 and #334 needed the identical guard, so the fourth copy became a function instead: the file must carry our markers *and* hold nothing outside them, or it is left alone with a warning. Deliberately conservative — a `config.yaml` written by a pre-`write_managed` version has no markers to prove ownership, so it stays, and the warning says why (#337)
+That check is **`--verify`**, which asks each installed tool whether it actually reads what we generate. CI proves these files *parse* — necessary, and it caught #291 — but a file that parses perfectly and is read by nobody passes every check in the repo. The question can only be answered where the tools are installed. It found three of the five on its first run.
+
+The counter-rule turned out to matter as much as the rule. A blanket "move everything to XDG" sweep would have broken two: VS Code is genuinely Library-based, and ngrok ignores `XDG_CONFIG_HOME` entirely. So this release moves ngrok *into* `~/Library/Application Support` and three other tools *out* of it. Per-tool, never per-directory — ask the tool, which is now what the script does.
+
+**Re-run the script** (`--only configs`, or a full run): five config paths changed, and until it runs none of this has reached the machine. The run also clears the superseded copies, which is when the k9s skin applies and the asciinema and nushell banners stop. No breaking changes.
 
 ### Added
 
@@ -26,6 +30,18 @@
   An unrecognized mode warns loudly rather than matching no branch, following the rule #242 was written for: a row that silently matches nothing reads as "verified". `--verify` exits 1 when any tool is ignoring our config.
 
   It found three on its first run — k9s, lazygit and nushell, all sharing one root cause, filed as #333 (#336, closes #331)
+
+### Changed
+
+- **docs**: **AGENTS.md gains a section for the bug class behind #329, #332 and #333** — "A config can be valid and still be read by nobody". Four PRs in one session fixed the same defect and there was nothing written down that would have made anyone look for it. It records the symptoms, why no check in the repo catches it (the CI job proves a file parses; a file that parses and is read by nobody passes every time), and the fix: ask the tool for its path rather than hardcoding, pinning `XDG_CONFIG_HOME` on the query so the answer describes the post-setup machine. Plus the counter-rule that stops the obvious over-correction — VS Code is genuinely Library-based and ngrok ignores XDG, so the rule is per-tool, never per-directory.
+
+  Also corrects the testing loop, which gave step 2 as `shellcheck -S warning` when CI runs it with `-x`, and notes that a green local ShellCheck is not proof CI is green: 0.11.0 passed a dead variable the runner's older build flagged as SC2034 (#339, closes #338)
+
+- **internal**: **The "this config moved, clear the old copy" guard is one helper, `remove_superseded_managed`.** A path change is only half-delivered without it — writing the new file fixes fresh installs while every provisioned machine keeps the old one, and in each case so far that cost something visible (asciinema and nushell both printed a banner). #329, #333 and #334 needed the identical guard, so the fourth copy became a function instead: the file must carry our markers *and* hold nothing outside them, or it is left alone with a warning. Deliberately conservative — a `config.yaml` written by a pre-`write_managed` version has no markers to prove ownership, so it stays, and the warning says why (#337)
+
+- **ci**: **The `generated-config` job parses the eight generated TOML files too** — `STARSHIP_CONF`, `ATUIN_CONF`, `MISE_CONF`, `TOPGRADE_CONF`, `TRIPPY_CONF`, `GIT_CLIFF_CONF`, `HARLEQUIN_CONF` and the new `ASCIINEMA_CONF` — via `tomllib`, which needs no extra install on the runner. All eight already parsed; the rows are there to keep them that way.
+
+  The job's comment now also records what it **cannot** catch, because #329 walked straight past it: a file that parses perfectly and is read by nobody. The asciinema config was valid 2.x TOML-adjacent INI the whole time. Parsing is necessary, not sufficient — a new row is a prompt to also check the tool still reads that path and those keys (#330)
 
 ### Fixed
 
@@ -58,12 +74,6 @@
   Keys move to `[session]`: `idle_time_limit` and `command` keep their names, `stdin = no` becomes `capture_input = false`. `overwrite` is dropped — 3.x has no config equivalent, only the `--overwrite` flag, and carrying a key that does nothing is the bug being fixed. All three surviving keys were verified against asciinema 3.2.1 rather than its docs: `session.capture_input` and `session.idle_time_limit` name themselves in its type errors, and `--help` documents `session.capture_input` and `session.command` as config options.
 
   Because the fix is a **path** change, writing the new file only helps fresh installs — an already-provisioned machine keeps the 2.x file beside it and goes on printing the banner forever. The old file is removed too, but only when it is provably ours: it must carry our markers *and* hold nothing outside them, the same test `write_managed` applies before deleting an outside region (#259). A file with edits outside the markers, or one this script never wrote, is left in place with a warning that says what to do with it (#330, closes #329)
-
-### Changed
-
-- **ci**: **The `generated-config` job parses the eight generated TOML files too** — `STARSHIP_CONF`, `ATUIN_CONF`, `MISE_CONF`, `TOPGRADE_CONF`, `TRIPPY_CONF`, `GIT_CLIFF_CONF`, `HARLEQUIN_CONF` and the new `ASCIINEMA_CONF` — via `tomllib`, which needs no extra install on the runner. All eight already parsed; the rows are there to keep them that way.
-
-  The job's comment now also records what it **cannot** catch, because #329 walked straight past it: a file that parses perfectly and is read by nobody. The asciinema config was valid 2.x TOML-adjacent INI the whole time. Parsing is necessary, not sufficient — a new row is a prompt to also check the tool still reads that path and those keys (#330)
 
 ## [7.14.3] - 2026-08-21
 
