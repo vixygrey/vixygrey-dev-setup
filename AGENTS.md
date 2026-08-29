@@ -58,6 +58,59 @@ Related: **name the binary, not the package.** `trippy`→`trip`, `nushell`→`n
 
 Same for **generated docs**: a checklist step, `TOOL_REFERENCE` entry, or `CLAUDE.md` line can promise a tool, backend, default provider, or example command that the script never installs or that does not exist. The docs advertised a local **Ollama** backend for herald's AI and `croft pair --provider ollama` that nothing installed — a "local, no-key" path that was dead until the install was added (#237); and the `ni` entry documented an `nx` command that `@antfu/ni` does not ship — the package-binary runner is `nlx` (#238). Cross-check every tool / backend / default / example command a generated doc names against the install calls (`brew_install`/`go_install`/`npm_global_install`/…) and, for commands, the package's real `bin` keys.
 
+## A config can be valid and still be read by nobody
+
+The section above is about the right **keys**. This one is about the right **address**, and
+it is the defect this repo has shipped most often. A generated file can be perfectly
+well-formed and sit somewhere its tool never looks. Nothing errors — the tool starts, falls
+back to its defaults, and carries on.
+
+| Tool | We wrote | The tool reads |
+| --- | --- | --- |
+| asciinema (#329) | `~/.config/asciinema/config`, 2.x INI | `config.toml`, TOML |
+| ngrok (#332) | `~/.config/ngrok/ngrok.yml` | `~/Library/Application Support/ngrok/ngrok.yml` |
+| k9s, lazygit, nushell (#333) | `~/Library/Application Support/<tool>/` | `~/.config/<tool>/` |
+
+Why it survives so well:
+
+- **No check in the repo can see it.** The CI `generated-config` job proves each heredoc
+  *parses*, which is necessary and caught #291. A file that parses perfectly and is read by
+  nobody passes it every time.
+- **A warning is not enough.** Two of the five *did* announce themselves — asciinema and
+  nushell printed a banner on every invocation, across releases. Both survived anyway, because
+  a banner naming a config file reads as advisory noise rather than "your settings are off".
+- **The tool usually keeps working.** ngrok was never broken: `add-authtoken` writes to the
+  file ngrok actually reads, so only the stranded seed template was dead. Nothing pointed at it.
+- **The cause can be ours.** #333's three came from the generated `~/.zshrc` exporting
+  `XDG_CONFIG_HOME="$HOME/.config"`, which relocated the config of every XDG-aware tool on
+  the machine while those config blocks kept their hardcoded macOS paths.
+
+**Ask the tool; do not hardcode.** Where a tool will tell you, derive the path from it —
+`lazygit --print-config-dir`, `k9s info`, `nu -c '$nu.env-path'`, `bat --config-dir` — so a
+tool that moves again is self-correcting. Pin `XDG_CONFIG_HOME` to the value our own
+`.zshrc` exports when you query, because the question is not where the tool looks in
+whatever shell is running setup — possibly a bare bash on a fresh box that has never sourced
+the generated zshrc — but where it will look once setup is done. Without that pin, a first
+run on a fresh machine resolves to the old paths and bakes in the bug.
+
+**The rule is per-tool, never per-directory.** A blanket "move everything to XDG" sweep
+would have broken two: **VS Code** is genuinely Library-based on macOS, and **ngrok** ignores
+`XDG_CONFIG_HOME` entirely (verified with `HOME` and `XDG_CONFIG_HOME` both pointed at temp
+dirs). #334 deliberately moved ngrok *into* Library in the same release #337 moved three
+others out of it.
+
+**Finish the move.** A path change is the two-delivery-paths problem in its purest form:
+writing the new file fixes fresh installs, while every provisioned machine keeps the old one
+and goes on paying for it. `remove_superseded_managed <file> <explanation> [ref]` is the
+canonical way — it deletes only when the file carries our markers **and** holds nothing
+outside them, the same test `write_managed` applies before removing an outside region
+(#259). It is deliberately conservative: a `k9s/config.yaml` written by a pre-`write_managed`
+version has our content but no markers, so ownership cannot be proven and it stays with a
+warning. A harmless stale file beats deleting something we cannot prove is ours.
+
+`--verify` (step 5 below) is the check for all of this, and the only one that can answer
+"does anything read this". Read a `FAIL` as *the file is fine, the tool is ignoring it*.
+
 ## Generated shell config is inherited by agents and scripts
 
 `~/.zshrc` is sourced by non-interactive shells, so anything defined there reaches Claude Code and any script. Aliases are an interactive convenience and **must be gated** — every modern replacement rejects the original's flags (`du -sh` prints dust's help, `rm -rf` is rejected by trash), and the quiet ones are worse (`ps aux`, `dig +short` silently ignore the argument). Gate the whole section on `[[ -o interactive && -z "$CLAUDECODE" && -z "$AI_AGENT" ]]` rather than enumerating hazards — the enumerate approach already failed once, letting `wget` through (#218, #220).
@@ -87,6 +140,9 @@ Two rules whenever you add or edit a table that is dispatched on a string field:
 - **Write files with the managed helpers**, not ad-hoc redirection:
   - `write_managed <file> [comment-prefix]` — wraps stdin in a managed block (refreshes in place on re-run; backs up+replaces an unmarked pre-existing file).
   - `write_managed_script <file>` — same, for executables; keeps the shebang on line 1 and `chmod +x`.
+  - `remove_superseded_managed <file> <explanation> [ref]` — for the *other* half of a path
+    change: clears a copy we wrote at an address the tool no longer reads, and only when it
+    is provably ours. See "A config can be valid and still be read by nobody".
 - **Logging/UX helpers:** `info`, `success`, `warn`, `error`, `banner`, `progress`. Everything verbose goes to `$LOG_FILE` via `log`.
 - **Guard on tool presence** with `installed <cmd>` before using an optional tool.
 - **Heredoc quoting:** use `<<'MARKER'` (quoted) for literal content — this is the default, and it keeps `$` and backticks literal (most generated files rely on this). Only use an unquoted heredoc when you deliberately want the script's variables expanded.
@@ -94,7 +150,10 @@ Two rules whenever you add or edit a table that is dispatched on a string field:
 ## Testing / verification loop (do this before every commit)
 
 1. `bash -n scripts/setup-dev-tools-mac.sh` — syntax.
-2. `shellcheck -S warning scripts/setup-dev-tools-mac.sh` — **this is what CI runs** (`.github/workflows/lint.yml`). Keep it clean.
+2. `shellcheck -x -S warning scripts/setup-dev-tools-mac.sh` — **this is what CI runs**
+   (`.github/workflows/lint.yml`), `-x` included. Keep it clean — and note a green local run
+   is not proof CI is green: 0.11.0 passed a dead `NUSHELL_CONFIG_DIR` that the runner's older
+   build flagged as SC2034. When CI disagrees with your shellcheck, CI is the gate.
 3. `./scripts/setup-dev-tools-mac.sh --dry-run` (or `--only <category>`) — preview without mutating the machine.
 4. When you change a generated file, extract and exercise it in a throwaway dir rather than trusting the heredoc by eye (e.g. the pre-commit hook was tested against sample staged files in a temp `git init`).
 5. `./scripts/setup-dev-tools-mac.sh --verify` — asks each installed tool whether it
