@@ -6,6 +6,10 @@
 
 ### Changed
 
+- **docs**: **AGENTS.md gains a section for the bug class behind #329, #332 and #333** — "A config can be valid and still be read by nobody". Four PRs in one session fixed the same defect and there was nothing written down that would have made anyone look for it. It records the symptoms, why no check in the repo catches it (the CI job proves a file parses; a file that parses and is read by nobody passes every time), and the fix: ask the tool for its path rather than hardcoding, pinning `XDG_CONFIG_HOME` on the query so the answer describes the post-setup machine. Plus the counter-rule that stops the obvious over-correction — VS Code is genuinely Library-based and ngrok ignores XDG, so the rule is per-tool, never per-directory.
+
+  Also corrects the testing loop, which gave step 2 as `shellcheck -S warning` when CI runs it with `-x`, and notes that a green local ShellCheck is not proof CI is green: 0.11.0 passed a dead variable the runner's older build flagged as SC2034 (#339, closes #338)
+
 - **internal**: **The "this config moved, clear the old copy" guard is one helper, `remove_superseded_managed`.** A path change is only half-delivered without it — writing the new file fixes fresh installs while every provisioned machine keeps the old one, and in each case so far that cost something visible (asciinema and nushell both printed a banner). #329, #333 and #334 needed the identical guard, so the fourth copy became a function instead: the file must carry our markers *and* hold nothing outside them, or it is left alone with a warning. Deliberately conservative — a `config.yaml` written by a pre-`write_managed` version has no markers to prove ownership, so it stays, and the warning says why (#337)
 
 ### Added
