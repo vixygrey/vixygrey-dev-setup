@@ -31,6 +31,12 @@ jobs:
     # lost. ShellCheck passed, and so did a generator-vs-disk comparison, because the
     # broken file on disk matched the broken generator exactly (#291). The only check
     # that catches this class is handing the generated text to the real parser.
+    #
+    # What it does NOT catch: a file that parses perfectly and is read by nobody.
+    # The asciinema config was valid for asciinema 2.x for the whole of 7.x while the
+    # installed asciinema was 3.x, which reads a different path in a different format
+    # (#329). Parsing is necessary, not sufficient — when you add a row here, also
+    # check the tool still reads that path and those keys.
     steps:
       - uses: actions/checkout@v6
 
@@ -44,6 +50,7 @@ jobs:
             https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
           sudo chmod +x /usr/local/bin/yq
           just --version && zsh --version && jq --version && yq --version
+          python3 -c 'import tomllib, sys; print("tomllib ok on", sys.version.split()[0])'
 
       - name: Parse every generated config
         run: |
@@ -90,6 +97,14 @@ jobs:
           GH_CONF|yq eval '.' /tmp/generated
           NGROK_CONF|yq eval '.' /tmp/generated
           BORGMATIC_CONF|yq eval '.' /tmp/generated
+          STARSHIP_CONF|python3 -c 'import tomllib; tomllib.load(open("/tmp/generated","rb"))'
+          ATUIN_CONF|python3 -c 'import tomllib; tomllib.load(open("/tmp/generated","rb"))'
+          MISE_CONF|python3 -c 'import tomllib; tomllib.load(open("/tmp/generated","rb"))'
+          TOPGRADE_CONF|python3 -c 'import tomllib; tomllib.load(open("/tmp/generated","rb"))'
+          TRIPPY_CONF|python3 -c 'import tomllib; tomllib.load(open("/tmp/generated","rb"))'
+          GIT_CLIFF_CONF|python3 -c 'import tomllib; tomllib.load(open("/tmp/generated","rb"))'
+          HARLEQUIN_CONF|python3 -c 'import tomllib; tomllib.load(open("/tmp/generated","rb"))'
+          ASCIINEMA_CONF|python3 -c 'import tomllib; tomllib.load(open("/tmp/generated","rb"))'
           CHECKS
 
           exit "$fail"

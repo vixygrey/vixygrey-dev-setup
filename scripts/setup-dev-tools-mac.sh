@@ -4363,21 +4363,52 @@ MLR_CONF
 
 # ---- asciinema config ----
 ASCIINEMA_CONFIG_DIR="$HOME/.config/asciinema"
-ASCIINEMA_CONFIG="$ASCIINEMA_CONFIG_DIR/config"
+ASCIINEMA_CONFIG="$ASCIINEMA_CONFIG_DIR/config.toml"
+ASCIINEMA_LEGACY_CONFIG="$ASCIINEMA_CONFIG_DIR/config"
     info "Creating asciinema configuration..."
+    # asciinema 3.x moved the config to config.toml and switched INI -> TOML, so the
+    # 2.x file this script used to write is not read at all. Writing the new file is
+    # only half the fix on a machine already provisioned: asciinema prints a
+    # three-line "uses the location and format from asciinema 2.x" banner on EVERY
+    # invocation for as long as the old one sits beside it (#329). Remove it — but
+    # only when it is provably ours, meaning it carries our markers AND holds nothing
+    # outside them. That is the same test write_managed applies before deleting an
+    # outside region (#259), and for the same reason: anything looser eats edits.
+    if [[ -f "$ASCIINEMA_LEGACY_CONFIG" ]]; then
+        _asc_mb="# >>> dev-setup managed block (do not edit between the markers) >>>"
+        _asc_me="# <<< dev-setup managed block <<<"
+        if ! grep -qF "$_asc_mb" "$ASCIINEMA_LEGACY_CONFIG" 2>/dev/null; then
+            warn "Left $ASCIINEMA_LEGACY_CONFIG alone — this script did not write it. asciinema 3.x ignores it and warns on every run; move anything you want into config.toml and delete it"
+        else
+            _asc_outside="$(mktemp)"
+            awk -v mb="$_asc_mb" -v me="$_asc_me" '
+                index($0, mb) { inb = 1; next }
+                index($0, me) { inb = 0; next }
+                !inb { print }' "$ASCIINEMA_LEGACY_CONFIG" > "$_asc_outside"
+            if _has_content "$_asc_outside"; then
+                warn "Left $ASCIINEMA_LEGACY_CONFIG alone — it has edits outside our markers. asciinema 3.x ignores it and warns on every run; move them into config.toml and delete it"
+            elif [[ "$DRY_RUN" == "true" ]]; then
+                info "[DRY RUN] Would remove the superseded asciinema 2.x config at $ASCIINEMA_LEGACY_CONFIG (#329)"
+            else
+                rm -f "$ASCIINEMA_LEGACY_CONFIG"
+                info "Removed the superseded asciinema 2.x config — 3.x reads config.toml (#329)"
+            fi
+            rm -f "$_asc_outside"
+        fi
+    fi
     write_managed "$ASCIINEMA_CONFIG" "#" <<'ASCIINEMA_CONF'
-[record]
+# asciinema 3.x configuration. Keys live under [session]; the 2.x [record] section at
+# ~/.config/asciinema/config is a different file in a different format and is ignored.
+
+[session]
 # Idle time limit (seconds) — trims long pauses
 idle_time_limit = 2
 
 # Input recording (disable for security — don't record keystrokes)
-stdin = no
+capture_input = false
 
 # Default command to record
-command = /bin/zsh -l
-
-# Overwrite existing file without prompt
-overwrite = yes
+command = "/bin/zsh -l"
 ASCIINEMA_CONF
     success "asciinema configured (2s idle limit, no keystroke recording)"
 
