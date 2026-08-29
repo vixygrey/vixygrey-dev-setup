@@ -4919,7 +4919,6 @@ W3M_CONF
 # from either place. `$nu.env-path` is the file it will actually read (#333).
 NUSHELL_ENV="$(XDG_CONFIG_HOME="$HOME/.config" nu -c '$nu.env-path' 2>/dev/null | tail -1)"
 NUSHELL_ENV="${NUSHELL_ENV:-$HOME/.config/nushell/env.nu}"
-NUSHELL_CONFIG_DIR="$(dirname "$NUSHELL_ENV")"
 NUSHELL_SUPERSEDED="$HOME/Library/Application Support/nushell/env.nu"
     info "Creating nushell env config..."
     write_managed "$NUSHELL_ENV" "#" <<'NUSHELL_ENV_CONF'
