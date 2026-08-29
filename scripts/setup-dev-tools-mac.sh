@@ -4171,30 +4171,64 @@ LEAF_CONF
 fi
 
 # ---- ngrok config ----
-NGROK_CONFIG_DIR="$HOME/.config/ngrok"
+# ngrok on macOS reads ~/Library/Application Support/ngrok/ngrok.yml and nothing else
+# — NOT $XDG_CONFIG_HOME/ngrok, where this seed template used to land and was never
+# once read (#332). `ngrok config check` and `ngrok config add-authtoken --help` both
+# name that path as the default. It is hardcoded here rather than scraped out of
+# --help, which is brittle; --verify is what re-checks it against the live tool.
+NGROK_CONFIG_DIR="$HOME/Library/Application Support/ngrok"
+NGROK_CONFIG="$NGROK_CONFIG_DIR/ngrok.yml"
+NGROK_STRANDED_CONFIG="$HOME/.config/ngrok/ngrok.yml"
 if ! is_done "config:ngrok"; then
-# Deliberately create-once (#277): this is a SEED TEMPLATE, not managed config.
-# `ngrok config add-authtoken <TOKEN>` — which POST_SETUP_CHECKLIST tells you to run —
-# rewrites this same file to store the token, so refreshing it on every run would
-# clobber the user's credential. Changes to the template below only reach fresh
-# machines, and that is the correct trade here.
-if [[ ! -d "$NGROK_CONFIG_DIR" ]]; then
-    info "Creating ngrok config directory..."
-    mkdir -p "$NGROK_CONFIG_DIR"
-    cat > "$NGROK_CONFIG_DIR/ngrok.yml" <<'NGROK_CONF'
+# The template is materialized ONCE and then used for both jobs below — seeding a
+# fresh machine, and recognizing our own stranded copy well enough to delete it. A
+# second inline copy would be free to drift out of step with this one, and the only
+# symptom would be the cleanup silently never matching again.
+_ngrok_seed="$(mktemp)"
+cat > "$_ngrok_seed" <<'NGROK_CONF'
 # ngrok configuration
 # Add your authtoken: ngrok config add-authtoken <TOKEN>
 version: "3"
 agent:
   metadata: "dev-machine"
 NGROK_CONF
+
+# Deliberately create-once (#277): this is a SEED TEMPLATE, not managed config.
+# `ngrok config add-authtoken <TOKEN>` — which POST_SETUP_CHECKLIST tells you to run —
+# writes the token into this file, so refreshing it on every run would clobber the
+# user's credential. Changes to the template only reach fresh machines, and that is
+# the correct trade here. Keyed on the FILE, not the directory: add-authtoken creates
+# both, so on a machine that ran it first the directory is already there.
+if [[ -f "$NGROK_CONFIG" ]]; then
+    info "ngrok config already exists — leaving it alone (it may hold your authtoken)"
+elif [[ "$DRY_RUN" == "true" ]]; then
+    info "[DRY RUN] Would create the ngrok seed config at $NGROK_CONFIG"
+else
+    info "Creating ngrok config..."
+    mkdir -p "$NGROK_CONFIG_DIR"
+    cp "$_ngrok_seed" "$NGROK_CONFIG"
     # Lock down: ngrok.yml will hold your authtoken.
     chmod 700 "$NGROK_CONFIG_DIR" 2>/dev/null || true
-    chmod 600 "$NGROK_CONFIG_DIR/ngrok.yml" 2>/dev/null || true
+    chmod 600 "$NGROK_CONFIG" 2>/dev/null || true
     success "ngrok config created (add authtoken: ngrok config add-authtoken <TOKEN>)"
-else
-    warn "ngrok config directory already exists"
 fi
+
+# Clear the copy stranded at ~/.config/ngrok by earlier versions — but ONLY when it is
+# byte-identical to the template we shipped. Anything else is either a deliberate
+# `ngrok --config` setup or an edited file, and either could hold an authtoken. Do not
+# read it, do not migrate it, do not print it: say where the real config lives and stop.
+if [[ -f "$NGROK_STRANDED_CONFIG" ]]; then
+    if ! cmp -s "$_ngrok_seed" "$NGROK_STRANDED_CONFIG"; then
+        warn "Left $NGROK_STRANDED_CONFIG alone — it differs from the template this script wrote, so it may be a deliberate 'ngrok --config' setup or hold an authtoken. ngrok itself reads $NGROK_CONFIG"
+    elif [[ "$DRY_RUN" == "true" ]]; then
+        info "[DRY RUN] Would remove the stranded ngrok seed config at $NGROK_STRANDED_CONFIG (#332)"
+    else
+        rm -f "$NGROK_STRANDED_CONFIG"
+        rmdir "$HOME/.config/ngrok" 2>/dev/null || true
+        info "Removed the stranded ngrok seed config — ngrok reads $NGROK_CONFIG (#332)"
+    fi
+fi
+rm -f "$_ngrok_seed"
 mark_done "config:ngrok"
 fi
 
@@ -4239,7 +4273,14 @@ if ! is_done "config:caddy"; then
 # Deliberately create-once (#277): a commented-out starting point ("uncomment and
 # adjust as needed") that the user is expected to edit into their own site config.
 # Refreshing it on every run would discard their edits.
-if [[ ! -d "$CADDY_CONFIG_DIR" ]]; then
+# Unlike ngrok, this path is correct: the template is used with an explicit
+# `caddy run --config ~/.config/caddy/Caddyfile`, which is what its own first
+# line documents. Only the missing DRY_RUN guard was wrong here (#332).
+if [[ -d "$CADDY_CONFIG_DIR" ]]; then
+    warn "Caddy config directory already exists"
+elif [[ "$DRY_RUN" == "true" ]]; then
+    info "[DRY RUN] Would create the Caddy config template at $CADDY_CONFIG_DIR/Caddyfile"
+else
     info "Creating Caddy config template..."
     mkdir -p "$CADDY_CONFIG_DIR"
     cat > "$CADDY_CONFIG_DIR/Caddyfile" <<'CADDY_CONF'
@@ -4259,8 +4300,6 @@ if [[ ! -d "$CADDY_CONFIG_DIR" ]]; then
 # }
 CADDY_CONF
     success "Caddy config template created at $CADDY_CONFIG_DIR/Caddyfile"
-else
-    warn "Caddy config directory already exists"
 fi
 mark_done "config:caddy"
 fi

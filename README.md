@@ -775,7 +775,7 @@ The script generates config files with sensible defaults:
 | `~/.config/yt-dlp/config` | yt-dlp | Best quality mp4, aria2c downloader, metadata, subtitles |
 | `~/.config/gh-dash/config.yml` | gh-dash | PR/issue sections, Dracula theme |
 | `~/.config/stern/config.yaml` | stern | 50 tail lines, 5m lookback, timestamps |
-| `~/.config/ngrok/ngrok.yml` | ngrok | Base config (add authtoken) |
+| `~/Library/Application Support/ngrok/ngrok.yml` | ngrok | Base config (add authtoken). ngrok's real macOS path — **not** `~/.config/ngrok`, which it never reads; a stranded copy there is removed on the next run |
 | `~/.config/caddy/Caddyfile` | Caddy | Development server template |
 | `~/.config/asciinema/config.toml` | asciinema | 2s idle limit, no keystroke recording. TOML, for asciinema 3.x — a 2.x `config` left beside it is removed on the next run |
 | `~/.config/micro/settings.json` | micro | Dracula (`dracula-tc`), the $EDITOR for git/gh/lazygit and leaf's Ctrl+Ents, auto-format on save (ruff for Python, taplo/marksman/TS/CSS/bash/yaml servers, rust-analyzer, gopls) |

@@ -6,6 +6,18 @@
 
 ### Fixed
 
+- **network**: **The ngrok seed config is written where ngrok actually reads it.** The script wrote `~/.config/ngrok/ngrok.yml`; ngrok on macOS reads `~/Library/Application Support/ngrok/ngrok.yml` and nothing else. Verified against ngrok 3.39.11 with a temp `HOME` in both directions — with only the XDG file present, `ngrok config check` reports the Library path missing; add that file and it validates.
+
+  ngrok itself has always worked, which is why nothing pointed at this. `ngrok config add-authtoken` writes to its own default (`--help`: `save in this config file (default …/Library/Application Support/ngrok/ngrok.yml)`), so the token lands in the file ngrok reads — only the seed template was stranded. That also falsified the comment justifying the create-once guard, which claimed `add-authtoken` "rewrites this same file". It rewrites a different one. The create-once trade from #277 is still right at the new path, where a token genuinely would be clobbered, and the reasoning now matches where the token goes.
+
+  Found by the audit in #331 as the second instance of the class behind #329: a config that parses cleanly and is read by nobody. Both were path drift rather than syntax, and neither is visible to any check in the repo today.
+
+  A stranded `~/.config/ngrok/ngrok.yml` is removed on the next run, but **only when it is byte-identical to the template we shipped**. Anything else may be a deliberate `ngrok --config` setup or an edited file, and either could hold an authtoken — those are left in place with a warning naming the real path. The file is never read, migrated or printed (#334, closes #332)
+
+- **cli**: **`--dry-run` no longer creates the ngrok and Caddy config files.** Both #277 seed-template blocks used raw `mkdir -p` + `cat >` with no `DRY_RUN` guard — and because they do not go through `write_managed`, its built-in handling never applied. A `--dry-run` on a fresh machine wrote both files for real.
+
+  It survives everyday use because it only fires when the directory is absent: on a provisioned machine both blocks take the `else` branch and report "already exists". A fresh machine is precisely where someone reaches for `--dry-run` first, so the one case where the flag is most likely to be used is the one case where it was wrong. Caddy is fixed alongside ngrok because it is the same two-line defect in the same idiom four lines away; its path, unlike ngrok's, was always correct — the template is used with an explicit `caddy run --config` (#334, closes #332)
+
 - **terminal**: **The asciinema config is written in the 3.x format, at the path 3.x reads.** The script wrote `~/.config/asciinema/config` in the asciinema **2.x** INI format; the installed asciinema is **3.x**, which reads `~/.config/asciinema/config.toml` in TOML. Every setting was ignored, including `stdin = no` — the "don't record keystrokes" one. That setting happened to match 3.x's default (input capture is opt-in via `-I`), so nothing was ever captured, but the intent was not in force and would not have been had the default gone the other way.
 
   Unlike the recent run of silent no-ops (#311, #316, #321, #324), this one announced itself: asciinema prints a three-line `uses the location and format from asciinema 2.x` banner on **every** invocation. It survived anyway because the banner names a config file rather than a broken feature, so it reads as advisory noise from an occasional tool rather than "your settings are off" — the same way a `WARNING` that blocks a commit got skimmed past in #327.
