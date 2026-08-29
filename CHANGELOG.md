@@ -4,6 +4,10 @@
 
 ## [Unreleased]
 
+### Changed
+
+- **internal**: **The "this config moved, clear the old copy" guard is one helper, `remove_superseded_managed`.** A path change is only half-delivered without it — writing the new file fixes fresh installs while every provisioned machine keeps the old one, and in each case so far that cost something visible (asciinema and nushell both printed a banner). #329, #333 and #334 needed the identical guard, so the fourth copy became a function instead: the file must carry our markers *and* hold nothing outside them, or it is left alone with a warning. Deliberately conservative — a `config.yaml` written by a pre-`write_managed` version has no markers to prove ownership, so it stays, and the warning says why (#337)
+
 ### Added
 
 - **cli**: **`--verify` — does each tool actually read the config we generate?** CI proves every generated file *parses*, which is necessary and caught #291. It cannot prove anything *reads* one. #329 (asciinema) and #332 (ngrok) were both well-formed files sitting at paths their tool never looks at, and both passed CI for releases — one of them printing a warning on every single invocation the whole time.
@@ -20,6 +24,16 @@
   It found three on its first run — k9s, lazygit and nushell, all sharing one root cause, filed as #333 (#336, closes #331)
 
 ### Fixed
+
+- **shell**: **k9s, lazygit and nushell config is written where those tools read it.** The generated `~/.zshrc` exports `XDG_CONFIG_HOME="$HOME/.config"`, which moves the config location of every XDG-aware tool on the machine. Three config blocks still hardcoded `~/Library/Application Support`, so their files sat where the tool had stopped looking the moment that export landed. Nothing errored — the tools start, fall back to their defaults and carry on.
+
+  k9s is the one with a visible symptom: the Dracula skin is a stated goal of this setup and has never applied. `~/.config/k9s/skins/` was empty while `dracula.yaml` sat in the Library tree. nushell said so out loud on every invocation — `Nushell will not move your configuration files from ~/Library/Application Support/nushell` — while loading `env.nu` from neither place.
+
+  Found by `--verify` (#331) on its first run, which is the whole argument for having built it.
+
+  Each path is now **asked of the tool** rather than assumed — `lazygit --print-config-dir`, `k9s info`, `nu -c '$nu.env-path'` — the way the bat block already did with `bat --config-dir`, so a tool that moves again is self-correcting. The query pins `XDG_CONFIG_HOME` to the value our own `.zshrc` exports, because the honest question is not where the tool looks in whatever shell is running setup (possibly a bare bash on a fresh box that has never sourced the generated zshrc) but where it will look once setup is done.
+
+  Not every Library path was wrong, and a blanket sweep would have broken two: **VS Code** is genuinely Library-based on macOS, and **ngrok** ignores `XDG_CONFIG_HOME` entirely — verified with `HOME` and `XDG_CONFIG_HOME` both pointed at temp dirs. #334 deliberately moved ngrok *into* Library in the same release this moves three others out. The rule is per-tool; ask the tool (#337, closes #333)
 
 - **network**: **The ngrok seed config is written where ngrok actually reads it.** The script wrote `~/.config/ngrok/ngrok.yml`; ngrok on macOS reads `~/Library/Application Support/ngrok/ngrok.yml` and nothing else. Verified against ngrok 3.39.11 with a temp `HOME` in both directions — with only the XDG file present, `ngrok config check` reports the Library path missing; add that file and it validates.
 

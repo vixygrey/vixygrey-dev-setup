@@ -741,6 +741,42 @@ _trim_blank_edges() {
 # _has_content <file>   -> 0 when the file holds anything other than whitespace
 _has_content() { grep -q '[^[:space:]]' "$1" 2>/dev/null; }
 
+# remove_superseded_managed <file> <explanation> [issue-ref]
+# Delete a config file THIS SCRIPT wrote that has since moved to a new path. Only
+# when it is provably ours: our markers present AND nothing outside them — the same
+# test write_managed applies before it deletes an outside region (#259), and for the
+# same reason. Anything else is a user edit, a foreign file, or something holding a
+# credential, and is left in place with a warning instead. Honors DRY_RUN.
+#
+# A path change is only half-delivered without this. Writing the new file fixes fresh
+# installs; every already-provisioned machine keeps the old one sitting there, and in
+# every case so far it kept costing something — asciinema printed a banner on each
+# invocation (#329), nushell prints one too (#333).
+remove_superseded_managed() {
+    local file="$1" what="$2" ref="${3:-}"
+    [[ -f "$file" ]] || return 0
+    local mb="# >>> dev-setup managed block (do not edit between the markers) >>>"
+    local me="# <<< dev-setup managed block <<<"
+    if ! grep -qF "$mb" "$file" 2>/dev/null; then
+        warn "Left $file alone — this script did not write it. $what"
+        return 0
+    fi
+    local outside; outside="$(mktemp)"
+    awk -v mb="$mb" -v me="$me" '
+        index($0, mb) { inb = 1; next }
+        index($0, me) { inb = 0; next }
+        !inb { print }' "$file" > "$outside"
+    if _has_content "$outside"; then
+        warn "Left $file alone — it has edits outside our markers. $what"
+    elif [[ "$DRY_RUN" == "true" ]]; then
+        info "[DRY RUN] Would remove the superseded $file $ref"
+    else
+        rm -f "$file"
+        info "Removed the superseded $file — $what $ref"
+    fi
+    rm -f "$outside"
+}
+
 # write_managed <file> [comment-prefix]   (config content on stdin)
 # Idempotent config writer that MERGES on re-run instead of overwriting:
 #   - new file                -> create it wrapped in dev-setup markers
@@ -1737,10 +1773,10 @@ if [[ "$VERIFY" == "true" ]]; then
         "validate|ngrok|$HOME/Library/Application Support/ngrok/ngrok.yml|ngrok config check"
         "validate|asciinema|$HOME/.config/asciinema/config.toml|_verify_asciinema"
         "template|borgmatic|$HOME/.config/borgmatic/config.yaml|borgmatic config validate"
-        "path|k9s|$HOME/Library/Application Support/k9s/config.yaml|k9s info 2>/dev/null | sed 's/\x1b\[[0-9;]*m//g' | sed -n 's/^Config: *//p'"
+        "path|k9s|$HOME/.config/k9s/config.yaml|k9s info 2>/dev/null | sed 's/\x1b\[[0-9;]*m//g' | sed -n 's/^Config: *//p'"
         "path|mise|$HOME/.config/mise/config.toml|mise config ls 2>/dev/null | awk 'NR==1 {print \$1}' | sed \"s|^~|\$HOME|\""
-        "path|lazygit|$HOME/Library/Application Support/lazygit/config.yml|echo \"\$(lazygit --print-config-dir)/config.yml\""
-        "path|nu|$HOME/Library/Application Support/nushell/env.nu|nu -c '\$nu.env-path' 2>/dev/null | tail -1"
+        "path|lazygit|$HOME/.config/lazygit/config.yml|echo \"\$(lazygit --print-config-dir)/config.yml\""
+        "path|nu|$HOME/.config/nushell/env.nu|nu -c '\$nu.env-path' 2>/dev/null | tail -1"
         "path|atuin|$HOME/.config/atuin/config.toml|atuin info 2>/dev/null | awk -F'\"' '/client config:/ {print \$2}'"
         "path|bat|$(bat --config-file 2>/dev/null)|bat --config-file"
         "unchecked|starship|$HOME/.config/starship.toml|"
@@ -3904,8 +3940,16 @@ ATUIN_CONF
 
 # ---- lazygit Dracula theme ----
 if installed lazygit; then
-LAZYGIT_CONFIG_DIR="$HOME/Library/Application Support/lazygit"
+# Ask lazygit where it looks rather than assuming (#333). It follows XDG, and this
+# script's own ~/.zshrc exports XDG_CONFIG_HOME=~/.config — so the answer depends on
+# an environment variable WE set, and the honest question is not "where does lazygit
+# look right now" but "where will it look once setup is done". Hence the explicit
+# XDG_CONFIG_HOME on the query: it asks about the post-setup machine, not this shell,
+# which may be a bare bash on a fresh box that has never sourced the generated zshrc.
+LAZYGIT_CONFIG_DIR="$(XDG_CONFIG_HOME="$HOME/.config" lazygit --print-config-dir 2>/dev/null)"
+LAZYGIT_CONFIG_DIR="${LAZYGIT_CONFIG_DIR:-$HOME/.config/lazygit}"
 LAZYGIT_CONFIG="$LAZYGIT_CONFIG_DIR/config.yml"
+LAZYGIT_SUPERSEDED="$HOME/Library/Application Support/lazygit/config.yml"
     info "Creating lazygit Dracula config..."
     write_managed "$LAZYGIT_CONFIG" "#" <<'LAZYGIT_CONF'
 gui:
@@ -3952,13 +3996,23 @@ os:
 notARepository: skip
 promptToReturnFromSubprocess: false
 LAZYGIT_CONF
+    remove_superseded_managed "$LAZYGIT_SUPERSEDED" \
+        "lazygit reads $LAZYGIT_CONFIG" "(#333)"
     success "lazygit configured (Dracula theme, delta pager, auto-fetch, micro editor)"
 fi  # installed lazygit
 
 # ---- k9s Dracula skin ----
-K9S_SKINS_DIR="$HOME/Library/Application Support/k9s/skins"
-K9S_CONFIG_DIR="$HOME/Library/Application Support/k9s"
+# k9s follows XDG too, so the Library path this used to write was read by nobody and
+# the Dracula skin never applied (#333). `k9s info` reports the config file it will
+# use; strip its ANSI colouring, and match on the whole rest of the line because these
+# paths contain a space ("Application Support") that a field-splitting read truncates.
+K9S_CONFIG_DIR="$(XDG_CONFIG_HOME="$HOME/.config" k9s info 2>/dev/null \
+    | sed 's/\x1b\[[0-9;]*m//g' | sed -n 's|^Config: *||p' | head -1)"
+K9S_CONFIG_DIR="${K9S_CONFIG_DIR%/config.yaml}"
+K9S_CONFIG_DIR="${K9S_CONFIG_DIR:-$HOME/.config/k9s}"
+K9S_SKINS_DIR="$K9S_CONFIG_DIR/skins"
 K9S_SKIN="$K9S_SKINS_DIR/dracula.yaml"
+K9S_SUPERSEDED_DIR="$HOME/Library/Application Support/k9s"
     info "Creating k9s Dracula skin..."
     write_managed "$K9S_SKIN" "#" <<'K9S_DRACULA'
 k9s:
@@ -4057,6 +4111,10 @@ k9s:
     skin: dracula
 K9S_CFG
     fi
+    remove_superseded_managed "$K9S_SUPERSEDED_DIR/skins/dracula.yaml" \
+        "k9s reads $K9S_SKIN" "(#333)"
+    remove_superseded_managed "$K9S_SUPERSEDED_DIR/config.yaml" \
+        "k9s reads $K9S_CONFIG_DIR/config.yaml" "(#333)"
     success "k9s Dracula skin configured"
 
 # ---- micro editor config ----
@@ -4565,35 +4623,10 @@ ASCIINEMA_CONFIG="$ASCIINEMA_CONFIG_DIR/config.toml"
 ASCIINEMA_LEGACY_CONFIG="$ASCIINEMA_CONFIG_DIR/config"
     info "Creating asciinema configuration..."
     # asciinema 3.x moved the config to config.toml and switched INI -> TOML, so the
-    # 2.x file this script used to write is not read at all. Writing the new file is
-    # only half the fix on a machine already provisioned: asciinema prints a
-    # three-line "uses the location and format from asciinema 2.x" banner on EVERY
-    # invocation for as long as the old one sits beside it (#329). Remove it — but
-    # only when it is provably ours, meaning it carries our markers AND holds nothing
-    # outside them. That is the same test write_managed applies before deleting an
-    # outside region (#259), and for the same reason: anything looser eats edits.
-    if [[ -f "$ASCIINEMA_LEGACY_CONFIG" ]]; then
-        _asc_mb="# >>> dev-setup managed block (do not edit between the markers) >>>"
-        _asc_me="# <<< dev-setup managed block <<<"
-        if ! grep -qF "$_asc_mb" "$ASCIINEMA_LEGACY_CONFIG" 2>/dev/null; then
-            warn "Left $ASCIINEMA_LEGACY_CONFIG alone — this script did not write it. asciinema 3.x ignores it and warns on every run; move anything you want into config.toml and delete it"
-        else
-            _asc_outside="$(mktemp)"
-            awk -v mb="$_asc_mb" -v me="$_asc_me" '
-                index($0, mb) { inb = 1; next }
-                index($0, me) { inb = 0; next }
-                !inb { print }' "$ASCIINEMA_LEGACY_CONFIG" > "$_asc_outside"
-            if _has_content "$_asc_outside"; then
-                warn "Left $ASCIINEMA_LEGACY_CONFIG alone — it has edits outside our markers. asciinema 3.x ignores it and warns on every run; move them into config.toml and delete it"
-            elif [[ "$DRY_RUN" == "true" ]]; then
-                info "[DRY RUN] Would remove the superseded asciinema 2.x config at $ASCIINEMA_LEGACY_CONFIG (#329)"
-            else
-                rm -f "$ASCIINEMA_LEGACY_CONFIG"
-                info "Removed the superseded asciinema 2.x config — 3.x reads config.toml (#329)"
-            fi
-            rm -f "$_asc_outside"
-        fi
-    fi
+    # 2.x file this script used to write is not read at all — and asciinema prints a
+    # three-line banner about it on every invocation for as long as it sits there.
+    remove_superseded_managed "$ASCIINEMA_LEGACY_CONFIG" \
+        "asciinema 3.x reads $ASCIINEMA_CONFIG and warns on every run while this exists" "(#329)"
     write_managed "$ASCIINEMA_CONFIG" "#" <<'ASCIINEMA_CONF'
 # asciinema 3.x configuration. Keys live under [session]; the 2.x [record] section at
 # ~/.config/asciinema/config is a different file in a different format and is ignored.
@@ -4880,8 +4913,14 @@ W3M_CONF
     success "w3m configured (UTF-8, cookies off)"
 
 # ---- nushell config ----
-NUSHELL_CONFIG_DIR="$HOME/Library/Application Support/nushell"
-NUSHELL_ENV="$NUSHELL_CONFIG_DIR/env.nu"
+# nushell follows XDG as well, and is the one tool that said so out loud: with
+# XDG_CONFIG_HOME set it prints "Nushell will not move your configuration files from
+# ~/Library/Application Support/nushell" on every invocation, while loading nothing
+# from either place. `$nu.env-path` is the file it will actually read (#333).
+NUSHELL_ENV="$(XDG_CONFIG_HOME="$HOME/.config" nu -c '$nu.env-path' 2>/dev/null | tail -1)"
+NUSHELL_ENV="${NUSHELL_ENV:-$HOME/.config/nushell/env.nu}"
+NUSHELL_CONFIG_DIR="$(dirname "$NUSHELL_ENV")"
+NUSHELL_SUPERSEDED="$HOME/Library/Application Support/nushell/env.nu"
     info "Creating nushell env config..."
     write_managed "$NUSHELL_ENV" "#" <<'NUSHELL_ENV_CONF'
 # Nushell environment config
@@ -4896,6 +4935,8 @@ if (which starship | is-not-empty) {
 # Homebrew paths
 $env.PATH = ($env.PATH | prepend "/opt/homebrew/bin" | prepend ($env.HOME + "/.local/bin"))
 NUSHELL_ENV_CONF
+    remove_superseded_managed "$NUSHELL_SUPERSEDED" \
+        "nushell reads $NUSHELL_ENV" "(#333)"
     success "nushell env configured (starship prompt, Homebrew paths)"
 
 # ---- git-cliff config ----

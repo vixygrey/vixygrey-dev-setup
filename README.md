@@ -790,7 +790,7 @@ The script generates config files with sensible defaults:
 | `~/.config/git-cliff/cliff.toml` | git-cliff | Conventional commits changelog template |
 | `~/.newsboat/config` | newsboat | Vim keys, Dracula colors, auto-reload |
 | `~/.newsboat/urls` | newsboat | Starter RSS feeds (Claude Code, Node, Rust, GitHub) |
-| `~/Library/Application Support/nushell/env.nu` | nushell | Starship prompt, Homebrew paths |
+| `~/.config/nushell/env.nu` | nushell | Starship prompt, Homebrew paths |
 | `~/.config/ghostty/config` | Ghostty | JetBrainsMono Nerd Font, Dracula palette, transparent titlebar |
 | `~/.config/fastfetch/config.jsonc` | fastfetch | Nerd Font icons, package counts, Node/Python/Go/Rust/Docker versions, battery, disk, colored output |
 | `~/.config/mise/config.toml` | mise | Auto-install, trust ~/Code |
@@ -828,8 +828,8 @@ The script generates config files with sensible defaults:
 | `~/.myclirc` | mycli | Multi-line, auto-expand, destructive warnings |
 | `~/.gemrc` | Ruby | No docs on gem install |
 | `~/.claude.json` (mcpServers) | Claude Code MCP | User-scope MCP servers (migrated from Kiro via `claude mcp add`) — filesystem, github, git, fetch, context7, aws-docs, aws-pricing, aws-iac, aws-knowledge, cloudwatch, iam. Opt-in per project: playwright, postgres, several AWS servers. (Notion server dropped.) |
-| `~/Library/.../lazygit/config.yml` | lazygit | Dracula theme, delta pager, nerd fonts, auto-fetch, micro editor (`hx`), rounded borders |
-| `~/Library/.../k9s/skins/dracula.yaml` | k9s | Full Dracula skin |
+| `~/.config/lazygit/config.yml` | lazygit | Dracula theme, delta pager, nerd fonts, auto-fetch, micro editor (`hx`), rounded borders |
+| `~/.config/k9s/skins/dracula.yaml` | k9s | Full Dracula skin |
 
 ---
 
