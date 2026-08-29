@@ -777,7 +777,7 @@ The script generates config files with sensible defaults:
 | `~/.config/stern/config.yaml` | stern | 50 tail lines, 5m lookback, timestamps |
 | `~/.config/ngrok/ngrok.yml` | ngrok | Base config (add authtoken) |
 | `~/.config/caddy/Caddyfile` | Caddy | Development server template |
-| `~/.config/asciinema/config` | asciinema | 2s idle limit, no keystroke recording |
+| `~/.config/asciinema/config.toml` | asciinema | 2s idle limit, no keystroke recording. TOML, for asciinema 3.x — a 2.x `config` left beside it is removed on the next run |
 | `~/.config/micro/settings.json` | micro | Dracula (`dracula-tc`), the $EDITOR for git/gh/lazygit and leaf's Ctrl+Ents, auto-format on save (ruff for Python, taplo/marksman/TS/CSS/bash/yaml servers, rust-analyzer, gopls) |
 | `~/Library/.../Code/User/settings.json` | VS Code | Dracula, format-on-save, ruff + basedpyright (Python; Pylance disabled), prettier (web), shfmt (shell), tabs for Go, LF, telemetry off. **Merged, not overwritten** — your keys and Settings Sync win |
 | `~/.config/sketchybar/` | SketchyBar | Dracula bar: app, clock, battery, wifi, volume, cpu, mem, bluetooth, VPN |

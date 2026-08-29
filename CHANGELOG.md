@@ -2,6 +2,24 @@
 
 > Release notes for 7.0.0–7.1.1 live in [GitHub Releases](https://github.com/vixygrey/vixygrey-dev-setup/releases) (auto-generated). This file resumes hand-written notes at 7.2.0.
 
+## [Unreleased]
+
+### Fixed
+
+- **terminal**: **The asciinema config is written in the 3.x format, at the path 3.x reads.** The script wrote `~/.config/asciinema/config` in the asciinema **2.x** INI format; the installed asciinema is **3.x**, which reads `~/.config/asciinema/config.toml` in TOML. Every setting was ignored, including `stdin = no` — the "don't record keystrokes" one. That setting happened to match 3.x's default (input capture is opt-in via `-I`), so nothing was ever captured, but the intent was not in force and would not have been had the default gone the other way.
+
+  Unlike the recent run of silent no-ops (#311, #316, #321, #324), this one announced itself: asciinema prints a three-line `uses the location and format from asciinema 2.x` banner on **every** invocation. It survived anyway because the banner names a config file rather than a broken feature, so it reads as advisory noise from an occasional tool rather than "your settings are off" — the same way a `WARNING` that blocks a commit got skimmed past in #327.
+
+  Keys move to `[session]`: `idle_time_limit` and `command` keep their names, `stdin = no` becomes `capture_input = false`. `overwrite` is dropped — 3.x has no config equivalent, only the `--overwrite` flag, and carrying a key that does nothing is the bug being fixed. All three surviving keys were verified against asciinema 3.2.1 rather than its docs: `session.capture_input` and `session.idle_time_limit` name themselves in its type errors, and `--help` documents `session.capture_input` and `session.command` as config options.
+
+  Because the fix is a **path** change, writing the new file only helps fresh installs — an already-provisioned machine keeps the 2.x file beside it and goes on printing the banner forever. The old file is removed too, but only when it is provably ours: it must carry our markers *and* hold nothing outside them, the same test `write_managed` applies before deleting an outside region (#259). A file with edits outside the markers, or one this script never wrote, is left in place with a warning that says what to do with it (#330, closes #329)
+
+### Changed
+
+- **ci**: **The `generated-config` job parses the eight generated TOML files too** — `STARSHIP_CONF`, `ATUIN_CONF`, `MISE_CONF`, `TOPGRADE_CONF`, `TRIPPY_CONF`, `GIT_CLIFF_CONF`, `HARLEQUIN_CONF` and the new `ASCIINEMA_CONF` — via `tomllib`, which needs no extra install on the runner. All eight already parsed; the rows are there to keep them that way.
+
+  The job's comment now also records what it **cannot** catch, because #329 walked straight past it: a file that parses perfectly and is read by nobody. The asciinema config was valid 2.x TOML-adjacent INI the whole time. Parsing is necessary, not sufficient — a new row is a prompt to also check the tool still reads that path and those keys (#330)
+
 ## [7.14.3] - 2026-08-21
 
 Both fixes here came from **auditing for a bug class rather than chasing a symptom**.
