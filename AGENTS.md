@@ -138,6 +138,14 @@ Rules that follow:
 
 - **A brew formula can install a whole second runtime as a dependency.** `brew install prettier` pulls in `node`. Before adding a formula that has a language runtime beneath it, check `brew deps <formula>` — and prefer the package manager that runtime already has. Check afterwards too: `brew uses --installed node` names everything keeping it alive.
 
+## `~/.local/bin` outranks Homebrew, so linking a shim there is a machine-wide decision
+
+`~/.local/bin` sits at `PATH` position **9** in a bare `sh`; `$HOMEBREW_PREFIX/bin` sits at **13**. Anything linked into the former therefore wins in **every** context — git hooks, launchd, GUI-launched editors — not only where `mise activate` has run.
+
+That is the point when the tool is one mise owns (`pi`, `claude`, `prettier`, `tsc`). It is a hazard when something else already depends on the Homebrew copy: `pre-commit` builds hook environments against whichever `python3` it finds, so linking mise's Python there retargets those envs machine-wide and breaks ones already built. Check `command -v <tool>` in a bare `sh` **before and after** adding a link, and ask what else resolves that name.
+
+Prefer linking by **exclusion** over an allowlist — a tool added to mise later is then picked up automatically rather than silently missing until someone trips over it. Pair it with a prune, since a removed tool otherwise leaves a dangling link that fails only at the point of use, and scope the prune to symlinks pointing into the shims directory so hand-placed files survive.
+
 ## pi's per-skill prompt budget does not apply to a package that registers a tool
 
 The five-skill curation in `~/.agents/skills/` exists because pi injects **every discovered skill's name and description** into its system prompt at startup, and that prompt is under 1k tokens by design. That reasoning is right for loose skills and **wrong for packages**.
