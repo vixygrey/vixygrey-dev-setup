@@ -835,6 +835,7 @@ The script generates config files with sensible defaults:
 | `~/.pi/agent/models.json` | pi | Registers the local Ollama provider (`qwen3:8b` on `127.0.0.1:11434`). **Not** XDG -- pi ignores `XDG_CONFIG_HOME` entirely |
 | `~/.pi/agent/themes/dracula.json` | pi | Full Dracula theme -- all 51 required colour tokens plus the 3 optional ones |
 | `~/.agents/skills/*` | pi | Symlinks to five skills shared with Claude Code (api-testing, d2-diagrams, dbmate-migrations, office-docs, tiki) |
+| `~/.pi/agent/settings.json` (packages) | pi | Third-party packages, **pinned**: `pi-web-access@0.28.0` (pi ships no web tool at all) and `bigpowers@2.88.1` (81 skills behind one `bigpowers_skill` tool, +0 system-prompt tokens). Pinned because pi loads packages in-process and unsandboxed; bumps are manual and deliberate |
 | `~/.pi/agent/extensions/*` | pi | Five safety extensions — permission gate (confirms dangerous bash), protected paths (blocks writes to credentials), git checkpoint, dirty-repo guard, desktop notify. First-party examples copied from the installed package; `protected-paths.ts` is generated with this machine's credential paths |
 
 ---

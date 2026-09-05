@@ -1323,6 +1323,9 @@ if [[ "$UNINSTALL" == "true" ]]; then
     echo "  rm -rf ~/.vscode                          # installed extensions"
     echo "  rm -rf \"\$HOME/Library/Application Support/Code\"   # settings, state, workspace storage"
     echo ""
+    echo "# Remove pi third-party packages (pi-web-access, bigpowers):"
+    echo "  pi remove npm:pi-web-access; pi remove npm:bigpowers"
+    echo ""
     echo "# Remove pi config, sessions and credentials:"
     echo "  npm uninstall -g @earendil-works/pi-coding-agent && rm -rf ~/.pi ~/.agents"
     echo ""
@@ -10174,6 +10177,56 @@ export default function (pi: ExtensionAPI) {
 }
 PI_PROTECTED_CONF
     success "pi: protected-paths written (credentials, ~/.ssh, ~/.aws, auth.json blocked from write/edit)"
+
+    # -- Third-party packages -------------------------------------------------------
+    # PINNED ON PURPOSE. Unlike the extensions above, these are third-party and pi loads
+    # them in-process, unsandboxed, with full user permissions — bigpowers ships an
+    # extension, and global extensions load with no trust prompt. A pin means a broken or
+    # compromised upstream release cannot arrive silently on the next run. The cost is that
+    # bumps are manual: that is the trade, not neglect. Re-review before raising a version.
+    #
+    # Both were reviewed before adoption: MIT, real repos, no preinstall/postinstall/prepare
+    # hooks, no telemetry. bigpowers' extension makes no network calls and its only execSync
+    # is a fixed `git rev-parse` with no interpolation.
+    #
+    #   pi-web-access  pi ships NO web tool at all — no search, no fetch. Biggest functional
+    #                  gap vs Claude Code. Note its queries go to Exa by default (#349).
+    #   bigpowers      81 software-engineering skills. Costs +0 system-prompt tokens
+    #                  (measured 2050 -> 2050): it registers ONE `bigpowers_skill` tool
+    #                  rather than injecting 81 descriptions, so the per-skill prompt cost
+    #                  that forced the five-skill curation above does not apply here.
+    PI_PACKAGES=(
+        "pi-web-access@0.28.0"
+        "bigpowers@2.88.1"
+    )
+    # `pi install` succeeds on a re-run but re-runs `npm install` every time — network and
+    # seconds on every setup run. The pinned entry already sits in settings.json, so ask
+    # there and skip when it matches exactly.
+    if ! installed pi; then
+        warn "pi not installed — skipping its third-party packages"
+    elif ! command -v jq &>/dev/null; then
+        warn "jq missing — cannot check pi packages; install by hand: pi install npm:<pkg>"
+    else
+        _pi_pkg_added=0
+        for _pkg in "${PI_PACKAGES[@]}"; do
+            if jq -e --arg p "npm:$_pkg" '(.packages // []) | index($p)' \
+                 "$PI_DIR/settings.json" >/dev/null 2>&1; then
+                continue
+            fi
+            info "pi: installing $_pkg (pinned)..."
+            if pi install "npm:$_pkg" >> "$LOG_FILE" 2>&1; then
+                _pi_pkg_added=$((_pi_pkg_added + 1))
+            else
+                warn "pi: failed to install $_pkg — see $LOG_FILE"
+            fi
+        done
+        if [[ "$_pi_pkg_added" -gt 0 ]]; then
+            success "pi: $_pi_pkg_added package(s) installed (pinned)"
+        else
+            warn "pi packages already installed at the pinned versions"
+        fi
+        unset _pkg _pi_pkg_added
+    fi
 
     # -- Shared skills --------------------------------------------------------------
     # pi discovers ~/.agents/skills automatically (it does NOT read ~/.claude/skills).
