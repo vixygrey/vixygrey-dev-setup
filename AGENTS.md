@@ -138,6 +138,14 @@ Rules that follow:
 
 - **A brew formula can install a whole second runtime as a dependency.** `brew install prettier` pulls in `node`. Before adding a formula that has a language runtime beneath it, check `brew deps <formula>` — and prefer the package manager that runtime already has. Check afterwards too: `brew uses --installed node` names everything keeping it alive.
 
+## pi's per-skill prompt budget does not apply to a package that registers a tool
+
+The five-skill curation in `~/.agents/skills/` exists because pi injects **every discovered skill's name and description** into its system prompt at startup, and that prompt is under 1k tokens by design. That reasoning is right for loose skills and **wrong for packages**.
+
+`bigpowers` ships 81 skills and costs **+0 system-prompt tokens** — measured at 2050 before and 2050 after installing. Its extension exposes them through a single `bigpowers_skill` tool plus slash commands, so nothing is injected up front. An estimate built from summing the frontmatter predicted ~6,000 tokens and was simply measuring the wrong thing.
+
+Measure the prompt cost (`--mode json`, compare peak input tokens on a trivial prompt) rather than inferring it from file contents. Read the package's `pi` manifest in `package.json` too — it declares exactly which `extensions`, `skills` and `prompts` pi will load, which is rarely the same as what the tarball contains: `bigpowers` has 1,137 `SKILL.md` files on disk and loads 81.
+
 ## pi extensions are unsandboxed, and a wrong event field fails silently
 
 pi extensions are TypeScript running **in-process with the user's full permissions**. pi's own security doc is explicit: *"It is not a sandbox."* Project trust gates only `.pi/` resources — a **global** extension in `~/.pi/agent/extensions/` loads with no prompt whatsoever. `pi install npm:<anything>` is therefore the same decision as `npm i -g`, and `~/.pi/agent/auth.json` (a live OAuth token) is readable by anything that loads. Prefer the examples bundled inside the installed package; they are first-party and add no supply-chain surface.

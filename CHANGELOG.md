@@ -6,6 +6,21 @@
 
 ### Added
 
+- **configs**: **pi's two third-party packages are now installed by the script, pinned** — `pi-web-access@0.28.0` and `bigpowers@2.88.1`. Both had been installed by hand, so a rebuild silently lost them.
+
+  - **`pi-web-access`** — pi ships **no** web tool at all: no search, no fetch. This is the largest functional gap versus Claude Code, and it is invisible until you ask pi something that needs a doc page. Note its queries go to Exa by default (#349).
+  - **`bigpowers`** — 81 software-engineering skills behind a single `bigpowers_skill` tool.
+
+  **Pinned deliberately.** Unlike the bundled safety extensions, these are third-party, and pi loads them in-process, unsandboxed, with full user permissions — `bigpowers` ships an extension, and global extensions load with no trust prompt. A pin means a broken or compromised upstream release cannot arrive silently on the next run. Bumps are manual: that is the trade, not neglect.
+
+  Both were reviewed before adoption — MIT, real repos, **no `preinstall`/`postinstall`/`prepare` hooks**, no telemetry; `bigpowers`' extension makes no network calls and its only `execSync` is a fixed `git rev-parse` with no interpolation.
+
+  Guarded on the `packages` array in `settings.json` rather than re-running `pi install`, which succeeds every time but hits npm on every setup run.
+
+  **Correcting the reasoning behind the five-skill curation:** `bigpowers` costs **+0 system-prompt tokens**, measured (2050 before, 2050 after). pi normally injects every discovered skill's name and description into the system prompt — which is exactly why only five Claude skills are shared — but a package that registers a *tool* instead injects nothing. The per-skill budget does not apply to it, and an estimate that assumed otherwise was off by ~6,000 tokens.
+
+### Added
+
 - **configs**: **Five safety extensions wired into pi.** pi has four tools, one of them is `bash`, there is no built-in confirmation step, and its own security doc says plainly *"It is not a sandbox."* These are pi's **own** bundled examples, copied from the installed package — first-party, so they add no supply-chain surface:
 
   | Extension | What it does |
