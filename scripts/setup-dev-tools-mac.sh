@@ -335,7 +335,7 @@ declare -A CONFIG_LIVES_IN_CONFIGS=(
     [database]="pgcli, mycli, harlequin"
     [containers]="lazydocker, k9s (config + Dracula skin)"
     [networking]="trippy"
-    [dx]="atuin, zellij, Ghostty, VS Code settings — and starship, which is in the \`dracula\` category"
+    [dx]="atuin, zellij, Ghostty, VS Code settings, pi (~/.pi/agent + the shared ~/.agents/skills links) — and starship, which is in the \`dracula\` category"
     [mac-focus]="newsboat"
     [mac-media]="mpv"
     [mac-browsers]="w3m"
@@ -1000,6 +1000,12 @@ _npm_has() {
 npm_global_install() {
     local pkg="$1"
     local name="${2:-$1}"
+    # Any args after the display name go straight to `npm install -g`. pi documents
+    # --ignore-scripts as part of its install form, and a package that needs it is
+    # not served by a helper that cannot express it. This script runs under bash 4+
+    # with no `set -u`, so an empty array expands to zero words, not one empty one.
+    shift $(( $# > 2 ? 2 : $# ))
+    local npm_flags=("$@")
     progress
     is_done "npm:$pkg" && { warn "$name already completed (resume)"; return 0; }
     if [[ "$DRY_RUN" == "true" ]]; then
@@ -1015,7 +1021,7 @@ npm_global_install() {
         mark_done "npm:$pkg"
     else
         info "Installing $name globally..."
-        if npm install -g "$pkg" >> "$LOG_FILE" 2>&1; then
+        if npm install -g "${npm_flags[@]}" "$pkg" >> "$LOG_FILE" 2>&1; then
             success "$name installed"
             mark_done "npm:$pkg"
         else
@@ -1313,6 +1319,9 @@ if [[ "$UNINSTALL" == "true" ]]; then
     echo "# Remove VS Code's per-user trees (the cask uninstall leaves these behind):"
     echo "  rm -rf ~/.vscode                          # installed extensions"
     echo "  rm -rf \"\$HOME/Library/Application Support/Code\"   # settings, state, workspace storage"
+    echo ""
+    echo "# Remove pi config, sessions and credentials:"
+    echo "  npm uninstall -g @earendil-works/pi-coding-agent && rm -rf ~/.pi ~/.agents"
     echo ""
     echo "# Remove Claude Code config (CAREFUL — contains your custom rules):"
     echo "  rm -rf ~/.claude/settings.json ~/.claude/CLAUDE.md ~/.claude/rules ~/.claude/hooks ~/.claude/commands ~/.claude/agents ~/.claude/statusline.sh"
@@ -1772,6 +1781,7 @@ if [[ "$VERIFY" == "true" ]]; then
         "validate|zellij|$HOME/.config/zellij/config.kdl|zellij setup --check 2>&1 | grep -q 'Well defined'"
         "validate|ngrok|$HOME/Library/Application Support/ngrok/ngrok.yml|ngrok config check"
         "validate|asciinema|$HOME/.config/asciinema/config.toml|_verify_asciinema"
+        "validate|pi|$HOME/.pi/agent/models.json|pi --list-models 2>/dev/null | grep -q '^ollama'"
         "template|borgmatic|$HOME/.config/borgmatic/config.yaml|borgmatic config validate"
         "path|k9s|$HOME/.config/k9s/config.yaml|k9s info 2>/dev/null | sed 's/\x1b\[[0-9;]*m//g' | sed -n 's/^Config: *//p'"
         "path|mise|$HOME/.config/mise/config.toml|mise config ls 2>/dev/null | awk 'NR==1 {print \$1}' | sed \"s|^~|\$HOME|\""
@@ -2893,8 +2903,19 @@ fi
 # Claude Code (installed via npm, not brew)
 if installed npm; then
     npm_global_install "@anthropic-ai/claude-code" "Claude Code (AI-assisted coding in terminal)"
+    # pi — a second, deliberately minimal agent alongside Claude Code: four tools
+    # (read/write/edit/bash), a sub-1k-token system prompt, and no MCP support (upstream
+    # considers it token-wasteful and prefers CLI tools with READMEs). It is NOT a
+    # replacement: everything built on herald/gws MCP stays Claude Code's job.
+    #
+    # Namespace matters. Every blog post and write-up points at badlogic/pi-mono ->
+    # @mariozechner/pi-coding-agent, which stopped at 0.73.1 in May 2026. The live
+    # project is earendil-works/pi -> @earendil-works/pi-coding-agent. Installing the
+    # one the articles name gets a months-stale fork that still appears to work.
+    npm_global_install "@earendil-works/pi-coding-agent" "pi (minimal coding agent — 2nd agent alongside Claude Code)" --ignore-scripts
 else
     progress  # keep progress bar accurate when npm unavailable
+    progress  # (two npm installs above: Claude Code + pi)
 fi
 # Additional LLM CLIs that pair with Claude Code.
 # Install llm as an isolated uv tool WITH the Anthropic plugin bundled. Homebrew's
@@ -3048,7 +3069,15 @@ brew_install "ollama" "ollama (local LLM runtime — backs herald AI + croft pai
 OLLAMA_DEFAULT_MODELS=(
     "gemma3:4b"                 # chat: herald triage/summaries/compose + croft pair (~3.3 GB)
     "nomic-embed-text-v2-moe"   # embeddings: herald semantic search (~0.96 GB)
+    "qwen3:8b"                  # agentic tool-calling: pi against a local model (~5.2 GB)
 )
+# On qwen3:8b specifically. pi's agent loop needs a model whose Ollama template emits
+# STRUCTURED tool calls; gemma3:4b is a chat model and does not. The obvious-looking pick,
+# qwen2.5-coder:7b, is worse than useless here: it advertises `tools` in `ollama show` and
+# then returns the call as literal text in the message content, tool_calls null — on the
+# native /api/chat endpoint as well as the OpenAI-compatible one, so it is the model, not
+# the shim. Verified against llama3.2 as a control, which returns a proper structured call.
+# If this model is ever swapped, re-run that check before trusting it.
 # A model is "present" if its name matches an `ollama list` row exactly — either as given
 # (an explicit tag like gemma3:4b) or with the implicit :latest tag Ollama adds to untagged
 # pulls (nomic-embed-text-v2-moe -> nomic-embed-text-v2-moe:latest).
@@ -8635,7 +8664,7 @@ Rules that follow from this:
 
 ## Environment
 - Shell: zsh with starship prompt, atuin history, fzf fuzzy finder, zsh-autosuggestions, zsh-syntax-highlighting
-- Editor / IDE: **croft** is the primary editor (VS Code-style terminal IDE — `croft` to open a workspace, `croft pair` for the AI navigator). **Visual Studio Code** is installed as the **GUI** editor for when a TUI is the wrong tool (`code .`) — secondary to croft, not a replacement; it carries the same rules via extensions (Dracula, ruff, **basedpyright** — the same Python type server croft uses, never Microsoft's proprietary Pylance, which the setup removes — prettier, ESLint, shellcheck/shfmt, EditorConfig) so it cannot disagree with the CLI. **micro** is the `EDITOR` for git/gh/lazygit commit messages and quick edits — non-modal, Dracula, with an on-screen key menu (`Ctrl+G` for full help). Helix was retired in 7.6.0. Agentic coding via Claude Code (`claude`).
+- Editor / IDE: **croft** is the primary editor (VS Code-style terminal IDE — `croft` to open a workspace, `croft pair` for the AI navigator). **Visual Studio Code** is installed as the **GUI** editor for when a TUI is the wrong tool (`code .`) — secondary to croft, not a replacement; it carries the same rules via extensions (Dracula, ruff, **basedpyright** — the same Python type server croft uses, never Microsoft's proprietary Pylance, which the setup removes — prettier, ESLint, shellcheck/shfmt, EditorConfig) so it cannot disagree with the CLI. **micro** is the `EDITOR` for git/gh/lazygit commit messages and quick edits — non-modal, Dracula, with an on-screen key menu (`Ctrl+G` for full help). Helix was retired in 7.6.0. Agentic coding via Claude Code (`claude`), with `pi` as a second, minimal agent (see **AI / agentic** below).
 - **croft does not support EditorConfig** (verified in croft 0.1.700 — no reference anywhere in its source). Its indentation is a language default (2 spaces for YAML, 4 otherwise) plus a per-buffer status-bar override that does not persist. VS Code *does* honour `.editorconfig`, so on a repo with one, the two editors will disagree unless you flip croft's status-bar pill. Croft's extensions are declarative `extension.toml` manifests (languages, LSP servers, themes, debug adapters, test runners, MCP sidecars) under `~/.config/croft/extensions/` — pure data, no code, no marketplace, so an EditorConfig reader cannot be added as one.
 - Terminal: Ghostty (Dracula theme)
 - Package managers: pnpm (preferred), npm, bun
@@ -8681,7 +8710,8 @@ Rules that follow from this:
 - **Code quality**: `typos` for spell checking, `ast-grep` for structural search/replace, `shellcheck`/`shfmt` for shell, `scc` to count lines of code by language with complexity + COCOMO cost, `manly` to explain a command's flags from its man page
 - **Security**: `trivy` to scan containers/IaC, `gitleaks` for secrets, `semgrep` for static analysis, `detect-secrets` for pre-commit secret detection, `sops` for secrets encryption
 - **IaC**: `tofu` (Terraform), `tflint` for linting, `terraform-docs` for module READMEs, `checkov` for static analysis, `infracost` for cost estimation, `cfn-lint` for CloudFormation, `sam` for SAM (note: `tfsec` checks live in `trivy config`)
-- **AI / agentic**: `claude` (Claude Code) is the coding agent — do agentic, multi-file edits yourself. `llm` for one-shot prompts and embeddings.
+- **AI / agentic**: `claude` (Claude Code) is the **default** coding agent — do agentic, multi-file edits yourself. `llm` for one-shot prompts and embeddings.
+- **`pi` — the second agent, and when to reach for it.** A deliberately minimal harness: four tools (`read`/`write`/`edit`/`bash`), a sub-1k-token system prompt, no sub-agents, no todo list, no plan mode, and **no MCP support** (upstream will not add it). Use it for a tight edit/bash loop in one repo, when you want the whole context visible, or to run against a local model with no metered spend: `pi --provider ollama --model qwen3:8b`. Anthropic is its default provider — auth is `pi` then `/login`, and third-party harness usage on a Pro/Max plan is billed as **extra usage per token, not against plan limits**, so prefer the Ollama path for long or exploratory loops. **Anything that needs MCP — herald, gws, GitHub, AWS — stays Claude Code's job**, since pi cannot reach those servers at all. pi reads `AGENTS.md` and `CLAUDE.md` the same way Claude Code does, and shares exactly five skills through `~/.agents/skills/` (api-testing, d2-diagrams, dbmate-migrations, office-docs, tiki) — not the whole skills directory, because pi puts every skill's description in its system prompt. Config lives in `~/.pi/agent/`, never `~/.config/pi`.
 - **HTTP**: `xh` for colorized requests, `curlie` for curl with httpie output, `grpcurl` for gRPC
 - **Network**: `trip` (trippy) for traceroute TUI, `sudo mtr` (requires root, lives in sbin), `bandwhich` for bandwidth, `nmap` for scanning, `mkcert` for local TLS certs
 - **Docs**: `d2` for diagrams, `pandoc` for conversion, `leaf` for Markdown preview, `doxx` to read/preview `.docx` files in the terminal
@@ -9804,6 +9834,156 @@ grpcurl -d '{"id":1}' localhost:50051 svc.Users/Get
 - Never hard-code secrets — reference env vars / `{{token}}` variables.
 SKILL_API
     success "First-party Claude skills written: office-docs, d2-diagrams, dbmate-migrations, api-testing -> ~/.claude/skills/"
+fi
+
+# ---- pi coding agent (~/.pi/agent) ----
+# pi ignores XDG_CONFIG_HOME completely. Settings, custom providers, themes, sessions and
+# credentials all live under ~/.pi/agent — so ~/.config/pi would be #338's "valid config,
+# wrong address" all over again, and this is the one config in here that `--verify` can
+# prove for real (see the `validate|pi` row: `pi --list-models` knows the `ollama` provider
+# ONLY because our models.json defines it).
+#
+# Credentials are deliberately not our business. `pi` then `/login` writes ~/.pi/agent/auth.json
+# at 0600; this script never reads, writes or echoes it — same line as `llm keys set anthropic`.
+PI_DIR="$HOME/.pi/agent"
+AGENTS_SKILLS="$HOME/.agents/skills"
+
+# The skills pi shares with Claude Code. NOT the whole of ~/.claude/skills: pi injects every
+# discovered skill's name+description into its system prompt at startup (/skill:name is only a
+# manual override), and that prompt is under 1k tokens by design. All 29 skills measure ~1k
+# tokens of frontmatter on their own — it would more than double the prompt, mostly with Google
+# Workspace recipes a coding agent will never call. These five cost ~392 tokens.
+#
+# Per-skill symlinks, not a directory symlink, for a second reason: the gws skills are re-copied
+# from upstream on every run, so their frontmatter cannot be edited to carry
+# `disable-model-invocation` — the next run would overwrite it.
+PI_SHARED_SKILLS=(api-testing d2-diagrams dbmate-migrations office-docs tiki)
+
+if [[ "$DRY_RUN" == "true" ]]; then
+    info "[DRY RUN] Would write pi config -> $PI_DIR (settings.json, models.json, themes/dracula.json)"
+    info "[DRY RUN] Would link ${#PI_SHARED_SKILLS[@]} shared skills -> $AGENTS_SKILLS/"
+else
+    mkdir -p "$PI_DIR/themes" "$AGENTS_SKILLS"
+
+    # -- models.json: the local Ollama provider ------------------------------------
+    # ollama already runs as a login service on 127.0.0.1:11434 (see the mac-productivity
+    # section), so this is live the moment it is written. Merged rather than overwritten so a
+    # hand-added provider survives; the `ollama` key itself is ours and is replaced each run.
+    PI_OLLAMA_PROVIDER='{"ollama":{"baseUrl":"http://localhost:11434/v1","api":"openai-completions","apiKey":"ollama","models":[{"id":"qwen3:8b","name":"Qwen3 8B (local)","reasoning":false,"contextWindow":40960,"maxTokens":8192,"cost":{"input":0,"output":0,"cacheRead":0,"cacheWrite":0}}]}}'
+    if command -v jq &>/dev/null; then
+        PI_TMP=$(mktemp)
+        [[ -f "$PI_DIR/models.json" ]] || echo '{}' > "$PI_DIR/models.json"
+        if jq --argjson prov "$PI_OLLAMA_PROVIDER" \
+             '.providers = ((.providers // {}) + $prov)' \
+             "$PI_DIR/models.json" > "$PI_TMP" 2>/dev/null; then
+            mv "$PI_TMP" "$PI_DIR/models.json"
+            success "pi: Ollama provider registered (~/.pi/agent/models.json)"
+        else
+            rm -f "$PI_TMP"
+            warn "pi: could not merge models.json — the Ollama provider is not registered"
+        fi
+    else
+        warn "pi: jq missing — skipping models.json (the Ollama provider won't be available)"
+    fi
+
+    # -- settings.json --------------------------------------------------------------
+    # Forced where we own the value (theme is ours; telemetry off matches the privacy stance
+    # this setup takes everywhere), defaulted with // where the user may legitimately differ.
+    #
+    # Deliberately NOT set: `enabledModels`. Scoping it to ["anthropic/*"] makes pi print
+    #   Warning: No models match pattern "anthropic/*"
+    # on every run of a fresh machine, because the Anthropic catalog is empty until the first
+    # /login. A nag on a clean install is exactly the shape of the WARNING that got skimmed
+    # past for releases in #327. Ctrl+P cycles the available models without it.
+    if command -v jq &>/dev/null; then
+        PI_TMP=$(mktemp)
+        [[ -f "$PI_DIR/settings.json" ]] || echo '{}' > "$PI_DIR/settings.json"
+        if jq '.theme = "dracula"
+               | .enableInstallTelemetry = false
+               | .enableAnalytics = false
+               | .defaultProvider = (.defaultProvider // "anthropic")
+               | .externalEditor = (.externalEditor // "micro")
+               | .enableSkillCommands = (.enableSkillCommands // true)' \
+             "$PI_DIR/settings.json" > "$PI_TMP" 2>/dev/null; then
+            mv "$PI_TMP" "$PI_DIR/settings.json"
+            success "pi: settings written (Dracula, micro as external editor, telemetry off)"
+        else
+            rm -f "$PI_TMP"
+            warn "pi: could not merge settings.json"
+        fi
+    fi
+
+    # -- Dracula theme --------------------------------------------------------------
+    # All 51 schema-required colour tokens plus the 3 optional ones. pi's theme schema sets
+    # additionalProperties:false, so a typo'd token name is rejected outright rather than
+    # silently ignored — validate against
+    # $(npm root -g)/@earendil-works/pi-coding-agent/dist/modes/interactive/theme/theme-schema.json
+    # after any edit here.
+    cat > "$PI_DIR/themes/dracula.json" <<'PI_THEME_CONF'
+{
+  "name": "dracula",
+  "vars": {
+    "bg": "#282a36", "current": "#44475a", "fg": "#f8f8f2", "comment": "#6272a4",
+    "cyan": "#8be9fd", "green": "#50fa7b", "orange": "#ffb86c", "pink": "#ff79c6",
+    "purple": "#bd93f9", "red": "#ff5555", "yellow": "#f1fa8c"
+  },
+  "colors": {
+    "accent": "purple", "border": "comment", "borderAccent": "purple", "borderMuted": "current",
+    "success": "green", "error": "red", "warning": "yellow", "muted": "comment", "dim": "current",
+    "text": "", "thinkingText": "comment", "scrollbarTrack": "current", "scrollbarThumb": "comment",
+    "selectedBg": "current", "searchMatchBg": "yellow", "searchMatchText": "bg",
+    "userMessageBg": "current", "userMessageText": "fg",
+    "customMessageBg": "current", "customMessageText": "fg", "customMessageLabel": "purple",
+    "toolPendingBg": "#2b2d3a", "toolSuccessBg": "#2a3a2f", "toolErrorBg": "#3a2a2f",
+    "toolTitle": "purple", "toolOutput": "",
+    "mdHeading": "purple", "mdLink": "cyan", "mdLinkUrl": "comment", "mdCode": "green",
+    "mdCodeBlock": "", "mdCodeBlockBorder": "comment", "mdQuote": "comment",
+    "mdQuoteBorder": "comment", "mdHr": "comment", "mdListBullet": "pink",
+    "toolDiffAdded": "green", "toolDiffRemoved": "red", "toolDiffContext": "comment",
+    "syntaxComment": "comment", "syntaxKeyword": "pink", "syntaxFunction": "green",
+    "syntaxVariable": "orange", "syntaxString": "yellow", "syntaxNumber": "purple",
+    "syntaxType": "cyan", "syntaxOperator": "pink", "syntaxPunctuation": "fg",
+    "thinkingOff": "comment", "thinkingMinimal": "cyan", "thinkingLow": "green",
+    "thinkingMedium": "yellow", "thinkingHigh": "orange", "thinkingXhigh": "pink",
+    "thinkingMax": "red", "bashMode": "orange"
+  }
+}
+PI_THEME_CONF
+    success "pi: Dracula theme written (~/.pi/agent/themes/dracula.json)"
+
+    # -- Shared skills --------------------------------------------------------------
+    # pi discovers ~/.agents/skills automatically (it does NOT read ~/.claude/skills).
+    _pi_linked=0 _pi_missing=0
+    for _skill in "${PI_SHARED_SKILLS[@]}"; do
+        if [[ -d "$HOME/.claude/skills/$_skill" ]]; then
+            ln -sfn "$HOME/.claude/skills/$_skill" "$AGENTS_SKILLS/$_skill"
+            _pi_linked=$((_pi_linked + 1))
+        else
+            _pi_missing=$((_pi_missing + 1))
+        fi
+    done
+    # Drop links this script made on an earlier run but no longer shares. Only ever removes a
+    # SYMLINK pointing into ~/.claude/skills — a real directory the user put here is untouched.
+    for _stale in "$AGENTS_SKILLS"/*; do
+        [[ -L "$_stale" ]] || continue
+        case "$(readlink "$_stale")" in
+            "$HOME/.claude/skills/"*) ;;
+            *) continue ;;
+        esac
+        _name="$(basename "$_stale")"
+        _keep=false
+        for _skill in "${PI_SHARED_SKILLS[@]}"; do
+            [[ "$_name" == "$_skill" ]] && _keep=true && break
+        done
+        [[ "$_keep" == "false" ]] && rm -f "$_stale"
+    done
+    unset _stale _name _keep _skill
+    if [[ "$_pi_missing" -gt 0 ]]; then
+        warn "pi: $_pi_linked skill(s) shared -> ~/.agents/skills/ ($_pi_missing not found in ~/.claude/skills)"
+    else
+        success "pi: $_pi_linked skills shared -> ~/.agents/skills/ (api-testing, d2-diagrams, dbmate-migrations, office-docs, tiki)"
+    fi
+    unset _pi_linked _pi_missing
 fi
 
 fi  # configs (Claude Code)
