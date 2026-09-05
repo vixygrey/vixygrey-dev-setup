@@ -21,6 +21,9 @@ wrk = "wrk"
 # HashiCorp — the company, and the publisher half of the `hashicorp.terraform`
 # extension ID. typos reads "Hashi" as "Hash".
 HashiCorp = "HashiCorp"
+# nd — one of the binaries `@antfu/ni` actually ships (na nci nd ni nlx nr nun nup).
+# typos reads it as "and" and rewrites the command list into a false one.
+nd = "nd"
 
 [default.extend-words]
 # Same, as whole-word fallback.
@@ -29,3 +32,4 @@ keyward = "keyward"
 clearn = "clearn"
 SLQ = "SLQ"
 wrk = "wrk"
+nd = "nd"

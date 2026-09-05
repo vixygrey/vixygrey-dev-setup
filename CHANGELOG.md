@@ -2,6 +2,41 @@
 
 > Release notes for 7.0.0–7.1.1 live in [GitHub Releases](https://github.com/vixygrey/vixygrey-dev-setup/releases) (auto-generated). This file resumes hand-written notes at 7.2.0.
 
+## [Unreleased]
+
+### Added
+
+- **dx**: **`pi` — a second coding agent alongside Claude Code.** Four tools (`read`/`write`/`edit`/`bash`), a system prompt under 1,000 tokens, and no sub-agents, todo list, plan mode or **MCP support** — upstream considers MCP token-wasteful and prefers CLI tools with READMEs. It is a complement, not a replacement: anything that needs an MCP server (herald, `gws`, GitHub, AWS) stays Claude Code's job, because pi cannot reach those servers at all.
+
+  **The package namespace is the first trap.** Every blog post and write-up points at `badlogic/pi-mono` -> `@mariozechner/pi-coding-agent`, which stopped at 0.73.1 in May 2026. The live project is `earendil-works/pi` -> `@earendil-works/pi-coding-agent`. Installing the one the articles name gets a months-stale fork that still appears to work — the same silent-wrong-thing shape this repo keeps finding.
+
+  `npm_global_install` now forwards extra flags to `npm install -g`, because pi documents `--ignore-scripts` as part of its install form and a package that needs it is not served by a helper that cannot express it.
+
+- **configs**: **pi configuration under `~/.pi/agent/`** — `settings.json` (Dracula, `micro` as external editor, telemetry and analytics off, Anthropic as default provider), `models.json` (registers the local Ollama provider), and a full `themes/dracula.json`. Both JSON files are `jq`-merged rather than overwritten, so hand-added providers and settings survive a re-run.
+
+  **pi ignores `XDG_CONFIG_HOME` completely.** Settings, providers, themes, sessions and credentials all live under `~/.pi/agent`, so `~/.config/pi` would have been #338's "valid config, wrong address" all over again. Credentials stay out of scope: `pi` then `/login` writes `~/.pi/agent/auth.json` at 0600, and the script never reads, writes or echoes it — the same line already drawn at `llm keys set anthropic`.
+
+  The Dracula theme defines all 51 schema-required colour tokens plus the 3 optional ones. pi's bundled theme schema sets `additionalProperties: false`, so a typo'd token name is rejected outright rather than silently ignored; validate against the schema in the installed package after any edit.
+
+- **configs**: **five skills shared with Claude Code** via per-skill symlinks in `~/.agents/skills/` — `api-testing`, `d2-diagrams`, `dbmate-migrations`, `office-docs`, `tiki`. Deliberately not the whole of `~/.claude/skills/`: pi injects **every** discovered skill's name and description into its system prompt at startup (`/skill:name` is only a manual override), and that prompt is under 1k tokens by design. All 29 skills measure roughly 1,000 tokens of frontmatter on their own, which would about double it — mostly with Google Workspace recipes a coding agent will never call. These five cost ~392 tokens.
+
+  Per-skill links rather than a directory symlink for a second reason: the `gws` skills are re-copied from upstream on every run, so their frontmatter cannot be edited to carry `disable-model-invocation` — the next run would overwrite it. Stale links this script made are pruned on re-run, and only ever if they are symlinks pointing into `~/.claude/skills` — a real directory you put there is untouched.
+
+- **cli**: **`--verify` now covers pi**, as a `validate`-grade row. `pi --list-models` knows the `ollama` provider *only* because our generated `models.json` defines it, so a hit proves pi found our file at its own default address — the path question and the format question answered in one shot, which is the strongest form the check offers.
+
+- **mac-productivity**: **`qwen3:8b` added to the default Ollama model set** (~5.2 GB), so pi has a local model that can actually drive an agent loop. `gemma3:4b` is a chat model and cannot.
+
+  The obvious-looking pick, `qwen2.5-coder:7b`, is worse than useless here: it advertises `tools` in `ollama show` and then returns the call as literal text in the message content with `tool_calls: null` — on the native `/api/chat` endpoint as well as the OpenAI-compatible one, so it is the model, not the shim. Verified against `llama3.2` as a control, which returns a proper structured call. Re-run that `curl` check before ever swapping this model.
+
+### Fixed
+
+- **repo**: **`nd` allowlisted in `.typos.toml`.** It is one of the binaries `@antfu/ni` actually ships (`na nci nd ni nlx nr nun nup`), but the `typos` pre-commit hook read it as "and" and silently rewrote the 7.9.0 entry's command list into a false one — turning a correct piece of documentation into a wrong one, as a hook auto-fix, with no review step. Reverted and allowlisted so it cannot happen again.
+
+### Notes
+
+- **Anthropic auth in pi is metered separately from your plan.** `pi` then `/login` works with a Claude Pro/Max subscription, but since 2026-04-04 Anthropic enforces server-side that third-party harness usage draws from **extra usage, billed per token**, not against plan limits. This is a deliberate, accepted cost; the Ollama path exists for long or exploratory loops.
+- **`enabledModels` is deliberately absent from the generated `settings.json`.** Scoping it to `["anthropic/*"]` makes pi print `Warning: No models match pattern "anthropic/*"` on every run of a fresh machine, because the Anthropic catalog is empty until the first `/login`. A nag on a clean install is exactly the shape of the blocking `WARNING` that survived for releases in #327. Ctrl+P cycles the available models without it.
+
 ## [7.15.0] - 2026-08-29
 
 Five fixes here, and they are all one bug: **a generated config file can be perfectly well-formed and sit at an address its tool never reads.**
