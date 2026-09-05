@@ -138,6 +138,12 @@ Rules that follow:
 
 - **A brew formula can install a whole second runtime as a dependency.** `brew install prettier` pulls in `node`. Before adding a formula that has a language runtime beneath it, check `brew deps <formula>` — and prefer the package manager that runtime already has. Check afterwards too: `brew uses --installed node` names everything keeping it alive.
 
+## pi extensions are unsandboxed, and a wrong event field fails silently
+
+pi extensions are TypeScript running **in-process with the user's full permissions**. pi's own security doc is explicit: *"It is not a sandbox."* Project trust gates only `.pi/` resources — a **global** extension in `~/.pi/agent/extensions/` loads with no prompt whatsoever. `pi install npm:<anything>` is therefore the same decision as `npm i -g`, and `~/.pi/agent/auth.json` (a live OAuth token) is readable by anything that loads. Prefer the examples bundled inside the installed package; they are first-party and add no supply-chain surface.
+
+When generating one, **copy the upstream example's API exactly and then verify behaviour, not loading.** The `tool_call` event field is `event.toolName`; a first draft here used `event.tool`, which matches nothing. It type-checked, loaded without complaint, and reported success while blocking nothing — the same silent-no-op family as everything else in this file. The test that catches it is functional: ask pi to write a protected path and confirm no file appears.
+
 ## Uninstall before install when both own the same bin path
 
 Migrating a tool from Homebrew to npm is not "install the new one, remove the old one" — that order fails. Homebrew's prettier owns `$HOMEBREW_PREFIX/bin/prettier`; `npm install -g prettier` wants to write its shim to the same path and dies with `EEXIST: file already exists`. The install fails, the uninstall that follows removes the Homebrew copy anyway, and the machine is left with **no prettier at all** — a worse state than before the "fix", produced by a script reporting only a single failed step.
