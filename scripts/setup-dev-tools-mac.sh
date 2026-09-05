@@ -1299,6 +1299,9 @@ if [[ "$UNINSTALL" == "true" ]]; then
     echo ""
     echo "# Remove config files:"
     echo "  rm -f ~/.shellcheckrc ~/.editorconfig ~/.prettierrc"
+    echo ""
+    echo "# Remove the mise shim links that make node/npm/npx visible to git hooks:"
+    echo "  rm -f ~/.local/bin/node ~/.local/bin/npm ~/.local/bin/npx"
     echo "  rm -f ~/.curlrc ~/.npmrc ~/.ripgreprc ~/.fdignore ~/.nanorc ~/.vimrc"
     echo "  rm -f ~/.hushlogin ~/.gitmessage ~/.myclirc ~/.gemrc ~/.actrc ~/.mlrrc ~/.czrc ~/.tflint.hcl"
     echo "  rm -rf ~/.aria2 ~/.config/atuin ~/.config/ngrok"
@@ -2032,6 +2035,52 @@ if installed mise; then
             hash -r 2>/dev/null || true
         fi
         unset _mise_node _mise_node_bin
+    fi
+
+    # Make Node reachable OUTSIDE a mise-activated shell (#345). `mise activate` runs for
+    # zsh only, via ~/.zshenv and ~/.zshrc. Git hooks run under `sh`, which reads neither —
+    # so once #344 removed Homebrew's node they had no node, npm or npx at all, and a
+    # prettier pre-commit hook in another repo failed with `npx not found`. Homebrew's copy
+    # lived in $HOMEBREW_PREFIX/bin and was therefore on essentially every PATH on the
+    # machine. That was accidental, but real tooling depended on it.
+    #
+    # mise ships SHIMS for exactly this case: they resolve the active version with no shell
+    # activation at all. The shims directory itself cannot go on a system-wide PATH without
+    # sudo, but ~/.local/bin is already on PATH in that `sh` environment and this script
+    # already uses it this way (soffice, office-py, manly, starlit) — so link the shims in.
+    #
+    # Two constraints, both verified rather than assumed:
+    #   * The link NAME must match the shim name. mise dispatches on argv[0], so a link
+    #     called anything else fails with "<name> is not a valid shim".
+    #   * Link the SHIM, not the versioned installs/node/<ver>/bin path. The shim follows a
+    #     Node upgrade; a versioned path silently rots at the next `mise use node@...`.
+    if [[ "$DRY_RUN" == "true" ]]; then
+        info "[DRY RUN] Would link mise node/npm/npx shims -> ~/.local/bin (for git hooks + non-zsh callers)"
+    else
+        # A tool installed since the last reshim has no shim yet; cheap and idempotent.
+        mise reshim >> "$LOG_FILE" 2>&1 || true
+        _mise_shims="$HOME/.local/share/mise/shims"
+        if [[ -d "$_mise_shims" ]]; then
+            mkdir -p "$HOME/.local/bin"
+            _shim_missing=""
+            for _bin in node npm npx; do
+                if [[ -e "$_mise_shims/$_bin" ]]; then
+                    ln -sfn "$_mise_shims/$_bin" "$HOME/.local/bin/$_bin"
+                else
+                    _shim_missing="$_shim_missing $_bin"
+                fi
+            done
+            if [[ -n "$_shim_missing" ]]; then
+                warn "mise has no shim for:$_shim_missing — git hooks will not see them"
+                info "  Try: mise reshim   (then re-run this script)"
+            else
+                success "node/npm/npx linked to ~/.local/bin via mise shims — git hooks and non-zsh shells can find them"
+            fi
+            unset _bin _shim_missing
+        else
+            warn "mise shims directory not found ($_mise_shims) — git hooks will not see node/npm/npx"
+        fi
+        unset _mise_shims
     fi
 
     if ! is_done "install:mise-python"; then
