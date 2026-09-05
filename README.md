@@ -818,7 +818,7 @@ The script generates config files with sensible defaults:
 | `~/.mlrrc` | miller | Pretty-print output, CSV I/O defaults |
 | `~/.ripgreprc` | ripgrep | Smart-case, hidden files, custom type definitions |
 | `~/.w3m/config` | w3m | UTF-8, cookies off, colors, proxy-from-env |
-| `~/.zshenv` | Shell | mise activation for all shell types (login + non-login) |
+| `~/.zshenv` | Shell | mise activation for all shell types (login + non-login) — coverage. mise is activated **again** at the end of `~/.zshrc` for *precedence*: `.zshenv` runs first, so everything prepended afterwards (`brew shellenv`, gnubin, `~/.local/bin`, `$PNPM_HOME`) would otherwise outrank it |
 | `~/.actrc` | act | Medium Ubuntu images, container reuse |
 | `~/.mlrrc` | miller | CSV input, pretty table output |
 | `~/.hushlogin` | Terminal | Suppresses "Last login" message |

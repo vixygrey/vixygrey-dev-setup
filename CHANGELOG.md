@@ -30,6 +30,22 @@
 
 ### Fixed
 
+- **core**: **One Node, owned by mise.** `npm` resolved to two different global prefixes depending on how the shell was started, leaving this machine with two global `node_modules` trees, **18 packages present in both**, and `npm install -g` writing to whichever tree the invoking shell happened to pick.
+
+  The source was `brew_install "prettier"`: the Homebrew formula **depends on `node`**, so it silently installed Node 26.8.1 next to the `node@lts` (24.18.1) this script pins through mise. prettier now installs from **npm** instead, and an existing-machine migration removes the Homebrew copy and lets `brew autoremove` take its orphaned Node with it. prettier was the only formula holding that Node (`brew uses --installed node`), and nothing in the script referenced its path.
+
+  Nothing about this ever errored. `mise current node` kept reporting the pinned 24.18.1, `_npm_has` truthfully answered "already installed" about a tree `PATH` never reached, and every run finished `Failed: 0` — the same silent-wrong-address family as #329/#332/#333, one layer down.
+
+- **core**: **The script now puts the Node it just installed on its own `PATH`.** `mise activate bash` registers a `PROMPT_COMMAND` hook, and `PROMPT_COMMAND` never fires in a non-interactive script — so the run's own `PATH` never picked up the `node@lts` mise had just installed. Whenever the invoking shell did not already have mise's Node in front, `installed npm` was false for the remainder of the run and **every** `npm_global_install` — pi, Claude Code, prettier, commitizen, commitlint, ni — silently no-opped while the run still reported `Failed: 0`.
+
+  This was reproduced live: with Homebrew's node removed, a `--only code-quality` run found no `npm` at all and skipped prettier without a word. `mise which node` resolves the real binary without needing the hook, so the run now prepends it explicitly.
+
+- **shell**: **mise now gets the last word on `PATH`.** zsh reads `~/.zshenv` -> `~/.zprofile` -> `~/.zshrc`, so activating mise in `~/.zshenv` — correct for coverage, since it is the only file every shell type reads — guaranteed it was activated *first*, and then outranked by everything prepended after it: `brew shellenv`, the gnubin loop, `~/.local/bin`, `~/Scripts/bin`, `$PNPM_HOME`. mise ended at PATH position 24 against Homebrew's 10.
+
+  The machine disagreed with itself as a result: a login shell served Homebrew's `node` 26.8.1, a non-login shell served mise's 24.18.1, and which `npm` ran came down to whether the shell was a login shell. mise is now activated **twice** — in `~/.zshenv` for coverage, and again at the end of `~/.zshrc` for precedence. `mise activate` registers its hook through `add-zsh-hook`, which is idempotent per function name, so the second call does not double-fire it (verified by counting `$precmd_functions`).
+
+  **This changes which `node`, `python`, `go` and `ruby` your interactive shell serves** — they now resolve to the versions mise manages, which is what the documentation already claimed. Re-run the script (`--only shell`) and open a new shell for it to take effect.
+
 - **repo**: **`nd` allowlisted in `.typos.toml`.** It is one of the binaries `@antfu/ni` actually ships (`na nci nd ni nlx nr nun nup`), but the `typos` pre-commit hook read it as "and" and silently rewrote the 7.9.0 entry's command list into a false one — turning a correct piece of documentation into a wrong one, as a hook auto-fix, with no review step. Reverted and allowlisted so it cannot happen again.
 
 ### Notes

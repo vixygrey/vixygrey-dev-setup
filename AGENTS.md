@@ -115,6 +115,29 @@ warning. A harmless stale file beats deleting something we cannot prove is ours.
 
 `~/.zshrc` is sourced by non-interactive shells, so anything defined there reaches Claude Code and any script. Aliases are an interactive convenience and **must be gated** — every modern replacement rejects the original's flags (`du -sh` prints dust's help, `rm -rf` is rejected by trash), and the quiet ones are worse (`ps aux`, `dig +short` silently ignore the argument). Gate the whole section on `[[ -o interactive && -z "$CLAUDECODE" && -z "$AI_AGENT" ]]` rather than enumerating hazards — the enumerate approach already failed once, letting `wget` through (#218, #220).
 
+## Shell startup order decides which tool wins, and `~/.zshenv` loses
+
+zsh reads **`~/.zshenv` -> `~/.zprofile` -> `~/.zshrc`**. Anything activated in `.zshenv` is therefore activated *first*, which for a version manager is exactly backwards: every later `export PATH="X:$PATH"` — `brew shellenv` in `.zprofile`, the gnubin loop, `~/.local/bin`, `~/Scripts/bin`, `$PNPM_HOME` — prepends itself in front of it.
+
+`mise activate` sat in `.zshenv` alone, for the good reason that `.zshenv` is the only file every shell type reads (agents and scripts included). The cost was that mise ended up at PATH position **24** while Homebrew sat at **10**, and the machine disagreed with itself:
+
+- **login/interactive shell** (`.zprofile` runs `brew shellenv`) -> Homebrew's `node` 26.8.1 and Homebrew's `npm`
+- **non-login shell** (only `.zshenv` runs, Homebrew's shellenv never does) -> mise's `node` 24.18.1 and mise's `npm`
+
+`mise current node` reported the pinned 24.18.1 the whole time. Nothing errored. The visible damage was two global `node_modules` trees with 18 packages in both, `npm install -g` writing to whichever one the invoking shell resolved, and `_npm_has` truthfully answering "installed" about a tree `PATH` never reached (#343).
+
+Rules that follow:
+
+- **Activate in `.zshenv` for coverage, and again at the end of `.zshrc` for precedence.** Both, not either. `mise activate` registers its hook with `add-zsh-hook`, which is idempotent per function name, so the second call does not double-fire it — verified by counting `$precmd_functions`.
+- **`command -v foo` is not an answer unless you say which shell you asked.** Check both: `zsh -c 'command -v foo'` and `zsh -l -i -c 'command -v foo'`. A tool that resolves differently in the two is a bug, not a quirk — and `--verify` results inherit the same split (see [[verify-generated-config-before-flagging]] territory: k9s and nushell "fail" from a non-login shell purely because `XDG_CONFIG_HOME` is unset there).
+- **A brew formula can install a whole second runtime as a dependency.** `brew install prettier` pulls in `node`. Before adding a formula that has a language runtime beneath it, check `brew deps <formula>` — and prefer the package manager that runtime already has. Check afterwards too: `brew uses --installed node` names everything keeping it alive.
+
+## Uninstall before install when both own the same bin path
+
+Migrating a tool from Homebrew to npm is not "install the new one, remove the old one" — that order fails. Homebrew's prettier owns `$HOMEBREW_PREFIX/bin/prettier`; `npm install -g prettier` wants to write its shim to the same path and dies with `EEXIST: file already exists`. The install fails, the uninstall that follows removes the Homebrew copy anyway, and the machine is left with **no prettier at all** — a worse state than before the "fix", produced by a script reporting only a single failed step.
+
+Uninstall first, install second, and prove it by running the migration on a machine that actually has the old package. A dry run cannot catch this: it reports both steps as intended and never discovers they collide.
+
 ## Removing user data needs two guards
 
 `--cleanup` deletes things people may still want. Every removal must:
