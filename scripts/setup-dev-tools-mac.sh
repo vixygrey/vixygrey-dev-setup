@@ -2017,6 +2017,23 @@ if installed mise; then
     mark_done "install:mise-node"
     fi
 
+    # Put the Node mise just installed on THIS script's PATH (#343). `mise activate bash`
+    # above registers a PROMPT_COMMAND hook, and PROMPT_COMMAND never fires in a
+    # non-interactive script — so PATH does not pick up node until the next shell. Without
+    # this, `installed npm` is false for the rest of the run whenever the invoking shell
+    # did not already have mise's node in front, and every npm_global_install below (pi,
+    # Claude Code, prettier, commitizen, …) silently no-ops while the run still reports
+    # "Failed: 0". `mise which` resolves the real binary without needing the hook.
+    if [[ "$DRY_RUN" != "true" ]]; then
+        _mise_node="$(mise which node 2>/dev/null || true)"
+        if [[ -n "$_mise_node" ]]; then
+            _mise_node_bin="$(dirname "$_mise_node")"
+            export PATH="$_mise_node_bin:$PATH"
+            hash -r 2>/dev/null || true
+        fi
+        unset _mise_node _mise_node_bin
+    fi
+
     if ! is_done "install:mise-python"; then
     if ! mise ls python 2>/dev/null | grep -q "$PYTHON_VERSION"; then
         info "Installing Python $PYTHON_VERSION via mise..."
@@ -2517,11 +2534,70 @@ brew_install "hadolint" "hadolint (Dockerfile linter — catches bad practices)"
 brew_install "ruff" "ruff (fast Python linter+formatter — replaces flake8+black+isort)"
 # prettier — the JS/TS/CSS/MD formatter the generated CLAUDE.md mandates and the
 # pre-push checklist runs. It was documented but never installed, so the Claude
-# format-on-edit hook found nothing on PATH and silently no-opped. Installed from
-# brew (single bottled binary) rather than npm so it survives mise Node switches.
+# format-on-edit hook found nothing on PATH and silently no-opped.
+#
+# Installed from npm, NOT brew (#343). The Homebrew formula depends on `node`, so
+# `brew install prettier` silently pulled in a second Node — 26.8.1 — alongside the
+# `node@lts` this script pins through mise, and with it a second global node_modules
+# tree. Nothing errored: `mise current node` kept reporting the pinned 24.18.1 while an
+# interactive shell served 26.8.1, and `npm install -g` wrote to whichever tree the
+# invoking shell happened to resolve. One Node, owned by mise, is the whole point.
+#
+# The old rationale for brew here was that a bottled binary survives mise Node switches.
+# It does — but it bought that by installing its own Node, which is the disease, not the
+# cure. `mise use --global node@lts` keeps the runtime stable instead.
+#
 # NOTE: the hook still prefers a project's OWN prettier over this one — see the
 # format-on-edit heredoc — so a repo pinning prettier 2.x is not reformatted by 3.x.
-brew_install "prettier" "prettier (JS/TS/CSS/MD/YAML formatter — global fallback; projects pin their own)"
+# Existing-machine half of the same fix. A change that only lands on fresh installs is half
+# a fix: without this, every already-provisioned machine keeps the Homebrew prettier, its
+# Node, and the duplicate global tree forever.
+#
+# Two ordering constraints, both learned the hard way, both load-bearing:
+#
+#  1. The whole migration is INSIDE the `installed npm` guard. Removing the Homebrew copy
+#     when npm is unavailable leaves the machine with no prettier at all — strictly worse
+#     than before. And npm can genuinely be missing here: removing Homebrew's node takes
+#     Homebrew's npm with it, so a shell whose PATH only ever had `$HOMEBREW_PREFIX/bin`
+#     has no npm at all on the very next run. Never uninstall before the replacement is
+#     known to be installable.
+#  2. The uninstall runs BEFORE the install, not after. Homebrew's prettier owns
+#     `$HOMEBREW_PREFIX/bin/prettier`; when the invoking shell resolves `npm` to Homebrew's
+#     — which a login shell did, and which is the very ambiguity this fixes — `npm install
+#     -g prettier` tries to write its shim to that same path and dies with `EEXIST: file
+#     already exists`. Install-then-remove fails the install and removes the old copy
+#     anyway, which is exactly how this was first shipped and immediately caught.
+#
+# A dry run cannot catch either: it reports both steps as intended and never discovers that
+# they collide. This has to be exercised on a machine that actually has the old package.
+if ! installed npm; then
+    warn "npm not found — leaving prettier as-is (removing the Homebrew copy without a replacement would leave none)"
+    progress  # keep the progress bar accurate
+else
+    if [[ "$DRY_RUN" == "true" ]]; then
+        brew list --formula prettier &>/dev/null \
+            && info "[DRY RUN] Would remove Homebrew prettier + its orphaned Node (#343)"
+    elif brew list --formula prettier &>/dev/null; then
+        info "Removing Homebrew prettier — its formula pulls in a second Node (#343)..."
+        if brew uninstall prettier >> "$LOG_FILE" 2>&1; then
+            # `brew autoremove` only considers formulae Homebrew recorded as installed AS A
+            # DEPENDENCY. node here is `installed_on_request: false`, so it goes; a node the
+            # user asked for on purpose is left alone. Same guard the cleanup path uses.
+            brew autoremove >> "$LOG_FILE" 2>&1 || true
+            if brew list --formula node &>/dev/null; then
+                success "Homebrew prettier removed (npm's prettier takes over)"
+                warn "Homebrew node is still installed — something else depends on it, or it was installed on request"
+                info "  Two Node installs remain. Check with: brew uses --installed node"
+            else
+                success "Homebrew prettier + its orphaned Node removed — mise now owns the only Node"
+            fi
+        else
+            warn "Could not remove Homebrew prettier — run: brew uninstall prettier && brew autoremove"
+        fi
+    fi
+    npm_global_install "prettier" "prettier (JS/TS/CSS/MD/YAML formatter — global fallback; projects pin their own)"
+fi
+
 brew_install "typos-cli" "typos (source code spell checker — fast, low false positives)"
 brew_install "ast-grep" "ast-grep (structural code search/replace using AST)"
 
@@ -10059,7 +10135,8 @@ for _pkg in coreutils gnu-sed gnu-tar gawk findutils; do
 done
 unset _pkg _gnubin
 
-# mise activation lives in ~/.zshenv (runs for all shell types) — not duplicated here.
+# mise is activated in ~/.zshenv so EVERY shell type gets it, and again at the bottom of
+# this file so it also wins on PATH. See the block above the welcome screen for why.
 
 # direnv
 command -v direnv &>/dev/null && eval "$(direnv hook zsh)"
@@ -10338,6 +10415,24 @@ else
         command trash "${paths[@]}"
     }
 fi
+
+# -- mise, last word on PATH --------------------------------------------------
+# Activated once in ~/.zshenv (so non-interactive shells and agents get it) and AGAIN
+# here, last, because ordering is the whole point (#343).
+#
+# ~/.zshenv runs BEFORE ~/.zprofile and ~/.zshrc. So `brew shellenv` in ~/.zprofile, the
+# gnubin loop, ~/.local/bin, ~/Scripts/bin and $PNPM_HOME all prepended themselves ahead
+# of mise afterwards. The result was a shell that disagreed with itself: an interactive
+# login shell served Homebrew's node 26.8.1 while `mise current node` reported the
+# 24.18.1 this script pins, and a non-interactive shell served mise's. Which `npm` ran —
+# and therefore which global node_modules tree `npm install -g` wrote into — came down
+# to whether the shell was a login shell.
+#
+# Re-activating here puts mise back in front, so node, python, go and ruby resolve to the
+# versions mise manages in BOTH kinds of shell. `mise activate` registers its precmd hook
+# with `add-zsh-hook`, which is idempotent for a given function name, so running it twice
+# does not double-fire it.
+command -v mise &>/dev/null && eval "$(mise activate zsh)"
 
 # -- Terminal Welcome Screen --------------------------------------------------
 # Colorful greeting on new terminal sessions (skip inside editor-integrated terminals).
