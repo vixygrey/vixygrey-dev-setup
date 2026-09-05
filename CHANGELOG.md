@@ -4,6 +4,18 @@
 
 ## [Unreleased]
 
+### Changed
+
+- **core**: **Every mise-managed tool is now reachable outside zsh, not just `node`/`npm`/`npx`.** #345 linked those three shims into `~/.local/bin`; the same gap still applied to the other 48 — `pi`, `claude`, `prettier`, `tsc`, `tsx`, the `ni` family, and the language servers — all of which were only on `PATH` where `mise activate` had run, which means zsh.
+
+  It surfaced as `pi: command not found` in a shell opened before pi moved into mise's tree. New shells resolved it; git hooks, launchd jobs and GUI-launched editors did not.
+
+  **Linked by exclusion, not by allowlist**, so a tool added to mise later is picked up automatically instead of silently missing until someone notices — that silent-gap shape is the reason this block exists at all. 36 shims link; the rest are held back on purpose.
+
+  **The Python family and `corepack` are deliberately excluded.** `~/.local/bin` sits at `PATH` position 9 against `$HOMEBREW_PREFIX/bin` at 13, so anything linked there wins in *every* context. `pre-commit` builds its hook environments against whichever `python3` it finds, and retargeting that machine-wide to mise's 3.12 would break envs already built against Homebrew's — #345 again, one language over. `corepack` manages package-manager shims and collides with the pnpm setup. Verified after the change: `python3` in a bare `sh` still resolves to `/opt/homebrew/bin/python3`.
+
+  Dangling links are pruned, because a tool removed from mise otherwise leaves a link that resolves to nothing and reports "command not found" only at the point of use. The prune only ever removes a **symlink pointing into the mise shims directory** — a real file placed in `~/.local/bin` by hand (`soffice`, `office-py`, `manly`, `starlit`) is untouched, and so is a symlink pointing anywhere else. Both cases tested.
+
 ### Added
 
 - **configs**: **pi's two third-party packages are now installed by the script, pinned** — `pi-web-access@0.28.0` and `bigpowers@2.88.1`. Both had been installed by hand, so a rebuild silently lost them.

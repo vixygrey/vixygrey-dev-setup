@@ -2057,31 +2057,54 @@ if installed mise; then
     #     called anything else fails with "<name> is not a valid shim".
     #   * Link the SHIM, not the versioned installs/node/<ver>/bin path. The shim follows a
     #     Node upgrade; a versioned path silently rots at the next `mise use node@...`.
+    # Which shims NOT to link. Everything else is linked, so a tool added to mise later is
+    # picked up automatically instead of silently missing until someone notices — that
+    # silent-gap shape is the whole reason this block exists.
+    #
+    # The Python family is excluded deliberately. `pre-commit` builds its hook environments
+    # against whichever `python3` it finds, and ~/.local/bin outranks $HOMEBREW_PREFIX/bin
+    # in every context — so linking mise's 3.12 here would retarget hook envs machine-wide
+    # and break ones already built against Homebrew's. That is #345 again, one language over.
+    # corepack is excluded because it manages package-manager shims and collides with pnpm.
+    PI_SHIM_EXCLUDE=(
+        python python3 python3.12 python3-config python3.12-config
+        pip pip3 pip3.12 2to3 2to3-3.12 idle3 idle3.12 pydoc3 pydoc3.12
+        corepack
+    )
     if [[ "$DRY_RUN" == "true" ]]; then
-        info "[DRY RUN] Would link mise node/npm/npx shims -> ~/.local/bin (for git hooks + non-zsh callers)"
+        info "[DRY RUN] Would link mise shims -> ~/.local/bin (all but the Python family; for git hooks + non-zsh callers)"
     else
         # A tool installed since the last reshim has no shim yet; cheap and idempotent.
         mise reshim >> "$LOG_FILE" 2>&1 || true
         _mise_shims="$HOME/.local/share/mise/shims"
         if [[ -d "$_mise_shims" ]]; then
             mkdir -p "$HOME/.local/bin"
-            _shim_missing=""
-            for _bin in node npm npx; do
-                if [[ -e "$_mise_shims/$_bin" ]]; then
-                    ln -sfn "$_mise_shims/$_bin" "$HOME/.local/bin/$_bin"
-                else
-                    _shim_missing="$_shim_missing $_bin"
-                fi
+            _shim_n=0
+            for _shim in "$_mise_shims"/*; do
+                [[ -e "$_shim" ]] || continue
+                _bin="$(basename "$_shim")"
+                _skip=false
+                for _ex in "${PI_SHIM_EXCLUDE[@]}"; do
+                    [[ "$_bin" == "$_ex" ]] && _skip=true && break
+                done
+                [[ "$_skip" == "true" ]] && continue
+                ln -sfn "$_shim" "$HOME/.local/bin/$_bin"
+                _shim_n=$((_shim_n + 1))
             done
-            if [[ -n "$_shim_missing" ]]; then
-                warn "mise has no shim for:$_shim_missing — git hooks will not see them"
-                info "  Try: mise reshim   (then re-run this script)"
-            else
-                success "node/npm/npx linked to ~/.local/bin via mise shims — git hooks and non-zsh shells can find them"
-            fi
-            unset _bin _shim_missing
+            # Prune links whose shim has gone — a tool removed from mise otherwise leaves a
+            # dangling link that resolves to nothing and reports "command not found" only at
+            # the point of use. Only ever removes a SYMLINK pointing into the shims dir, so a
+            # real file placed in ~/.local/bin by hand (soffice, office-py, …) is untouched.
+            for _link in "$HOME/.local/bin"/*; do
+                [[ -L "$_link" ]] || continue
+                case "$(readlink "$_link")" in
+                    "$_mise_shims/"*) [[ -e "$_link" ]] || rm -f "$_link" ;;
+                esac
+            done
+            success "$_shim_n mise shims linked to ~/.local/bin — git hooks, editors and non-zsh shells can find them"
+            unset _shim _bin _skip _ex _shim_n _link
         else
-            warn "mise shims directory not found ($_mise_shims) — git hooks will not see node/npm/npx"
+            warn "mise shims directory not found ($_mise_shims) — non-zsh callers will not see mise tools"
         fi
         unset _mise_shims
     fi
