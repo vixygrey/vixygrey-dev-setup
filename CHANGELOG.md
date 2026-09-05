@@ -6,6 +6,24 @@
 
 ### Added
 
+- **configs**: **Five safety extensions wired into pi.** pi has four tools, one of them is `bash`, there is no built-in confirmation step, and its own security doc says plainly *"It is not a sandbox."* These are pi's **own** bundled examples, copied from the installed package — first-party, so they add no supply-chain surface:
+
+  | Extension | What it does |
+  |---|---|
+  | `permission-gate.ts` | Confirms before dangerous bash (`rm -rf`, `sudo`, …) — the guardrail Claude Code has by default and pi does not |
+  | `protected-paths.ts` | Blocks write/edit to credential and VCS-internal paths |
+  | `git-checkpoint.ts` | Git stash checkpoint each turn, so `/fork` restores code state, not just the conversation |
+  | `dirty-repo-guard.ts` | Blocks session changes when the repo has uncommitted work |
+  | `notify.ts` | Native terminal notification when pi is waiting for input |
+
+  That distinction matters, because pi extensions run **in-process, unsandboxed, with your full permissions**, and *global* extensions load with no trust prompt at all — project trust only gates `.pi/` resources. Treat `pi install npm:<anything>` as the same decision as `npm i -g`.
+
+  `protected-paths.ts` is **generated**, not copied. Upstream's example hardcodes `[".env", ".git/", "node_modules/"]`, which says nothing about credentials; ours extends it to `~/.pi/agent/auth.json` (a live OAuth token), `~/.claude/`, `~/.ssh/`, `~/.aws/`, `~/.npmrc`, `~/.netrc`, `gh/hosts.yml` and `Library/Keychains/` — the "never touch credentials" rule enforced by the harness rather than hoped for.
+
+  One trap worth recording: the event field is **`event.toolName`**, not `event.tool`. The first draft of the generated extension used `event.tool`, which matches nothing — it would have loaded cleanly, reported success, and blocked precisely nothing. Verified functionally instead of by eye: pi was asked to write a `.env` and was refused, with zero files created.
+
+### Added
+
 - **dx**: **`pi` — a second coding agent alongside Claude Code.** Four tools (`read`/`write`/`edit`/`bash`), a system prompt under 1,000 tokens, and no sub-agents, todo list, plan mode or **MCP support** — upstream considers MCP token-wasteful and prefers CLI tools with READMEs. It is a complement, not a replacement: anything that needs an MCP server (herald, `gws`, GitHub, AWS) stays Claude Code's job, because pi cannot reach those servers at all.
 
   **The package namespace is the first trap.** Every blog post and write-up points at `badlogic/pi-mono` -> `@mariozechner/pi-coding-agent`, which stopped at 0.73.1 in May 2026. The live project is `earendil-works/pi` -> `@earendil-works/pi-coding-agent`. Installing the one the articles name gets a months-stale fork that still appears to work — the same silent-wrong-thing shape this repo keeps finding.
