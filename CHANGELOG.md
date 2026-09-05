@@ -36,6 +36,14 @@
 
   Nothing about this ever errored. `mise current node` kept reporting the pinned 24.18.1, `_npm_has` truthfully answered "already installed" about a tree `PATH` never reached, and every run finished `Failed: 0` — the same silent-wrong-address family as #329/#332/#333, one layer down.
 
+- **core**: **Node, npm and npx are reachable again outside a mise-activated shell.** #344 removed Homebrew's node for good reasons, and in doing so took `node`/`npm`/`npx` off nearly every `PATH` on the machine: `$HOMEBREW_PREFIX/bin` is on the `PATH` of `sh`, of git hooks, and of most GUI-launched processes, while a mise-managed tool is only on the `PATH` of a shell that ran `mise activate` — which means zsh, and only zsh. It surfaced as a prettier pre-commit hook in an unrelated repo failing with `npx not found`.
+
+  Worse than failing, in one place: the generated Claude format-on-edit hook guards its call with `command -v npx` and falls back to `command -v prettier`. Both guards missed, so it silently formatted nothing, with no error, in every non-mise-activated context.
+
+  mise ships **shims** for exactly this — they resolve the active version with no shell activation at all. The shims directory cannot go on a system-wide `PATH` without `sudo`, but `~/.local/bin` is already on `PATH` in that environment and this script already uses it that way (`soffice`, `office-py`, `manly`, `starlit`), so `node`, `npm` and `npx` are now linked into it.
+
+  Verified against a real git hook run under `env -i` with nothing but `HOME` and a minimal `PATH`: `npx 11.16.0, node v24.18.1`. Two constraints found by testing rather than reading — the link name must match the shim name (mise dispatches on `argv[0]`; a link named anything else fails with `is not a valid shim`), and the link must point at the **shim**, not at the versioned `installs/node/<ver>/bin` path, which silently rots at the next `mise use node@…`.
+
 - **core**: **The script now puts the Node it just installed on its own `PATH`.** `mise activate bash` registers a `PROMPT_COMMAND` hook, and `PROMPT_COMMAND` never fires in a non-interactive script — so the run's own `PATH` never picked up the `node@lts` mise had just installed. Whenever the invoking shell did not already have mise's Node in front, `installed npm` was false for the remainder of the run and **every** `npm_global_install` — pi, Claude Code, prettier, commitizen, commitlint, ni — silently no-opped while the run still reported `Failed: 0`.
 
   This was reproduced live: with Homebrew's node removed, a `--only code-quality` run found no `npm` at all and skipped prettier without a word. `mise which node` resolves the real binary without needing the hook, so the run now prepends it explicitly.
