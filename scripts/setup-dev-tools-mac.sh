@@ -1055,7 +1055,21 @@ vscode_ext_install() {
     # above this. Guarding first made a fresh-machine dry run say it would install VS Code
     # and then refuse to preview a single extension — the preview was useless exactly where
     # it matters most.
+    #
+    # But that is the FRESH-machine case, and the same branch was being taken on a machine
+    # where `code` exists and can answer the question — so a dry run printed 26 "Would
+    # install" lines for 26 extensions that were all already present, and counted none of
+    # them as skipped (#372). Ask when we can, fall back to the unconditional preview when
+    # we cannot; the brew helpers already resolve already-installed inside their dry-run
+    # branch this way.
     if [[ "$DRY_RUN" == "true" ]]; then
+        if installed code; then
+            [[ -z "${_VSCODE_EXTS+x}" ]] && _VSCODE_EXTS=$(code --list-extensions 2>/dev/null || true)
+            if printf '%s\n' "$_VSCODE_EXTS" | grep -qix -- "$ext"; then
+                warn "[DRY RUN] $name — already installed"
+                return 0
+            fi
+        fi
         info "[DRY RUN] Would install VS Code extension: $name ($ext)"
         return 0
     fi
