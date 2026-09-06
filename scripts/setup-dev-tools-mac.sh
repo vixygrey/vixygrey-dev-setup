@@ -280,7 +280,7 @@ ALL_CATEGORIES=(
 declare -A CATEGORY_DESC=(
     [prerequisites]="Xcode CLI Tools, Homebrew, GNU coreutils"
     [core]="mise (Node, Python), Go, Rust, OrbStack, bun, uv, pnpm"
-    [git]="Git, GitHub CLI, glab, delta, lazygit, pre-commit framework (hooks + config: configs)"
+    [git]="Git, GitHub CLI, glab, delta, lazygit, gk, pre-commit framework (hooks + config: configs)"
     [aws]="AWS CLI, CDK, SAM, Granted, cfn-lint, e1s/e2c/stu/claws (TUIs), s5cmd, steampipe, dynein, iamlive"
     [iac]="OpenTofu (Terraform), tflint, terraform-docs, checkov, infracost"
     [security]="detect-secrets, gitleaks, trivy, semgrep, ClamAV, Objective-See"
@@ -2169,6 +2169,13 @@ brew_install "pinentry-mac" "pinentry-mac (GPG passphrase)"
 brew_install "lazygit" "lazygit (terminal UI for git)"
 brew_install "git-absorb" "git-absorb (auto-fixup commits)"
 brew_install "git-cliff" "git-cliff (generate changelogs from conventional commits)"
+# gk — GitKraken's CLI, installed for exactly one reason: it serves the GitKraken MCP
+# server registered with Claude Code further down. It used to arrive as a 19 MB binary
+# that the GitLens VS Code extension downloaded into its own globalStorage, which meant
+# an MCP server this setup depends on lived inside an extension no generator step owned
+# and that uninstalling the extension silently killed 31 agent tools (#362). The cask
+# ships `gk` as a Binary artifact, so it is on PATH straight after install.
+brew_cask_install "gitkraken-cli" "GitKraken CLI (gk — serves the GitKraken MCP server)"
 
 # pre-commit
 brew_install "pre-commit" "pre-commit (git hook framework)"
@@ -2878,7 +2885,6 @@ vscode_ext_install "dracula-theme.theme-dracula" "Dracula Official (theme — ma
 vscode_ext_install "editorconfig.editorconfig" "EditorConfig (per-repo indent rules)"
 vscode_ext_install "esbenp.prettier-vscode" "Prettier (JS/TS/CSS/MD formatter)"
 vscode_ext_install "dbaeumer.vscode-eslint" "ESLint"
-vscode_ext_install "eamodio.gitlens" "GitLens (blame, history, authorship)"
 vscode_ext_install "github.vscode-pull-request-github" "GitHub Pull Requests (matches the gh PR workflow)"
 vscode_ext_install "github.vscode-github-actions" "GitHub Actions (workflow syntax + run status)"
 vscode_ext_install "usernamehw.errorlens" "Error Lens (inline diagnostics)"
@@ -2904,6 +2910,26 @@ vscode_ext_install "foxundermoon.shell-format" "shell-format (shfmt-backed)"
 vscode_ext_install "terrastruct.d2" "D2 (diagram syntax + preview)"
 vscode_ext_install "bierner.markdown-mermaid" "Mermaid in Markdown preview"
 vscode_ext_install "nefrob.vscode-just-syntax" "just (Justfile syntax)"
+
+# GitLens is NOT installed here, deliberately (#362). It was, for a long time, described in
+# this list as "blame, history, authorship" — three things lazygit, delta, difft and
+# git-cliff already do, in the terminal, which is where the work happens. GitLens 19 is a
+# much bigger freemium product than that description admits (Launchpad, Cloud Patches, Code
+# Suggest, workspaces, AI commit messages), most of it Pro-gated or duplicating a CLI above,
+# on an editor that is the escape hatch rather than the daily driver. 34 MB and an account
+# nag for a feature surface that went unused, which is the opposite of the rule stated at the
+# top of this list: every entry mirrors a CLI this script already installs.
+#
+# It was NOT a clean removal, and that is the part worth remembering. GitLens had
+# auto-registered the GitKraken MCP server into ~/.claude.json pointing at a `gk` binary
+# inside its own globalStorage — so 31 Claude Code tools depended on an extension no step in
+# this script owned, and uninstalling it would have killed them silently. `gitkraken-cli` is
+# now installed in the git section above and the MCP server is registered from here, so the
+# generator owns both ends. The standalone `gk mcp` serves the same 31 tools and reads the
+# same auth store; verified at tool-list and tool-call parity before the extension went.
+#
+# The one feature with no CLI equivalent is the inline blame annotation on the current line.
+# If it is ever missed, waderyan.gitblame is ~200 KB for that single behaviour.
 
 # GitHub Copilot is NOT installed here, deliberately (#356). Current VS Code ships it
 # BUILT IN — 1.136.1 carries copilot-chat 0.64.1 inside the app bundle
@@ -4430,11 +4456,19 @@ if installed claude; then
         # herald (email + calendar) — read-only after initial sync; mutations need `herald serve`.
         # Inert until herald accounts are configured (see the POST_SETUP checklist).
         add_mcp herald --transport stdio herald -- herald mcp -config "$HOME/.herald/conf.yaml"
+        # GitKraken (31 tools: git_*, pull_request_*, issues_*, gitlens_launchpad). Served by
+        # the standalone `gk` from the gitkraken-cli cask. Registered here because it used to
+        # register ITSELF: the GitLens extension wrote this server into ~/.claude.json pointing
+        # at a gk binary inside its own VS Code globalStorage, so removing the extension would
+        # have taken the server with it (#362). Name kept capitalised — it is the name GitLens
+        # used and the one already in every transcript. `--no-telemetry` suppresses gk's OTel
+        # spans and Sentry reporting, matching "telemetry.telemetryLevel": "off" above.
+        add_mcp GitKraken --transport stdio GitKraken -- gk mcp --host=claude-cli --no-telemetry
         unset -f add_mcp
 
         success "Claude Code MCP servers configured (user scope)"
         info "  Added: filesystem, github, git, fetch, context7, aws-docs, aws-pricing,"
-        info "         aws-iac, aws-knowledge, cloudwatch, iam, herald"
+        info "         aws-iac, aws-knowledge, cloudwatch, iam, herald, GitKraken"
         info "  Opt-in per project (claude mcp add --scope project <name> ...):"
         info "         playwright, postgres, aws-ccapi, aws-serverless, aws-lambda-tool,"
         info "         aws-eks, aws-ecs, aws-dynamodb"
