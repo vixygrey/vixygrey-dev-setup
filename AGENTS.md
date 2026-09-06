@@ -138,6 +138,12 @@ Rules that follow:
 
 - **A brew formula can install a whole second runtime as a dependency.** `brew install prettier` pulls in `node`. Before adding a formula that has a language runtime beneath it, check `brew deps <formula>` — and prefer the package manager that runtime already has. Check afterwards too: `brew uses --installed node` names everything keeping it alive.
 
+## Check whether the editor already ships it before adding an extension
+
+VS Code bundles a growing set of extensions, and a marketplace install of one of them **fails** rather than no-ops: `code --install-extension github.copilot` pulls `github.copilot-chat`, which is built in at a *newer* version than the marketplace copy, and dies with `cannot be downgraded`. Adding it to the managed list would print a red `Failed` on every run forever.
+
+Before adding any `vscode_ext_install` line, check `/Applications/Visual Studio Code.app/Contents/Resources/app/extensions/` and run the install once by hand. A failure there is cheap; a permanent failure in every run is the noise that hides real ones (#327).
+
 ## `~/.local/bin` outranks Homebrew, so linking a shim there is a machine-wide decision
 
 `~/.local/bin` sits at `PATH` position **9** in a bare `sh`; `$HOMEBREW_PREFIX/bin` sits at **13**. Anything linked into the former therefore wins in **every** context — git hooks, launchd, GUI-launched editors — not only where `mise activate` has run.

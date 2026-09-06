@@ -1315,7 +1315,8 @@ if [[ "$UNINSTALL" == "true" ]]; then
     echo "  rustup self uninstall"
     echo ""
     echo "# Remove tools not managed by brew (--cleanup can't reach these):"
-    echo "  gh extension remove github/gh-copilot   # if the old Copilot CLI is still installed"
+    echo "  npm uninstall -g @github/copilot         # GitHub Copilot CLI"
+    echo "  gh extension remove github/gh-copilot   # the RETIRED gh-extension Copilot CLI, if still present"
     echo "  rm -f ~/.local/share/go/bin/helix-assist  # dropped Claude LSP for Helix"
     echo "  cargo uninstall croft                    # the terminal IDE (if you want it gone)"
     echo ""
@@ -2979,6 +2980,19 @@ vscode_ext_install "terrastruct.d2" "D2 (diagram syntax + preview)"
 vscode_ext_install "bierner.markdown-mermaid" "Mermaid in Markdown preview"
 vscode_ext_install "nefrob.vscode-just-syntax" "just (Justfile syntax)"
 
+# GitHub Copilot is NOT installed here, deliberately (#356). Current VS Code ships it
+# BUILT IN — 1.136.1 carries copilot-chat 0.64.1 inside the app bundle
+# (Contents/Resources/app/extensions/copilot). `code --install-extension github.copilot`
+# pulls github.copilot-chat as a dependency and then fails:
+#
+#   Extension 'github.copilot-chat' is a built-in extension with version '0.64.1'
+#   and cannot be downgraded to version '0.48.1'.
+#
+# So adding it to this list buys nothing and prints a red "Failed" on every run — the kind
+# of routine noise that trains you to skim past real failures (the #327 lesson). Sign in to
+# the bundled extension instead; nothing needs installing. The CLI is a separate package and
+# IS managed, in the dx section.
+
 # Pylance — remove it (#308). `ms-python.python` declares an `extensionPack` of
 # [vscode-pylance, debugpy, vscode-python-envs], so installing Python silently also
 # installs Microsoft's *proprietary* type server. That contradicts the decision made in
@@ -3064,6 +3078,12 @@ if installed npm; then
     # project is earendil-works/pi -> @earendil-works/pi-coding-agent. Installing the
     # one the articles name gets a months-stale fork that still appears to work.
     npm_global_install "@earendil-works/pi-coding-agent" "pi (minimal coding agent — 2nd agent alongside Claude Code)" --ignore-scripts
+    # GitHub Copilot CLI (#356). A STANDALONE npm package now — `gh extension install
+    # github/gh-copilot` is the retired path, and the uninstall notes still pointed at it.
+    # Requires Node 22+; mise pins 24.18.1. Installing it here rather than via Homebrew keeps
+    # it in the one npm tree (#343) and gets it a mise shim, so #353 links it into
+    # ~/.local/bin and `copilot` resolves from git hooks and GUI editors, not just zsh.
+    npm_global_install "@github/copilot" "GitHub Copilot CLI (\`copilot\`)"
 else
     progress  # keep progress bar accurate when npm unavailable
     progress  # (two npm installs above: Claude Code + pi)

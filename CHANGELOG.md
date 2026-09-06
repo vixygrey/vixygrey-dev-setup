@@ -4,6 +4,29 @@
 
 ## [Unreleased]
 
+### Added
+
+- **dx**: **GitHub Copilot CLI is now managed** — `@github/copilot`, installed via npm. It is a **standalone package now**, not a `gh` extension; the `--uninstall` notes still pointed at `gh extension remove github/gh-copilot`, which has been reworded to name that as the *retired* path and add the npm uninstall for the current CLI. Installing it through `npm_global_install` keeps it in the single npm tree (#343) and gives it a mise shim, so #353 makes `copilot` reachable from git hooks and GUI-launched editors rather than zsh alone.
+
+  **`@github/copilot` is proprietary** (`"license": "SEE LICENSE IN LICENSE.md"`) — a deliberate exception to the open-source preference, recorded here rather than left to slip in unremarked.
+
+### Fixed
+
+- **dx**: **The Copilot VS Code extensions are deliberately NOT installed**, which is the opposite of what this change originally set out to do. Current VS Code ships Copilot **built in** — 1.136.1 carries `copilot-chat` 0.64.1 inside the app bundle (`Contents/Resources/app/extensions/copilot`). `code --install-extension github.copilot` pulls `github.copilot-chat` as a dependency and then fails:
+
+  ```
+  Extension 'github.copilot-chat' is a built-in extension with version '0.64.1'
+  and cannot be downgraded to version '0.48.1'.
+  ```
+
+  Adding those two lines to the managed extension list would have bought nothing and printed a red `Failed` on **every run** — routine noise that trains you to skim past real failures, which is the #327 lesson. Sign in to the bundled extension; nothing needs installing. The reasoning is recorded in place so the next person does not re-add them.
+
+### Notes
+
+- **pi can authenticate with a GitHub Copilot subscription.** Confirmed in pi's own `docs/providers.md`: GitHub Copilot sits alongside ChatGPT Plus/Pro and Claude Pro/Max as a subscription provider. `pi` then `/login`, choose GitHub Copilot, press Enter for github.com.
+
+  This matters for the cost finding in #349 — pi on Anthropic auth bills as **extra usage per token**, not against the Max plan; routing it through Copilot avoids that billing path. One documented gotcha: if pi reports **"model not supported"**, enable the model in VS Code first (Copilot Chat -> model selector -> select model -> *Enable*). Whether Copilot's terms permit third-party harness use, and how its quotas behave under an agent loop, are open questions worth answering before relying on it.
+
 ### Changed
 
 - **core**: **Every mise-managed tool is now reachable outside zsh, not just `node`/`npm`/`npx`.** #345 linked those three shims into `~/.local/bin`; the same gap still applied to the other 48 — `pi`, `claude`, `prettier`, `tsc`, `tsx`, the `ni` family, and the language servers — all of which were only on `PATH` where `mise activate` had run, which means zsh.
