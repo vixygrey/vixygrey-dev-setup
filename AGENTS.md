@@ -159,23 +159,9 @@ Before adding any `vscode_ext_install` line, check `/Applications/Visual Studio 
 
 `~/.local/bin` sits at `PATH` position **9** in a bare `sh`; `$HOMEBREW_PREFIX/bin` sits at **13**. Anything linked into the former therefore wins in **every** context — git hooks, launchd, GUI-launched editors — not only where `mise activate` has run.
 
-That is the point when the tool is one mise owns (`pi`, `claude`, `prettier`, `tsc`). It is a hazard when something else already depends on the Homebrew copy: `pre-commit` builds hook environments against whichever `python3` it finds, so linking mise's Python there retargets those envs machine-wide and breaks ones already built. Check `command -v <tool>` in a bare `sh` **before and after** adding a link, and ask what else resolves that name.
+That is the point when the tool is one mise owns (`claude`, `prettier`, `tsc`, `copilot`). It is a hazard when something else already depends on the Homebrew copy: `pre-commit` builds hook environments against whichever `python3` it finds, so linking mise's Python there retargets those envs machine-wide and breaks ones already built. Check `command -v <tool>` in a bare `sh` **before and after** adding a link, and ask what else resolves that name.
 
 Prefer linking by **exclusion** over an allowlist — a tool added to mise later is then picked up automatically rather than silently missing until someone trips over it. Pair it with a prune, since a removed tool otherwise leaves a dangling link that fails only at the point of use, and scope the prune to symlinks pointing into the shims directory so hand-placed files survive.
-
-## pi's per-skill prompt budget does not apply to a package that registers a tool
-
-The five-skill curation in `~/.agents/skills/` exists because pi injects **every discovered skill's name and description** into its system prompt at startup, and that prompt is under 1k tokens by design. That reasoning is right for loose skills and **wrong for packages**.
-
-`bigpowers` ships 81 skills and costs **+0 system-prompt tokens** — measured at 2050 before and 2050 after installing. Its extension exposes them through a single `bigpowers_skill` tool plus slash commands, so nothing is injected up front. An estimate built from summing the frontmatter predicted ~6,000 tokens and was simply measuring the wrong thing.
-
-Measure the prompt cost (`--mode json`, compare peak input tokens on a trivial prompt) rather than inferring it from file contents. Read the package's `pi` manifest in `package.json` too — it declares exactly which `extensions`, `skills` and `prompts` pi will load, which is rarely the same as what the tarball contains: `bigpowers` has 1,137 `SKILL.md` files on disk and loads 81.
-
-## pi extensions are unsandboxed, and a wrong event field fails silently
-
-pi extensions are TypeScript running **in-process with the user's full permissions**. pi's own security doc is explicit: *"It is not a sandbox."* Project trust gates only `.pi/` resources — a **global** extension in `~/.pi/agent/extensions/` loads with no prompt whatsoever. `pi install npm:<anything>` is therefore the same decision as `npm i -g`, and `~/.pi/agent/auth.json` (a live OAuth token) is readable by anything that loads. Prefer the examples bundled inside the installed package; they are first-party and add no supply-chain surface.
-
-When generating one, **copy the upstream example's API exactly and then verify behaviour, not loading.** The `tool_call` event field is `event.toolName`; a first draft here used `event.tool`, which matches nothing. It type-checked, loaded without complaint, and reported success while blocking nothing — the same silent-no-op family as everything else in this file. The test that catches it is functional: ask pi to write a protected path and confirm no file appears.
 
 ## Uninstall before install when both own the same bin path
 
@@ -313,7 +299,3 @@ Releases are hand-prepared in a PR, then **a tag push triggers the GitHub releas
 
 - **Skills** installed to `~/.claude/skills/`: `tiki` (curl'd `SKILL.md`) and a **scoped set of Google Workspace (`gws`) skills** — Drive/Docs/Slides/Sheets/Forms only (sparse-cloned from `googleworkspace/cli`; Gmail/Calendar/Chat/Meet deliberately excluded). Skills are recipes, **not** an access boundary — `gws`'s reach is set by the OAuth scopes granted at `gws auth setup`.
 - **MCP servers** registered via `claude mcp add` (not idempotent — the script guards): `filesystem, github, git, fetch, context7, aws-docs, aws-pricing, aws-iac, aws-knowledge, cloudwatch, iam, herald`.
-- **A second agent, `pi`**, installed from `@earendil-works/pi-coding-agent` — *not* `@mariozechner/pi-coding-agent`, which is the namespace every write-up links and which stopped at 0.73.1 in May 2026. Its config lives in **`~/.pi/agent/`**, which ignores `XDG_CONFIG_HOME`; `~/.config/pi` would be this repo's "valid config, wrong address" bug again, so `--verify` covers it (`pi --list-models` knows the `ollama` provider only because our `models.json` defines it).
-  - pi shares **five** skills with Claude Code via per-skill symlinks in `~/.agents/skills/` — not the whole of `~/.claude/skills/`. pi injects every discovered skill's name and description into its system prompt at startup, and that prompt is under 1k tokens by design; all 29 skills would roughly double it, mostly with Google Workspace recipes. Per-skill links also matter because the `gws` skills are re-copied from upstream each run, so their frontmatter cannot carry `disable-model-invocation`.
-  - Do **not** add `enabledModels` to the generated `settings.json`. Scoping it to `["anthropic/*"]` makes pi print `Warning: No models match pattern "anthropic/*"` on every run of a fresh machine, because the Anthropic catalog is empty until the first `/login` — the #327 shape.
-  - The local model must emit *structured* tool calls under Ollama. `qwen3:8b` does; `qwen2.5-coder:7b` does not, despite advertising `tools` in `ollama show`. Verify with a direct `curl` to `/v1/chat/completions` carrying a `tools` array before changing the model.
