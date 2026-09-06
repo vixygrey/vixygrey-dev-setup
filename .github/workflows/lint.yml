@@ -143,6 +143,13 @@ jobs:
       - name: Install bash 4+ (the script's one manual prerequisite)
         run: brew install bash
 
+      # NOTE: this asserts the script RUNS and exits 0. It does not yet assert that a dry
+      # run leaves no trace — because it does not. The first green run of this job showed
+      # --dry-run executing a remote pnpm installer, 53 `git config --global` writes and a
+      # `brew bundle dump` on the runner (#380). That is contained here (the VM is
+      # ephemeral) but it is the stronger assertion this job should eventually make:
+      # snapshot $HOME and `git config --global --list` either side and fail on a diff.
+      # It can only be added once #380 is fixed, so it is tracked there, not skipped here.
       - name: Dry run (must exit 0)
         run: ./scripts/setup-dev-tools-mac.sh --dry-run --no-prompt
 

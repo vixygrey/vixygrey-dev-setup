@@ -2780,10 +2780,18 @@ banner "Kubernetes & GitHub Extras"
 brew_install "stern" "stern (multi-pod log tailing for k8s)"
 
 # gh-dash (GitHub dashboard extension)
+# A raw `gh extension install` — not one of the managed helpers — so it has to guard
+# itself, per the --dry-run rule in AGENTS.md. It did not, and a dry run therefore
+# attempted a real network install every time. Invisible on a machine that already had
+# the extension; on a clean one (the macOS CI job, #376) it failed against an
+# unauthenticated gh and put a red `Failed: 1` on a run that was supposed to change
+# nothing. The rest of that class is #380.
 progress
 if installed gh; then
     if gh extension list 2>/dev/null | grep -q "gh-dash"; then
         warn "gh-dash already installed"
+    elif [[ "$DRY_RUN" == "true" ]]; then
+        info "[DRY RUN] Would install gh extension: dlvhdr/gh-dash"
     else
         info "Installing gh-dash (GitHub dashboard)..."
         if gh extension install dlvhdr/gh-dash >> "$LOG_FILE" 2>&1; then
