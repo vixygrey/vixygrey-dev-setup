@@ -4,6 +4,25 @@
 
 ## [Unreleased]
 
+### Removed
+
+- **pi is gone** — from the generator and from the machine. It was added, configured and hardened over the course of a day, tried in practice, and did not earn its place. Three reasons, all upstream and none with a fix in sight:
+
+  - **It loads no context files at all.** Not a project `AGENTS.md`, not `CLAUDE.md`, not its own documented global `~/.pi/agent/AGENTS.md`. Hierarchical `AGENTS.md` support was a main reason for adopting it. Confirmed with a formatting directive even a small model obeys, and with input-token counts identical in a bare directory and in a repo carrying an 8,159-token `AGENTS.md`.
+  - **Local models cannot drive its agent loop.** `gpt-oss:20b` passes every raw endpoint probe — structured `tool_calls`, with and without a system prompt — and makes **zero** tool calls through pi in every configuration tried, then reports success it did not achieve. `qwen3:8b` manages one tool call and fails a read-then-write sequence.
+  - **Neither remote auth path is satisfactory.** Anthropic bills third-party harness usage as extra usage per token rather than against the Max plan; a session comparable to one day's work here measured **~$202** at Opus 5 rates. GitHub Copilot auth works but goes through `api.github.com/copilot_internal/v2/token`, an undocumented endpoint, while GitHub's own SDK exists as the sanctioned path and pi does not use it.
+
+  Removed with it: the pi install and its two pinned packages, the whole `~/.pi/agent` config block (settings, models, Dracula theme, five safety extensions, generated `protected-paths`), the five shared skills in `~/.agents/skills/`, the `validate|pi` row in `--verify`, the CLAUDE.md guidance, and `qwen3:8b` from `OLLAMA_DEFAULT_MODELS` (18 GB of pi-only models removed from the machine alongside `gpt-oss:20b`).
+
+  **`bigpowers` deliberately survives.** It was installed inside pi's package tree, and the working Claude Code MCP server resolves its entry point from there. It is now a normal global install, and `bigpowers-mcp-shim` finds it through its existing fallback candidate — verified still `✔ Connected` after pi was removed. The 81 project-local skills in `.claude/skills/` are plain files and were never affected.
+
+### Changed
+
+- **repo**: `PI_SHIM_EXCLUDE` renamed to `SHIM_EXCLUDE`. The prefix suggested it had something to do with pi; it is the Python-family exclusion list for the `~/.local/bin` shim links and always was.
+
+- **docs**: The pi-specific rules are out of AGENTS.md. The general lessons found *through* pi stay, because they are about this repo rather than about pi — shell startup order and `~/.zshenv` precedence, `~/.local/bin` outranking Homebrew, uninstall-before-install when two packages own one bin path, `{ umask; }` leaking where `( umask; )` does not, and the self-healing bug that hides from every check made after the fact.
+
+
 ### Fixed
 
 - **core**: **Shim links are created after the installs, not before.** #353 linked mise shims into `~/.local/bin` from a block in `core` at line ~2105, while the `npm_global_install` calls start at ~2292. A tool installed during a run therefore got its mise shim and **no `~/.local/bin` link until the next run** — so `pi`, `claude`, `prettier` and `copilot` were unreachable from git hooks, launchd and GUI-launched editors for one full run after being installed.

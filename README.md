@@ -393,7 +393,6 @@ Faster, prettier, smarter replacements for standard Unix utilities.
 | **micro** | The `$EDITOR` -- git/gh/lazygit commit messages, leaf's Ctrl+E, quick edits. Non-modal, on-screen key menu (`Ctrl+G` for help), Dracula theme |
 | **Claude Code (`claude`)** | Agentic coding in the terminal; hosts the migrated MCP servers |
 | **GitHub Copilot CLI** | `copilot` -- installed from `@github/copilot` (a standalone npm package now, not a `gh` extension). The VS Code side needs no install: current VS Code ships Copilot **built in**, and installing the marketplace extension fails against the newer bundled `copilot-chat`. Proprietary -- a deliberate exception to the open-source preference |
-| **pi** | The *second* agent -- deliberately minimal: four tools (`read`/`write`/`edit`/`bash`), a sub-1k-token system prompt, no sub-agents, no MCP. For tight edit/bash loops and for running against a local Ollama model. Installed from `@earendil-works/pi-coding-agent` (**not** the stale `@mariozechner/*` package the write-ups link) |
 | **llm** | Simon Willison's CLI -- one-shot prompts, plugin ecosystem, SQLite logging, embeddings. Installed via `uv tool` with the Anthropic plugin; default model `anthropic/claude-sonnet-4-5` |
 | **chezmoi** | Dotfile manager -- backup and restore configs across machines |
 | **mitmproxy** | Free HTTP debugging proxy -- inspect and modify API calls from any app |
@@ -832,13 +831,7 @@ The script generates config files with sensible defaults:
 | `~/.claude.json` (mcpServers) | Claude Code MCP | User-scope MCP servers (migrated from Kiro via `claude mcp add`) — filesystem, github, git, fetch, context7, aws-docs, aws-pricing, aws-iac, aws-knowledge, cloudwatch, iam. Opt-in per project: playwright, postgres, several AWS servers. (Notion server dropped.) |
 | `~/.config/lazygit/config.yml` | lazygit | Dracula theme, delta pager, nerd fonts, auto-fetch, micro editor (`hx`), rounded borders |
 | `~/.config/k9s/skins/dracula.yaml` | k9s | Full Dracula skin |
-| `~/.pi/agent/settings.json` | pi | Dracula theme, `micro` as external editor, telemetry + analytics off, Anthropic as default provider. Merged, so your own keys survive |
-| `~/.pi/agent/models.json` | pi | Registers the local Ollama provider (`qwen3:8b` on `127.0.0.1:11434`). **Not** XDG -- pi ignores `XDG_CONFIG_HOME` entirely |
-| `~/.pi/agent/themes/dracula.json` | pi | Full Dracula theme -- all 51 required colour tokens plus the 3 optional ones |
-| `~/.agents/skills/*` | pi | Symlinks to five skills shared with Claude Code (api-testing, d2-diagrams, dbmate-migrations, office-docs, tiki) |
-| `~/.pi/agent/settings.json` (packages) | pi | Third-party packages, **pinned**: `pi-web-access@0.28.0` (pi ships no web tool at all) and `bigpowers@2.88.1` (81 skills behind one `bigpowers_skill` tool, +0 system-prompt tokens). Pinned because pi loads packages in-process and unsandboxed; bumps are manual and deliberate |
-| `~/.local/bin/*` (36 links) | mise | Symlinks to every mise shim except the Python family and `corepack`, so `pi`, `claude`, `prettier`, `tsc` and the language servers are reachable from git hooks, launchd and GUI-launched editors — not only from zsh, where `mise activate` runs |
-| `~/.pi/agent/extensions/*` | pi | Five safety extensions — permission gate (confirms dangerous bash), protected paths (blocks writes to credentials), git checkpoint, dirty-repo guard, desktop notify. First-party examples copied from the installed package; `protected-paths.ts` is generated with this machine's credential paths |
+| `~/.local/bin/*` (36 links) | mise | Symlinks to every mise shim except the Python family and `corepack`, so `claude`, `prettier`, `tsc`, `copilot` and the language servers are reachable from git hooks, launchd and GUI-launched editors — not only from zsh, where `mise activate` runs |
 
 ---
 
@@ -996,39 +989,6 @@ Set `ANTHROPIC_API_KEY` (for `croft pair`) and run `llm keys set anthropic` (for
 `llm` pipe bind). The script installs `llm` via `uv tool` with the `llm-anthropic`
 plugin and sets the default model to `anthropic/claude-sonnet-4-5`, so only the key is
 left to add.
-
-### Second agent -- pi
-
-**pi** is a deliberately minimal coding agent installed alongside Claude Code: four tools
-(`read`, `write`, `edit`, `bash`), a system prompt under 1,000 tokens, and no sub-agents,
-todo list, plan mode or **MCP support** -- upstream considers MCP token-wasteful and prefers
-CLI tools with READMEs. It is a *complement*, not a replacement: anything that needs an MCP
-server (herald, `gws`, GitHub, AWS) stays Claude Code's job.
-
-Reach for pi for a tight edit/bash loop in one repo, when you want the entire context
-visible, or to work against a local model at no metered cost:
-
-```bash
-pi                                                    # Anthropic (after /login)
-pi --provider ollama --model qwen3:8b --thinking off  # local, free, offline-capable
-```
-
-Two things worth knowing:
-
-- **Install the right package.** Blog posts and write-ups point at `badlogic/pi-mono` ->
-  `@mariozechner/pi-coding-agent`, which stopped at 0.73.1 in May 2026. The live project is
-  `earendil-works/pi` -> `@earendil-works/pi-coding-agent`, which is what the script installs.
-- **Anthropic auth is metered separately.** `pi` then `/login` stores an OAuth token in
-  `~/.pi/agent/auth.json` (0600, never touched by this script). Since 2026-04-04 Anthropic
-  enforces server-side that third-party harness usage on a Pro/Max plan draws from **extra
-  usage, billed per token** -- not against plan limits. Use the Ollama path for long or
-  exploratory loops.
-
-On the local model: pi's agent loop needs a model whose Ollama template emits *structured*
-tool calls. `qwen3:8b` (pulled by the script, ~5.2 GB) does. The obvious-looking pick,
-`qwen2.5-coder:7b`, does **not** -- it advertises `tools` in `ollama show` and then returns
-the call as literal text with `tool_calls: null`, on the native endpoint as well as the
-OpenAI-compatible one. Re-run that check before swapping the model.
 
 ### Claude Code MCP Servers
 
