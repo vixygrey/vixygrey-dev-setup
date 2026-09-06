@@ -16,6 +16,12 @@
 
   The one feature with no CLI equivalent is the **inline blame annotation on the current line** — `git blame` in another pane is not the same thing as seeing it in peripheral vision. If it turns out to be missed, `waderyan.gitblame` is ~200 KB for that single behaviour. Nothing else about GitLens was in use.
 
+- **The `gitkraken-hooks` Claude Code plugin went with it** — uninstalled, and the `gitkraken` marketplace deregistered. It billed itself as *"live AI session tracking for GitKraken products"*: its entire purpose was streaming this session to a **GitLens / GitKraken Desktop UI that is no longer installed**, so it had become a pure outbound feed with nothing at the other end.
+
+  Reading the manifest before removing it is what made the decision obvious. It registered **22 hook events**, not the handful the one-line description implies — `UserPromptSubmit` (every prompt typed), `InstructionsLoaded` (the CLAUDE.md contents), `PreToolUse`, `PostToolUse`, `PermissionRequest`, `SubagentStart`, `Elicitation`, `PreCompact` — each shelling out to `gk ai hook run`, and **two of them `--blocking`**, meaning a subprocess sat in the critical path of every tool call. `~/.claude.json` had recorded 405 invocations across the two plugin ids.
+
+  This is not managed by the generator — Claude Code plugins are live state under `~/.claude/`, and this script has never written `enabledPlugins`. Removed with `claude plugin uninstall` and `claude plugin marketplace remove` rather than by hand-editing `settings.json`; `enabledPlugins` and `extraKnownMarketplaces` are now empty and `claude plugin list` reports none. Noted here because it arrived *with* GitLens, silently, and would otherwise have outlived it with no record of where it came from.
+
 - **pi is gone** — from the generator and from the machine. It was added, configured and hardened over the course of a day, tried in practice, and did not earn its place. Three reasons, all upstream and none with a fix in sight:
 
   - **It loads no context files at all.** Not a project `AGENTS.md`, not `CLAUDE.md`, not its own documented global `~/.pi/agent/AGENTS.md`. Hierarchical `AGENTS.md` support was a main reason for adopting it. Confirmed with a formatting directive even a small model obeys, and with input-token counts identical in a bare directory and in a repo carrying an 8,159-token `AGENTS.md`.
