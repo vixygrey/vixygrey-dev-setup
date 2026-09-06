@@ -4,6 +4,14 @@
 
 ## [Unreleased]
 
+### Added
+
+- **CI now runs the script** (#376, #378). Both existing jobs are `ubuntu-latest`, and this script is macOS + Homebrew + zsh only — so for the whole of 7.x, nothing in CI had ever *executed* it. What CI proved was that the file is valid bash, passes ShellCheck, and that 22 of its heredocs parse. What it could not prove was that the thing runs.
+
+  `bash -n` checks grammar, not reachability. It cannot see a misspelled function name on a branch nobody took, a `case` arm that matches nothing, a category missing from `ALL_CATEGORIES`, or a flag parsed into the wrong variable. That class has already reached a real machine: the local error logs carry `Unknown option: --only core` three separate times. A new `macos-latest` job runs `--dry-run --no-prompt`, which exercises argument parsing, preflight, category dispatch, every `should_run` gate, all 96 `write_managed` calls in dry-run mode, and the summary.
+
+  The job carries a second step that pins **#370** rather than trusting it: a green dry run proves a *clean* run exits 0 and says nothing about a run **with** failures, which is the half that was broken and the half the job's own value depends on. So it injects one synthetic `error` immediately before the summary and asserts the status comes back non-zero — with a `grep -qx` on the anchor first, so a moved marker fails loudly instead of quietly testing an unmodified copy. That is the same silent-no-op guard the `generated-config` job applies to an empty heredoc extraction.
+
 ### Removed
 
 - **The GitLens VS Code extension is gone** (#362), and `gitkraken-cli` is installed in its place. This list described it for a long time as *"GitLens (blame, history, authorship)"* — three things `lazygit`, `delta`, `difft` and `git-cliff` already do, in the terminal, which is where the work actually happens. GitLens 19 is a far larger freemium product than that line admits: Launchpad, Cloud Patches, Code Suggest, cloud workspaces, AI commit messages, most of it either Pro-gated or a second copy of a CLI installed a few hundred lines above it. 34 MB across two extension directories and an account nag, on the editor that is explicitly the *escape hatch* rather than the daily driver. That is precisely the opposite of the rule written at the top of the extension list — **every entry mirrors a CLI this script already installs** — and it had been sitting there failing that test.
