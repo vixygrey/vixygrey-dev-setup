@@ -1793,7 +1793,7 @@ if [[ "$VERIFY" == "true" ]]; then
         "unchecked|topgrade|$HOME/.config/topgrade.toml|"
         "unchecked|trippy|$HOME/.config/trippy/trippy.toml|"
         "unchecked|git-cliff|$HOME/.config/git-cliff/cliff.toml|"
-        "unchecked|harlequin|$HOME/.config/harlequin/config.toml|"
+        "unchecked|harlequin|$HOME/.harlequin.toml|"
         "unchecked|gh-dash|$HOME/.config/gh-dash/config.yml|"
         "unchecked|stern|$HOME/.config/stern/config.yaml|"
         "unchecked|lazydocker|$HOME/.config/lazydocker/config.yml|"
@@ -2258,7 +2258,10 @@ banner "Infrastructure as Code"
 
 brew_install "opentofu" "OpenTofu (open-source Terraform — multi-cloud IaC)"
 trust_tap terraform-linters/tap
-brew_install "tflint" "tflint (Terraform linter — terraform-linters tap, not homebrew-core)"
+# tflint ships as a CASK in its tap, not a formula (#366). `brew install` falls back to the
+# cask so it installed fine, but _brew_has_formula can never match a cask, so every
+# non-resume run re-ran the install and --dry-run always claimed it was missing.
+brew_cask_install "tflint" "tflint (Terraform linter — terraform-linters tap, not homebrew-core)"
 brew_install "terraform-docs" "terraform-docs (auto-generate module docs from variables/outputs)"
 brew_install "checkov" "checkov (IaC static analysis — Terraform, CloudFormation, Kubernetes, Dockerfile)"
 brew_install "infracost" "infracost (cost estimation for Terraform changes before apply)"
@@ -2715,7 +2718,7 @@ trust_tap lazynop/tap
 brew_install "lazyenv" "lazyenv (TUI for .env files — diff/sync across projects, secret masking)"
 # keyward — TUI SSH-key manager + A–F security audit + encrypted key backups.
 trust_tap gateway-of-last-resort/tap
-brew_install "keyward" "keyward (SSH-key manager + security audit — offline, single binary)"
+brew_cask_install "keyward" "keyward (SSH-key manager + security audit — offline, single binary)"
 # bmm — CLI/TUI bookmark manager (local, fzf-friendly). dhth/tap already trusted above.
 brew_install "bmm" "bmm (bookmark manager — CLI + TUI, local, import HTML/JSON/TXT)"
 # manly — explains the flags in a command by pulling the relevant man-page lines.
@@ -5983,27 +5986,31 @@ MISE_CONF
     success "mise configured (auto-install, trust ~/Code)"
 
 # ---- topgrade config ----
+# `cleanup` is a [misc] key, NOT a top-level one (#366). It sat at the top level here, and
+# topgrade rejects the WHOLE file on one unknown field — "Failed to deserialize ... unknown
+# field `cleanup`" — so topgrade had never once run with the config this script generates.
+# The path was never the problem; the schema was. Validate any change to the block below
+# with `topgrade --config <file> --dry-run`, which fails loudly on a deserialization error
+# (#367 wires exactly that into --verify, so this cannot go unnoticed again).
 TOPGRADE_CONFIG="$HOME/.config/topgrade.toml"
     info "Creating topgrade configuration..."
     write_managed "$TOPGRADE_CONFIG" "#" <<'TOPGRADE_CONF'
 # topgrade configuration — update everything with one command
 # Run: topgrade
 
-# Don't ask for confirmation
-#assume_yes = true
-
-# Cleanup after update
+[misc]
+# Cleanup temporary or old files after an update. NOTE: a [misc] key, not a top-level one.
 cleanup = true
 
-# Disable things you don't want updated automatically
-[misc]
+# Don't ask for confirmation
+# assume_yes = true
+
 # Pre-commands (run before updates)
 # pre_commands = { "Backup" = "backup-dotfiles" }
 
 [brew]
+# Use --greedy (or -a with Repo Cask Upgrade) so casks that self-update are still upgraded
 greedy_cask = true
-
-[linux]
 TOPGRADE_CONF
     success "topgrade configured (cleanup, greedy cask updates)"
 
@@ -6769,8 +6776,14 @@ PGCLI_CONF
     success "pgcli configured (multi-line, auto-expand, destructive warnings, bat pager)"
 
 # ---- harlequin config ----
-HARLEQUIN_CONFIG_DIR="$HOME/.config/harlequin"
-HARLEQUIN_CONFIG="$HARLEQUIN_CONFIG_DIR/config.toml"
+# Harlequin does NOT read ~/.config (#366). Its own --help: "By default, Harlequin finds
+# files named .harlequin.toml in the current directory and the home directory (~) and
+# merges them." We wrote ~/.config/harlequin/config.toml for a long time, so the Dracula
+# theme and vscode keymap below never applied to anything. Same shape as the lazygit bug
+# in #333. The alternative — exporting HARLEQUIN_CONFIG_PATH — would only work for shells
+# that source our .zshrc, so the documented home-directory path is the robust one.
+HARLEQUIN_CONFIG="$HOME/.harlequin.toml"
+HARLEQUIN_SUPERSEDED="$HOME/.config/harlequin/config.toml"
     info "Creating harlequin configuration..."
     write_managed "$HARLEQUIN_CONFIG" "#" <<'HARLEQUIN_CONF'
 # Harlequin SQL IDE — https://harlequin.sql/docs/config-file/
@@ -6780,6 +6793,8 @@ keymap_name = ["vscode"]
 show_files = true
 locale = "en_US.UTF-8"
 HARLEQUIN_CONF
+    remove_superseded_managed "$HARLEQUIN_SUPERSEDED" \
+        "harlequin reads $HARLEQUIN_CONFIG" "(#366)"
     success "harlequin configured (Dracula theme, vscode keymap)"
 
 # ---- mycli config ----

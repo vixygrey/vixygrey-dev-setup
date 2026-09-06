@@ -41,6 +41,18 @@
 
 ### Fixed
 
+- **Two more generated configs had never been used by the tool they were written for** (#366). Found by sweeping for more of the #364 class — config that is generated, assumed working, and never actually exercised.
+
+  **topgrade rejected its config on every run.** `cleanup = true` sat at the top level, where it is not a valid key; it belongs under `[misc]`. topgrade refuses the *whole file* on a single unknown field, so every invocation died at `Failed to deserialize ~/.config/topgrade.toml: unknown field 'cleanup'` before doing any work. The path was always right — the schema was not.
+
+  A trap worth recording, because it nearly produced a false "verified": **`topgrade --config <file>` is not a faithful validator of the default config.** A file passed that way is deserialized as an *include section*, which tolerates unknown fields — the broken config passes cleanly through `--config` and fails through `~/.config/topgrade.toml`. Only `topgrade --dry-run` against the default path reproduces the error, and that is what #367 wires into `--verify`.
+
+  **harlequin never read its config at all.** The script wrote `~/.config/harlequin/config.toml`; harlequin's own `--help` says it "finds files named `.harlequin.toml` in the current directory and the home directory (~) and merges them". `HARLEQUIN_CONFIG_PATH` was set nowhere — not in the script, not in `~/.zshrc`, not in the environment — so the Dracula theme and vscode keymap applied to nothing. The content was always valid; only the location was wrong. Now written to `~/.harlequin.toml`, with `remove_superseded_managed` clearing the old path, exactly as lazygit's identical bug was handled in #333.
+
+- **`tflint` and `keyward` are casks, and were being installed as formulae** (#366). `brew install` falls back to the cask so both installed correctly, but `_brew_has_formula` can never match a cask: every non-resume run re-ran `brew install` for two already-installed tools, reported them as freshly installed, and `--dry-run` always claimed they were missing. Moved to `brew_cask_install`.
+
+  Nothing else was wrong. The sweep that found these checked 174 formulae (none deprecated or disabled), 26 casks, 20 npm packages, 7 PyPI packages (none yanked), 26 VS Code extension IDs, all 14 MCP servers, and every `installed` guard in the script.
+
 - **`aws-knowledge` was registered with the wrong transport and had never once connected** (#364). It was added as `uvx awslabs.aws-knowledge-mcp-server@latest`, but the AWS Knowledge MCP Server is a **remote, fully managed HTTP endpoint** — `https://knowledge-mcp.global.api.aws`, no authentication, no AWS account, rate-limited. It is the only non-stdio server in this setup, and there is no legitimate PyPI distribution to `uvx` at all.
 
   The name that *was* on PyPI — `awslabs.aws-knowledge-mcp-server`, a single 0.1.0 uploaded 2025-10-15, declaring `github.com/awslabs/aws-knowledge-mcp-server` as its homepage — is **yanked, with the reason `Not ours`**. It was not published by AWS Labs. So this line had been pointing `uvx` at a squatted package name.
