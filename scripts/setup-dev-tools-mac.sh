@@ -1777,6 +1777,26 @@ if [[ "$VERIFY" == "true" ]]; then
         ! grep -qiE 'TOML parse error|asciinema 2\.x|invalid type' <<<"$out"
     }
 
+    # topgrade and starship both lie in their exit codes, so both need the asciinema
+    # treatment: capture the output, then judge it. Critically, the check must NOT be
+    # written inline as `! cmd | grep -q ...` — this script runs under `set -o pipefail`
+    # (line ~1289), `topgrade --dry-run` exits 1 even on a perfectly good config, so the
+    # pipeline would return topgrade's 1, the `!` would flip it to 0, and the row would
+    # report OK for a config topgrade had just rejected. A check that cannot fail is worse
+    # than no check, because the summary counts it as verified.
+    _verify_topgrade() {
+        # `--dry-run` executes nothing; it prints the steps. On a config it cannot accept it
+        # prints "Failed to deserialize <path>" and does no work at all. ~3s.
+        local out; out="$(topgrade --dry-run 2>&1 || true)"
+        ! grep -q 'Failed to deserialize' <<<"$out"
+    }
+    _verify_starship() {
+        # `print-config` exits 0 even when it could not parse the file; the error only
+        # appears on stderr.
+        local out; out="$(starship print-config 2>&1 || true)"
+        ! grep -q 'Unable to parse the config file' <<<"$out"
+    }
+
     VERIFY_TARGETS=(
         "validate|ghostty|$HOME/.config/ghostty/config|ghostty +validate-config"
         "validate|zellij|$HOME/.config/zellij/config.kdl|zellij setup --check 2>&1 | grep -q 'Well defined'"
@@ -1789,10 +1809,19 @@ if [[ "$VERIFY" == "true" ]]; then
         "path|nu|$HOME/.config/nushell/env.nu|nu -c '\$nu.env-path' 2>/dev/null | tail -1"
         "path|atuin|$HOME/.config/atuin/config.toml|atuin info 2>/dev/null | awk -F'\"' '/client config:/ {print \$2}'"
         "path|bat|$(bat --config-file 2>/dev/null)|bat --config-file"
-        "unchecked|starship|$HOME/.config/starship.toml|"
-        "unchecked|topgrade|$HOME/.config/topgrade.toml|"
+        # These three were "unchecked" until #367 — the label was too pessimistic. topgrade
+        # and starship go through the helpers above because their exit codes cannot be
+        # trusted; git-cliff exits non-zero on a bad config, so it needs no helper. The
+        # topgrade row is the one that would have caught #366 the day it landed.
+        #
+        # git-cliff is given the path explicitly rather than left to resolve one. It
+        # legitimately prefers a ./cliff.toml, so a `path` row would pass or fail depending
+        # on which directory --verify was run from. This proves the file we write is valid,
+        # which is the part we control.
+        "validate|starship|$HOME/.config/starship.toml|_verify_starship"
+        "validate|topgrade|$HOME/.config/topgrade.toml|_verify_topgrade"
+        "validate|git-cliff|$HOME/.config/git-cliff/cliff.toml|git-cliff --config \"$HOME/.config/git-cliff/cliff.toml\" --context"
         "unchecked|trippy|$HOME/.config/trippy/trippy.toml|"
-        "unchecked|git-cliff|$HOME/.config/git-cliff/cliff.toml|"
         "unchecked|harlequin|$HOME/.harlequin.toml|"
         "unchecked|gh-dash|$HOME/.config/gh-dash/config.yml|"
         "unchecked|stern|$HOME/.config/stern/config.yaml|"

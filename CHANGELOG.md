@@ -34,6 +34,16 @@
 
 ### Changed
 
+- **`--verify` now checks three configs it used to shrug at** (#367). `starship`, `topgrade` and `git-cliff` were labelled *"no validator and no way to ask"*. They all have a way to ask; it just is not the obvious one. Verified count goes 10 → 13, unverified 10 → 7.
+
+  This matters because #366's topgrade bug lived in that bucket: its config had been rejected on every single run, and `--verify` reported it as merely unverifiable rather than broken. The new row fails on exactly that file — confirmed by restoring the original and watching it go red.
+
+  **Two of the three lie in their exit code, and the naive check silently inverts.** `topgrade --dry-run` exits 1 even on a perfectly good config, and `starship print-config` exits 0 even on one it could not parse. Written inline as `! topgrade --dry-run | grep -q 'Failed to deserialize'`, `set -o pipefail` makes the pipeline return topgrade's 1, the `!` flips it to 0, and the row reports **OK for a config topgrade had just rejected**. That false pass was caught only by deliberately re-breaking the config and re-running — a check that cannot fail is worse than no check, because the summary counts it as verified. Both now go through `_verify_*` helpers that capture output and then judge it, the pattern `_verify_asciinema` already established for the same reason.
+
+  `git-cliff` is handed its path explicitly rather than left to resolve one: it legitimately prefers a `./cliff.toml`, so a `path` row would pass or fail depending on which directory `--verify` was run from.
+
+  The remaining seven — `trippy`, `harlequin`, `gh-dash`, `stern`, `lazydocker`, `yt-dlp`, `micro` — stay honestly labelled. None can report the config path they would resolve, and their config is only exercised by launching a TUI. `stern --config` and `micro -config-dir` accept a path but will not report the default they would otherwise use, which is the thing that needs verifying.
+
 - **repo**: `PI_SHIM_EXCLUDE` renamed to `SHIM_EXCLUDE`. The prefix suggested it had something to do with pi; it is the Python-family exclusion list for the `~/.local/bin` shim links and always was.
 
 - **docs**: The pi-specific rules are out of AGENTS.md. The general lessons found *through* pi stay, because they are about this repo rather than about pi — shell startup order and `~/.zshenv` precedence, `~/.local/bin` outranking Homebrew, uninstall-before-install when two packages own one bin path, `{ umask; }` leaking where `( umask; )` does not, and the self-healing bug that hides from every check made after the fact.
