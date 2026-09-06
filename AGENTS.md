@@ -138,6 +138,17 @@ Rules that follow:
 
 - **A brew formula can install a whole second runtime as a dependency.** `brew install prettier` pulls in `node`. Before adding a formula that has a language runtime beneath it, check `brew deps <formula>` — and prefer the package manager that runtime already has. Check afterwards too: `brew uses --installed node` names everything keeping it alive.
 
+## A bug that self-heals on the next run is the hardest kind to see
+
+The shim-linking block ran before the installs it was meant to cover, so any newly installed tool went one full run without a `~/.local/bin` link (#357). Nothing ever looked wrong: the next run fixed it, so every tool that was checked had been installed by an earlier run than the one that linked it — and a login shell resolves everything through mise activation anyway, so the usual `command -v` check passes.
+
+Two rules from it:
+
+- **Order-dependent work needs a test that spans one run, not a check afterwards.** Remove the thing entirely, run once, and assert the end state — `copilot` removed (package, shim *and* link), one `--only dx`, then `command -v copilot` under `env -i`. Checking after a second run proves nothing.
+- **Two jobs with opposite timing requirements cannot share a block.** Putting mise's node on the run's own `PATH` must be early; linking shims must be late. They were written together because they are about the same tool, and one of them was therefore always wrong. When a block serves two schedules, split it before the schedules diverge.
+
+Related: prefer no category guard for work that must reflect the *final* state of a run. Parking this in `configs` would have been tidier and would have broken `--only dx`, which installs tools and so must link them.
+
 ## Check whether the editor already ships it before adding an extension
 
 VS Code bundles a growing set of extensions, and a marketplace install of one of them **fails** rather than no-ops: `code --install-extension github.copilot` pulls `github.copilot-chat`, which is built in at a *newer* version than the marketplace copy, and dies with `cannot be downgraded`. Adding it to the managed list would print a red `Failed` on every run forever.

@@ -4,6 +4,18 @@
 
 ## [Unreleased]
 
+### Fixed
+
+- **core**: **Shim links are created after the installs, not before.** #353 linked mise shims into `~/.local/bin` from a block in `core` at line ~2105, while the `npm_global_install` calls start at ~2292. A tool installed during a run therefore got its mise shim and **no `~/.local/bin` link until the next run** — so `pi`, `claude`, `prettier` and `copilot` were unreachable from git hooks, launchd and GUI-launched editors for one full run after being installed.
+
+  It **self-healed on the next run**, which is exactly why it survived: every tool that looked correctly linked had been installed by an *earlier* run than the one that linked it, and a login shell finds everything through mise activation regardless. Testing the obvious way says it works. Installing the Copilot CLI (#356) is what exposed it — `copilot` resolved in a login shell and not in a bare `sh`.
+
+  The root cause was two jobs with opposite timing requirements sharing one block: putting mise's node on the run's own `PATH` (#343) must happen **early**, before any `npm_global_install`, or `installed npm` is false for the rest of the run; linking shims into `~/.local/bin` (#353) must happen **late**, after every install, or it cannot see what was just installed. The `PATH` fix stays in `core`; the linking moves to the end of the run.
+
+  It is deliberately **outside every `should_run` guard**, not parked in `configs`: `--only dx` installs tools, so `--only dx` must link them — a category guard would reintroduce the same gap for anyone running a single category. Re-linking is idempotent, so running it on every invocation costs nothing.
+
+  Verified against the exact failure: `copilot` removed completely (package, shim and link), then a single `--only dx` run both installed it and reported `37 mise shims linked`, after which `copilot --version` answers under `env -i` with only `HOME` and a minimal `PATH`.
+
 ### Added
 
 - **dx**: **GitHub Copilot CLI is now managed** — `@github/copilot`, installed via npm. It is a **standalone package now**, not a `gh` extension; the `--uninstall` notes still pointed at `gh extension remove github/gh-copilot`, which has been reworded to name that as the *retired* path and add the npm uninstall for the current CLI. Installing it through `npm_global_install` keeps it in the single npm tree (#343) and gives it a mise shim, so #353 makes `copilot` reachable from git hooks and GUI-launched editors rather than zsh alone.
