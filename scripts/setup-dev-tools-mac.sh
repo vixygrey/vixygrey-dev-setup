@@ -2813,7 +2813,14 @@ banner "Containers & Orchestration"
 
 brew_install "lazydocker" "lazydocker (terminal UI for Docker)"
 brew_install "dive" "dive (explore Docker image layers)"
-brew_install "kubectl" "kubectl (Kubernetes CLI)"
+# Declared as kubernetes-cli, not kubectl. `kubectl` is a Homebrew ALIAS; the canonical
+# formula name is what `brew list --formula -1` prints, and that list is what
+# _brew_has_formula matches against. Declaring the alias made the membership test false
+# on a machine that already had it, so every run took the install branch, brew no-opped,
+# and the run counted a fresh install that never happened (#371). Same trap as naming a
+# package where the binary is meant — check `brew info --json=v2 <x> | jq -r
+# '.formulae[0].name'` before adding a formula whose name you are guessing.
+brew_install "kubernetes-cli" "kubectl (Kubernetes CLI)"
 brew_install "k9s" "k9s (terminal UI for Kubernetes)"
 
 fi  # containers
