@@ -13571,3 +13571,24 @@ else
     echo -e "${GREEN}${BOLD}  Restart your terminal to activate everything.${NC}"
 fi
 echo ""
+
+# Turn the counted failures back into an exit status (#370).
+#
+# `set +e` is deliberate — one failed formula must not abandon the other 200 — but
+# nothing ever converted the count back, and the last statement in the file was a bare
+# `echo`, so EVERY run exited 0. A run could print `Failed: 12` and still satisfy
+# `./setup-dev-tools-mac.sh && echo ok`. The only failure signal was notify_failure,
+# which no-ops without terminal-notifier, so launchd jobs, `topgrade` steps, `&&` chains
+# and CI had no signal at all.
+#
+# The interactive `exec zsh -l` branch above replaces this process and takes the status
+# with it. That is acceptable and not worth contorting the flow for: exec is only
+# reached when a human answered the prompt having just read the red summary, and
+# --no-prompt answers "n" (#265), so every unattended run reaches this line.
+#
+# --dry-run is included on purpose. It counts errors too (a bad --only category, a
+# missing prerequisite), and a preview that cannot fail is no use as a CI gate.
+if [[ "$INSTALL_FAILED" -gt 0 ]]; then
+    exit 1
+fi
+exit 0
