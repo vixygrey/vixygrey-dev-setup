@@ -51,6 +51,20 @@
 
 ### Fixed
 
+- **The script always exited 0, even when items failed** (#370, #377). `set +e` is deliberate — one bad formula must not abandon the other two hundred — but nothing ever converted the counted failures back into an exit status, and the last statement in the file was a bare `echo`. So a run could print `Failed: 12` and still satisfy `./setup-dev-tools-mac.sh && echo ok`.
+
+  The reason it survived this long is that the only failure signal was the macOS notification, and `notify_failure` opens with `command -v terminal-notifier >/dev/null || return 0`. Interactively there is a banner and a red summary; in a launchd job, a `topgrade` step, an `&&` chain or a CI runner there was **nothing at all** — a run with a dozen failures was byte-identical, to its caller, to a clean one.
+
+  Now `exit 1` when `INSTALL_FAILED > 0`. `--dry-run` is included on purpose: it counts errors too, and a preview that cannot fail is no use as a gate. The interactive `exec zsh -l` prompt still replaces the process and takes the status with it, which is acceptable rather than worth contorting the flow for — `exec` is only reached when a human answered the prompt having just read the red summary, and `--no-prompt` answers `n` (#265), so every unattended run reaches the exit. Proven by injecting one synthetic `error` before the summary: `Failed: 1` → exit 1; a clean dry run still exits 0.
+
+- **`kubectl` is a Homebrew alias, and was declared as one** (#371). The canonical formula is `kubernetes-cli`, which is what `brew list --formula -1` prints — and that list is what `_brew_has_formula` matches against. So the membership test was false on a machine that already had kubectl installed, every non-resume run took the install branch, `brew install kubectl` no-opped, and the run recorded a fresh install that never happened. `--dry-run` claimed it was missing on a fully provisioned machine.
+
+  Exactly the shape of the `tflint`/`keyward` cask-as-formula bug below, one layer along: the name was not wrong, it was not *canonical*. Checked across all 174 declared formulae by diffing the declarations against `brew list --formula -1`; `kubectl` was the only one. (`tlrc` also showed up in that diff and is simply not installed on this machine yet — not an alias problem.)
+
+- **`--dry-run` reported every VS Code extension as pending, on a machine that had them all** (#372). `vscode_ext_install` checked `DRY_RUN` before consulting the cached extension list, so it printed 26 `Would install VS Code extension: …` lines for 26 extensions that were already installed, and counted none of them as skipped.
+
+  The early check was deliberate and its reasoning holds for the case it was written for: on a fresh machine the cask that provides `code` is installed a few lines above, so guarding on `code` first made a fresh-machine dry run refuse to preview a single extension — useless exactly where a preview matters most. The bug was that the *same* branch was taken on a machine where `code` exists and can answer the question. Now it asks when it can and falls back to the unconditional preview when it cannot, the way the brew helpers already resolve already-installed inside their own dry-run branch. `Skipped:` on this machine goes 253 → 280 (26 extensions plus kubectl).
+
 - **Two more generated configs had never been used by the tool they were written for** (#366). Found by sweeping for more of the #364 class — config that is generated, assumed working, and never actually exercised.
 
   **topgrade rejected its config on every run.** `cleanup = true` sat at the top level, where it is not a valid key; it belongs under `[misc]`. topgrade refuses the *whole file* on a single unknown field, so every invocation died at `Failed to deserialize ~/.config/topgrade.toml: unknown field 'cleanup'` before doing any work. The path was always right — the schema was not.

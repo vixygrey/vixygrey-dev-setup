@@ -1055,7 +1055,21 @@ vscode_ext_install() {
     # above this. Guarding first made a fresh-machine dry run say it would install VS Code
     # and then refuse to preview a single extension — the preview was useless exactly where
     # it matters most.
+    #
+    # But that is the FRESH-machine case, and the same branch was being taken on a machine
+    # where `code` exists and can answer the question — so a dry run printed 26 "Would
+    # install" lines for 26 extensions that were all already present, and counted none of
+    # them as skipped (#372). Ask when we can, fall back to the unconditional preview when
+    # we cannot; the brew helpers already resolve already-installed inside their dry-run
+    # branch this way.
     if [[ "$DRY_RUN" == "true" ]]; then
+        if installed code; then
+            [[ -z "${_VSCODE_EXTS+x}" ]] && _VSCODE_EXTS=$(code --list-extensions 2>/dev/null || true)
+            if printf '%s\n' "$_VSCODE_EXTS" | grep -qix -- "$ext"; then
+                warn "[DRY RUN] $name — already installed"
+                return 0
+            fi
+        fi
         info "[DRY RUN] Would install VS Code extension: $name ($ext)"
         return 0
     fi
@@ -2813,7 +2827,14 @@ banner "Containers & Orchestration"
 
 brew_install "lazydocker" "lazydocker (terminal UI for Docker)"
 brew_install "dive" "dive (explore Docker image layers)"
-brew_install "kubectl" "kubectl (Kubernetes CLI)"
+# Declared as kubernetes-cli, not kubectl. `kubectl` is a Homebrew ALIAS; the canonical
+# formula name is what `brew list --formula -1` prints, and that list is what
+# _brew_has_formula matches against. Declaring the alias made the membership test false
+# on a machine that already had it, so every run took the install branch, brew no-opped,
+# and the run counted a fresh install that never happened (#371). Same trap as naming a
+# package where the binary is meant — check `brew info --json=v2 <x> | jq -r
+# '.formulae[0].name'` before adding a formula whose name you are guessing.
+brew_install "kubernetes-cli" "kubectl (Kubernetes CLI)"
 brew_install "k9s" "k9s (terminal UI for Kubernetes)"
 
 fi  # containers
@@ -13571,3 +13592,24 @@ else
     echo -e "${GREEN}${BOLD}  Restart your terminal to activate everything.${NC}"
 fi
 echo ""
+
+# Turn the counted failures back into an exit status (#370).
+#
+# `set +e` is deliberate — one failed formula must not abandon the other 200 — but
+# nothing ever converted the count back, and the last statement in the file was a bare
+# `echo`, so EVERY run exited 0. A run could print `Failed: 12` and still satisfy
+# `./setup-dev-tools-mac.sh && echo ok`. The only failure signal was notify_failure,
+# which no-ops without terminal-notifier, so launchd jobs, `topgrade` steps, `&&` chains
+# and CI had no signal at all.
+#
+# The interactive `exec zsh -l` branch above replaces this process and takes the status
+# with it. That is acceptable and not worth contorting the flow for: exec is only
+# reached when a human answered the prompt having just read the red summary, and
+# --no-prompt answers "n" (#265), so every unattended run reaches this line.
+#
+# --dry-run is included on purpose. It counts errors too (a bad --only category, a
+# missing prerequisite), and a preview that cannot fail is no use as a CI gate.
+if [[ "$INSTALL_FAILED" -gt 0 ]]; then
+    exit 1
+fi
+exit 0
