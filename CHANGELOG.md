@@ -41,6 +41,14 @@
 
 ### Fixed
 
+- **`aws-knowledge` was registered with the wrong transport and had never once connected** (#364). It was added as `uvx awslabs.aws-knowledge-mcp-server@latest`, but the AWS Knowledge MCP Server is a **remote, fully managed HTTP endpoint** — `https://knowledge-mcp.global.api.aws`, no authentication, no AWS account, rate-limited. It is the only non-stdio server in this setup, and there is no legitimate PyPI distribution to `uvx` at all.
+
+  The name that *was* on PyPI — `awslabs.aws-knowledge-mcp-server`, a single 0.1.0 uploaded 2025-10-15, declaring `github.com/awslabs/aws-knowledge-mcp-server` as its homepage — is **yanked, with the reason `Not ours`**. It was not published by AWS Labs. So this line had been pointing `uvx` at a squatted package name.
+
+  **Nothing was fetched or executed here.** `~/.cache/uv` has no trace of it: uv refuses a yanked-only resolution rather than falling back to it, so the server failed closed from the moment it was added. The bug that made this visible is the same property that made it harmless — which is luck, not design, and worth saying plainly.
+
+  It also sat as a red `✘ Failed to connect` line in `--verify` output long enough to read as background noise, which is the #327 lesson repeating: routine noise trains you to skim past real failures. It looked like a flaky `uvx` install for as long as nobody ran the command by hand.
+
 - **core**: **Shim links are created after the installs, not before.** #353 linked mise shims into `~/.local/bin` from a block in `core` at line ~2105, while the `npm_global_install` calls start at ~2292. A tool installed during a run therefore got its mise shim and **no `~/.local/bin` link until the next run** — so `pi`, `claude`, `prettier` and `copilot` were unreachable from git hooks, launchd and GUI-launched editors for one full run after being installed.
 
   It **self-healed on the next run**, which is exactly why it survived: every tool that looked correctly linked had been installed by an *earlier* run than the one that linked it, and a login shell finds everything through mise activation regardless. Testing the obvious way says it works. Installing the Copilot CLI (#356) is what exposed it — `copilot` resolved in a login shell and not in a bare `sh`.

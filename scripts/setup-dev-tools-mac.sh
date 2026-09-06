@@ -4450,7 +4450,16 @@ if installed claude; then
         add_mcp aws-docs --transport stdio aws-docs -- uvx awslabs.aws-documentation-mcp-server
         add_mcp aws-pricing --transport stdio aws-pricing -- uvx awslabs.aws-pricing-mcp-server@latest
         add_mcp aws-iac --transport stdio aws-iac -- uvx awslabs.aws-iac-mcp-server@latest
-        add_mcp aws-knowledge --transport stdio aws-knowledge -- uvx awslabs.aws-knowledge-mcp-server@latest
+        # aws-knowledge is REMOTE — a fully managed HTTP endpoint, not a local stdio server,
+        # and the only one here that is (#364). No auth, no AWS account, rate-limited. This
+        # was registered as `uvx awslabs.aws-knowledge-mcp-server@latest` and had therefore
+        # never once connected: there is no legitimate PyPI distribution, and the name that
+        # was on PyPI (single 0.1.0, 2025-10-15) is YANKED with the reason "Not ours" — it
+        # was not published by AWS Labs despite claiming their repo as its homepage. uv
+        # refuses a yanked-only resolution rather than falling back to it, so the package was
+        # never fetched or executed here; ~/.cache/uv has no trace of it. Failing closed is
+        # the only reason a wrong `uvx` line pointed at a squatted name stayed harmless.
+        add_mcp aws-knowledge --transport http aws-knowledge https://knowledge-mcp.global.api.aws
         add_mcp cloudwatch cloudwatch --transport stdio -e "AWS_REGION=\${AWS_REGION}" -e "AWS_PROFILE=\${AWS_PROFILE}" -- uvx awslabs.cloudwatch-mcp-server@latest
         add_mcp iam iam --transport stdio -e "AWS_REGION=\${AWS_REGION}" -e "AWS_PROFILE=\${AWS_PROFILE}" -- uvx awslabs.iam-mcp-server@latest
         # herald (email + calendar) — read-only after initial sync; mutations need `herald serve`.

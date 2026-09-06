@@ -1004,7 +1004,8 @@ in `~/.claude.json` — never hand-edited). Enabled everywhere:
 | **fetch** | HTTP fetch with HTML->Markdown | `mcp-server-fetch` (uvx) |
 | **context7** | Up-to-date library docs by package name | `@upstash/context7-mcp` (npx) |
 | **herald** | Email + calendar (Gmail/iCloud) read/search tools | `herald mcp`; mutations require `herald serve` running |
-| **aws-docs / aws-pricing / aws-iac / aws-knowledge** | AWS docs, cost estimation, IaC patterns, knowledge base | `awslabs.*` (uvx) |
+| **aws-docs / aws-pricing / aws-iac** | AWS docs, cost estimation, IaC patterns | `awslabs.*` (uvx) |
+| **aws-knowledge** | AWS knowledge base | **Remote HTTP** — `https://knowledge-mcp.global.api.aws`. No auth, no AWS account, rate-limited. The only non-stdio server here |
 | **cloudwatch / iam** | CloudWatch logs + metrics; read IAM | `awslabs.*` (uvx); need AWS creds |
 | **GitKraken** | 31 tools — `git_*` porcelain, PR/issue read + create, Launchpad | `gk mcp` (gitkraken-cli cask), `--no-telemetry` |
 
