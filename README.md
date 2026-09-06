@@ -145,6 +145,7 @@ chmod +x scripts/setup-dev-tools-mac.sh
 | **lazygit** | Terminal UI for git -- visualize branches, stage hunks interactively |
 | **git-absorb** | Auto-fixup commits -- automatically amends the right commit |
 | **git-cliff** | Generate changelogs from conventional commits |
+| **gk** | GitKraken CLI -- installed to serve the [GitKraken MCP server](#claude-code-mcp-servers) to Claude Code, not for interactive use. Replaced the copy the GitLens VS Code extension used to hide in its own storage |
 | **pre-commit** | Git hook framework -- run linters/formatters before each commit |
 
 ---
@@ -389,7 +390,7 @@ Faster, prettier, smarter replacements for standard Unix utilities.
 | **atuin** | Replaces shell history with SQLite-backed, fuzzy-searchable database |
 | **mise** | Universal version manager -- Node, Python, Go, Ruby all in one (replaces nvm + pyenv + rbenv) |
 | **croft** | Primary editor -- VS Code-style terminal IDE (Rust; `cargo install --git`). Three-pane workspace, LSP/DAP, integrated terminal; `croft pair` runs an AI navigator (Anthropic/local). Installed from git `main` |
-| **Visual Studio Code** | The GUI editor, secondary to croft -- for long multi-tab refactors, graphical diffs, and `.editorconfig` repos (croft has no EditorConfig support). Ships 27 extensions and a merged `settings.json` that mirrors the terminal's rules -- including basedpyright as the Python type server, matching croft |
+| **Visual Studio Code** | The GUI editor, secondary to croft -- for long multi-tab refactors, graphical diffs, and `.editorconfig` repos (croft has no EditorConfig support). Ships 26 extensions and a merged `settings.json` that mirrors the terminal's rules -- including basedpyright as the Python type server, matching croft |
 | **micro** | The `$EDITOR` -- git/gh/lazygit commit messages, leaf's Ctrl+E, quick edits. Non-modal, on-screen key menu (`Ctrl+G` for help), Dracula theme |
 | **Claude Code (`claude`)** | Agentic coding in the terminal; hosts the migrated MCP servers |
 | **GitHub Copilot CLI** | `copilot` -- installed from `@github/copilot` (a standalone npm package now, not a `gh` extension). The VS Code side needs no install: current VS Code ships Copilot **built in**, and installing the marketplace extension fails against the newer bundled `copilot-chat`. Proprietary -- a deliberate exception to the open-source preference |
@@ -828,7 +829,7 @@ The script generates config files with sensible defaults:
 | `~/.nanorc` | nano | Line numbers, auto-indent, mouse, syntax highlighting |
 | `~/.myclirc` | mycli | Multi-line, auto-expand, destructive warnings |
 | `~/.gemrc` | Ruby | No docs on gem install |
-| `~/.claude.json` (mcpServers) | Claude Code MCP | User-scope MCP servers (migrated from Kiro via `claude mcp add`) — filesystem, github, git, fetch, context7, aws-docs, aws-pricing, aws-iac, aws-knowledge, cloudwatch, iam. Opt-in per project: playwright, postgres, several AWS servers. (Notion server dropped.) |
+| `~/.claude.json` (mcpServers) | Claude Code MCP | User-scope MCP servers (migrated from Kiro via `claude mcp add`) — filesystem, github, git, fetch, context7, aws-docs, aws-pricing, aws-iac, aws-knowledge, cloudwatch, iam, herald, GitKraken. Opt-in per project: playwright, postgres, several AWS servers. (Notion server dropped.) |
 | `~/.config/lazygit/config.yml` | lazygit | Dracula theme, delta pager, nerd fonts, auto-fetch, micro editor (`hx`), rounded borders |
 | `~/.config/k9s/skins/dracula.yaml` | k9s | Full Dracula skin |
 | `~/.local/bin/*` (36 links) | mise | Symlinks to every mise shim except the Python family and `corepack`, so `claude`, `prettier`, `tsc`, `copilot` and the language servers are reachable from git hooks, launchd and GUI-launched editors — not only from zsh, where `mise activate` runs |
@@ -1005,6 +1006,7 @@ in `~/.claude.json` — never hand-edited). Enabled everywhere:
 | **herald** | Email + calendar (Gmail/iCloud) read/search tools | `herald mcp`; mutations require `herald serve` running |
 | **aws-docs / aws-pricing / aws-iac / aws-knowledge** | AWS docs, cost estimation, IaC patterns, knowledge base | `awslabs.*` (uvx) |
 | **cloudwatch / iam** | CloudWatch logs + metrics; read IAM | `awslabs.*` (uvx); need AWS creds |
+| **GitKraken** | 31 tools — `git_*` porcelain, PR/issue read + create, Launchpad | `gk mcp` (gitkraken-cli cask), `--no-telemetry` |
 
 Opt-in per project with `claude mcp add --scope project <name> ...`: playwright,
 postgres, aws-ccapi, aws-serverless, aws-lambda-tool, aws-eks, aws-ecs, aws-dynamodb.
