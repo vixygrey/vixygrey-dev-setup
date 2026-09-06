@@ -131,12 +131,29 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
+      # bash 4+ is a hard prerequisite, not a convenience: the script opens with a 3.2-
+      # compatible guard that re-execs under a newer bash and refuses to run without one.
+      # macOS ships 3.2 as /bin/bash and the GitHub runner image has no Homebrew bash, so
+      # this step is satisfying a documented requirement the way a real user does — not
+      # papering over a failure. The very first CI run of this job hit exactly the message
+      # a user on a clean Mac gets, which is how we learned the requirement is written
+      # down nowhere but the script itself (follow-up: #379).
+      #
+      # Installing it also means the job exercises the re-exec path rather than skipping it.
+      - name: Install bash 4+ (the script's one manual prerequisite)
+        run: brew install bash
+
       - name: Dry run (must exit 0)
         run: ./scripts/setup-dev-tools-mac.sh --dry-run --no-prompt
 
       # --no-prompt is not optional here. Every prompt the script owns goes through
       # prompt_ask, and without it a run parks on the first question forever and holds
       # the lock (#265) — the exact scenario the flag was added for.
+      # `|| continue` on an unmatched glob, and a trailing `true`: the run can fail before
+      # it ever opens a log (it did — the guard above rejects bash 3.2 before LOG_FILE
+      # exists), and an unguarded `tail` on the literal unexpanded glob exits 1 under the
+      # runner's `bash -e`. A diagnostic step that fails the job for having nothing to
+      # report buries the real error under its own.
       - name: Surface the run's own logs on failure
         if: failure()
         run: |
@@ -145,8 +162,10 @@ jobs:
             echo "::group::$f"; cat "$f"; echo "::endgroup::"
           done
           for f in "$HOME"/.local/share/dev-setup/setup-*.log; do
+            [ -f "$f" ] || continue
             echo "::group::tail $f"; tail -200 "$f"; echo "::endgroup::"
           done
+          true
 
       # Regression guard for #370. A green "Dry run" step above proves a clean run
       # exits 0; it says nothing about a run WITH failures, which is the half that was
