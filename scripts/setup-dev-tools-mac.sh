@@ -61,9 +61,14 @@ NC=$'\033[0m'
 
 # -- Logging ------------------------------------------------------------------
 LOG_DIR="$HOME/.local/share/dev-setup"
-mkdir -p "$LOG_DIR"
-LOG_FILE="$LOG_DIR/setup-$(date +%Y%m%d-%H%M%S).log"
-ERROR_LOG="$LOG_DIR/setup-errors-$(date +%Y%m%d-%H%M%S).log"
+# #375: skip directory creation under SETUP_LIB_ONLY — the helper layer has no
+# logs and creating the dir is itself a side effect. The variables below are still
+# set so any helper that does try to log does not fail with an unbound variable.
+if [[ -z "${SETUP_LIB_ONLY:-}" ]]; then
+    mkdir -p "$LOG_DIR"
+    LOG_FILE="$LOG_DIR/setup-$(date +%Y%m%d-%H%M%S).log"
+    ERROR_LOG="$LOG_DIR/setup-errors-$(date +%Y%m%d-%H%M%S).log"
+fi
 
 log() { echo "[$(date +%H:%M:%S)] $*" >> "$LOG_FILE"; }
 
@@ -1257,6 +1262,20 @@ trust_tap() {
         || warn "Could not trust tap $tap — installs from it may be refused by Homebrew"
     env -u XDG_CONFIG_HOME brew trust --tap "$tap" >> "$LOG_FILE" 2>&1 || true
 }
+
+# -- Source guard for unit tests ---------------------------------------------
+# #375: the helpers above carry all the risk in this script and were testable only
+# by hand (the file executes top to bottom on source, so `source setup-dev-tools-mac.sh`
+# starts installing things). Setting SETUP_LIB_ONLY=1 before sourcing returns here,
+# after every helper is defined and before preflight / lock / anything destructive
+# runs — so a bats suite can load the helper layer in isolation on a Linux CI runner.
+#
+# The guard is its own short block so the intent is obvious in code review; placing it
+# after trust_tap (the last helper) and before preflight (the first side-effecting
+# function) gives it a precise load boundary.
+if [[ -n "${SETUP_LIB_ONLY:-}" ]]; then
+    return 0 2>/dev/null || exit 0
+fi
 
 # -- Pre-flight checks --------------------------------------------------------
 preflight() {
