@@ -2,7 +2,9 @@
 
 > Release notes for 7.0.0–7.1.1 live in [GitHub Releases](https://github.com/vixygrey/vixygrey-dev-setup/releases) (auto-generated). This file resumes hand-written notes at 7.2.0.
 
-## [Unreleased]
+## [7.16.0] - 2026-09-07
+
+This release hardens the setup script end to end: CI now runs it on macOS, generated-config and helper coverage are much broader, dry-run is honest and non-mutating, and several long-lived config-path and tooling defects are fixed alongside the rollback of the pi experiment.
 
 ### Added
 
