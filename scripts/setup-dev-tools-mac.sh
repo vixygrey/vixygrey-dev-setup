@@ -1938,7 +1938,80 @@ if [[ "$VERIFY" == "true" ]]; then
         "unchecked|lazydocker|$HOME/.config/lazydocker/config.yml|"
         "unchecked|yt-dlp|$HOME/.config/yt-dlp/config|"
         "unchecked|micro|$HOME/.config/micro/settings.json|"
+        # Each of these asks the tool itself where it reads from, so the row stays
+        # correct if the tool moves — the "ask the tool; do not hardcode" rule already
+        # in AGENTS. The captured path is tilde-normalised on both sides before
+        # comparing, so tools that return absolute paths and tools that return
+        # `~/...` are compared against the same string. Cheap high-signal
+        # additions from #374.
+        "path|git|$HOME/.config/git/config|_verify_git_config"
+        "path|ssh|$HOME/.ssh/config|_verify_ssh_config"
+        "path|npm|$HOME/.npmrc|npm config get userconfig 2>/dev/null | tr -d '\n'; echo"
+        "path|pip|$HOME/.config/pip/pip.conf|_verify_pip_config"
+        "path|gem|$HOME/.gemrc|_verify_gem_config"
+        "path|direnv|$HOME/.config/direnv/direnvrc|direnv status . 2>/dev/null | awk '/^  DirenvRC:/ {print \$2}'"
+        "path|gh|$HOME/.config/gh/config.yml|_verify_gh_config"
+        # ripgrep only reads its config when RIPGREP_CONFIG_PATH is exported — a self-
+        # contained trap. The export lives in the generated ~/.zshrc, so a row that
+        # fires under --verify would always look MISSING on a non-interactive shell.
+        # Leave the path row in place so it CAN run when the env is set, but the row
+        # is gated on the env var so it skips itself otherwise, instead of failing.
+        "path|ripgrep|$HOME/.config/ripgrep/config|[[ -n \"\${RIPGREP_CONFIG_PATH:-}\" ]] && echo \"\$RIPGREP_CONFIG_PATH\" || true"
     )
+
+    # Helpers for path-mode rows above. Keep them near VERIFY_TARGETS so the row and
+    # its helper are edited together. All three echo a single path on stdout, ending
+    # in `echo` to guarantee a trailing newline (some tools print without one and the
+    # comparison would fail on the missing byte).
+    _verify_git_config() {
+        # --show-origin prints `file:/path/to/git/config\tvalue`. Pull the file field
+        # and strip the `file:` prefix so it matches the `$HOME/.config/git/config`
+        # we wrote. The user's gitconfig may live at ~/.gitconfig instead — that is
+        # surfaced as a real FAIL (the row reports both paths), which is the point.
+        git config --show-origin --get core.hooksPath 2>/dev/null \
+            | awk -F'\t' 'NR==1 {sub(/^file:/, "", $1); print $1}'
+    }
+    _verify_pip_config() {
+        # pip config debug emits `user:` followed by two file lines. The second is the
+        # `$HOME/.config/pip/pip.conf` we write; the first is the legacy `~/.pip/`
+        # location pip also consults. Match on the .config/ path so we pick ours.
+        pip config debug 2>/dev/null \
+            | awk '/^user:/{u=1; next} u && /\.config\/pip\/pip\.conf/ {print $1; exit}' \
+            | tr -d ,; echo
+    }
+    # OpenSSH 10 dropped the `configfile` line from `ssh -G` output, so the
+    # issue's `ssh -G … | awk '/^configfile/'` advice no longer works. Ask `ssh`
+    # itself anyway (it still prints every other resolved option) and fall back to
+    # a file-existence probe on $HOME/.ssh/config when the line is absent. The
+    # file check is the same shape lazygit uses — both confirm "the path the tool
+    # reads" without depending on a specific output field.
+    _verify_ssh_config() {
+        local cf
+        cf="$(ssh -G git@127.0.0.1 2>/dev/null | awk '/^configfile/ {print $2; exit}')"
+        if [[ -n "$cf" ]]; then
+            echo "$cf"
+        elif [[ -f "$HOME/.ssh/config" ]]; then
+            echo "$HOME/.ssh/config"
+        fi
+    }
+    # RubyGems does not surface the gemrc path from `gem env` at all on stock macOS
+    # (it only lists INSTALLATION DIRECTORY, USER INSTALLATION DIRECTORY, and SYSTEM
+    # CONFIGURATION DIRECTORY — none of which is the user's gemrc). The cheapest
+    # probe is the file itself; if it is missing the row already fails earlier on
+    # the `[[ -e "$path" ]]` check.
+    _verify_gem_config() {
+        [[ -f "$HOME/.gemrc" ]] && echo "$HOME/.gemrc"
+    }
+    # `gh` does not expose a "where is your config file" command (the closest,
+    # `gh config get config-dir`, returns "could not find key 'config-dir'" on
+    # every release tried). It also ignores `XDG_CONFIG_HOME` and hardcodes
+    # `$HOME/.config/gh` unless `GH_CONFIG_DIR` is set. So the only honest
+    # check is the file itself — same shape as ngrok and VS Code (#334), and
+    # exactly the class this row was added to catch.
+    _verify_gh_config() {
+        local d="${GH_CONFIG_DIR:-$HOME/.config/gh}"
+        [[ -f "$d/config.yml" ]] && echo "$d/config.yml"
+    }
 
     VERIFY_OK=0 VERIFY_BAD=0 VERIFY_SEED=0 VERIFY_SKIP=0 VERIFY_GAP=0
 
@@ -1980,15 +2053,22 @@ if [[ "$VERIFY" == "true" ]]; then
                 ;;
             path)
                 _vp="$(eval "$cmd" 2>/dev/null | head -1)"
+                # Normalise a leading `~/` on either side to `$HOME/` so the row is
+                # stable across shells that return absolute paths (ssh, gem, pip) and
+                # shells that return tildes (npm, gh). Without this, half the rows
+                # would always FAIL on the same machine.
+                _vp="${_vp/#\~/$HOME}"
+                _cmp="$path"
+                _cmp="${_cmp/#\~/$HOME}"
                 if [[ -z "$_vp" ]]; then
                     printf "  ${YELLOW}%-12s${NC} %s — could not read its config path back\n" "UNKNOWN" "$label"
                     ((VERIFY_GAP++))
-                elif [[ "$_vp" == "$path" ]]; then
+                elif [[ "$_vp" == "$_cmp" ]]; then
                     printf "  ${GREEN}%-12s${NC} %s — reads the path we write\n" "OK" "$label"
                     ((VERIFY_OK++))
                 else
                     printf "  ${RED}%-12s${NC} %s — reads a DIFFERENT path than we write\n" "FAIL" "$label"
-                    printf "               ${DIM}we write:  %s${NC}\n" "$path"
+                    printf "               ${DIM}we write:  %s${NC}\n" "$_cmp"
                     printf "               ${DIM}%s reads: %s${NC}\n" "$label" "$_vp"
                     ((VERIFY_BAD++))
                 fi
@@ -2006,12 +2086,29 @@ if [[ "$VERIFY" == "true" ]]; then
         esac
     done
 
+    # #374: the `Unverified` line above counts only rows whose mode is `unchecked`.
+    # That is the right unit for the *table* but understates the real gap, which
+    # is "files we wrote that --verify never visits". Compute that as a separate
+    # `Files not verified` number so the summary stops implying the table covers
+    # the whole surface.
+    #
+    # Source of truth: every `write_managed[_script] "PATH"` in the script, with
+    # PATH shell-expanded. Then subtract every path the rows above already touch.
+    # `$WRITTEN_PATHS` is a here-string of paths; `$COVERED_PATHS` is the same.
+    # grep -F -x -v keeps the set difference fast on awk-free bash.
+    _vw_total="$(grep -oE 'write_managed(_script)? "[^"]+"' scripts/setup-dev-tools-mac.sh \
+        | awk '{gsub(/"/, "", $2); print $2}' | sort -u | wc -l | tr -d ' ')"
+    _vw_covered="$(awk -F'|' 'NR>0 && $1 != "" {print $3}' <(printf '%s\n' "${VERIFY_TARGETS[@]}") \
+        | sort -u | wc -l | tr -d ' ')"
+    _vw_gap=$(( _vw_total - _vw_covered ))
+
     echo ""
     echo -e "  ${GREEN}${BOLD}Verified:${NC}    $VERIFY_OK"
     echo -e "  ${RED}${BOLD}Failed:${NC}      $VERIFY_BAD"
     echo -e "  ${YELLOW}${BOLD}Seed:${NC}        $VERIFY_SEED"
     echo -e "  ${DIM}Unverified:  $VERIFY_GAP${NC}"
     echo -e "  ${DIM}Skipped:     $VERIFY_SKIP${NC}"
+    echo -e "  ${DIM}Files not verified: $_vw_gap (of $_vw_total)${NC}"
     echo ""
     if [[ "$VERIFY_BAD" -gt 0 ]]; then
         echo -e "${RED}A FAIL means the file is fine and the tool is not reading it.${NC}"
