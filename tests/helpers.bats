@@ -192,6 +192,68 @@ OUR
     [ "$status" -eq 0 ]
 }
 
+@test "mark_done: no-op under --dry-run so previews cannot poison --resume (#390)" {
+    run run_with_helpers '
+        export DRY_RUN=true
+        mkdir -p "$(dirname "$STATE_FILE")"
+        : > "$STATE_FILE"
+        mark_done "install:demo"
+        test ! -s "$STATE_FILE"
+    '
+    [ "$status" -eq 0 ]
+}
+
+@test "append_line_if_missing: dry-run narrates and writes nothing (#391)" {
+    run run_with_helpers '
+        export DRY_RUN=true
+        append_line_if_missing "$HOME/cfg" "alpha" "demo line"
+        test ! -e "$HOME/cfg"
+    '
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"[DRY RUN] Would append demo line to $TEST_TMP/cfg"* ]]
+}
+
+@test "append_line_if_missing: appends once and then reports already present" {
+    run run_with_helpers '
+        append_line_if_missing "$HOME/cfg" "alpha" "demo line"
+        append_line_if_missing "$HOME/cfg" "alpha" "demo line" && echo SECOND_WROTE || echo SECOND_SKIPPED
+        cat "$HOME/cfg"
+    '
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"SECOND_SKIPPED"* ]]
+    [[ "$output" == *$'alpha'* ]]
+}
+
+@test "append_block_if_missing: dry-run narrates and writes nothing (#391)" {
+    run run_with_helpers '
+        export DRY_RUN=true
+        append_block_if_missing "$HOME/cfg" "needle" "demo block" <<"EOF"
+needle
+payload
+EOF
+        test ! -e "$HOME/cfg"
+    '
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"[DRY RUN] Would append demo block to $TEST_TMP/cfg"* ]]
+}
+
+@test "append_block_if_missing: appends once when sentinel is absent" {
+    run run_with_helpers '
+        append_block_if_missing "$HOME/cfg" "needle" "demo block" <<"EOF"
+needle
+payload
+EOF
+        append_block_if_missing "$HOME/cfg" "needle" "demo block" <<"EOF"
+needle
+payload
+EOF
+        cat "$HOME/cfg"
+    '
+    [ "$status" -eq 0 ]
+    [ "$(printf "%s" "$output" | grep -c '^needle$')" -eq 1 ]
+    [ "$(printf "%s" "$output" | grep -c '^payload$')" -eq 1 ]
+}
+
 @test "SETUP_LIB_ONLY: loading the script writes no files under HOME" {
     run run_with_helpers '
         # Anything the test had to create is fine; anything that snuck out of the

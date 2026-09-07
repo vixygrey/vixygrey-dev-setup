@@ -32,6 +32,8 @@
 
 ### Fixed
 
+- **`--dry-run` no longer poisons later runs or writes bat / k9s config through unguarded side paths** (#390, #391, #392). `mark_done()` is now a no-op under `--dry-run`, so a preview no longer seeds `~/.local/share/dev-setup/completed-items.txt` with work that never happened and then lets `--resume` skip it later. Two remaining direct-write config branches were fixed too: `bat`'s built-in Dracula theme line and syntax-mapping block now go through dry-run-aware append helpers, and the existing-file `k9s` branch no longer appends a bare `  skin: dracula` line to EOF. Existing `k9s` YAML is updated with `yq` when available; otherwise the script warns and leaves the file alone rather than risking a malformed append.
+
 - **The bash bootstrap now tells the truth about prerequisites and finds more installed shells** (#379). README and `docs/GUIDE.md` now warn up front that macOS ships `bash` 3.2 while the script needs 4+. The startup guard no longer probes only `/opt/homebrew/bin/bash` and `/usr/local/bin/bash`; it now also checks `bash` on `PATH`, `$(brew --prefix)/bin/bash`, and MacPorts' `/opt/local/bin/bash`, and verifies a candidate is actually bash 4+ before `exec`ing it. That lets a machine with a perfectly good newer bash outside the two hardcoded paths start successfully, and avoids looping into another 3.2.
 
 - **`--dry-run` reported 65 completed actions it had not performed** (#381, #383). `delta configured as git pager`, `k9s Dracula skin configured`, `Global git hooks created`, and 62 more — every one printed by a `success` call that fired unconditionally around a `write_managed` that had correctly done nothing.
