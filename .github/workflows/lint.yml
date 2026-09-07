@@ -22,6 +22,21 @@ jobs:
       - name: Run ShellCheck
         run: shellcheck -x -S warning scripts/setup-dev-tools-mac.sh
 
+  unit-tests:
+    name: Helper unit tests
+    runs-on: ubuntu-latest
+    # #375: the ~30 helpers that carry all the risk in this script are testable in
+    # isolation under SETUP_LIB_ONLY=1, with no macOS, no Homebrew and no network.
+    # `bats` is what AGENTS.md's "extract and exercise in a throwaway dir" loop was
+    # by hand — automated. The suite starts with the highest-blast-radius helpers
+    # (write_managed, remove_superseded_managed, _trim_blank_edges) and grows.
+    steps:
+      - uses: actions/checkout@v6
+      - name: Install bats
+        run: sudo apt-get update && sudo apt-get install -y bats
+      - name: Run tests
+        run: bats tests/
+
   generated-config:
     name: Generated config parses
     runs-on: ubuntu-latest
