@@ -33,7 +33,7 @@ fi
 #           --interactive/-i, --resume, --cleanup, --uninstall, --version, --help
 # =============================================================================
 
-SCRIPT_VERSION="7.15.0"
+SCRIPT_VERSION="7.16.0"
 SCRIPT_START=$(date +%s)
 PYTHON_VERSION="3.12"
 
