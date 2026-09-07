@@ -10,6 +10,7 @@ if ((BASH_VERSINFO[0] < 4)); then
         [[ -n "$_newbash" && -x "$_newbash" ]] || continue
         [[ "$_newbash" != "$BASH" ]] || continue
         "$_newbash" -c '(( BASH_VERSINFO[0] >= 4 ))' >/dev/null 2>&1 || continue
+        # shellcheck disable=SC2093
         exec "$_newbash" "$0" "$@"
     done
     echo "This setup script needs bash 4+ (macOS ships bash 3.2)." >&2
