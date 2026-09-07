@@ -108,3 +108,102 @@ jobs:
           CHECKS
 
           exit "$fail"
+
+  dry-run:
+    name: Dry run (macOS)
+    runs-on: macos-latest
+    # Until this job existed, CI had never RUN the script — both other jobs are
+    # ubuntu-latest, and the script is macOS + Homebrew + zsh only. What they prove is
+    # that the file is valid bash and that some of its heredocs parse. `bash -n` checks
+    # grammar, not reachability: it cannot see a misspelled function name on a branch
+    # nobody took, a `case` arm that matches nothing, a category missing from
+    # ALL_CATEGORIES, or a flag parsed into the wrong variable. That class has reached a
+    # real user before — the error logs on the maintainer's machine carry
+    # "Unknown option: --only core" three separate times (#376).
+    #
+    # One --dry-run exercises argument parsing, preflight, category dispatch, every
+    # should_run gate, all 96 write_managed calls in dry-run mode, and the summary.
+    #
+    # This job is only meaningful because #370 taught the script to exit non-zero on a
+    # counted failure. Before that it returned 0 unconditionally and would have passed
+    # here no matter what it printed — which is why the second step below pins that
+    # behaviour rather than trusting it to stay.
+    steps:
+      - uses: actions/checkout@v6
+
+      # bash 4+ is a hard prerequisite, not a convenience: the script opens with a 3.2-
+      # compatible guard that re-execs under a newer bash and refuses to run without one.
+      # macOS ships 3.2 as /bin/bash and the GitHub runner image has no Homebrew bash, so
+      # this step is satisfying a documented requirement the way a real user does — not
+      # papering over a failure. The very first CI run of this job hit exactly the message
+      # a user on a clean Mac gets, which is how we learned the requirement is written
+      # down nowhere but the script itself (follow-up: #379).
+      #
+      # Installing it also means the job exercises the re-exec path rather than skipping it.
+      - name: Install bash 4+ (the script's one manual prerequisite)
+        run: brew install bash
+
+      # NOTE: this asserts the script RUNS and exits 0. It does not yet assert that a dry
+      # run leaves no trace — because it does not. The first green run of this job showed
+      # --dry-run executing a remote pnpm installer, 53 `git config --global` writes and a
+      # `brew bundle dump` on the runner (#380). That is contained here (the VM is
+      # ephemeral) but it is the stronger assertion this job should eventually make:
+      # snapshot $HOME and `git config --global --list` either side and fail on a diff.
+      # It can only be added once #380 is fixed, so it is tracked there, not skipped here.
+      - name: Dry run (must exit 0)
+        run: ./scripts/setup-dev-tools-mac.sh --dry-run --no-prompt
+
+      # --no-prompt is not optional here. Every prompt the script owns goes through
+      # prompt_ask, and without it a run parks on the first question forever and holds
+      # the lock (#265) — the exact scenario the flag was added for.
+      # `|| continue` on an unmatched glob, and a trailing `true`: the run can fail before
+      # it ever opens a log (it did — the guard above rejects bash 3.2 before LOG_FILE
+      # exists), and an unguarded `tail` on the literal unexpanded glob exits 1 under the
+      # runner's `bash -e`. A diagnostic step that fails the job for having nothing to
+      # report buries the real error under its own.
+      - name: Surface the run's own logs on failure
+        if: failure()
+        run: |
+          for f in "$HOME"/.local/share/dev-setup/setup-errors-*.log; do
+            [ -s "$f" ] || continue
+            echo "::group::$f"; cat "$f"; echo "::endgroup::"
+          done
+          for f in "$HOME"/.local/share/dev-setup/setup-*.log; do
+            [ -f "$f" ] || continue
+            echo "::group::tail $f"; tail -200 "$f"; echo "::endgroup::"
+          done
+          true
+
+      # Regression guard for #370. A green "Dry run" step above proves a clean run
+      # exits 0; it says nothing about a run WITH failures, which is the half that was
+      # broken and the half this whole job depends on. Inject one synthetic error
+      # immediately before the summary and assert the status comes back non-zero.
+      - name: A run with failures must exit non-zero
+        run: |
+          set -euo pipefail
+          src=scripts/setup-dev-tools-mac.sh
+          # Fail loudly if the anchor moves, rather than testing an unmodified copy and
+          # calling it a pass — the silent-no-op shape the generated-config job also
+          # guards against with its empty-extraction check.
+          grep -qx '# FINAL SUMMARY' "$src" \
+            || { echo "::error::anchor '# FINAL SUMMARY' not found in $src"; exit 1; }
+          awk '/^# FINAL SUMMARY$/ && !done {
+                 print "error \"synthetic failure (CI regression guard for #370)\""
+                 print ""
+                 done = 1
+               } { print }' "$src" > /tmp/failing.sh
+          chmod +x /tmp/failing.sh
+          grep -q 'synthetic failure' /tmp/failing.sh \
+            || { echo "::error::injection produced no change"; exit 1; }
+          bash -n /tmp/failing.sh
+
+          # `rc`, not `status` — `status` is a read-only special in zsh, so the obvious
+          # name makes this block untestable in the maintainer's own shell.
+          rc=0
+          /tmp/failing.sh --dry-run --no-prompt > /tmp/failing.out 2>&1 || rc=$?
+          grep -aE 'Installed:|Skipped:|Failed:' /tmp/failing.out || true
+          if [ "$rc" -eq 0 ]; then
+            echo "::error::a run reporting a failure still exited 0 — #370 has regressed"
+            exit 1
+          fi
+          echo "ok — a run with one counted failure exited $rc"
