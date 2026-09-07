@@ -143,15 +143,78 @@ jobs:
       - name: Install bash 4+ (the script's one manual prerequisite)
         run: brew install bash
 
-      # NOTE: this asserts the script RUNS and exits 0. It does not yet assert that a dry
-      # run leaves no trace — because it does not. The first green run of this job showed
-      # --dry-run executing a remote pnpm installer, 53 `git config --global` writes and a
-      # `brew bundle dump` on the runner (#380). That is contained here (the VM is
-      # ephemeral) but it is the stronger assertion this job should eventually make:
-      # snapshot $HOME and `git config --global --list` either side and fail on a diff.
-      # It can only be added once #380 is fixed, so it is tracked there, not skipped here.
-      - name: Dry run (must exit 0)
-        run: ./scripts/setup-dev-tools-mac.sh --dry-run --no-prompt
+      # Runs in a throwaway $HOME and then proves the dry run left no trace in it — the
+      # assertion this job was created without, and the one #380 turned out to need. That
+      # first green run showed --dry-run executing a remote pnpm installer, making 53
+      # `git config --global` writes, a `brew bundle dump`, `docker buildx install`, a
+      # `chmod 700 ~/.gnupg`, and creating ~/.hushlogin and ~/.fzf.zsh — under a run whose
+      # closing line is "no changes were made".
+      #
+      # A DENYLIST of paths the script writes, not "the directory must be empty". Merely
+      # invoking brew, npm and code populates ~/Library/Caches/Homebrew, ~/.npm and
+      # ~/Library/Application Support/Code, none of which are ours; an emptiness check
+      # would fail on the next tool that caches something and teach everyone to ignore it.
+      # These entries are ours, unambiguously, and each one was actually created by a dry
+      # run before this was fixed.
+      - name: Dry run leaves no trace (must exit 0)
+        run: |
+          set -uo pipefail
+          sandbox="$(mktemp -d)"
+          # Hand the path to the failure() step below — the run's logs live under the
+          # sandbox now, not under the runner's own $HOME.
+          echo "SANDBOX_HOME=$sandbox" >> "$GITHUB_ENV"
+
+          rc=0
+          HOME="$sandbox" ./scripts/setup-dev-tools-mac.sh --dry-run --no-prompt || rc=$?
+          if [ "$rc" -ne 0 ]; then
+            echo "::error::dry run exited $rc"
+            exit "$rc"
+          fi
+
+          # ~/.local/share/dev-setup is the run's OWN log/state/lock directory. It has to
+          # exist for the run to be able to report anything, so it is the one deliberate
+          # exception rather than an oversight.
+          bad=0
+          while read -r rel; do
+            [ -z "$rel" ] && continue
+            if [ -e "$sandbox/$rel" ]; then
+              echo "::error::--dry-run created ~/$rel"
+              bad=1
+            fi
+          done <<'PATHS'
+          .gitconfig
+          .hushlogin
+          .fzf.zsh
+          .zshrc
+          .zprofile
+          .zshenv
+          .gitignore_global
+          .gitmessage
+          .config/git/hooks
+          .config/k9s
+          .config/micro
+          .config/brewfile
+          .docker
+          .claude
+          .ssh
+          .gnupg
+          .local/share/go/bin
+          PATHS
+
+          # .gitconfig is called out separately: 53 unguarded `git config --global` writes
+          # were the bulk of #380, and "the file does not exist" is the clearest proof.
+          if HOME="$sandbox" git config --global --list >/dev/null 2>&1; then
+            echo "::error::--dry-run wrote global git config"
+            HOME="$sandbox" git config --global --list | sed 's/^/    /'
+            bad=1
+          fi
+
+          if [ "$bad" -ne 0 ]; then
+            echo "Everything the dry run left behind:"
+            find "$sandbox" -mindepth 1 -maxdepth 4 | sed "s|^$sandbox|    ~|" | sort
+            exit 1
+          fi
+          echo "ok — dry run left nothing behind but its own log directory"
 
       # --no-prompt is not optional here. Every prompt the script owns goes through
       # prompt_ask, and without it a run parks on the first question forever and holds
@@ -164,11 +227,14 @@ jobs:
       - name: Surface the run's own logs on failure
         if: failure()
         run: |
-          for f in "$HOME"/.local/share/dev-setup/setup-errors-*.log; do
+          # SANDBOX_HOME when the dry-run step got far enough to set it, the runner's own
+          # $HOME otherwise (the bash 3.2 guard rejects the run before either exists).
+          root="${SANDBOX_HOME:-$HOME}"
+          for f in "$root"/.local/share/dev-setup/setup-errors-*.log; do
             [ -s "$f" ] || continue
             echo "::group::$f"; cat "$f"; echo "::endgroup::"
           done
-          for f in "$HOME"/.local/share/dev-setup/setup-*.log; do
+          for f in "$root"/.local/share/dev-setup/setup-*.log; do
             [ -f "$f" ] || continue
             echo "::group::tail $f"; tail -200 "$f"; echo "::endgroup::"
           done
