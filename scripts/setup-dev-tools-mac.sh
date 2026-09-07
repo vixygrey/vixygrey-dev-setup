@@ -32,7 +32,10 @@ PYTHON_VERSION="3.12"
 # and put it on THIS run's PATH so freshly-installed Go tools resolve immediately.
 export GOBIN="$HOME/.local/share/go/bin"
 export PATH="$GOBIN:$PATH"
-mkdir -p "$GOBIN"
+# The directory itself is created later, once --dry-run has been parsed — see the
+# ensure_dir call before preflight. Creating it here ran before the flags were read,
+# so a dry run made the directory unconditionally (#380). The export and the PATH
+# entry are free; only the mkdir is a change to the machine.
 
 # -- Colors & Formatting ------------------------------------------------------
 RED=$'\033[0;31m'
@@ -726,6 +729,45 @@ should_run() {
 
 # -- Utility functions --------------------------------------------------------
 installed() { command -v "$1" &>/dev/null; }
+
+# git_global <args...>
+# A `git config --global` WRITE, with the --dry-run rule applied in one place instead
+# of at 49 call sites. Every one of those sites was unguarded, so `--dry-run` rewrote
+# the user's global git config — pager, aliases, hooksPath, excludesfile, commit
+# template, the includeIf identity routing — on a run that signs off with "no changes
+# were made" (#380). Guarding them individually would have worked once and rotted at
+# the next addition; a helper is what makes the next line someone adds safe by default.
+#
+# WRITES ONLY. A read (`if git config --global core.pager | grep -q delta`) must stay
+# a raw `git config` call — it has no side effect, and routing it through here would
+# make it return success without answering the question, which is how a guard turns
+# into a bug.
+#
+# Logged rather than printed: 49 "[DRY RUN] Would set …" lines would bury the run's
+# actual output. The enclosing block prints one summary line; the detail is in the log.
+git_global() {
+    if [[ "$DRY_RUN" == "true" ]]; then
+        log "[DRY RUN] git config --global $*"
+        return 0
+    fi
+    git config --global "$@"
+}
+
+# ensure_dir <dir...>
+# `mkdir -p` that honours --dry-run. Used at the sites a dry run actually reaches —
+# found by running one against a throwaway $HOME and listing what appeared, not by
+# reading (#380). An empty ~/.claude/agents or ~/.ssh/sockets is harmless in itself;
+# the problem is that "no changes were made" has to be true or it is worth nothing,
+# and a directory tree is the thing someone checks for when they want to know whether
+# a preview touched their machine. Same reasoning as git_global: one place, so the
+# next caller inherits the rule instead of having to remember it.
+ensure_dir() {
+    if [[ "$DRY_RUN" == "true" ]]; then
+        log "[DRY RUN] mkdir -p $*"
+        return 0
+    fi
+    mkdir -p "$@"
+}
 
 # _trim_blank_edges <file>   (trimmed content on stdout)
 # The file's content with leading and trailing blank lines removed, so two regions
@@ -1926,6 +1968,11 @@ if [[ "$VERIFY" == "true" ]]; then
     exit 0
 fi
 
+# GOBIN was exported at the top of the file (it has to be, so it lands on this run's
+# PATH before anything resolves a Go tool), but creating the directory is a change to
+# the machine and so waits until here, where --dry-run has been parsed (#380).
+ensure_dir "$GOBIN"
+
 preflight
 acquire_lock
 
@@ -1996,8 +2043,12 @@ if ! installed brew; then
     success "Homebrew installed"
 else
     warn "Homebrew already installed"
-    info "Updating Homebrew..."
-    brew update
+    if [[ "$DRY_RUN" == "true" ]]; then
+        info "[DRY RUN] Would: brew update"
+    else
+        info "Updating Homebrew..."
+        brew update
+    fi
 fi
 
 # Prevent brew from auto-updating on every install (we already updated above)
@@ -2150,6 +2201,9 @@ progress
 if ! is_done "install:pnpm"; then
 if ! installed pnpm; then
     info "Installing pnpm..."
+    if [[ "$DRY_RUN" == "true" ]]; then
+        info "[DRY RUN] Would: curl https://get.pnpm.io/install.sh | bash"
+    else
     installer="$(mktemp)"
     curl -fsSL "https://get.pnpm.io/install.sh" -o "$installer"
     if [[ ! -s "$installer" ]]; then
@@ -2162,6 +2216,7 @@ if ! installed pnpm; then
         error "Failed to install pnpm (check $LOG_FILE)"
         rm -f "$installer"
     fi
+    fi  # DRY_RUN — this block downloads and EXECUTES a remote installer (#380)
 else
     warn "pnpm already installed"
 fi
@@ -2226,11 +2281,11 @@ brew_install "pre-commit" "pre-commit (git hook framework)"
 # Configure delta as default git pager if not already set
 if ! git config --global core.pager | grep -q delta 2>/dev/null; then
     info "Configuring delta as git pager..."
-    git config --global core.pager delta
-    git config --global interactive.diffFilter "delta --color-only"
-    git config --global delta.navigate true
-    git config --global delta.side-by-side true
-    git config --global merge.conflictstyle diff3
+    git_global core.pager delta
+    git_global interactive.diffFilter "delta --color-only"
+    git_global delta.navigate true
+    git_global delta.side-by-side true
+    git_global merge.conflictstyle diff3
     success "delta configured as git pager"
 fi
 
@@ -2394,7 +2449,15 @@ fi
 if ! is_done "install:mkcert-ca"; then
 if installed mkcert; then
     info "Installing local CA for mkcert (enables trusted localhost HTTPS)..."
-    if mkcert -install >> "$LOG_FILE" 2>&1; then
+    # `mkcert -install` writes a root CA into the system trust store — about the last
+    # thing a preview should do to a machine. It was unguarded (#380), and invisible on
+    # a machine that already had the CA, where it is a no-op. It also never showed up on
+    # the CI runner, because a dry run does not install mkcert and this block is behind
+    # `installed mkcert` — a whole class that only appears on a machine that already has
+    # the tool.
+    if [[ "$DRY_RUN" == "true" ]]; then
+        info "[DRY RUN] Would: mkcert -install (adds a local root CA to the system trust store)"
+    elif mkcert -install >> "$LOG_FILE" 2>&1; then
         success "mkcert local CA installed"
     else
         error "Failed to install mkcert local CA (check $LOG_FILE)"
@@ -3134,9 +3197,14 @@ fi
 if ! is_done "install:fzf-keybindings"; then
 FZF_INSTALL_SCRIPT="$(brew --prefix 2>/dev/null)/opt/fzf/install"
 if [[ ! -f "$HOME/.fzf.zsh" ]] && installed fzf && [[ -x "$FZF_INSTALL_SCRIPT" ]]; then
-    info "Setting up fzf key bindings..."
-    "$FZF_INSTALL_SCRIPT" --key-bindings --completion --no-update-rc --no-bash --no-fish
-    success "fzf key bindings configured"
+    if [[ "$DRY_RUN" == "true" ]]; then
+        # fzf's own installer writes ~/.fzf.zsh. Unguarded, a dry run created it (#380).
+        info "[DRY RUN] Would run fzf's installer to write $HOME/.fzf.zsh (key bindings + completion)"
+    else
+        info "Setting up fzf key bindings..."
+        "$FZF_INSTALL_SCRIPT" --key-bindings --completion --no-update-rc --no-bash --no-fish
+        success "fzf key bindings configured"
+    fi
 fi
 mark_done "install:fzf-keybindings"
 fi
@@ -3600,7 +3668,7 @@ if git config --global delta.syntax-theme &>/dev/null; then
     warn "delta syntax theme already set"
 else
     info "Setting delta to Dracula theme..."
-    git config --global delta.syntax-theme Dracula
+    git_global delta.syntax-theme Dracula
     success "delta Dracula theme configured"
 fi
 mark_done "config:delta-dracula"
@@ -3844,66 +3912,66 @@ banner "Tool Configurations"
 info "Configuring git global settings..."
 
 # Default branch
-git config --global init.defaultBranch main 2>/dev/null
+git_global init.defaultBranch main 2>/dev/null
 
 # Pull strategy (rebase to keep history clean)
-git config --global pull.rebase true
+git_global pull.rebase true
 
 # Auto-stash on rebase
-git config --global rebase.autoStash true
+git_global rebase.autoStash true
 
 # Better diff algorithm
-git config --global diff.algorithm histogram
+git_global diff.algorithm histogram
 
 # Show diff in commit message editor
-git config --global commit.verbose true
+git_global commit.verbose true
 
 # Auto-correct typos (0.5s delay)
-git config --global help.autocorrect 5
+git_global help.autocorrect 5
 
 # Column output for branch listing
-git config --global column.ui auto
+git_global column.ui auto
 
 # Sort branches by most recent commit
-git config --global branch.sort -committerdate
+git_global branch.sort -committerdate
 
 # Remember merge conflict resolutions and auto-apply next time
-git config --global rerere.enabled true
+git_global rerere.enabled true
 
 success "  git core settings configured (rebase, histogram diff, rerere)"
 
 # Useful aliases
 # Basic shortcuts
-git config --global alias.st "status -sb"
-git config --global alias.co "checkout"
-git config --global alias.br "branch"
-git config --global alias.ci "commit"
-git config --global alias.sw "switch"
+git_global alias.st "status -sb"
+git_global alias.co "checkout"
+git_global alias.br "branch"
+git_global alias.ci "commit"
+git_global alias.sw "switch"
 
 # Undo & reset
-git config --global alias.unstage "reset HEAD --"
-git config --global alias.undo "reset --soft HEAD~1"
-git config --global alias.discard "checkout -- ."
-git config --global alias.amend "commit --amend --no-edit"
+git_global alias.unstage "reset HEAD --"
+git_global alias.undo "reset --soft HEAD~1"
+git_global alias.discard "checkout -- ."
+git_global alias.amend "commit --amend --no-edit"
 
 # Quick commits
-git config --global alias.wip "!git add -A && git commit -m 'WIP'"
-git config --global alias.save "!git add -A && git commit -m 'chore: savepoint'"
+git_global alias.wip "!git add -A && git commit -m 'WIP'"
+git_global alias.save "!git add -A && git commit -m 'chore: savepoint'"
 
 # Stash
-git config --global alias.stash-all "stash push --include-untracked"
-git config --global alias.stash-peek "stash show -p"
+git_global alias.stash-all "stash push --include-untracked"
+git_global alias.stash-peek "stash show -p"
 
 # Log & history
-git config --global alias.last "log -1 HEAD --stat"
-git config --global alias.lg "log --oneline --graph --decorate --all"
-git config --global alias.log-stats "log --oneline --stat"
-git config --global alias.log-since "log --oneline --since='1 week ago'"
-git config --global alias.contributors "shortlog -sne --no-merges"
-git config --global alias.standup "!git log --oneline --since='yesterday' --author=\"\$(git config user.name)\""
+git_global alias.last "log -1 HEAD --stat"
+git_global alias.lg "log --oneline --graph --decorate --all"
+git_global alias.log-stats "log --oneline --stat"
+git_global alias.log-since "log --oneline --since='1 week ago'"
+git_global alias.contributors "shortlog -sne --no-merges"
+git_global alias.standup "!git log --oneline --since='yesterday' --author=\"\$(git config user.name)\""
 
 # Branch management
-git config --global alias.recent "branch --sort=-committerdate --format='%(committerdate:relative)%09%(refname:short)' -n 15"
+git_global alias.recent "branch --sort=-committerdate --format='%(committerdate:relative)%09%(refname:short)' -n 15"
 # `gone` deletes local branches whose upstream is gone — which is exactly what a
 # squash merge plus `--delete-branch` leaves behind. Two things it must NOT do,
 # both of which the pre-#321 one-liners did:
@@ -3927,7 +3995,7 @@ git config --global alias.recent "branch --sort=-committerdate --format='%(commi
 # Single-quoted so the body reaches git verbatim; keep single quotes OUT of it.
 # `for-each-ref` rather than `branch -vv | awk` so that no `$1` has to survive
 # three levels of quoting.
-git config --global alias.gone '!f() {
+git_global alias.gone '!f() {
     git fetch --prune --quiet
     current=$(git branch --show-current)
     stale=$(git for-each-ref --format="%(refname:short) %(upstream:track)" refs/heads | grep "\[gone\]$" | cut -d" " -f1)
@@ -3951,25 +4019,28 @@ git config --global alias.gone '!f() {
 
 # cleanup delegates: ancestry selection is the bug above, so there is only one
 # correct implementation and this is a second name for it (#321).
-git config --global alias.cleanup "!git gone"
+git_global alias.cleanup "!git gone"
 
 # Diff
-git config --global alias.dft "!git -c diff.external=difft diff"
-git config --global alias.dfl "!git -c diff.external=difft log -p --ext-diff"
-git config --global alias.diff-names "diff --name-only"
-git config --global alias.diff-stat "diff --stat"
+git_global alias.dft "!git -c diff.external=difft diff"
+git_global alias.dfl "!git -c diff.external=difft log -p --ext-diff"
+git_global alias.diff-names "diff --name-only"
+git_global alias.diff-stat "diff --stat"
 
 # Worktree shortcuts
-git config --global alias.wt "worktree"
-git config --global alias.wta "worktree add"
-git config --global alias.wtl "worktree list"
+git_global alias.wt "worktree"
+git_global alias.wta "worktree add"
+git_global alias.wtl "worktree list"
 
 success "  git aliases configured (30+ shortcuts for status, log, branch, diff, worktree)"
 
 # ---- GPG + pinentry-mac ----
 GPG_AGENT_CONF="$HOME/.gnupg/gpg-agent.conf"
     info "Configuring GPG to use pinentry-mac..."
-    chmod 700 "$HOME/.gnupg"
+    # write_managed and the gpgconf restart below are the guarded parts; this chmod and
+    # the agent kill were not, so a dry run changed permissions on ~/.gnupg and dropped
+    # the user's cached passphrases (#380).
+    [[ "$DRY_RUN" == "true" ]] || chmod 700 "$HOME/.gnupg"
     PINENTRY_PATH="$(brew --prefix 2>/dev/null)/bin/pinentry-mac"
     if [[ ! -x "$PINENTRY_PATH" ]]; then
         warn "pinentry-mac not found at $PINENTRY_PATH — skipping GPG agent config"
@@ -3983,7 +4054,7 @@ default-cache-ttl 28800
 max-cache-ttl 28800
 GPG_CONFIG
         # Restart gpg-agent to pick up changes
-        gpgconf --kill gpg-agent 2>/dev/null || true
+        [[ "$DRY_RUN" == "true" ]] || gpgconf --kill gpg-agent 2>/dev/null || true
         success "GPG pinentry-mac configured (passphrases cached 8 hours)"
     fi
 
@@ -4199,8 +4270,23 @@ fi  # installed lazygit
 # the Dracula skin never applied (#333). `k9s info` reports the config file it will
 # use; strip its ANSI colouring, and match on the whole rest of the line because these
 # paths contain a space ("Application Support") that a field-splitting read truncates.
-K9S_CONFIG_DIR="$(XDG_CONFIG_HOME="$HOME/.config" k9s info 2>/dev/null \
-    | sed 's/\x1b\[[0-9;]*m//g' | sed -n 's|^Config: *||p' | head -1)"
+#
+# Asking is itself a side effect here, which is the trap. `k9s info` CREATES its config
+# directory as a consequence of being asked — verified against a throwaway
+# XDG_CONFIG_HOME, where `k9s info` alone leaves behind `k9s/` and `k9s/skins/`. So a
+# --dry-run that probed it made two directories on a machine that had never run k9s,
+# and it was the last thing still doing so after #380's other guards went in.
+#
+# "Ask the tool, do not hardcode" still holds for a real run; under --dry-run we take
+# the documented default instead. The cost is that the preview names the default path
+# on a machine where k9s has been relocated. That is the right trade: a preview may be
+# approximate, but it may not change anything.
+if [[ "$DRY_RUN" == "true" ]]; then
+    K9S_CONFIG_DIR="$HOME/.config/k9s"
+else
+    K9S_CONFIG_DIR="$(XDG_CONFIG_HOME="$HOME/.config" k9s info 2>/dev/null \
+        | sed 's/\x1b\[[0-9;]*m//g' | sed -n 's|^Config: *||p' | head -1)"
+fi
 K9S_CONFIG_DIR="${K9S_CONFIG_DIR%/config.yaml}"
 K9S_CONFIG_DIR="${K9S_CONFIG_DIR:-$HOME/.config/k9s}"
 K9S_SKINS_DIR="$K9S_CONFIG_DIR/skins"
@@ -4320,7 +4406,7 @@ K9S_CFG
 # Indentation follows the house rules: 2 spaces, 4 for Python, real tabs for Go/Makefiles.
 MICRO_CONFIG_DIR="$HOME/.config/micro"
 info "Configuring micro (Dracula, on-screen key menu, house indent rules)..."
-mkdir -p "$MICRO_CONFIG_DIR"
+ensure_dir "$MICRO_CONFIG_DIR"
 # NOT write_managed: settings.json is JSON, which has no comment syntax for the markers,
 # and micro rewrites this file itself whenever you change a setting from inside the editor
 # (`> set foo bar`). So merge instead of overwrite, with the on-disk file winning — your
@@ -5244,9 +5330,11 @@ Host github.com
 #     IdentityFile ~/.ssh/id_ed25519
 SSH_CONF
     # Create the multiplexing sockets dir, then lock down perms (dirs must exist first)
-    mkdir -p "$HOME/.ssh/sockets"
-    chmod 700 "$HOME/.ssh" "$HOME/.ssh/sockets"
-    chmod 600 "$SSH_CONFIG"
+    ensure_dir "$HOME/.ssh/sockets"
+    if [[ "$DRY_RUN" != "true" ]]; then
+        chmod 700 "$HOME/.ssh" "$HOME/.ssh/sockets"
+        chmod 600 "$SSH_CONFIG"
+    fi
     success "SSH configured (multiplexing, keychain, keep-alive, strong algorithms)"
 
 # Generate SSH key if none exists
@@ -5348,7 +5436,7 @@ Desktop.ini
 # genuinely wants a tracked CLAUDE.md can still `git add -f CLAUDE.md`.
 CLAUDE.md
 GITIGNORE_GLOBAL
-    git config --global core.excludesfile "$GLOBAL_GITIGNORE"
+    git_global core.excludesfile "$GLOBAL_GITIGNORE"
     success "Global .gitignore created and registered with git"
 
 # ---- .npmrc ----
@@ -5471,7 +5559,9 @@ DOCKER_DAEMON="$DOCKER_CONFIG_DIR/daemon.json"
 # Docker daemon.json is strict JSON (no comment markers), so we jq deep-merge our
 # keys into any existing file — adding/updating ours while preserving the user's.
 info "Configuring Docker daemon.json..."
-mkdir -p "$DOCKER_CONFIG_DIR"
+# The merge below honours DRY_RUN; this mkdir did not, so a dry run created ~/.docker
+# on a machine that had never run Docker (#380).
+[[ "$DRY_RUN" == "true" ]] || mkdir -p "$DOCKER_CONFIG_DIR"
 DOCKER_TMP="$(mktemp)"
 cat > "$DOCKER_TMP" <<'DOCKER_CONF'
 {
@@ -5512,9 +5602,15 @@ fi
 # ---- Docker buildx as default builder ----
 if installed docker; then
     if docker buildx version &>/dev/null; then
-        info "Setting Docker buildx as default builder..."
-        docker buildx install 2>/dev/null || true
-        success "Docker buildx set as default builder (multi-platform builds enabled)"
+        if [[ "$DRY_RUN" == "true" ]]; then
+            info "[DRY RUN] Would: docker buildx install (set buildx as the default builder)"
+        else
+            info "Setting Docker buildx as default builder..."
+            # Writes an alias into ~/.docker/config.json — a real change, so it needs the
+            # guard above (#380).
+            docker buildx install 2>/dev/null || true
+            success "Docker buildx set as default builder (multi-platform builds enabled)"
+        fi
     fi
 fi
 
@@ -5682,7 +5778,10 @@ if should_run "configs"; then  # resume configs (second segment)
 
 # ---- ~/.hushlogin (suppress "Last login" message) ----
 if ! is_done "config:hushlogin"; then
-if [[ -f "$HOME/.hushlogin" ]]; then
+if [[ "$DRY_RUN" == "true" ]]; then
+    [[ -f "$HOME/.hushlogin" ]] && warn "[DRY RUN] $HOME/.hushlogin — already exists" \
+        || info "[DRY RUN] Would create $HOME/.hushlogin"
+elif [[ -f "$HOME/.hushlogin" ]]; then
     warn "$HOME/.hushlogin already exists"
 else
     touch "$HOME/.hushlogin"
@@ -6335,7 +6434,7 @@ GIT_COMMIT_TEMPLATE="$HOME/.gitmessage"
 #
 # Closes: #<issue>
 GIT_TEMPLATE
-    git config --global commit.template "$GIT_COMMIT_TEMPLATE"
+    git_global commit.template "$GIT_COMMIT_TEMPLATE"
     success "Git commit template created and registered"
 
 # ---- Global git hooks directory ----
@@ -6642,7 +6741,7 @@ exit 0
 HOOK_PRECOMMIT
 
 # Register global hooks directory
-git config --global core.hooksPath "$GIT_HOOKS_DIR"
+git_global core.hooksPath "$GIT_HOOKS_DIR"
 
 success "Global git hooks created (${#GIT_HOOK_TYPES[@]} delegators + debug/large-file/conflict checks)"
 
@@ -8145,14 +8244,14 @@ fi
 
 # Register includeIf directives in global gitconfig
 if ! git config --global --get "includeIf.gitdir:~/Code/work/.path" &>/dev/null; then
-    git config --global "includeIf.gitdir:~/Code/work/.path" "$GITCONFIG_WORK"
+    git_global "includeIf.gitdir:~/Code/work/.path" "$GITCONFIG_WORK"
     success "git includeIf registered for ~/Code/work/ -> ~/.gitconfig-work"
 else
     warn "git includeIf for ~/Code/work/ already set"
 fi
 
 if ! git config --global --get "includeIf.gitdir:~/Code/personal/.path" &>/dev/null; then
-    git config --global "includeIf.gitdir:~/Code/personal/.path" "$GITCONFIG_PERSONAL"
+    git_global "includeIf.gitdir:~/Code/personal/.path" "$GITCONFIG_PERSONAL"
     success "git includeIf registered for ~/Code/personal/ -> ~/.gitconfig-personal"
 else
     warn "git includeIf for ~/Code/personal/ already set"
@@ -9080,7 +9179,7 @@ CLAUDE_RULES_DIR="$HOME/.claude/rules"
 # be stuck with the rules as they were that day. write_managed replaces the block in
 # place and keeps anything outside the markers.
 info "Writing Claude Code rules..."
-mkdir -p "$CLAUDE_RULES_DIR"
+ensure_dir "$CLAUDE_RULES_DIR"
 
     # Workflow rules (trunk-based, PR-first)
     write_managed "$CLAUDE_RULES_DIR/workflow.md" "#" <<'WORKFLOW_RULES'
@@ -9341,7 +9440,7 @@ CLAUDE_AGENTS_DIR="$HOME/.claude/agents"
 # already has agents", so a single pre-existing file froze the whole set and no
 # later edit or addition ever reached a provisioned machine (#277).
 info "Writing Claude Code subagents (code-reviewer, aws-helper)..."
-mkdir -p "$CLAUDE_AGENTS_DIR"
+ensure_dir "$CLAUDE_AGENTS_DIR"
 write_generated "$CLAUDE_AGENTS_DIR/code-reviewer.md" <<'AGENT_REVIEWER'
 ---
 name: code-reviewer
@@ -9389,7 +9488,7 @@ success "Claude Code subagents created (code-reviewer, aws-helper)"
 CLAUDE_COMMANDS_DIR="$HOME/.claude/commands"
 # Refreshed every run via write_generated — same reasoning as the agents block (#277).
 info "Writing Claude Code custom slash commands..."
-mkdir -p "$CLAUDE_COMMANDS_DIR"
+ensure_dir "$CLAUDE_COMMANDS_DIR"
 
 # /pr-review — review the current branch's changes
 write_generated "$CLAUDE_COMMANDS_DIR/pr-review.md" <<'CMD_PR_REVIEW'
@@ -10423,13 +10522,17 @@ fi  # shell
 banner "Export Brewfile"
 
 BREWFILE_DIR="$HOME/.config/brewfile"
-mkdir -p "$BREWFILE_DIR"
 BREWFILE="$BREWFILE_DIR/Brewfile"
 
+if [[ "$DRY_RUN" == "true" ]]; then
+    info "[DRY RUN] Would export a Brewfile snapshot to $BREWFILE"
+else
+mkdir -p "$BREWFILE_DIR"
 info "Exporting Brewfile snapshot (with descriptions)..."
 brew bundle dump --file="$BREWFILE" --force --describe 2>/dev/null || true
 success "Brewfile exported to $BREWFILE"
 echo "  -> Restore on a new machine: brew bundle install --file=$BREWFILE"
+fi  # DRY_RUN (#380)
 
 # -----------------------------------------------------------------------------
 # Final Summary
@@ -13317,10 +13420,10 @@ GIT_PERSONAL_ID
             # in ~/Code/oss, ~/Inbox, /tmp, etc.). git reads config top-to-bottom, so the
             # work includeIf must sit AFTER [user] to override it — re-assert it here so it
             # lands after the [user] block git config just appended.
-            git config --global user.name "$personal_name"
-            git config --global user.email "$personal_email"
-            git config --global --unset-all "includeIf.gitdir:~/Code/work/.path" 2>/dev/null || true
-            git config --global "includeIf.gitdir:~/Code/work/.path" "$GITCONFIG_WORK"
+            git_global user.name "$personal_name"
+            git_global user.email "$personal_email"
+            git_global --unset-all "includeIf.gitdir:~/Code/work/.path" 2>/dev/null || true
+            git_global "includeIf.gitdir:~/Code/work/.path" "$GITCONFIG_WORK"
             success "Global git default = personal ($personal_email); ~/Code/work still overrides it"
         fi
     fi
