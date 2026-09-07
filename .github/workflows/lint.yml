@@ -37,6 +37,49 @@ jobs:
       - name: Run tests
         run: bats tests/
 
+  brew-name-check:
+    name: Homebrew name canonicality
+    runs-on: ubuntu-latest
+    # #384: every `brew_install "X"` and `brew_cask_install "X"` declaration must
+    # use a name that exists, in the declared type, in Homebrew's current core
+    # API. Two bugs of this shape have already shipped (#371: kubectl alias;
+    # #366: tflint/keyward wrong type); both were silent at runtime because
+    # `brew install` falls back to the right thing once it figures out the
+    # caller's intent. Proves a third class too: a bare name that is NOT in core
+    # and not declared with its tap is indistinguishable from a typo, so the
+    # check fails every bare-name-on-tap declaration unless it is rewritten
+    # as `user/repo/name`.
+    #
+    # Runs on ubuntu-latest — no Homebrew needed. Cached formula.json / cask.json
+    # keyed by date so a 48 MB download does not run on every PR.
+    steps:
+      - uses: actions/checkout@v6
+      - name: Install jq
+        run: sudo apt-get update && sudo apt-get install -y jq
+      - name: Resolve cache key (UTC date)
+        id: date
+        run: echo "value=$(date -u +%Y-%m-%d)" >> "$GITHUB_OUTPUT"
+      - name: Cache core formula API
+        id: cache-formula
+        uses: actions/cache@v4
+        with:
+          path: ${{ runner.temp }}/formula.json
+          key: brew-formula-${{ steps.date.outputs.value }}
+      - name: Cache core cask API
+        id: cache-cask
+        uses: actions/cache@v4
+        with:
+          path: ${{ runner.temp }}/cask.json
+          key: brew-cask-${{ steps.date.outputs.value }}
+      - name: Download formula.json if cache miss
+        if: steps.cache-formula.outputs.cache-hit != 'true'
+        run: curl -sSL --max-time 120 https://formulae.brew.sh/api/formula.json -o "$RUNNER_TEMP/formula.json"
+      - name: Download cask.json if cache miss
+        if: steps.cache-cask.outputs.cache-hit != 'true'
+        run: curl -sSL --max-time 120 https://formulae.brew.sh/api/cask.json -o "$RUNNER_TEMP/cask.json"
+      - name: Run check
+        run: bash tests/ci/check-brew-names.sh "$RUNNER_TEMP/formula.json" "$RUNNER_TEMP/cask.json" scripts/setup-dev-tools-mac.sh
+
   generated-config:
     name: Generated config parses
     runs-on: ubuntu-latest
