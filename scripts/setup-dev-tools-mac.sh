@@ -233,6 +233,10 @@ STATE_DIR="$HOME/.local/share/dev-setup"
 STATE_FILE="$STATE_DIR/completed-items.txt"
 
 mark_done() {
+    # A preview must not poison a later `--resume` by recording work it only named.
+    # CI's dry-run job deliberately permits the log/state dir itself to exist, so this
+    # class needs the guard here rather than another path denylist entry (#390).
+    [[ "$DRY_RUN" == "true" ]] && return 0
     echo "$1" >> "$STATE_FILE"
 }
 
@@ -1010,6 +1014,42 @@ write_generated() {
         managed_note refreshed "$file"
     fi
     mv "$tmp" "$file"
+}
+
+# Append one exact line when it is missing. Used for tool-owned config files whose
+# existing user content we must preserve rather than replace. DRY_RUN narrates the
+# pending append and writes nothing (#391).
+append_line_if_missing() {
+    local file="$1" line="$2" desc="${3:-line}"
+    if [[ -f "$file" ]] && grep -qxF -- "$line" "$file" 2>/dev/null; then
+        return 1
+    fi
+    if [[ "$DRY_RUN" == "true" ]]; then
+        info "[DRY RUN] Would append $desc to $file"
+        return 0
+    fi
+    mkdir -p "$(dirname "$file")"
+    printf '%s\n' "$line" >> "$file"
+}
+
+# Append a heredoc block when a sentinel text is missing. Same constraints and same
+# DRY_RUN rule as append_line_if_missing (#391).
+append_block_if_missing() {
+    local file="$1" needle="$2" desc="${3:-block}"
+    local tmp; tmp="$(mktemp)"
+    cat > "$tmp"
+    if [[ -f "$file" ]] && grep -qF -- "$needle" "$file" 2>/dev/null; then
+        rm -f "$tmp"
+        return 1
+    fi
+    if [[ "$DRY_RUN" == "true" ]]; then
+        info "[DRY RUN] Would append $desc to $file"
+        rm -f "$tmp"
+        return 0
+    fi
+    mkdir -p "$(dirname "$file")"
+    cat "$tmp" >> "$file"
+    rm -f "$tmp"
 }
 
 # Membership checks against a ONE-TIME snapshot of installed formulae/casks, instead
@@ -3819,13 +3859,11 @@ banner "Dracula Theme"
 if installed bat; then
     BAT_CONFIG_DIR="$(bat --config-dir 2>/dev/null)"
     if [[ -n "$BAT_CONFIG_DIR" ]]; then
-        mkdir -p "$BAT_CONFIG_DIR"
         if ! is_done "config:bat-dracula"; then
-        if [[ -f "$BAT_CONFIG_DIR/config" ]] && grep -q 'Dracula' "$BAT_CONFIG_DIR/config" 2>/dev/null; then
-            warn "bat Dracula theme already configured"
+        if append_line_if_missing "$BAT_CONFIG_DIR/config" '--theme="Dracula"' 'bat Dracula theme'; then
+            configured "bat Dracula theme configured"
         else
-            echo '--theme="Dracula"' >> "$BAT_CONFIG_DIR/config"
-            success "bat Dracula theme configured"
+            warn "bat Dracula theme already configured"
         fi
         mark_done "config:bat-dracula"
         fi
@@ -4547,11 +4585,29 @@ k9s:
         toggleOffColor: "#6272a4"
 K9S_DRACULA
 
-    # Set dracula as active skin in k9s config
+    # Set dracula as active skin in k9s config. Existing files are updated with yq
+    # rather than a blind EOF append: the old append bypassed DRY_RUN and assumed the
+    # file ended inside the right YAML nesting, which is not a safe assumption (#392).
     K9S_MAIN_CONFIG="$K9S_CONFIG_DIR/config.yaml"
     if [[ -f "$K9S_MAIN_CONFIG" ]]; then
-        if ! grep -q "skin:" "$K9S_MAIN_CONFIG" 2>/dev/null; then
-            echo "  skin: dracula" >> "$K9S_MAIN_CONFIG"
+        if installed yq; then
+            _k9s_skin="$(yq eval '.k9s.ui.skin // ""' "$K9S_MAIN_CONFIG" 2>/dev/null || true)"
+            if [[ "$_k9s_skin" == "dracula" ]]; then
+                warn "k9s active skin already set to dracula"
+            elif [[ "$DRY_RUN" == "true" ]]; then
+                info "[DRY RUN] Would set k9s.ui.skin to dracula in $K9S_MAIN_CONFIG"
+            elif yq eval '.k9s.ui.skin = "dracula"' -i "$K9S_MAIN_CONFIG" >> "$LOG_FILE" 2>&1; then
+                :
+            else
+                warn "Could not set k9s.ui.skin in $K9S_MAIN_CONFIG — leaving existing YAML unchanged"
+            fi
+            unset _k9s_skin
+        elif grep -Eq '^[[:space:]]*skin:[[:space:]]*dracula([[:space:]]|$)' "$K9S_MAIN_CONFIG" 2>/dev/null; then
+            warn "k9s active skin already set to dracula"
+        elif [[ "$DRY_RUN" == "true" ]]; then
+            info "[DRY RUN] Would set k9s.ui.skin to dracula in $K9S_MAIN_CONFIG"
+        else
+            warn "yq not installed — leaving existing k9s YAML unchanged rather than appending a brittle line"
         fi
     else
         write_managed "$K9S_MAIN_CONFIG" "#" <<'K9S_CFG'
@@ -6247,10 +6303,7 @@ if installed bat; then
     BAT_CONFIG_DIR="$(bat --config-dir 2>/dev/null)"
     BAT_CONFIG="$BAT_CONFIG_DIR/config"
     if [[ -n "$BAT_CONFIG_DIR" ]] && [[ -f "$BAT_CONFIG" ]]; then
-        # Add mappings if not already present
-        if ! grep -q "map-syntax" "$BAT_CONFIG" 2>/dev/null; then
-            info "Adding bat file type mappings..."
-            cat >> "$BAT_CONFIG" <<'BAT_MAPPINGS'
+        if append_block_if_missing "$BAT_CONFIG" 'map-syntax "*.env:dotenv"' 'bat file type mappings' <<'BAT_MAPPINGS'
 
 # File type mappings for syntax highlighting
 --map-syntax "*.env:dotenv"
@@ -6274,7 +6327,8 @@ if installed bat; then
 --style="numbers,changes,header,grid"
 --italic-text=always
 BAT_MAPPINGS
-            success "bat file type mappings added"
+        then
+            configured "bat file type mappings added"
         else
             warn "bat file type mappings already configured"
         fi
