@@ -16,7 +16,21 @@
 
   The job carries a second step that pins **#370** rather than trusting it: a green dry run proves a *clean* run exits 0 and says nothing about a run **with** failures, which is the half that was broken and the half the job's own value depends on. So it injects one synthetic `error` immediately before the summary and asserts the status comes back non-zero — with a `grep -qx` on the anchor first, so a moved marker fails loudly instead of quietly testing an unmodified copy. That is the same silent-no-op guard the `generated-config` job applies to an empty heredoc extraction.
 
+### Changed
+
+- **The summary separates what was installed from what was configured** (#381, #383). `success()` had been doing three jobs — a tool installed, a config file written, a preflight check passed — and counting all three into one `Installed:` number. On a fully provisioned machine a run that installed *nothing* still reported `Installed: 71`: 65 config writes and 6 preflight checks wearing an install's clothes.
+
+  Now `Installed:` counts installs, a new **`Configured:`** line counts config writes, and preflight checks are printed green but counted nowhere — "Disk space: 291GB free" was never an install. It also sharpens the #258 caveat numerically: `--only git` reports `Configured: 0` rather than folding its zero configuration work into a healthy-looking number.
+
 ### Fixed
+
+- **`--dry-run` reported 65 completed actions it had not performed** (#381, #383). `delta configured as git pager`, `k9s Dracula skin configured`, `Global git hooks created`, and 62 more — every one printed by a `success` call that fired unconditionally around a `write_managed` that had correctly done nothing.
+
+  The messages are past-tense summaries, so they are now **silent** under `--dry-run` rather than reworded: no prefix makes "delta configured as git pager" honest about something that did not happen.
+
+  Nothing is lost from the preview because the same change fixes the opposite problem. `write_managed` used to announce a file only when it already existed *and* differed — so on a **fresh machine, where all 96 files are absent and every one of them would be created, a dry run named none of them.** The preview was least informative exactly where it matters most. It now says `Would create` / `Would refresh` per file: **102 lines on a clean machine**, and 34 refreshes + 2 creates on this one, which is a real answer to "what would a run touch".
+
+  This is the other half of #380. That one stopped the dry run changing anything; this one stops it claiming it did. CI asserts both — the job already failed if a dry run left a trace, and now also fails if it reports a non-zero `Installed:` or `Configured:`. Verified by re-breaking the guard and watching it report `Configured: 65`, the exact count from the bug.
 
 - **`--dry-run` was changing the machine** (#380, #382). It signs off with *"This was a dry run — no changes were made."* That was not true. On a clean machine a preview ran the remote pnpm installer (`curl … get.pnpm.io/install.sh` → `bash "$installer"`), made **53 `git config --global` writes** — pager, aliases, `core.hooksPath`, `core.excludesfile`, the commit template, the `includeIf` identity routing — ran `brew update` and `brew bundle dump`, `docker buildx install`, `mkcert -install`, `chmod 700 ~/.gnupg` plus a `gpgconf --kill`, and created `~/.hushlogin`, `~/.fzf.zsh`, `~/.docker` and a handful of config directories.
 

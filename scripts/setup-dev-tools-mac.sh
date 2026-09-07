@@ -62,11 +62,40 @@ info() {
     log "INFO: $1"
 }
 
+# success() means "a tool was INSTALLED". It used to mean three different things —
+# a tool installed, a config file written, and a preflight check that passed — all
+# counted into one `Installed:` number, which is why a run that installed nothing
+# still reported 71 (#381). The other two now have their own functions below.
 success() {
     printf '\033[2K\r'
     echo -e "${GREEN}[  OK]${NC} $1"
     log "OK: $1"
     ((INSTALL_SUCCESS++)) || true
+}
+
+# configured() — a config file was written. Counts into `Configured:`, separately from
+# installs, and is SILENT under --dry-run.
+#
+# Silent rather than reworded: these messages are past-tense summaries ("delta
+# configured as git pager"), and no prefix makes a past-tense sentence honest about
+# something that did not happen. write_managed already narrates the file it would
+# create or refresh, so the preview loses nothing by dropping the claim — it gets
+# shorter and stops asserting 65 completed actions that never occurred.
+configured() {
+    [[ "$DRY_RUN" == "true" ]] && { log "[DRY RUN] would report: $1"; return 0; }
+    printf '\033[2K\r'
+    echo -e "${GREEN}[  OK]${NC} $1"
+    log "CONFIGURED: $1"
+    ((INSTALL_CONFIGURED++)) || true
+}
+
+# checked() — a preflight check passed. Green, because it is good news, but counted
+# nowhere: "Disk space: 291GB free" is not something that was installed, and it was
+# padding the install count on every run.
+checked() {
+    printf '\033[2K\r'
+    echo -e "${GREEN}[  OK]${NC} $1"
+    log "CHECK: $1"
 }
 
 warn() {
@@ -111,6 +140,7 @@ notify_failure() {
 
 # -- Counters -----------------------------------------------------------------
 INSTALL_SUCCESS=0
+INSTALL_CONFIGURED=0
 INSTALL_SKIPPED=0
 INSTALL_FAILED=0
 INSTALL_CURRENT=0
@@ -837,6 +867,12 @@ write_managed() {
     { printf '%s\n' "$mb"; cat "$body"; printf '%s\n' "$me"; } > "$tmp"
     if [[ "$DRY_RUN" != "true" ]]; then mkdir -p "$(dirname "$file")"; fi
     if [[ ! -f "$file" ]]; then
+        # A dry run used to say nothing at all here, so the preview was least
+        # informative exactly where it matters most: on a fresh machine, where every
+        # one of these 96 files is absent and every one of them would be created.
+        # Announcing it is also what lets `configured` go silent without the run
+        # losing the information (#381).
+        [[ "$DRY_RUN" == "true" ]] && info "[DRY RUN] Would create $file"
         [[ "$DRY_RUN" == "true" ]] || cp "$tmp" "$file"
     elif grep -qF "$mb" "$file" 2>/dev/null; then
         # Split the file around our markers so the regions OUTSIDE them can be
@@ -910,7 +946,14 @@ write_managed_script() {
     fi
     local mb="# >>> dev-setup managed block (do not edit between the markers) >>>"
     local me="# <<< dev-setup managed block <<<"
-    if [[ "$DRY_RUN" == "true" ]]; then return 0; fi
+    if [[ "$DRY_RUN" == "true" ]]; then
+        # Say what would happen, for the same reason write_managed does (#381) — these
+        # are the ~/Scripts/bin helpers and the git hook delegators, and a preview that
+        # named none of them was the least useful part of the output.
+        [[ -f "$file" ]] && info "[DRY RUN] Would refresh $file" \
+                         || info "[DRY RUN] Would create $file"
+        return 0
+    fi
     mkdir -p "$(dirname "$file")"
     local bt; bt="$(mktemp)"; printf '%s\n' "$body" > "$bt"
     if [[ ! -f "$file" ]] || ! grep -qF "$mb" "$file" 2>/dev/null; then
@@ -1219,17 +1262,17 @@ preflight() {
         confirm=$(prompt_ask "Continue anyway? [y/N] " "n")
         [[ "$confirm" =~ ^[Yy]$ ]] || exit 1
     else
-        success "macOS $macos_version detected"
+        checked "macOS $macos_version detected"
     fi
 
     # Architecture
     local arch
     arch=$(uname -m)
-    success "Architecture: $arch"
+    checked "Architecture: $arch"
 
     # Internet connectivity
     if curl -s --max-time 5 https://raw.githubusercontent.com > /dev/null 2>&1; then
-        success "Internet connection OK"
+        checked "Internet connection OK"
     else
         error "No internet connection detected"
         echo "  This script requires internet to download packages."
@@ -1249,7 +1292,7 @@ preflight() {
         confirm=$(prompt_ask "Continue anyway? [y/N] " "n")
         [[ "$confirm" =~ ^[Yy]$ ]] || exit 1
     else
-        success "Disk space: ${free_space:-unknown}GB free"
+        checked "Disk space: ${free_space:-unknown}GB free"
     fi
 
     # Admin check — only when a step in THIS run will actually use sudo, and saying
@@ -1260,12 +1303,12 @@ preflight() {
     reasons=$(sudo_reasons)
     if [[ -z "$reasons" ]]; then
         if [[ "$DRY_RUN" == "true" ]]; then
-            success "No admin privileges needed (dry run changes nothing)"
+            checked "No admin privileges needed (dry run changes nothing)"
         else
-            success "No admin privileges needed for the selected categories"
+            checked "No admin privileges needed for the selected categories"
         fi
     elif sudo -n true 2>/dev/null; then
-        success "Admin privileges available"
+        checked "Admin privileges available"
     else
         info "Admin privileges are needed for:"
         while IFS= read -r reason; do
@@ -1273,7 +1316,7 @@ preflight() {
         done <<< "$reasons"
         info "Enter your password once now:"
         sudo -v
-        success "Admin privileges granted"
+        checked "Admin privileges granted"
         # Keep sudo alive for the duration of the script. Test liveness BEFORE each
         # refresh, not only after the sleep: the old order could refresh the sudo
         # timestamp once more after the parent had already exited.
@@ -1286,7 +1329,7 @@ preflight() {
         if ! brew doctor >> "$LOG_FILE" 2>&1; then
             warn "brew doctor found issues (may cause install failures — see $LOG_FILE)"
         else
-            success "Homebrew healthy (brew doctor passed)"
+            checked "Homebrew healthy (brew doctor passed)"
         fi
     fi
 
@@ -1306,7 +1349,7 @@ preflight() {
     fi
 
     # Log file
-    success "Log file: $LOG_FILE"
+    checked "Log file: $LOG_FILE"
 
     if [[ "$DRY_RUN" == "true" ]]; then
         echo ""
@@ -2286,7 +2329,7 @@ if ! git config --global core.pager | grep -q delta 2>/dev/null; then
     git_global delta.navigate true
     git_global delta.side-by-side true
     git_global merge.conflictstyle diff3
-    success "delta configured as git pager"
+    configured "delta configured as git pager"
 fi
 
 fi  # git
@@ -3669,7 +3712,7 @@ if git config --global delta.syntax-theme &>/dev/null; then
 else
     info "Setting delta to Dracula theme..."
     git_global delta.syntax-theme Dracula
-    success "delta Dracula theme configured"
+    configured "delta Dracula theme configured"
 fi
 mark_done "config:delta-dracula"
 fi
@@ -3900,7 +3943,7 @@ purple = "#bd93f9"
 red = "#ff5555"
 yellow = "#f1fa8c"
 STARSHIP_CONF
-    success "Starship prompt configured (rich two-line prompt, Dracula theme)"
+    configured "Starship prompt configured (rich two-line prompt, Dracula theme)"
 
 fi  # dracula
 
@@ -3938,7 +3981,7 @@ git_global branch.sort -committerdate
 # Remember merge conflict resolutions and auto-apply next time
 git_global rerere.enabled true
 
-success "  git core settings configured (rebase, histogram diff, rerere)"
+configured "  git core settings configured (rebase, histogram diff, rerere)"
 
 # Useful aliases
 # Basic shortcuts
@@ -4032,7 +4075,7 @@ git_global alias.wt "worktree"
 git_global alias.wta "worktree add"
 git_global alias.wtl "worktree list"
 
-success "  git aliases configured (30+ shortcuts for status, log, branch, diff, worktree)"
+configured "  git aliases configured (30+ shortcuts for status, log, branch, diff, worktree)"
 
 # ---- GPG + pinentry-mac ----
 GPG_AGENT_CONF="$HOME/.gnupg/gpg-agent.conf"
@@ -4055,7 +4098,7 @@ max-cache-ttl 28800
 GPG_CONFIG
         # Restart gpg-agent to pick up changes
         [[ "$DRY_RUN" == "true" ]] || gpgconf --kill gpg-agent 2>/dev/null || true
-        success "GPG pinentry-mac configured (passphrases cached 8 hours)"
+        configured "GPG pinentry-mac configured (passphrases cached 8 hours)"
     fi
 
 # ---- aria2 ----
@@ -4135,7 +4178,7 @@ disk-cache=64M
 ARIA2_CONF
     # Replace placeholder with actual home directory
     /usr/bin/sed -i '' "s|PLACEHOLDER_HOME|$HOME|g" "$ARIA2_CONFIG"
-    success "aria2 configured (16 connections, auto-resume, BitTorrent)"
+    configured "aria2 configured (16 connections, auto-resume, BitTorrent)"
 
 # ---- atuin ----
 ATUIN_CONFIG_DIR="$HOME/.config/atuin"
@@ -4200,7 +4243,7 @@ secrets_filter = true
 # Show stats in search footer (e.g., "3,402 commands")
 stats.show_in_footer = true
 ATUIN_CONF
-    success "atuin configured (fuzzy search, local-only, history filter, enter=paste)"
+    configured "atuin configured (fuzzy search, local-only, history filter, enter=paste)"
 
 # ---- lazygit Dracula theme ----
 if installed lazygit; then
@@ -4262,7 +4305,7 @@ promptToReturnFromSubprocess: false
 LAZYGIT_CONF
     remove_superseded_managed "$LAZYGIT_SUPERSEDED" \
         "lazygit reads $LAZYGIT_CONFIG" "(#333)"
-    success "lazygit configured (Dracula theme, delta pager, auto-fetch, micro editor)"
+    configured "lazygit configured (Dracula theme, delta pager, auto-fetch, micro editor)"
 fi  # installed lazygit
 
 # ---- k9s Dracula skin ----
@@ -4394,7 +4437,7 @@ K9S_CFG
         "k9s reads $K9S_SKIN" "(#333)"
     remove_superseded_managed "$K9S_SUPERSEDED_DIR/config.yaml" \
         "k9s reads $K9S_CONFIG_DIR/config.yaml" "(#333)"
-    success "k9s Dracula skin configured"
+    configured "k9s Dracula skin configured"
 
 # ---- micro editor config ----
 # micro is the $EDITOR: git/gh/lazygit commit messages, leaf's Ctrl+E, quick file edits.
@@ -4649,7 +4692,7 @@ brew_cask_install "font-fira-code-nerd-font" "Fira Code Nerd Font (with icons)"
 brew_cask_install "font-inter" "Inter (best UI font for web/design)"
 brew_cask_install "font-hack-nerd-font" "Hack Nerd Font (classic terminal font)"
 
-success "Development fonts installed"
+configured "Development fonts installed"
 
 # ---- shellcheck config ----
 SHELLCHECK_RC="$HOME/.shellcheckrc"
@@ -4663,7 +4706,7 @@ external-sources=true
 # SC2034: Variable appears unused (often used in sourced files)
 disable=SC1091,SC2034
 SHELLCHECK_CONF
-    success "shellcheck configured"
+    configured "shellcheck configured"
 
 # ---- leaf (Markdown previewer) config ----
 # leaf is a viewer, not an editor: Ctrl+E hands the file off to an external
@@ -4679,7 +4722,7 @@ if ! is_done "config:leaf"; then
 # Ctrl+E hands off editing to micro (leaf ignores $EDITOR).
 editor = 'micro {$path} +{$line}'
 LEAF_CONF
-    success "leaf configured (Ctrl+E opens micro at the current line)"
+    configured "leaf configured (Ctrl+E opens micro at the current line)"
     mark_done "config:leaf"
 fi
 
@@ -4776,7 +4819,7 @@ YT_DLP_CONFIG="$YT_DLP_CONFIG_DIR/config"
 # Restrict filenames to ASCII
 --restrict-filenames
 YTDLP_CONF
-    success "yt-dlp configured (best quality, aria2c downloader, metadata)"
+    configured "yt-dlp configured (best quality, aria2c downloader, metadata)"
 
 # difftastic aliases already configured in git global settings above
 
@@ -4835,7 +4878,7 @@ ACT_CONFIG="$HOME/.actrc"
 # and act prints a warning on every run without this (containers run under emulation).
 --container-architecture linux/amd64
 ACT_CONF
-    success "act configured (medium Ubuntu images, container reuse)"
+    configured "act configured (medium Ubuntu images, container reuse)"
 
 # ---- tflint config (Terraform linter) ----
 # tflint core only catches syntax/deprecations; the real rules live in the AWS
@@ -4897,7 +4940,7 @@ map-world-color = "f8f8f2"
 map-radius-color = "ffb86c"
 map-selected-color = "50fa7b"
 TRIPPY_CONF
-    success "trippy Dracula theme configured"
+    configured "trippy Dracula theme configured"
 
 # ---- miller config ----
 MLR_CONFIG="$HOME/.mlrrc"
@@ -4911,7 +4954,7 @@ MLR_CONFIG="$HOME/.mlrrc"
 # Allow comments in data files
 --skip-trivial-records
 MLR_CONF
-    success "miller configured (CSV input, pretty table output)"
+    configured "miller configured (CSV input, pretty table output)"
 
 # ---- asciinema config ----
 ASCIINEMA_CONFIG_DIR="$HOME/.config/asciinema"
@@ -4937,7 +4980,7 @@ capture_input = false
 # Default command to record
 command = "/bin/zsh -l"
 ASCIINEMA_CONF
-    success "asciinema configured (2s idle limit, no keystroke recording)"
+    configured "asciinema configured (2s idle limit, no keystroke recording)"
 
 # ---- gh-dash config ----
 GH_DASH_CONFIG_DIR="$HOME/.config/gh-dash"
@@ -4976,7 +5019,7 @@ theme:
     bg:
       selected: "#44475a"
 GHDASH_CONF
-        success "gh-dash configured (Dracula theme, PR/issue sections)"
+        configured "gh-dash configured (Dracula theme, PR/issue sections)"
     fi
 
 # ---- stern config ----
@@ -4998,7 +5041,7 @@ timestamps: short
 # Only show logs from last 5 minutes on connect
 since: 5m
 STERN_CONF
-    success "stern configured (50 tail lines, 5m lookback, timestamps)"
+    configured "stern configured (50 tail lines, 5m lookback, timestamps)"
 fi  # installed stern
 
 # ---- zellij config ----
@@ -5048,7 +5091,7 @@ mouse_mode true
 // Scroll buffer
 scroll_buffer_size 50000
 ZELLIJ_CONF
-success "zellij configured (Dracula theme, compact layout, mouse)"
+configured "zellij configured (Dracula theme, compact layout, mouse)"
 
 # 'dev' layout: editor pane + a Claude Code pane side-by-side (AI integration tier 1).
 # Launch with:  zellij --layout dev
@@ -5069,7 +5112,7 @@ layout {
     }
 }
 ZELLIJ_DEV
-success "zellij 'dev' layout created (editor + Claude pane: zellij --layout dev)"
+configured "zellij 'dev' layout created (editor + Claude pane: zellij --layout dev)"
 fi  # installed zellij
 
 # ---- newsboat config ----
@@ -5123,7 +5166,7 @@ https://nodejs.org/en/feed/blog.xml "~Node.js Blog"
 https://blog.rust-lang.org/feed.xml "~Rust Blog"
 https://github.blog/feed/ "~GitHub Blog"
 NEWSBOAT_URLS_CONF
-    success "newsboat configured (vim keys, Dracula colors, starter URLs)"
+    configured "newsboat configured (vim keys, Dracula colors, starter URLs)"
 
 # ---- mpv config ----
 MPV_CONFIG_DIR="$HOME/.config/mpv"
@@ -5161,7 +5204,7 @@ save-position-on-quit=yes
 screenshot-directory=~/Screenshots
 screenshot-format=png
 MPV_CONF
-    success "mpv configured (hardware accel, save position, screenshots)"
+    configured "mpv configured (hardware accel, save position, screenshots)"
 
 # cliamp self-configures on first run (point it at ~/Media/music from its UI /
 # `cliamp ~/Media/music`); no hand-written config here.
@@ -5206,7 +5249,7 @@ use_proxy 1
 bookmark bookmark.html
 keep_cache_in_memory 0
 W3M_CONF
-    success "w3m configured (UTF-8, cookies off)"
+    configured "w3m configured (UTF-8, cookies off)"
 
 # ---- nushell config ----
 # nushell follows XDG as well, and is the one tool that said so out loud: with
@@ -5232,7 +5275,7 @@ $env.PATH = ($env.PATH | prepend "/opt/homebrew/bin" | prepend ($env.HOME + "/.l
 NUSHELL_ENV_CONF
     remove_superseded_managed "$NUSHELL_SUPERSEDED" \
         "nushell reads $NUSHELL_ENV" "(#333)"
-    success "nushell env configured (starship prompt, Homebrew paths)"
+    configured "nushell env configured (starship prompt, Homebrew paths)"
 
 # ---- git-cliff config ----
 GIT_CLIFF_CONFIG_DIR="$HOME/.config/git-cliff"
@@ -5282,7 +5325,7 @@ filter_commits = false
 tag_pattern = "v[0-9].*"
 sort_commits = "newest"
 GIT_CLIFF_CONF
-    success "git-cliff configured (conventional commits, grouped changelog)"
+    configured "git-cliff configured (conventional commits, grouped changelog)"
 
 # ---- SSH config ----
 SSH_CONFIG="$HOME/.ssh/config"
@@ -5335,7 +5378,7 @@ SSH_CONF
         chmod 700 "$HOME/.ssh" "$HOME/.ssh/sockets"
         chmod 600 "$SSH_CONFIG"
     fi
-    success "SSH configured (multiplexing, keychain, keep-alive, strong algorithms)"
+    configured "SSH configured (multiplexing, keychain, keep-alive, strong algorithms)"
 
 # Generate SSH key if none exists
 if [[ ! -f "$HOME/.ssh/id_ed25519" ]]; then
@@ -5437,7 +5480,7 @@ Desktop.ini
 CLAUDE.md
 GITIGNORE_GLOBAL
     git_global core.excludesfile "$GLOBAL_GITIGNORE"
-    success "Global .gitignore created and registered with git"
+    configured "Global .gitignore created and registered with git"
 
 # ---- .npmrc ----
 NPMRC="$HOME/.npmrc"
@@ -5462,7 +5505,7 @@ prefer-offline=true
 # Engine strict (fail if node version doesn't match)
 engine-strict=true
 NPMRC_CONF
-    success ".npmrc configured (save-exact, no telemetry, prefer-offline)"
+    configured ".npmrc configured (save-exact, no telemetry, prefer-offline)"
 
 # ---- .editorconfig ----
 EDITORCONFIG="$HOME/.editorconfig"
@@ -5502,7 +5545,7 @@ indent_size = 2
 [*.{sh,bash,zsh}]
 indent_size = 4
 EDITORCONFIG_CONF
-    success ".editorconfig created (utf-8, lf, 2-space indent, trim whitespace)"
+    configured ".editorconfig created (utf-8, lf, 2-space indent, trim whitespace)"
 
 # ---- .prettierrc ----
 PRETTIERRC="$HOME/.prettierrc"
@@ -5520,7 +5563,7 @@ PRETTIERRC="$HOME/.prettierrc"
   "endOfLine": "lf"
 }
 PRETTIER_CONF
-    success ".prettierrc created (single quotes, trailing commas, 100 width)"
+    configured ".prettierrc created (single quotes, trailing commas, 100 width)"
 
 # ---- .curlrc ----
 CURLRC="$HOME/.curlrc"
@@ -5551,7 +5594,7 @@ CURLRC="$HOME/.curlrc"
 # User agent
 --user-agent "curl/dev"
 CURLRC_CONF
-    success ".curlrc configured (follow redirects, retry, compression, timeouts)"
+    configured ".curlrc configured (follow redirects, retry, compression, timeouts)"
 
 # ---- Docker daemon config ----
 DOCKER_CONFIG_DIR="$HOME/.docker"
@@ -5903,7 +5946,7 @@ typeset -U PATH path
 # This won't be added again if you remove it.
 source ~/.orbstack/shell/init.zsh 2>/dev/null || :
 ZPROFILE_CONF
-    success "$HOME/.zprofile created (editor, pager, XDG, Go, Rust, bun, pnpm, mise, direnv, OrbStack)"
+    configured "$HOME/.zprofile created (editor, pager, XDG, Go, Rust, bun, pnpm, mise, direnv, OrbStack)"
 
 # ---- ~/.zshenv (every zsh invocation — interactive or not) ----
 ZSHENV="$HOME/.zshenv"
@@ -5914,7 +5957,7 @@ ZSHENV="$HOME/.zshenv"
 # available in Claude Code, IDE terminals, and scripted shells.
 command -v mise &>/dev/null && eval "$(mise activate zsh)"
 ZSHENV_CONF
-    success "$HOME/.zshenv created (mise activation for all shell types)"
+    configured "$HOME/.zshenv created (mise activation for all shell types)"
 
 # ---- ~/.vimrc (basic vim config for server editing) ----
 VIMRC="$HOME/.vimrc"
@@ -6020,7 +6063,7 @@ if !isdirectory($HOME . "/.vim/undodir")
     call mkdir($HOME . "/.vim/undodir", "p")
 endif
 VIM_CONF
-    success "$HOME/.vimrc created (line numbers, clipboard, mouse, Dracula colors, space leader)"
+    configured "$HOME/.vimrc created (line numbers, clipboard, mouse, Dracula colors, space leader)"
 
 # ---- ~/.nanorc (better nano for quick edits) ----
 NANORC="$HOME/.nanorc"
@@ -6069,7 +6112,7 @@ include "PLACEHOLDER_BREW_PREFIX/share/nano/*.nanorc"
 NANO_CONF
     # Replace placeholder with actual brew prefix
     /usr/bin/sed -i '' "s|PLACEHOLDER_BREW_PREFIX|$(brew --prefix)|g" "$NANORC"
-    success "$HOME/.nanorc created (line numbers, auto-indent, mouse, syntax highlighting)"
+    configured "$HOME/.nanorc created (line numbers, auto-indent, mouse, syntax highlighting)"
 
 # ---- bat extended config (file type mappings) ----
 if ! is_done "config:bat-mappings"; then
@@ -6140,7 +6183,7 @@ trusted_config_paths = ["~/Code"]
 quiet = false
 verbose = false
 MISE_CONF
-    success "mise configured (auto-install, trust ~/Code)"
+    configured "mise configured (auto-install, trust ~/Code)"
 
 # ---- topgrade config ----
 # `cleanup` is a [misc] key, NOT a top-level one (#366). It sat at the top level here, and
@@ -6169,7 +6212,7 @@ cleanup = true
 # Use --greedy (or -a with Repo Cask Upgrade) so casks that self-update are still upgraded
 greedy_cask = true
 TOPGRADE_CONF
-    success "topgrade configured (cleanup, greedy cask updates)"
+    configured "topgrade configured (cleanup, greedy cask updates)"
 
 # ---- fastfetch config ----
 FASTFETCH_CONFIG="$HOME/.config/fastfetch/config.jsonc"
@@ -6246,7 +6289,7 @@ FASTFETCH_CONFIG="$HOME/.config/fastfetch/config.jsonc"
     ]
 }
 FASTFETCH_CONF
-    success "fastfetch configured (themed layout, Nerd Font icons, dev tool versions)"
+    configured "fastfetch configured (themed layout, Nerd Font icons, dev tool versions)"
 
 # ---- ripgrep config ----
 RIPGREPRC="$HOME/.ripgreprc"
@@ -6287,7 +6330,7 @@ RIPGREPRC="$HOME/.ripgreprc"
 --type-add=doc:*.{md,mdx,txt,rst}
 --type-add=style:*.{css,scss,sass,less}
 RG_CONF
-    success "$HOME/.ripgreprc configured (smart-case, hidden files, custom types)"
+    configured "$HOME/.ripgreprc configured (smart-case, hidden files, custom types)"
 
 # ---- fd ignore ----
 FDIGNORE="$HOME/.fdignore"
@@ -6310,7 +6353,7 @@ __pycache__/
 .DS_Store
 .Trash/
 FD_CONF
-    success "$HOME/.fdignore created"
+    configured "$HOME/.fdignore created"
 
 # ---- btop Dracula theme ----
 BTOP_CONFIG_DIR="$HOME/.config/btop"
@@ -6389,7 +6432,7 @@ theme[process_start]="#8be9fd"
 theme[process_mid]="#bd93f9"
 theme[process_end]="#ff79c6"
 BTOP_DRACULA
-    success "btop configured with Dracula theme"
+    configured "btop configured with Dracula theme"
 
 # ---- lazydocker Dracula config ----
 LAZYDOCKER_CONFIG_DIR="$HOME/.config/lazydocker"
@@ -6416,7 +6459,7 @@ logs:
   timestamps: true
   since: "60m"
 LAZYDOCKER_CONF
-    success "lazydocker configured with Dracula theme"
+    configured "lazydocker configured with Dracula theme"
 
 # ---- Git commit template ----
 GIT_COMMIT_TEMPLATE="$HOME/.gitmessage"
@@ -6435,7 +6478,7 @@ GIT_COMMIT_TEMPLATE="$HOME/.gitmessage"
 # Closes: #<issue>
 GIT_TEMPLATE
     git_global commit.template "$GIT_COMMIT_TEMPLATE"
-    success "Git commit template created and registered"
+    configured "Git commit template created and registered"
 
 # ---- Global git hooks directory ----
 GIT_HOOKS_DIR="$HOME/.config/git/hooks"
@@ -6743,7 +6786,7 @@ HOOK_PRECOMMIT
 # Register global hooks directory
 git_global core.hooksPath "$GIT_HOOKS_DIR"
 
-success "Global git hooks created (${#GIT_HOOK_TYPES[@]} delegators + debug/large-file/conflict checks)"
+configured "Global git hooks created (${#GIT_HOOK_TYPES[@]} delegators + debug/large-file/conflict checks)"
 
 # ---- AWS config ----
 AWS_CONFIG="$HOME/.aws/config"
@@ -6773,7 +6816,7 @@ max_attempts = 3
 # output = json
 AWS_CONF
     chmod 600 "$AWS_CONFIG"
-    success "AWS CLI configured (us-east-1, json, bat pager, auto-prompt)"
+    configured "AWS CLI configured (us-east-1, json, bat pager, auto-prompt)"
 
 # ---- GitHub CLI config ----
 GH_CONFIG_DIR="$HOME/.config/gh"
@@ -6803,7 +6846,7 @@ aliases:
     pm: pr merge --squash --delete-branch
     rel: release create --generate-notes
 GH_CONF
-    success "GitHub CLI configured (SSH protocol, micro editor, delta pager, aliases)"
+    configured "GitHub CLI configured (SSH protocol, micro editor, delta pager, aliases)"
 
 # ---- glab (GitLab CLI) config — mirror the gh conveniences ----
 # GitLab uses merge requests, so the pr* aliases point at `mr` (same alias NAMES as
@@ -6882,7 +6925,7 @@ timeout = 30
 # Compile bytecode
 compile = true
 PIP_CONF
-    success "pip configured (require virtualenv, no telemetry)"
+    configured "pip configured (require virtualenv, no telemetry)"
 
 # ---- gemrc (Ruby) ----
 GEMRC="$HOME/.gemrc"
@@ -6891,7 +6934,7 @@ GEMRC="$HOME/.gemrc"
 # Skip documentation when installing gems (saves time and disk)
 gem: --no-document
 GEM_CONF
-    success "$HOME/.gemrc created (no docs on gem install)"
+    configured "$HOME/.gemrc created (no docs on gem install)"
 
 # ---- pgcli config ----
 PGCLI_CONFIG_DIR="$HOME/.config/pgcli"
@@ -6930,7 +6973,7 @@ keyword_casing = upper
 # Auto-completion
 smart_completion = True
 PGCLI_CONF
-    success "pgcli configured (multi-line, auto-expand, destructive warnings, bat pager)"
+    configured "pgcli configured (multi-line, auto-expand, destructive warnings, bat pager)"
 
 # ---- harlequin config ----
 # Harlequin does NOT read ~/.config (#366). Its own --help: "By default, Harlequin finds
@@ -6952,7 +6995,7 @@ locale = "en_US.UTF-8"
 HARLEQUIN_CONF
     remove_superseded_managed "$HARLEQUIN_SUPERSEDED" \
         "harlequin reads $HARLEQUIN_CONFIG" "(#366)"
-    success "harlequin configured (Dracula theme, vscode keymap)"
+    configured "harlequin configured (Dracula theme, vscode keymap)"
 
 # ---- mycli config ----
 MYCLIRC="$HOME/.myclirc"
@@ -6990,7 +7033,7 @@ history_file = ~/.mycli-history
 # Wider output before wrapping
 wider_completion_menu = True
 MYCLI_CONF
-    success "$HOME/.myclirc configured (multi-line, auto-expand, destructive warnings)"
+    configured "$HOME/.myclirc configured (multi-line, auto-expand, destructive warnings)"
 
 # ---- just config (global justfile with common recipes) ----
 JUSTFILE_GLOBAL="$HOME/.justfile"
@@ -7125,7 +7168,7 @@ standup:
 loc:
     @scc . 2>/dev/null || find . -name '*.ts' -o -name '*.tsx' -o -name '*.js' -o -name '*.py' -o -name '*.go' -o -name '*.rs' | xargs wc -l | tail -1
 JUSTFILE_CONF
-    success "Global justfile created (~/.justfile — system, git, docker, network, cleanup, info recipes)"
+    configured "Global justfile created (~/.justfile — system, git, docker, network, cleanup, info recipes)"
 
 # ---- Ghostty config ----
 GHOSTTY_CONFIG_DIR="$HOME/.config/ghostty"
@@ -7194,7 +7237,7 @@ quick-terminal-autohide = true
 # Space you're actually looking at. Rebind the chord to taste.
 keybind = global:cmd+alt+t=new_window
 GHOSTTY_CONF
-success "Ghostty configured (JetBrainsMono Nerd Font, Dracula theme, transparent titlebar)"
+configured "Ghostty configured (JetBrainsMono Nerd Font, Dracula theme, transparent titlebar)"
 
 # ---- Ghostty auto-start + keep-alive (launchd agent) ----
 # Ghostty's global cmd+space quick-terminal keybind only works while Ghostty is running:
@@ -7500,7 +7543,7 @@ P_SHOT
     if [[ "$DRY_RUN" != "true" ]] && installed sketchybar; then
         brew services restart sketchybar >> "$LOG_FILE" 2>&1 || warn "Could not start sketchybar service (grant it Accessibility if needed)"
     fi
-    success "SketchyBar configured (Dracula, system widgets)"
+    configured "SketchyBar configured (Dracula, system widgets)"
 
 # ---- clipse clipboard listener (launchd agent) ----
 # clipse runs a background listener to capture clipboard history. Register a
@@ -7587,7 +7630,7 @@ prefix = [
     "~/Code"
 ]
 DIRENV_CONF
-    success "direnv configured (hidden env diff, auto-trust ~/Code)"
+    configured "direnv configured (hidden env diff, auto-trust ~/Code)"
 
 # Set RIPGREP_CONFIG_PATH in zshrc (needed for ripgrep to read config)
 # This will be in the managed block below
@@ -8878,7 +8921,7 @@ else
   }
 }
 CLAUDE_SETTINGS_CONF
-    success "Claude Code settings.json created (permissions, statusline)"
+    configured "Claude Code settings.json created (permissions, statusline)"
 fi
 
 # ---- Global ~/.ignore (replaces the non-existent fileSuggestionSettings key) ----
@@ -8903,7 +8946,7 @@ poetry.lock
 *.min.css
 *.map
 CLAUDE_IGNORE_CONF
-    success "Global .ignore created (lock files + minified bundles hidden from @ suggestions)"
+    configured "Global .ignore created (lock files + minified bundles hidden from @ suggestions)"
 
 # ---- Claude Code global CLAUDE.md (memory/instructions) ----
 CLAUDE_MD="$HOME/.claude/CLAUDE.md"
@@ -9170,7 +9213,7 @@ Every project should have a README.md with:
 - `semgrep --config auto .` — static analysis
 - `detect-secrets scan` — pre-commit secret detection
 CLAUDE_MD_CONF
-success "Claude Code global CLAUDE.md written (refreshed each run; edits outside the markers are kept)"
+configured "Claude Code global CLAUDE.md written (refreshed each run; edits outside the markers are kept)"
 
 # ---- Claude Code rules directory ----
 CLAUDE_RULES_DIR="$HOME/.claude/rules"
@@ -9295,7 +9338,7 @@ DOCKER_RULES
 - Use workspaces or separate state files per environment
 IAC_RULES
 
-success "Claude Code rules written (workflow, git, security, typescript, python, docker, iac — refreshed each run)"
+configured "Claude Code rules written (workflow, git, security, typescript, python, docker, iac — refreshed each run)"
 
 # ---- Claude Code hooks ----
 CLAUDE_HOOKS_DIR="$HOME/.claude/hooks"
@@ -9410,7 +9453,7 @@ fi
 exit 0
 HOOK_HADOLINT
 
-    success "Claude Code hooks created (auto-format JS/TS, auto-lint Python, lint Dockerfiles)"
+    configured "Claude Code hooks created (auto-format JS/TS, auto-lint Python, lint Dockerfiles)"
 
 # ---- Claude Code statusline (Dracula) ----
 CLAUDE_STATUSLINE="$HOME/.claude/statusline.sh"
@@ -9432,7 +9475,7 @@ out="${P}${model}${R} ${D}in${R} ${C}${dir}${R}"
 [ -n "$branch" ] && out="${out} ${D}on${R} ${G}${branch}${R}"
 printf '%b' "$out"
 STATUSLINE
-success "Claude Code Dracula statusline created (model, dir, git branch)"
+configured "Claude Code Dracula statusline created (model, dir, git branch)"
 
 # ---- Claude Code subagents ----
 CLAUDE_AGENTS_DIR="$HOME/.claude/agents"
@@ -9482,7 +9525,7 @@ Operating rules:
 3. Be cost-aware — mention `infracost` for IaC changes and pricing implications for new resources.
 4. Prefer the installed TUIs/CLIs over manual console steps; give exact commands.
 AGENT_AWS
-success "Claude Code subagents created (code-reviewer, aws-helper)"
+configured "Claude Code subagents created (code-reviewer, aws-helper)"
 
 # ---- Claude Code custom slash commands ----
 CLAUDE_COMMANDS_DIR="$HOME/.claude/commands"
@@ -9936,7 +9979,7 @@ Generate a conventional commit message for the currently staged changes.
 Keep the first line under 72 characters. Use imperative mood ("add" not "added").
 CMD_COMMIT
 
-success "Claude Code commands created (20 commands: /pr-review, /test-plan, /dep-audit, /quick-doc, /cleanup, /security-scan, /perf-check, /docker-lint, /iac-review, /convert, /new-feature, /fix-bug, /create-readme, /init-project, /refactor, /add-endpoint, /add-component, /ci-fix, /changelog, /commit-msg)"
+configured "Claude Code commands created (20 commands: /pr-review, /test-plan, /dep-audit, /quick-doc, /cleanup, /security-scan, /perf-check, /docker-lint, /iac-review, /convert, /new-feature, /fix-bug, /create-readme, /init-project, /refactor, /add-endpoint, /add-component, /ci-fix, /changelog, /commit-msg)"
 
 # ---- Claude Code first-party skills (authored here) ----
 # Skills that teach Claude to use tools THIS script installs, written fresh each run
@@ -13606,6 +13649,7 @@ echo -e "${MAGENTA}${BOLD}  Setup Complete!${NC}"
 echo -e "${MAGENTA}${BOLD}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
 echo ""
 echo -e "  ${GREEN}${BOLD}Installed:${NC}  $INSTALL_SUCCESS"
+echo -e "  ${GREEN}${BOLD}Configured:${NC} $INSTALL_CONFIGURED"
 echo -e "  ${YELLOW}${BOLD}Skipped:${NC}   $INSTALL_SKIPPED (already installed)"
 echo -e "  ${RED}${BOLD}Failed:${NC}    $INSTALL_FAILED"
 echo -e "  ${BLUE}${BOLD}Duration:${NC}  ${MINUTES}m ${SECONDS_REMAINING}s"
@@ -13663,7 +13707,10 @@ fi
 
 # Repeat the install-vs-config notice here (#258). "Installed: 10, Failed: 0" is
 # exactly what made a half-run look complete, so the caveat belongs beside it —
-# and last, so it is the final thing read before the run ends.
+# and last, so it is the final thing read before the run ends. The separate
+# `Configured:` count added in #381 makes the same point numerically: `--only git`
+# now reports Configured: 0 rather than folding its zero configuration work into a
+# healthy-looking install number.
 config_split_notice
 
 if [[ "$DRY_RUN" == "true" ]]; then
@@ -13675,7 +13722,7 @@ else
     if [[ ${#FAILED_ITEMS[@]} -gt 0 ]]; then
         notify_failure "${INSTALL_FAILED} item(s) failed — see $ERROR_LOG"
     else
-        notify_success "Installed $INSTALL_SUCCESS, skipped $INSTALL_SKIPPED in ${MINUTES}m ${SECONDS_REMAINING}s"
+        notify_success "Installed $INSTALL_SUCCESS, configured $INSTALL_CONFIGURED, skipped $INSTALL_SKIPPED in ${MINUTES}m ${SECONDS_REMAINING}s"
     fi
 fi
 
