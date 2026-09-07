@@ -85,6 +85,36 @@ jobs:
           done <<'CHECKS'
           JUSTFILE_CONF|just --justfile /tmp/generated --working-directory /tmp --list
           MANAGED_ZSHRC|zsh -n /tmp/generated
+          ZSHENV_CONF|zsh -n /tmp/generated
+          ZPROFILE_CONF|zsh -n /tmp/generated
+          HOOK_CHAIN_LIB|bash -n /tmp/generated
+          HOOK_DELEGATOR|bash -n /tmp/generated
+          HOOK_PRECOMMIT|bash -n /tmp/generated
+          HOOK_FORMAT|bash -n /tmp/generated
+          HOOK_RUFF|bash -n /tmp/generated
+          HOOK_HADOLINT|bash -n /tmp/generated
+          STATUSLINE|bash -n /tmp/generated
+          SCRIPT|bash -n /tmp/generated
+          SBAR_RC|bash -n /tmp/generated
+          SBAR_COLORS|bash -n /tmp/generated
+          SBAR_ICONS|bash -n /tmp/generated
+          P_FRONT|bash -n /tmp/generated
+          P_CLOCK|bash -n /tmp/generated
+          P_BATT|bash -n /tmp/generated
+          P_BT|bash -n /tmp/generated
+          P_WIFI|bash -n /tmp/generated
+          P_VOL|bash -n /tmp/generated
+          P_CPU|bash -n /tmp/generated
+          P_MEM|bash -n /tmp/generated
+          P_VPN|bash -n /tmp/generated
+          P_VPNT|bash -n /tmp/generated
+          P_SHOTC|bash -n /tmp/generated
+          P_SHOT|bash -n /tmp/generated
+          DOCKER_CONF|jq empty /tmp/generated
+          FASTFETCH_CONF|jq empty /tmp/generated
+          K9S_CFG|yq eval '.' /tmp/generated
+          GEM_CONF|yq eval '.' /tmp/generated
+          GHOSTTY_PLIST_EOF|python3 -c 'import plistlib, sys; plistlib.load(open("/tmp/generated","rb"))'
           CLAUDE_SETTINGS_CONF|jq empty /tmp/generated
           PRETTIER_CONF|jq empty /tmp/generated
           VSCODE_CONF|jq empty /tmp/generated

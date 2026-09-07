@@ -22,6 +22,8 @@
 
   Now `Installed:` counts installs, a new **`Configured:`** line counts config writes, and preflight checks are printed green but counted nowhere — "Disk space: 291GB free" was never an install. It also sharpens the #258 caveat numerically: `--only git` reports `Configured: 0` rather than folding its zero configuration work into a healthy-looking number.
 
+- **`generated-config` CI now parses 31 more generated heredocs** (#373). The job's `tag|validator` table went from 22 rows to 53. The new rows cover the highest-blast-radius omissions: `ZSHENV_CONF` / `ZPROFILE_CONF` (every shell, agents included), every `HOOK_*` (every `git commit`), every `P_*` and the three `SBAR_*` (SketchyBar's silent-per-plugin failure mode), `STATUSLINE` and `SCRIPT` (`~/Scripts/bin/*`), `DOCKER_CONF`, `FASTFETCH_CONF`, `K9S_CFG`, `GEM_CONF`, and `GHOSTTY_PLIST_EOF` (validated with `python3 -c 'import plistlib'` rather than `plutil`, so the row runs on Linux too). Every row was extracted and validated against current `main` before the PR opened, so the job cannot turn CI red on merge — it only prevents the next regression.
+
 ### Fixed
 
 - **The bash bootstrap now tells the truth about prerequisites and finds more installed shells** (#379). README and `docs/GUIDE.md` now warn up front that macOS ships `bash` 3.2 while the script needs 4+. The startup guard no longer probes only `/opt/homebrew/bin/bash` and `/usr/local/bin/bash`; it now also checks `bash` on `PATH`, `$(brew --prefix)/bin/bash`, and MacPorts' `/opt/local/bin/bash`, and verifies a candidate is actually bash 4+ before `exec`ing it. That lets a machine with a perfectly good newer bash outside the two hardcoded paths start successfully, and avoids looping into another 3.2.
