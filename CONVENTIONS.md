@@ -1,0 +1,486 @@
+# CONVENTIONS.md
+
+> **Normative rules for how the code in this repo looks and behaves.**
+>
+> For the procedural rules AI coding agents must follow when working in this
+> repo (issue-first workflow, verification loop, generator-vs-output doctrine,
+> release prep), see [`AGENTS.md`](AGENTS.md). The two documents are
+> complementary: this file describes the code, AGENTS.md describes the
+> workflow. When they conflict, follow AGENTS.md's process and this file's
+> substance.
+
+This file is **public and tracked**. It describes the repo, not the
+maintainer. Personal preferences belong in a gitignored `CLAUDE.md` on the
+maintainer's own machine.
+
+---
+
+## 1. What this repo is
+
+A single idempotent Bash script,
+[`scripts/setup-dev-tools-mac.sh`](scripts/setup-dev-tools-mac.sh), that
+provisions a macOS developer machine: installs CLI/GUI tools via Homebrew,
+writes dotfiles and config, and generates the user's Claude environment
+(`~/.claude/CLAUDE.md`, `~/.claude/rules/*`, agents, commands, skills, MCP
+servers). Almost all work happens in that one file.
+
+Generated output lives on the user's machine; tracked config (this file,
+`AGENTS.md`, `tests/`, `.github/`, `.pre-commit-config.yaml`, `docs/`,
+`scripts/`) describes how the generator works and how to work in the repo.
+
+---
+
+## 2. The golden rule: edit the generator, never the output
+
+Config files, the user's `~/.claude/CLAUDE.md`, the pre-commit hook, and the
+Desktop docs are all **generated** by the script — usually inside a quoted
+heredoc. To change any of them, edit the heredoc **in the script**, not the
+produced file (which gets overwritten on the next run).
+
+Generated files carry a managed-block marker:
+
+```text
+# >>> dev-setup managed block (do not edit between the markers) >>>
+…
+# <<< dev-setup managed block <<<
+```
+
+Content *between* the markers refreshes on every run. Content *outside* the
+markers is never rewritten — deliberately. That outside region is where user
+content lives (`~/.ssh/config` Host entries, `~/.aws/config` profiles,
+`~/.zshrc` hand edits). The script never deletes or rewrites it.
+
+### The exact-match deletion test
+
+`write_managed` deletes an outside region only when it **exactly matches**
+the block being written *or* the block already on disk — both are provably
+ours. Anything short of an exact match to our own output would eat real user
+config. This is enforced by the script and verified by
+[`tests/helpers.bats`](tests/helpers.bats) (`write_managed: scrubs a
+duplicate block when the outside region exactly equals ours`, `write_managed:
+does not eat an outside region that does NOT match our block`).
+
+---
+
+## 3. Two delivery paths — a fix that only lands on fresh installs is half a fix
+
+Most breakage found in this repo has the same shape: the generator is
+correct, but the machine never receives the correction. Before calling
+anything done, ask *how does this reach a machine that was already
+provisioned?*
+
+The two paths are:
+
+1. **Files written with `write_managed` / `write_managed_script`** refresh
+   on every run. Nothing more to do — but only the region between the
+   markers refreshes.
+2. **`~/.claude/settings.json` is different.** The heredoc
+   (`CLAUDE_SETTINGS_CONF`) only writes the full block when the file is
+   absent. Existing machines take the `jq` **merge branch**, which must be
+   taught about the change explicitly.
+
+Anything guarded by `if [[ -f … ]]` / `if [[ -d … ]]` is create-once and
+silently freezes — that is exactly how `~/.claude/CLAUDE.md` and
+`~/.claude/rules/` have drifted behind the generator in past releases. Prefer
+`write_managed`.
+
+Retiring a tool is not the same as cleaning up after it. `--cleanup`
+uninstalls the package; the config dir, the tap, and orphaned dependencies
+each need separate handling.
+
+---
+
+## 4. Categories install; `configs` configures
+
+`should_run "<category>"` gates only the **install** sections. Every
+generated config file is written in one ordered `configs` segment further
+down the script — with three named exceptions: starship is in `dracula`,
+`~/Scripts/*` in `filesystem`, `~/.zshrc` in `shell`.
+
+So `--only git` installs git tooling, refreshes **no** git configuration
+(the global pre-commit hook included), and still reports `Failed: 0`.
+
+When you add a config block, put it in the `configs` segment with everything
+else — and if it belongs to a category a user would plausibly try to refresh
+on its own, add that category to **`CONFIG_LIVES_IN_CONFIGS`** so
+`--only <cat>` names what it is *not* refreshing. The keys of that table are
+validated against `ALL_CATEGORIES` at startup, so a typo fails loudly
+instead of producing a notice that can never fire.
+
+`ALL_CATEGORIES` and `CONFIG_LIVES_IN_CONFIGS` are the canonical category
+lists. Add a new category in **both** places, in the same order, or the
+interactive picker is broken.
+
+---
+
+## 5. Generated config must match the consuming tool's real schema
+
+Unknown keys are often silently ignored, so "no error" is not evidence a
+setting works. Verify against the tool's documented schema, or grep its
+binary, before shipping a config block.
+
+Related rules the codebase has learned by breakage:
+
+- **Name the binary, not the package.** `trippy`→`trip`, `nushell`→`nu`,
+  `dynein`→`dy`, `imagemagick`→`magick`, `csvkit`→`csvlook`. A permission
+  rule or doc line naming the package never matches.
+- **Generated docs must reflect what the script installs.** A checklist
+  step, `TOOL_REFERENCE` entry, or `CLAUDE.md` line can promise a tool,
+  backend, default provider, or example command that the script never
+  installs. Cross-check every tool / backend / default / example command a
+  generated doc names against the install calls
+  (`brew_install` / `go_install` / `npm_global_install` / …) and, for
+  commands, the package's real `bin` keys.
+
+---
+
+## 6. A config can be valid and still be read by nobody
+
+This is the defect the repo has shipped most often. A generated file can be
+perfectly well-formed and sit somewhere its tool never looks. Nothing errors
+— the tool starts, falls back to its defaults, and carries on.
+
+The rule is per-tool, never per-directory. A blanket "move everything to
+XDG" sweep would have broken at least one tool that ignores `XDG_CONFIG_HOME`
+entirely (verified). Some tools are genuinely Library-based on macOS even
+when XDG-aware tools aren't. When in doubt, **ask the tool**:
+
+```sh
+lazygit --print-config-dir
+k9s info
+nu -c '$nu.env-path'
+bat --config-dir
+```
+
+…then derive the path from that output so a tool that moves its config
+again is self-correcting. Pin `XDG_CONFIG_HOME` to the value our own
+`.zshrc` exports when you query, because the question is not where the tool
+looks in whatever shell is running setup — possibly a bare bash on a fresh
+box that has never sourced the generated zshrc — but where it will look
+once setup is done.
+
+`remove_superseded_managed <file> <explanation> [ref]` is the canonical way
+to clear a copy we wrote at an address the tool no longer reads. It deletes
+only when the file carries our markers **and** holds nothing outside them
+— the same test `write_managed` applies before removing an outside region.
+It is deliberately conservative: a file we wrote before the
+managed-block discipline exists carries our content but no markers, so
+ownership cannot be proven and it stays with a warning. A harmless stale
+file beats deleting something we cannot prove is ours.
+
+`./scripts/setup-dev-tools-mac.sh --verify` is the check for all of this,
+and the only one that can answer "does anything read this." Read a `FAIL`
+as *the file is fine, the tool is ignoring it.*
+
+---
+
+## 7. Generated shell config is inherited by agents and scripts
+
+`~/.zshrc` is sourced by non-interactive shells, so anything defined there
+reaches Claude Code and any script. Aliases are an interactive convenience
+and **must be gated** — every modern replacement rejects the original's
+flags (`du -sh` prints dust's help, `rm -rf` is rejected by trash), and the
+quiet ones are worse (`ps aux`, `dig +short` silently ignore the argument).
+Gate the whole section on
+`[[ -o interactive && -z "$CLAUDECODE" && -z "$AI_AGENT" ]]` rather than
+enumerating hazards — the enumerate approach has failed before, letting
+`wget` through.
+
+### Shell startup order decides which tool wins
+
+zsh reads **`~/.zshenv` → `~/.zprofile` → `~/.zshrc`**. Anything activated
+in `.zshenv` is therefore activated *first*, which for a version manager is
+exactly backwards: every later `export PATH="X:$PATH"` —
+`brew shellenv` in `.zprofile`, the gnubin loop, `~/.local/bin`,
+`~/Scripts/bin`, `$PNPM_HOME` — prepends itself in front of it.
+
+Conventions:
+
+- **Activate in `.zshenv` for coverage, and again at the end of `.zshrc`
+  for precedence.** Both, not either.
+- **`command -v foo` is not an answer unless you say which shell you
+  asked.** Check both: `zsh -c 'command -v foo'` and
+  `zsh -l -i -c 'command -v foo'`. A tool that resolves differently in the
+  two is a bug, not a quirk.
+- **`mise activate` is for interactive shells; `mise` SHIMS are for
+  everything else.** Activation only happens where a shell rc runs. Git
+  hooks run under `sh`, and launchd and GUI-launched apps run under
+  neither, so none of them see an activated tool.
+  `~/.local/share/mise/shims` resolves the active version with no
+  activation at all. The script links the shims into `~/.local/bin`,
+  which is already on `PATH` in those callers.
+
+When linking a shim, **the link name must match the shim name** — mise
+dispatches on `argv[0]`. **Link the shim, not the versioned
+`installs/node/<ver>/bin` path**, which silently rots at the next
+`mise use node@…`.
+
+`~/.local/bin` outranks Homebrew. Anything linked there wins in **every**
+context — git hooks, launchd, GUI-launched editors — not only where
+`mise activate` has run. That is the point when the tool is one mise owns
+(`claude`, `prettier`, `tsc`, `copilot`). It is a hazard when something
+else already depends on the Homebrew copy. Prefer linking by **exclusion**
+over an allowlist — a tool added to mise later is then picked up
+automatically. Pair it with a prune scoped to symlinks pointing into the
+shims directory, so hand-placed files survive.
+
+Removing a tool from `$HOMEBREW_PREFIX/bin` removes it from nearly every
+`PATH` on the machine — that directory is on the `PATH` of `sh`, git hooks,
+and most GUI-launched processes. Before relocating a tool out of Homebrew,
+ask which non-interactive callers were relying on it being there, and
+check with `sh -c 'command -v <tool>'` rather than from your own shell.
+
+A brew formula can install a whole second runtime as a dependency. Before
+adding a formula that has a language runtime beneath it, check
+`brew deps <formula>`, and prefer the package manager that runtime
+already has.
+
+---
+
+## 8. Order matters, and self-healing is the hardest kind of bug to see
+
+A bug that fixes itself on the next run is the hardest to spot, because the
+usual "check after" passes. Two rules from past incidents:
+
+- **Order-dependent work needs a test that spans one run, not a check
+  afterwards.** Remove the thing entirely, run once, assert the end state.
+- **Two jobs with opposite timing requirements cannot share a block.**
+  Putting mise's node on the run's own `PATH` must be early; linking shims
+  must be late. When a block serves two schedules, split it before the
+  schedules diverge.
+
+Related: prefer no category guard for work that must reflect the **final**
+state of a run.
+
+---
+
+## 9. The helper layer
+
+The script provides a small, named helper layer. New code uses the helpers
+rather than calling `brew install`, `git config`, `tee`, `cat >`, etc.
+directly. The helpers exist to make the next call site safe by default —
+guard once, benefit forever.
+
+| Helper | Purpose |
+|---|---|
+| `info`, `success`, `warn`, `error`, `banner`, `progress` | User-facing output. Use these, not `echo`. |
+| `log` | Verbose detail to `$LOG_FILE`. |
+| `mark_done <key>`, `is_done <key>` | Resume state. No-op under `--dry-run`. |
+| `installed <cmd>` | `command -v <cmd>` test. |
+| `brew_install`, `brew_cask_install`, `npm_global_install`, `go_install`, `uv_tool_install` | Snapshot installed state; skip work already done. Don't call `brew install` directly. |
+| `write_managed <file> [comment-prefix]`, `write_managed_script <file>` | Wrap stdin in a managed block. Refresh in place on re-run. Back up + replace an unmarked pre-existing file. The `write_managed_script` form keeps the shebang on line 1 and `chmod +x`. |
+| `remove_superseded_managed <file> <explanation> [ref]` | For the *other* half of a path change: clears a copy we wrote at an address the tool no longer reads, and only when it is provably ours. |
+| `git_global` | A `git config --global` WRITE that honors `--dry-run` in one place. **Writes only** — reads stay as raw `git config`. |
+
+Adding a new helper is fine; adding a new raw `brew install` call is not.
+If you find yourself reaching for a raw side-effecting command, the
+question is "should this be a helper?".
+
+---
+
+## 10. Idempotency is mandatory
+
+Every run must be safe to repeat. Use the existing guards: `mark_done` /
+`is_done "<key>"`, and the `brew_install` / `brew_cask_install` /
+`npm_global_install` / `go_install` / `uv_tool_install` helpers (they
+snapshot installed state and skip work already done). Don't call `brew
+install` directly.
+
+Honor `--dry-run`. Any block with side effects must do nothing when
+`$DRY_RUN == "true"` (print an `info "[DRY RUN] Would …"` line instead).
+`write_managed` / `write_managed_script` already handle this; raw `git`
+/ `curl` / `cp` / `ln` / `mkdir` blocks you add must guard themselves.
+
+Write files with the managed helpers, not ad-hoc redirection. The helpers
+are what makes `--dry-run` honest.
+
+---
+
+## 11. Logging, UX, and observability
+
+- **Logging helpers:** `info`, `success`, `warn`, `error`, `banner`,
+  `progress`. Everything verbose goes to `$LOG_FILE` via `log`.
+- **Guard on tool presence** with `installed <cmd>` before using an
+  optional tool.
+- **Heredoc quoting:** use `<<'MARKER'` (quoted) for literal content — this
+  is the default, and it keeps `$` and backticks literal (most generated
+  files rely on this). Only use an unquoted heredoc when you deliberately
+  want the script's variables expanded.
+
+---
+
+## 12. The global hooks directory is shared
+
+`core.hooksPath` makes git read **only** `~/.config/git/hooks`; per-repo
+`.git/hooks` is never consulted, for any hook type. So the script writes a
+**delegator for every hook type**, each sourcing `dev-setup-chain.sh`,
+which runs the repo's own hook and then anything in `<type>.d/`.
+
+Three traps:
+
+- **Never resolve the per-repo hook with `git rev-parse --git-path
+  hooks/<type>`.** That call is itself `core.hooksPath` aware, so it
+  returns the *delegator's own path* — the hook then runs itself forever
+  and every `git commit` on the machine hangs. Use `--git-common-dir`.
+- **This directory is not ours alone.** Third-party tools install hooks
+  here, so the chain must run `<type>.d/` too, and `preserve_foreign_hook`
+  must move a foreign hook aside before a delegator takes its name. It
+  re-runs on every setup, because tools re-create their hooks.
+- **`git-lfs` is deliberately NOT chained.** It is `core.hooksPath` aware
+  and installs `pre-push`/`post-checkout`/`post-merge`/`post-commit` here
+  from any repo, which made `git lfs pre-push` run on every push on the
+  machine — including repos with no LFS object in them. Per-repo opt-in
+  is `git-lfs-enable-repo`.
+
+Hooks fed data on stdin (`pre-push`, `post-rewrite`, `push-to-checkout`)
+need it buffered and replayed per link — the first reader would otherwise
+consume it and the rest would see nothing.
+
+---
+
+## 13. The generated pre-commit hook
+
+The script installs a **global** hook (`git config --global core.hooksPath
+~/.config/git/hooks`) that runs on all repos. It checks for debug
+statements (language-scoped: JS/TS `console.log` / `debugger`, Python
+`pdb` / `breakpoint()`, Ruby `binding.pry`), files > 5 MB, and
+merge-conflict markers.
+
+- A change to the hook only takes effect **after the script is re-run** to
+  regenerate it. Editing the hook's heredoc will not stop the *currently
+  installed* (old) hook from firing on your very next commit — that commit
+  may still need `--no-verify`.
+- To whitelist an intentional debug token on a line, add a trailing
+  **`debug-ok`** comment. Prefer that over `--no-verify`.
+
+---
+
+## 14. Data-driven dispatch needs one vocabulary and a loud default
+
+`--cleanup` reads `DEPRECATED_TOOLS` — rows like
+`type:name:display:replacement:appname` — and dispatches on `type` through
+a `case`. The case must have:
+
+- **One canonical vocabulary.** Don't let two spellings mean the same
+  branch. If you add a row, its `type` must be a value the case actually
+  matches.
+- **A `*)` default that fails loudly** (`warn` + count as skipped), so
+  the next typo'd or unhandled type is a visible warning, not a tool that
+  quietly never gets touched.
+
+The same smell applies to any lookup keyed on data — a missing key should
+never be silently correct.
+
+---
+
+## 15. Removing user data needs two guards
+
+`--cleanup` deletes things people may still want. Every removal must:
+
+1. **Verify the owner is actually gone** — check the `.app` is absent or
+   `command -v <tool>` fails, so a manual reinstall is never gutted.
+2. **Prefer `trash` over `rm -rf`** so a mistake is recoverable from
+   Finder.
+
+Beware paths that *look* orphaned but aren't: `~/.docker` reads as Docker
+Desktop residue, but a successor tool may have taken it over. Removing it
+would break the docker CLI and destroy credentials. Such paths are
+explicitly excluded with a comment in the script.
+
+---
+
+## 16. Conventions that are easy to get wrong
+
+A short list of rules that have each caused a regression at least once:
+
+- The generated pre-commit hook **checks against staged changes**, not
+  working-tree changes — `git add` first.
+- A `brew_install` call must list the formula by its **canonical name**,
+  not its display name. The CI `brew-names` job (`tests/ci/check-brew-names.sh`)
+  enforces this.
+- `~/.config/git/hooks` is **not** symlinked from `.git/hooks`; it is the
+  value of `core.hooksPath`. Adding a hook file there with the wrong
+  permissions (`chmod -x`) silently disables it.
+- `nvm`, `nodenv`, `asdf`, `pyenv`, and similar version managers **must
+  not** be installed alongside mise. Pick one; the script picks mise.
+- `mise use node@<ver>` at a project level writes a per-project
+  `.mise.toml` (or `.tool-versions`); do not commit those files by
+  accident.
+- Aliases in `~/.zshrc` are interactive-only. Anything that affects
+  non-interactive shells (PATH additions, env vars) goes in `~/.zshenv`.
+- The script targets macOS + Homebrew + bash. Linux is not a target; the
+  sister repo [`vixygrey-setup-linux`](https://github.com/vixygrey/vixygrey-setup-linux)
+  exists for that.
+
+---
+
+## 17. Future considerations
+
+These are conventions the codebase **knows about** but does not yet
+enforce. Treat them as "good ideas, awaiting formalization":
+
+- **Schema validation of generated files.** The CI `generated-config` job
+  proves each heredoc *parses* — JSON via `jq`, shell via `zsh -n`, etc.
+  It does not prove the file is at an address the tool reads. That's what
+  `--verify` is for, and not all generated files have a `--verify` check
+  yet.
+- **Cross-platform path helpers.** Several `xdg-open` / `open`-style
+  branches exist ad-hoc. A `open_url <url>` helper that respects platform
+  is overdue.
+- **Cleanup audit.** `DEPRECATED_TOOLS` has not had a sweep against
+  installed formulas in some releases. A CI job that diffs the table
+  against `brew list` would catch retired-but-not-removed packages.
+- **Pre-commit hook coverage matrix.** The global hook covers
+  `console.log`, `pdb`, `binding.pry`. It does not cover other debug
+  primitives (`console.debug`, `print(...)` debug-only, Ruby's
+  `byebug`). Adding more languages is straightforward; adding them
+  safely requires test cases.
+- **Shell-startup coverage in `--verify`.** `--verify` runs checks under
+  the shell it was invoked from. A tool that resolves differently in a
+  login shell vs a non-login shell needs both checked. The check exists
+  for k9s and nushell; it does not exist as a general pattern yet.
+- **Documented `--only` matrix.** The relationship between
+  `ALL_CATEGORIES`, `CONFIG_LIVES_IN_CONFIGS`, and the actual config
+  files written in the `configs` segment is implicit. A static check that
+  cross-references them would prevent the "category installs but never
+  configures" foot-gun.
+
+---
+
+## 18. Out of scope for this file
+
+- The release workflow (tag-push → GitHub Actions → release publish) lives
+  in `.github/workflows/release.yml` and is procedurally described in
+  `AGENTS.md`.
+- The bigpowers skills catalogue is not used in this repo. The script
+  *generates* a user's Claude environment; it does not consume one.
+  Anything in `specs/` at this repo's root would be a single-source
+  duplicate of this file.
+- The CHANGELOG. Hand-written from 7.2.0 onward; entries are added under
+  `## [Unreleased]` in `### Added` / `### Changed` / `### Fixed`, then
+  retitled to a versioned heading at release time.
+
+---
+
+## 19. Verification
+
+Per `AGENTS.md`, every change goes through:
+
+1. `bash -n scripts/setup-dev-tools-mac.sh` — syntax.
+2. `shellcheck -x -S warning scripts/setup-dev-tools-mac.sh` — **this is
+   what CI runs** (`.github/workflows/lint.yml`), `-x` included. Keep it
+   clean. A green local run is not proof CI is green: the runner's
+   shellcheck may flag things local builds miss.
+3. `./scripts/setup-dev-tools-mac.sh --dry-run` (or `--only <category>`)
+   — preview without mutating the machine.
+4. When you change a generated file, **extract and exercise it in a
+   throwaway dir** rather than trusting the heredoc by eye.
+5. `./scripts/setup-dev-tools-mac.sh --verify` — asks each installed tool
+   whether it actually reads what we generate. Steps 1–3 and CI all check
+   the file is *well-formed*; none of them can tell you it is at an
+   address the tool looks at. Run this after touching any config path.
+
+For changes to this file specifically: this file is markdown, not Bash.
+Steps 1, 2, and 3 still apply to the unchanged generator. Step 5 is a
+good sanity check that no heredoc references a helper or category this
+file has renamed or removed.

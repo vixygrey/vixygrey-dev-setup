@@ -2,6 +2,12 @@
 
 > Release notes for 7.0.0–7.1.1 live in [GitHub Releases](https://github.com/vixygrey/vixygrey-dev-setup/releases) (auto-generated). This file resumes hand-written notes at 7.2.0.
 
+## [Unreleased]
+
+### Added
+
+- **`CONVENTIONS.md`** (#395). The repo's documentation is now split along a line the codebase already implicitly followed but had not made explicit: `AGENTS.md` stays the procedural / workflow doc for AI coding agents (issue-first rule, generator-vs-output doctrine, verification loop, release prep), and `CONVENTIONS.md` becomes the normative / code-shape doc — helper usage, managed-block discipline, category structure, dependency policy, test architecture. Both files are tracked. When they conflict, follow AGENTS.md's process and CONVENTIONS.md's substance.
+
 ## [7.16.0] - 2026-09-07
 
 This release hardens the setup script end to end: CI now runs it on macOS, generated-config and helper coverage are much broader, dry-run is honest and non-mutating, and several long-lived config-path and tooling defects are fixed alongside the rollback of the pi experiment.
