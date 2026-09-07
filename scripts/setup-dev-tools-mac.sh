@@ -2502,7 +2502,7 @@ brew_install "stu" "stu (S3 TUI — browse/preview/download buckets)"
 go_install github.com/nlamirault/e2c/cmd/e2c@latest e2c "e2c (EC2 TUI)"
 # claws — broad all-AWS TUI (young); cask from the clawscli tap.
 trust_tap clawscli/tap
-brew_cask_install "claws" "claws (all-AWS TUI — ~70 services, k9s-style; young project)"
+brew_cask_install "clawscli/tap/claws" "claws (all-AWS TUI — ~70 services, k9s-style; young project)"
 
 # -- AWS CLIs --
 brew_install "s5cmd" "s5cmd (massively parallel S3 CLI — 10-30x faster than 'aws s3' for bulk)"
@@ -2516,7 +2516,7 @@ if [[ "$DRY_RUN" != "true" ]] && installed steampipe && ! is_done "config:steamp
 fi
 # iamlive — generate least-privilege IAM policies from observed API calls (tap).
 trust_tap iann0036/iamlive
-brew_install "iamlive" "iamlive (generate least-privilege IAM policies from observed API calls)"
+brew_install "iann0036/iamlive/iamlive" "iamlive (generate least-privilege IAM policies from observed API calls)"
 
 fi  # aws
 
@@ -2529,7 +2529,7 @@ trust_tap terraform-linters/tap
 # tflint ships as a CASK in its tap, not a formula (#366). `brew install` falls back to the
 # cask so it installed fine, but _brew_has_formula can never match a cask, so every
 # non-resume run re-ran the install and --dry-run always claimed it was missing.
-brew_cask_install "tflint" "tflint (Terraform linter — terraform-linters tap, not homebrew-core)"
+brew_cask_install "terraform-linters/tap/tflint" "tflint (Terraform linter — terraform-linters tap, not homebrew-core)"
 brew_install "terraform-docs" "terraform-docs (auto-generate module docs from variables/outputs)"
 brew_install "checkov" "checkov (IaC static analysis — Terraform, CloudFormation, Kubernetes, Dockerfile)"
 brew_install "infracost" "infracost (cost estimation for Terraform changes before apply)"
@@ -2814,7 +2814,7 @@ brew_install "shellcheck" "shellcheck (shell script linter)"
 brew_install "shfmt" "shfmt (shell script formatter)"
 brew_install "act" "act (run GitHub Actions locally)"
 trust_tap dhth/tap
-brew_install "act3" "act3 (glance at last 3 GitHub Actions runs — dhth tap, not homebrew-core)"
+brew_install "dhth/tap/act3" "act3 (glance at last 3 GitHub Actions runs — dhth tap, not homebrew-core)"
 brew_install "hadolint" "hadolint (Dockerfile linter — catches bad practices)"
 
 # Python linting (ruff — extremely fast, replaces flake8+black+isort)
@@ -2976,27 +2976,27 @@ brew_install "vhs" "vhs (scripted terminal GIF/MP4 recorder — pairs with ascii
 
 # -- Additional TUI/CLI tools (third-party taps) --
 trust_tap jesseduffield/lazynpm
-brew_install "lazynpm" "lazynpm (npm TUI — joins lazygit/lazydocker/lazysql)"
+brew_install "jesseduffield/lazynpm/lazynpm" "lazynpm (npm TUI — joins lazygit/lazydocker/lazysql)"
 trust_tap djetelina/tap
-brew_install "cheznav" "cheznav (chezmoi dotfiles TUI — dual-pane add/apply/diff)"
+brew_install "djetelina/tap/cheznav" "cheznav (chezmoi dotfiles TUI — dual-pane add/apply/diff)"
 trust_tap bendews/tap
-brew_install "apw" "apw (Apple Passwords + OTP from the CLI)"
+brew_install "bendews/tap/apw" "apw (Apple Passwords + OTP from the CLI)"
 trust_tap kdabir/tap
 brew_install "has" "has (checks presence & versions of CLI tools)"
 trust_tap jordond/tap
-brew_install "jolt" "jolt (battery / energy monitor TUI)"
+brew_install "jordond/tap/jolt" "jolt (battery / energy monitor TUI)"
 trust_tap ikebastuz/wiper
-brew_install "wiper" "wiper (interactive disk usage + cleanup — Trash-safe, ncdu-like)"
+brew_install "ikebastuz/wiper/wiper" "wiper (interactive disk usage + cleanup — Trash-safe, ncdu-like)"
 
 # lazyenv — TUI for managing .env files across projects (diff/sync, secret masking,
 # .gitignore checks). Complements direnv (direnv loads; lazyenv edits/compares).
 trust_tap lazynop/tap
-brew_install "lazyenv" "lazyenv (TUI for .env files — diff/sync across projects, secret masking)"
+brew_install "lazynop/tap/lazyenv" "lazyenv (TUI for .env files — diff/sync across projects, secret masking)"
 # keyward — TUI SSH-key manager + A–F security audit + encrypted key backups.
 trust_tap gateway-of-last-resort/tap
-brew_cask_install "keyward" "keyward (SSH-key manager + security audit — offline, single binary)"
+brew_cask_install "gateway-of-last-resort/tap/keyward" "keyward (SSH-key manager + security audit — offline, single binary)"
 # bmm — CLI/TUI bookmark manager (local, fzf-friendly). dhth/tap already trusted above.
-brew_install "bmm" "bmm (bookmark manager — CLI + TUI, local, import HTML/JSON/TXT)"
+brew_install "dhth/tap/bmm" "bmm (bookmark manager — CLI + TUI, local, import HTML/JSON/TXT)"
 # manly — explains the flags in a command by pulling the relevant man-page lines.
 uv_tool_install manly manly "manly (man-page explainer — 'manly tar -xzf')" "manly installed"
 
@@ -3341,7 +3341,7 @@ fi
 # Window management, status bar & clipboard (replaces Raycast + Spotlight)
 # SketchyBar — status bar / menu-bar replacement (Dracula), + app-icon font + bluetooth helper.
 trust_tap FelixKratz/formulae
-brew_install "sketchybar" "SketchyBar (customizable macOS status bar)"
+brew_install "FelixKratz/formulae/sketchybar" "SketchyBar (customizable macOS status bar)"
 brew_cask_install "font-sketchybar-app-font" "sketchybar-app-font (app glyphs for SketchyBar)"
 brew_install "blueutil" "blueutil (Bluetooth control from CLI — SketchyBar widget)"
 # clipse — TUI clipboard manager (replaces Raycast clipboard history). Not on Homebrew.
@@ -3441,7 +3441,7 @@ banner "Mac Apps — Productivity"
 brew_cask_install "claude" "Claude (AI assistant)"
 # Notion (GUI) replaced by tiki — terminal Markdown workspace (tasks/docs/kanban/wiki, git-backed).
 trust_tap boolean-maybe/tap
-brew_install "tiki" "tiki (terminal Markdown workspace — tasks, docs, kanban, wiki; git-backed)"
+brew_install "boolean-maybe/tap/tiki" "tiki (terminal Markdown workspace — tasks, docs, kanban, wiki; git-backed)"
 # tiki's official Claude Code skill — teaches Claude to manage the user's notes/tasks
 # via `tiki exec '<ruki>'` (CRUD with auto git-staging). The brew formula ships only
 # the binary, so fetch the skill into ~/.claude/skills/ (refreshed each run to track
@@ -3464,7 +3464,7 @@ fi
 # server for Claude. Replaced aerc + khal + vdirsyncer (three tools → one). Herald
 # self-configures via its own onboarding (no hand-written config); see the checklist.
 trust_tap herald-email/herald
-brew_install "herald" "herald (terminal email + calendar — Gmail + iCloud, AI triage, MCP server)"
+brew_install "herald-email/herald/herald" "herald (terminal email + calendar — Gmail + iCloud, AI triage, MCP server)"
 # Ollama — local LLM runtime that backs herald's built-in AI (triage, summaries, compose
 # styler) and `croft pair --provider ollama`. Both default to a local Ollama server on
 # 127.0.0.1:11434, so without it that "local, no-key" AI path is dead. The formula (not the
@@ -3540,7 +3540,7 @@ fi
 # First invocation triggers a macOS TCC consent prompt for Reminders access — a GUI
 # dialog this script cannot pre-grant, so the checklist covers it as a first-run step.
 trust_tap keith/formulae
-brew_install "reminders-cli" "reminders-cli (Apple Reminders from the terminal — 'reminders')"
+brew_install "keith/formulae/reminders-cli" "reminders-cli (Apple Reminders from the terminal — 'reminders')"
 # google-workspace-cli (gws) — one CLI for Drive/Gmail/Docs/Sheets/Calendar/Chat with
 # structured JSON output, built for humans + AI agents (ships 95 Claude Code skills).
 # All company work is on Google Workspace, so this is Claude's read/query surface there.
@@ -3690,7 +3690,7 @@ brew_install "p7zip" "7zip (archive tool — zip, 7z, rar, tar)"
 # cliamp — Winamp-inspired terminal music player (MIT): many formats, streaming
 # (YouTube/SoundCloud/Spotify/radio), parametric EQ, 20+ visualizations. Replaced kew.
 trust_tap bjarneo/cliamp
-brew_install "cliamp" "cliamp (terminal music player — Winamp-style, streaming, EQ, 20+ visualizers)"
+brew_install "bjarneo/cliamp/cliamp" "cliamp (terminal music player — Winamp-style, streaming, EQ, 20+ visualizers)"
 
 fi  # mac-media
 
