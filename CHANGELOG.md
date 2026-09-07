@@ -24,6 +24,8 @@
 
 ### Fixed
 
+- **The bash bootstrap now tells the truth about prerequisites and finds more installed shells** (#379). README and `docs/GUIDE.md` now warn up front that macOS ships `bash` 3.2 while the script needs 4+. The startup guard no longer probes only `/opt/homebrew/bin/bash` and `/usr/local/bin/bash`; it now also checks `bash` on `PATH`, `$(brew --prefix)/bin/bash`, and MacPorts' `/opt/local/bin/bash`, and verifies a candidate is actually bash 4+ before `exec`ing it. That lets a machine with a perfectly good newer bash outside the two hardcoded paths start successfully, and avoids looping into another 3.2.
+
 - **`--dry-run` reported 65 completed actions it had not performed** (#381, #383). `delta configured as git pager`, `k9s Dracula skin configured`, `Global git hooks created`, and 62 more — every one printed by a `success` call that fired unconditionally around a `write_managed` that had correctly done nothing.
 
   The messages are past-tense summaries, so they are now **silent** under `--dry-run` rather than reworded: no prefix makes "delta configured as git pager" honest about something that did not happen.

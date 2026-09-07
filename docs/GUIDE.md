@@ -2,6 +2,10 @@
 
 Everything installed by `scripts/setup-dev-tools-mac.sh` -- tools, apps, workflows, aliases, and system configuration. Read top to bottom or jump to a section.
 
+> **Before you run setup:** macOS ships `bash` 3.2, but `scripts/setup-dev-tools-mac.sh` needs **bash 4+**.
+> If `bash --version` shows 3.2, install Homebrew if needed, then run
+> `brew install bash` before starting setup.
+
 ---
 
 ## Quick Start

@@ -4,11 +4,21 @@
 # /bin/bash, so on a clean Mac re-exec under a newer bash if one is installed;
 # otherwise tell the user how to get one. (This guard is itself 3.2-compatible.)
 if ((BASH_VERSINFO[0] < 4)); then
-    for _newbash in /opt/homebrew/bin/bash /usr/local/bin/bash; do
-        [[ -x "$_newbash" ]] && exec "$_newbash" "$0" "$@"
+    _path_bash="$(command -v bash 2>/dev/null || true)"
+    _brew_prefix="$(brew --prefix 2>/dev/null || true)"
+    for _newbash in "$_path_bash" "$_brew_prefix/bin/bash" /opt/homebrew/bin/bash /usr/local/bin/bash /opt/local/bin/bash; do
+        [[ -n "$_newbash" && -x "$_newbash" ]] || continue
+        [[ "$_newbash" != "$BASH" ]] || continue
+        "$_newbash" -c '(( BASH_VERSINFO[0] >= 4 ))' >/dev/null 2>&1 || continue
+        exec "$_newbash" "$0" "$@"
     done
     echo "This setup script needs bash 4+ (macOS ships bash 3.2)." >&2
-    echo "Install a newer bash and re-run:  brew install bash" >&2
+    if command -v brew >/dev/null 2>&1; then
+        echo "Install a newer bash and re-run:  brew install bash" >&2
+    else
+        echo "Install Homebrew first, then install a newer bash:  brew install bash" >&2
+        echo "Or run the script with any bash 4+ already on your machine." >&2
+    fi
     exit 1
 fi
 

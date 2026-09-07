@@ -22,6 +22,10 @@ A single setup script that installs and configures **220+ tools** with **60+ con
 
 ## Quick Start
 
+> **Before you start:** macOS ships `bash` 3.2, but this script needs **bash 4+**.
+> If `bash --version` shows 3.2, install Homebrew if needed, then run
+> `brew install bash` before starting setup.
+
 ```bash
 chmod +x scripts/setup-dev-tools-mac.sh
 ./scripts/setup-dev-tools-mac.sh
