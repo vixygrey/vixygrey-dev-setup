@@ -165,11 +165,31 @@ jobs:
           echo "SANDBOX_HOME=$sandbox" >> "$GITHUB_ENV"
 
           rc=0
-          HOME="$sandbox" ./scripts/setup-dev-tools-mac.sh --dry-run --no-prompt || rc=$?
+          HOME="$sandbox" ./scripts/setup-dev-tools-mac.sh --dry-run --no-prompt \
+            > /tmp/dryrun.out 2>&1 || rc=$?
+          cat /tmp/dryrun.out
           if [ "$rc" -ne 0 ]; then
             echo "::error::dry run exited $rc"
             exit "$rc"
           fi
+
+          # The machine being untouched and the run SAYING so are two different claims,
+          # and the second one was false for just as long (#381): a dry run reported 65
+          # completed configurations and counted them into `Installed:`. Both numbers
+          # must now be zero, because a dry run installs nothing and configures nothing.
+          summary="$(sed 's/\x1b\[[0-9;]*m//g' /tmp/dryrun.out)"
+          for field in Installed Configured; do
+            n="$(printf '%s\n' "$summary" | sed -n "s/^ *$field: *\([0-9][0-9]*\).*/\1/p" | tail -1)"
+            if [ -z "$n" ]; then
+              echo "::error::could not find a '$field:' line in the summary"
+              exit 1
+            fi
+            if [ "$n" -ne 0 ]; then
+              echo "::error::--dry-run reported $field: $n — it should do neither"
+              exit 1
+            fi
+          done
+          echo "ok — dry run reported Installed: 0 and Configured: 0"
 
           # ~/.local/share/dev-setup is the run's OWN log/state/lock directory. It has to
           # exist for the run to be able to report anything, so it is the one deliberate
