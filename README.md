@@ -426,7 +426,7 @@ Faster, prettier, smarter replacements for standard Unix utilities.
 | **zsh-syntax-highlighting** | Command coloring in the terminal -- red for errors |
 | **atuin** | Replaces shell history with SQLite-backed, fuzzy-searchable database |
 | **mise** | Universal version manager -- Node, Python, Go, Ruby all in one (replaces nvm + pyenv + rbenv) |
-| **croft** | Primary editor -- VS Code-style terminal IDE (Rust; `cargo install --git`). Three-pane workspace, LSP/DAP, integrated terminal; `croft pair` runs an AI navigator (Anthropic/local). Installed from git `main` |
+| **croft** | Primary editor -- VS Code-style terminal IDE (Rust; `cargo install --git`). Three-pane workspace, LSP/DAP, integrated terminal; `croft pair` runs an AI navigator (Anthropic/local). Installed from git `main`, with a managed Dracula-Sakura theme extension and config |
 | **Visual Studio Code** | The GUI editor, secondary to croft -- for long multi-tab refactors, graphical diffs, and `.editorconfig` repos (croft has no EditorConfig support). Ships 26 extensions and a merged `settings.json` that mirrors the terminal's rules -- including basedpyright as the Python type server, matching croft |
 | **micro** | The `$EDITOR` -- git/gh/lazygit commit messages, leaf's Ctrl+E, quick edits. Non-modal, on-screen key menu (`Ctrl+G` for help), Dracula theme |
 | **Claude Code (`claude`)** | Agentic coding in the terminal; hosts the migrated MCP servers |
@@ -504,7 +504,7 @@ Preview files in Finder by pressing spacebar.
 | App | Description |
 |-----|-------------|
 | **tiki** | Terminal Markdown workspace -- tasks, docs, kanban, wiki (git-backed); replaced the Notion GUI. Its official Claude Code skill is installed to `~/.claude/skills/tiki/`, so Claude manages notes/tasks via `tiki exec` (ruki) |
-| **herald** | Terminal email **+** calendar in one app -- Gmail (work) + iCloud (personal), unified CalDAV, built-in AI triage/summaries + an MCP server for Claude; replaced aerc + khal + vdirsyncer + Notion Calendar |
+| **herald** | Terminal email **+** calendar in one app -- Gmail (work) + iCloud (personal), unified CalDAV, built-in AI triage/summaries + an MCP server for Claude; replaced aerc + khal + vdirsyncer + Notion Calendar. Theme-integrated with a local Dracula-Sakura theme asset and a narrow config merge |
 | **gws** (google-workspace-cli) | One CLI for Drive/Gmail/Docs/Sheets/Calendar/Chat with structured JSON output -- Claude's read/query surface for Workspace (`gws auth login` first; instructed to confirm before any mutation). A **scoped set of gws Claude skills -- Drive/Docs/Slides/Sheets/Forms only** -- is installed to `~/.claude/skills/` (Gmail/Calendar/Chat/Meet excluded); the real access boundary is the OAuth scopes granted at `gws auth`, not the skills |
 | **Shottr** | Fast native screenshots -- scrolling capture, OCR, annotations (local-only, no account) |
 | **Claude** | AI assistant |
@@ -585,6 +585,7 @@ Applied consistently across the machine, with built-in Dracula variants kept whe
 | **bat** | Dracula syntax theme in config |
 | **delta** | Dracula syntax theme for git diffs |
 | **Ghostty** | Full 16-color Dracula-Sakura palette in config |
+| **croft** | Custom Dracula-Sakura theme extension in `~/.config/croft/extensions/` |
 | **jqp** | Dracula base theme with Dracula-Sakura override colors in `~/.jqp.yaml` |
 | **fzf** | Dracula colors in `FZF_DEFAULT_OPTS` |
 | **Starship** | Dracula-Sakura palette in `starship.toml` |
@@ -601,6 +602,7 @@ Applied consistently across the machine, with built-in Dracula variants kept whe
 | **zellij** | Dracula-Sakura theme in the config |
 | **newsboat** | Dracula-Sakura colors in the config |
 | **aichat** | Dracula-Sakura dark TextMate theme plus rose/lilac prompt colors in config |
+| **herald** | Local Dracula-Sakura YAML theme in `~/.herald/themes/` with `theme.name` merged safely into `conf.yaml` |
 | **pi** | Full Dracula-Sakura custom theme in `~/.pi/agent/themes/dracula-sakura.json` |
 | **claws** | Built-in `dracula` theme via `claws --theme dracula` alias |
 | **miniserve** | `--color-scheme-dark dracula` in the `serve` alias |
@@ -819,6 +821,7 @@ The script generates config files with sensible defaults:
 | `~/.aria2/aria2.conf` | aria2 | 16 connections, auto-resume, BitTorrent, 64MB cache |
 | `~/.config/atuin/config.toml` | atuin | Fuzzy search, local-only, compact style, enter=paste (not execute), history filter (ls/cd/clear/exit), secrets filter |
 | `~/.config/mprocs/mprocs.yaml` | mprocs | 5k scrollback, wider proc list, per-process logs under the config dir |
+| `~/.config/croft/config.json` + theme extension | croft | Dracula-Sakura theme, terminal-first layout defaults, explorer/status bar preferences |
 | `~/.config/starship.toml` | Starship | Rich two-line prompt with a Dracula-Sakura palette, OS icon, git status with counts, Node/Python/Rust/Go/Docker/AWS/Terraform versions, battery warning, time, Nerd Font icons |
 | `~/.config/yt-dlp/config` | yt-dlp | Best quality mp4, aria2c downloader, metadata, subtitles |
 | `~/.config/gh-dash/config.yml` | gh-dash | PR/issue sections, Dracula-Sakura theme |
@@ -831,7 +834,7 @@ The script generates config files with sensible defaults:
 | `~/.config/sketchybar/` | SketchyBar | Dracula-Sakura bar: app, clock, battery, wifi, volume, cpu, mem, bluetooth, VPN |
 | `~/Media/photos/dracula-sakura.jpg` | Wallpaper | Bundled Dracula-Sakura wallpaper asset copied onto every provisioned machine |
 | _(cliamp)_ | cliamp | Music player — self-configured on first run (point at `~/Media/music`) |
-| `~/.herald/conf.yaml` | herald | Email + calendar — **self-configured** by herald on first run (not written by setup) |
+| `~/.herald/themes/dracula-sakura.yaml` + `~/.herald/conf.yaml` | herald | Local Dracula-Sakura theme asset plus a narrow merge of `theme.name`; accounts/credentials remain user-owned |
 | `~/.config/zellij/config.kdl` | zellij | Dracula-Sakura theme, compact layout, mouse, Ctrl-a prefix |
 | `~/.config/mpv/mpv.conf` | mpv | Hardware accel, save position, screenshots to ~/Screenshots |
 | `~/.config/git-cliff/cliff.toml` | git-cliff | Conventional commits changelog template |

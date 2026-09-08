@@ -192,6 +192,7 @@ jobs:
           PRETTIER_CONF|jq empty /tmp/generated
           VSCODE_CONF|jq empty /tmp/generated
           MICRO_CONF|jq empty /tmp/generated
+          CROFT_CONF|jq empty /tmp/generated
           LAZYGIT_CONF|yq eval '.' /tmp/generated
           K9S_DRACULA|yq eval '.' /tmp/generated
           GHDASH_CONF|yq eval '.' /tmp/generated
@@ -200,6 +201,7 @@ jobs:
           GH_CONF|yq eval '.' /tmp/generated
           NGROK_CONF|yq eval '.' /tmp/generated
           BORGMATIC_CONF|yq eval '.' /tmp/generated
+          HERALD_THEME_CONF|yq eval '.' /tmp/generated
           STARSHIP_CONF|python3 -c 'import tomllib; tomllib.load(open("/tmp/generated","rb"))'
           ATUIN_CONF|python3 -c 'import tomllib; tomllib.load(open("/tmp/generated","rb"))'
           MISE_CONF|python3 -c 'import tomllib; tomllib.load(open("/tmp/generated","rb"))'
@@ -208,6 +210,7 @@ jobs:
           GIT_CLIFF_CONF|python3 -c 'import tomllib; tomllib.load(open("/tmp/generated","rb"))'
           HARLEQUIN_CONF|python3 -c 'import tomllib; tomllib.load(open("/tmp/generated","rb"))'
           ASCIINEMA_CONF|python3 -c 'import tomllib; tomllib.load(open("/tmp/generated","rb"))'
+          CROFT_THEME_CONF|python3 -c 'import tomllib; tomllib.load(open("/tmp/generated","rb"))'
           CHECKS
 
           exit "$fail"
