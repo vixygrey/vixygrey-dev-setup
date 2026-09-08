@@ -1289,6 +1289,75 @@ uv_tool_install() {
     progress
 }
 
+# run_remote_installer <label> <url> <optional-sha256> <runner>... [-- <script-args...>]
+# Download an upstream installer script to a temp file, optionally verify it by
+# SHA256, then execute it via the given runner command. Any args after `--` are
+# passed to the installer script itself, so callers can express both
+#   /bin/bash installer.sh
+# and
+#   sh installer.sh -y --no-modify-path
+# through one helper.
+#
+# This centralizes the repo's fetch-and-exec bootstrap paths (Homebrew / rustup /
+# pnpm today) so the trust boundary is one helper instead of three hand-rolled
+# blocks, and makes a future pin as small as supplying the third argument.
+#
+# No DRY_RUN branch here on purpose: callers decide whether a fetch/exec path is
+# appropriate for the current mode. On failure, REMOTE_INSTALLER_ERROR is set to
+# one of: download failed, empty download, checksum mismatch, execution failed,
+# no runner.
+REMOTE_INSTALLER_ERROR=""
+run_remote_installer() {
+    local label="$1" url="$2" expected_sha="$3"; shift 3
+    local installer actual_sha arg seen_sep=0
+    local -a runner script_args
+    REMOTE_INSTALLER_ERROR=""
+    for arg in "$@"; do
+        if (( ! seen_sep )) && [[ "$arg" == "--" ]]; then
+            seen_sep=1
+            continue
+        fi
+        if (( seen_sep )); then
+            script_args+=("$arg")
+        else
+            runner+=("$arg")
+        fi
+    done
+    if (( ${#runner[@]} == 0 )); then
+        REMOTE_INSTALLER_ERROR="no runner"
+        return 1
+    fi
+    installer="$(mktemp)"
+    if ! curl -fsSL "$url" -o "$installer"; then
+        rm -f "$installer"
+        REMOTE_INSTALLER_ERROR="download failed"
+        return 1
+    fi
+    if [[ ! -s "$installer" ]]; then
+        rm -f "$installer"
+        REMOTE_INSTALLER_ERROR="empty download"
+        return 1
+    fi
+    if [[ -n "$expected_sha" ]]; then
+        actual_sha="$(shasum -a 256 "$installer" | awk '{print $1}')"
+        if [[ "$actual_sha" != "$expected_sha" ]]; then
+            rm -f "$installer"
+            REMOTE_INSTALLER_ERROR="checksum mismatch"
+            return 1
+        fi
+        log "REMOTE_INSTALLER: $label from $url (sha256 pinned)"
+    else
+        log "REMOTE_INSTALLER: $label from $url (sha256 unpinned)"
+    fi
+    if "${runner[@]}" "$installer" "${script_args[@]}" >> "$LOG_FILE" 2>&1; then
+        rm -f "$installer"
+        return 0
+    fi
+    rm -f "$installer"
+    REMOTE_INSTALLER_ERROR="execution failed"
+    return 1
+}
+
 # trust_tap <user/repo>
 # Homebrew 6 refuses to load formulae OR casks from non-official ("untrusted")
 # taps until they're trusted with `brew trust` (HOMEBREW_ALLOWED_TAPS does NOT
@@ -2038,9 +2107,9 @@ if [[ "$VERIFY" == "true" ]]; then
         "validate|topgrade|$HOME/.config/topgrade.toml|_verify_topgrade"
         "validate|git-cliff|$HOME/.config/git-cliff/cliff.toml|git-cliff --config \"$HOME/.config/git-cliff/cliff.toml\" --context"
         "unchecked|trippy|$HOME/.config/trippy/trippy.toml|"
-        "unchecked|harlequin|$HOME/.harlequin.toml|"
+        "path|harlequin|$HOME/.harlequin.toml|_verify_harlequin_config"
         "unchecked|gh-dash|$HOME/.config/gh-dash/config.yml|"
-        "unchecked|stern|$HOME/.config/stern/config.yaml|"
+        "path|stern|$HOME/.config/stern/config.yaml|_verify_stern_config"
         "unchecked|lazydocker|$HOME/.config/lazydocker/config.yml|"
         "unchecked|yt-dlp|$HOME/.config/yt-dlp/config|"
         "unchecked|micro|$HOME/.config/micro/settings.json|"
@@ -2107,6 +2176,17 @@ if [[ "$VERIFY" == "true" ]]; then
     # the `[[ -e "$path" ]]` check.
     _verify_gem_config() {
         [[ -f "$HOME/.gemrc" ]] && echo "$HOME/.gemrc"
+    }
+    _verify_stern_config() {
+        stern --help 2>/dev/null | awk -F'"' '/Path to the stern config file/ {print $2; exit}'
+    }
+    _verify_harlequin_config() {
+        local out
+        out="$(harlequin --help 2>/dev/null | sed 's/\x1b\[[0-9;]*m//g')"
+        if grep -q '\.harlequin\.toml in the current directory and' <<<"$out" \
+            && grep -q 'the home directory (~) and merges them' <<<"$out"; then
+            echo "$HOME/.harlequin.toml"
+        fi
     }
     # `gh` does not expose a "where is your config file" command (the closest,
     # `gh config get config-dir`, returns "could not find key 'config-dir'" on
@@ -2284,20 +2364,20 @@ fi
 # -----------------------------------------------------------------------------
 if ! installed brew; then
     info "Installing Homebrew..."
-    installer="$(mktemp)"
-    curl -fsSL "https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh" -o "$installer"
-    if [[ ! -s "$installer" ]]; then
-        error "Failed to download Homebrew installer"
-        rm -f "$installer"
+    if run_remote_installer \
+        "Homebrew installer" \
+        "https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh" \
+        "${HOMEBREW_INSTALLER_SHA256:-}" \
+        /bin/bash; then
+        # Add to path for Apple Silicon
+        if [[ -f /opt/homebrew/bin/brew ]]; then
+            eval "$(/opt/homebrew/bin/brew shellenv)"
+        fi
+        success "Homebrew installed"
+    else
+        error "Failed to install Homebrew (${REMOTE_INSTALLER_ERROR:-unknown error})"
         exit 1
     fi
-    /bin/bash "$installer"
-    rm -f "$installer"
-    # Add to path for Apple Silicon
-    if [[ -f /opt/homebrew/bin/brew ]]; then
-        eval "$(/opt/homebrew/bin/brew shellenv)"
-    fi
-    success "Homebrew installed"
 else
     warn "Homebrew already installed"
     if [[ "$DRY_RUN" == "true" ]]; then
@@ -2422,17 +2502,16 @@ if ! installed rustup; then
     if [[ "$DRY_RUN" == "true" ]]; then
         info "[DRY RUN] Would install: Rust via rustup"
     else
-        installer="$(mktemp)"
-        curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs -o "$installer"
-        if [[ ! -s "$installer" ]]; then
-            error "Failed to download rustup installer"
-        elif sh "$installer" -y --no-modify-path >> "$LOG_FILE" 2>&1; then
+        if run_remote_installer \
+            "rustup installer" \
+            "https://sh.rustup.rs" \
+            "${RUSTUP_INSTALLER_SHA256:-}" \
+            sh -- -y --no-modify-path; then
             source "$HOME/.cargo/env" 2>/dev/null || true
             success "Rust installed via rustup"
         else
-            error "Failed to install Rust via rustup (check $LOG_FILE)"
+            error "Failed to install Rust via rustup (${REMOTE_INSTALLER_ERROR:-check $LOG_FILE})"
         fi
-        rm -f "$installer"
     fi
 else
     warn "Rust (rustup) already installed"
@@ -2459,19 +2538,16 @@ if ! is_done "install:pnpm"; then
 if ! installed pnpm; then
     info "Installing pnpm..."
     if [[ "$DRY_RUN" == "true" ]]; then
-        info "[DRY RUN] Would: curl https://get.pnpm.io/install.sh | bash"
+        info "[DRY RUN] Would install: pnpm via upstream installer"
     else
-    installer="$(mktemp)"
-    curl -fsSL "https://get.pnpm.io/install.sh" -o "$installer"
-    if [[ ! -s "$installer" ]]; then
-        error "Failed to download pnpm installer"
-        rm -f "$installer"
-    elif bash "$installer" >> "$LOG_FILE" 2>&1; then
+    if run_remote_installer \
+        "pnpm installer" \
+        "https://get.pnpm.io/install.sh" \
+        "${PNPM_INSTALLER_SHA256:-}" \
+        bash; then
         success "pnpm installed"
-        rm -f "$installer"
     else
-        error "Failed to install pnpm (check $LOG_FILE)"
-        rm -f "$installer"
+        error "Failed to install pnpm (${REMOTE_INSTALLER_ERROR:-check $LOG_FILE})"
     fi
     fi  # DRY_RUN — this block downloads and EXECUTES a remote installer (#380)
 else
