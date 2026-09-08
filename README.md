@@ -844,6 +844,7 @@ The script generates config files with sensible defaults:
 | `~/.pi/agent/settings.json` | pi | Dracula-Sakura theme, telemetry/analytics off, `micro` as external editor, local Ollama defaults (`qwen2.5-coder:14b`) |
 | `~/.pi/agent/models.json` | pi | Registers four local Ollama chat/coding models; the embedding-only `nomic-embed-text-v2-moe` stays machine-local for herald/aichat and is intentionally not exposed as a Pi chat model |
 | `~/.pi/agent/themes/dracula-sakura.json` | pi | Full Dracula-Sakura theme with all required Pi color tokens |
+| `~/.pi/agent/skills/*` | pi | Pi-local Tiki companion skills: `tiki-capture`, `tiki-review`, `tiki-groom`, `tiki-arc`, `tiki-journal` |
 | `~/.agents/skills/*` | pi | Symlinks to the curated shared skills (`api-testing`, `d2-diagrams`, `dbmate-migrations`, `office-docs`, `tiki`) |
 | `~/.newsboat/config` | newsboat | Vim keys, Dracula-Sakura colors, auto-reload |
 | `~/.newsboat/urls` | newsboat | Starter RSS feeds (Claude Code, Node, Rust, GitHub) |
@@ -1049,9 +1050,11 @@ left to add.
 ### Secondary agent — Pi
 
 **Pi** (`pi`) is also installed as a deliberately smaller coding harness: four core tools,
-a custom Dracula-Sakura theme under `~/.pi/agent/themes/`, and a curated five-skill
-bridge via `~/.agents/skills/` (`api-testing`, `d2-diagrams`, `dbmate-migrations`,
-`office-docs`, `tiki`). Its config is written under `~/.pi/agent/`, not `~/.config`.
+a custom Dracula-Sakura theme under `~/.pi/agent/themes/`, a small Pi-local Tiki skill
+set under `~/.pi/agent/skills/` (`tiki-capture`, `tiki-review`, `tiki-groom`, `tiki-arc`,
+`tiki-journal`), and a curated five-skill bridge via `~/.agents/skills/`
+(`api-testing`, `d2-diagrams`, `dbmate-migrations`, `office-docs`, `tiki`). Its config is
+written under `~/.pi/agent/`, not `~/.config`.
 
 The default Pi path here is **local Ollama**, with `qwen2.5-coder:14b` as the startup
 model and three other local chat/coding models registered alongside it. The embedding-only

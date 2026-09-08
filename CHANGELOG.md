@@ -16,6 +16,8 @@
 
 ### Changed
 
+- **Pi now gets a fuller Tiki skill set on every machine, not just the shared CRUD bridge** (#448). The setup already linked the shared `tiki` skill into `~/.agents/skills/`; it now also writes five Pi-local companion skills under `~/.pi/agent/skills/` — `tiki-capture`, `tiki-review`, `tiki-groom`, `tiki-arc`, and `tiki-journal` — so quick capture, reviews, notebook cleanup, larger arc management, and reflective journaling are reproducible rather than hand-added. The shared `tiki` skill text was also tightened locally toward Pi-friendly guidance: JSON-first queries, workflow-label caution, softer note-taking examples, and less software-only framing.
+
 - **The generated Tiki notebook scaffold now includes a matching root `README.md`** (#446). The notebook already had a themed `index.md` for Tiki's wiki view; it now also gets a plain-repo entry page so Finder previews, editors, terminal listings, and GitHub all open on the same soft Dracula-Sakura explanation of the layout, views, and common `tiki` flows. The post-setup guidance and tool reference were updated to mention the README alongside the landing page and starter folders.
 
 - **The setup now scaffolds Tiki as a real notebook surface, not just an empty repo** (#444). `~/Documents/notes` still lands git-initialized, but it now also gets a managed `index.md` landing page plus a small folder constellation — `inbox`, `journal`, `ideas`, `life-admin`, `projects`, `reference`, `archive` — so the wiki opens onto something welcoming and the notebook has a gentle default shape from the first run. The generated docs were updated alongside it so the post-setup guidance and tool reference point at the seeded layout rather than an unspecified empty directory.
