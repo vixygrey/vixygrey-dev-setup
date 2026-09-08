@@ -9556,30 +9556,24 @@ cat > .gitattributes <<'GITATTRIBUTES'
 *.cmd text eol=crlf
 GITATTRIBUTES
 
+# Environment, editor, OS, log and secret rules apply to every project. The
+# per-ecosystem blocks below them are grouped and labelled so a project that is
+# not Node (or not Python, or not Rust) can delete the block it does not need
+# rather than hunt through a flat list (#472).
 cat > .gitignore <<'GITIGNORE'
-# Dependencies
-node_modules/
-.pnpm-store/
-
-# Build
-.next/
-out/
-dist/
-build/
-coverage/
-.nyc_output/
-
 # Environment and secrets
-.env
-.env.local
-.env.*.local
+# .env* is deliberately broad. The negation keeps the one env file projects
+# usually DO commit, so a checked-in template is not silently invisible.
 .env*
+!.env.example
 *.pem
 *.key
 
-# Tool state
-.vercel/
-.supabase/
+# Build output
+dist/
+build/
+out/
+coverage/
 
 # Editors
 .vscode/settings.json
@@ -9591,14 +9585,64 @@ Thumbs.db
 
 # Logs
 *.log
+
+# Private agent notes
+CLAUDE.md
+
+# --- Node (delete if this is not a Node project) ---
+node_modules/
+.pnpm-store/
+.next/
+.nyc_output/
+.vercel/
+.supabase/
 npm-debug.log*
 pnpm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
-# Private agent notes
-CLAUDE.md
+# --- Python (delete if this is not a Python project) ---
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# --- Go / Rust (delete if unused) ---
+target/
+vendor/
 GITIGNORE
+
+# The scaffold is language neutral by design (#458 deliberately writes no
+# package.json), so the command surfaces must not assert a runtime either. With
+# --justfile there is a real command spine to point at; without it, an honest
+# placeholder beats a pnpm line that is wrong for every non-Node project (#472).
+if [[ "$WANT_JUSTFILE" == "true" ]]; then
+    README_COMMANDS=$(cat <<'RMCMD'
+# See every available command
+just
+
+# Start development
+just dev
+
+# Run tests
+just test
+
+# Build
+just build
+RMCMD
+)
+else
+    README_COMMANDS=$(cat <<'RMCMD'
+# TODO: replace with this project's real commands.
+#   install:
+#   dev:
+#   test:
+#   build:
+RMCMD
+)
+fi
 
 cat > README.md <<README
 # $NAME
@@ -9609,17 +9653,7 @@ and a specs first planning structure.
 ## Getting started
 
 \`\`\`bash
-# Install dependencies
-pnpm install
-
-# Start development
-pnpm dev
-
-# Run tests
-pnpm test
-
-# Build
-pnpm build
+$README_COMMANDS
 \`\`\`
 
 ## Project structure
@@ -9761,14 +9795,37 @@ Read `CONVENTIONS.md` first for normative rules. Read `README.md` for human orie
 <!-- Replace with a one sentence project description. -->
 
 ## Commands
+AGENTSMD
+
+# Same reasoning as the README block above: the table must not claim a runtime
+# the scaffold deliberately did not choose (#472). Split rather than switching
+# AGENTSMD to an unquoted heredoc, which would mean escaping every backtick in
+# a 50-line document to interpolate six cells.
+if [[ "$WANT_JUSTFILE" == "true" ]]; then
+cat >> AGENTS.md <<'AGENTSCMD'
 | Action | Command |
 |---|---|
-| Install | `pnpm install` |
-| Dev | `pnpm dev` |
-| Test | `pnpm test` |
-| Build | `pnpm build` |
-| Lint | `pnpm lint` |
-| Preflight | `pnpm test && pnpm lint && pnpm build` |
+| Dev | `just dev` |
+| Test | `just test` |
+| Build | `just build` |
+| Lint | `just lint` |
+| Preflight | `just preflight` |
+AGENTSCMD
+else
+cat >> AGENTS.md <<'AGENTSCMD'
+<!-- Replace the right-hand column with this project's real commands. -->
+| Action | Command |
+|---|---|
+| Install | `TODO` |
+| Dev | `TODO` |
+| Test | `TODO` |
+| Build | `TODO` |
+| Lint | `TODO` |
+| Preflight | `TODO` |
+AGENTSCMD
+fi
+
+cat >> AGENTS.md <<'AGENTSMD'
 
 ## Architecture
 <!-- Replace with a short module and boundary summary. -->
@@ -9864,12 +9921,27 @@ cat > specs/bugs/registry.yaml <<'BUGS'
 bugs: []
 BUGS
 
-touch specs/tech-architecture/tech-stack.md \
-      specs/tech-architecture/SECURITY_PLAN_LATEST.md \
-      specs/tech-architecture/TEST_PLAN_LATEST.md \
-      specs/tech-architecture/DESIGN_PLAN_LATEST.md \
-      specs/tech-architecture/REFACTOR_LATEST.md \
-      specs/tech-architecture/IMPACT_LATEST.md
+# A heading and a one-line brief, not `touch` (#472). An empty tracked file tells
+# a reader nothing about what belongs in it, and — the sharper problem — a tool
+# that guards on `[ -f ... ]` reads "present" as "done", so the skill that exists
+# to write the file skips it. The YAML placeholders in this scaffold already seed
+# a real empty value (`bugs: []`, `epics: []`); these were the only bare ones.
+# Naming the skill that fills each one makes the directory self-documenting.
+_spec_stub() { # <path> <title> <brief>
+    printf '# %s\n\n<!-- %s -->\n' "$2" "$3" > "$1"
+}
+_spec_stub specs/tech-architecture/tech-stack.md "Tech stack" \
+    "What this project is built with, and why. Derived by the map-codebase skill; keep it current as the stack changes."
+_spec_stub specs/tech-architecture/SECURITY_PLAN_LATEST.md "Security plan" \
+    "Threat model, trust boundaries, and the checks that guard them. Written by the security-review skill."
+_spec_stub specs/tech-architecture/TEST_PLAN_LATEST.md "Test plan" \
+    "Risk-scaled test architecture: what is tested, at which level, and why. Written by the plan-tests skill."
+_spec_stub specs/tech-architecture/DESIGN_PLAN_LATEST.md "Design plan" \
+    "Interface and module shape decisions, including alternatives considered. Written by the design-interface skill."
+_spec_stub specs/tech-architecture/REFACTOR_LATEST.md "Refactor plan" \
+    "Planned refactors broken into safe incremental steps. Written by the plan-refactor skill."
+_spec_stub specs/tech-architecture/IMPACT_LATEST.md "Impact analysis" \
+    "Blast radius of a proposed change: dependents, affected stories, test coverage. Written by the assess-impact skill."
 
 mkdir -p .github
 cat > .github/PULL_REQUEST_TEMPLATE.md <<'PRTEMPLATE'
