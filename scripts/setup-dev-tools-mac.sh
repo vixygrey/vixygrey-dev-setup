@@ -5136,6 +5136,31 @@ VSCODE_SETTINGS="$VSCODE_USER_DIR/settings.json"
 VSCODE_DEFAULTS=$(cat <<'VSCODE_CONF'
 {
     "workbench.colorTheme": "Dracula Theme",
+    "workbench.colorCustomizations": {
+        "activityBar.activeBorder": "#ff9fe3",
+        "activityBarBadge.background": "#9be7ff",
+        "activityBarBadge.foreground": "#282a36",
+        "button.background": "#ff9fe3",
+        "button.foreground": "#282a36",
+        "button.hoverBackground": "#ffc2ec",
+        "commandCenter.activeBackground": "#323448",
+        "editor.selectionBackground": "#6a5d86",
+        "focusBorder": "#d4b2ff",
+        "inputOption.activeBorder": "#d4b2ff",
+        "list.activeSelectionBackground": "#6a5d86",
+        "list.activeSelectionForeground": "#f8f8f2",
+        "list.highlightForeground": "#9be7ff",
+        "list.hoverBackground": "#323448",
+        "quickInputList.focusBackground": "#6a5d86",
+        "quickInputList.focusForeground": "#f8f8f2",
+        "tab.activeBorderTop": "#ff9fe3",
+        "tab.selectedBorderTop": "#d4b2ff",
+        "terminal.selectionBackground": "#6a5d86",
+        "terminalCursor.background": "#282a36",
+        "terminalCursor.foreground": "#ff9fe3",
+        "titleBar.activeBackground": "#282a36",
+        "titleBar.inactiveBackground": "#323448"
+    },
     "workbench.startupEditor": "none",
     "editor.fontFamily": "'JetBrains Mono', Menlo, monospace",
     "editor.fontLigatures": true,
@@ -5148,12 +5173,57 @@ VSCODE_DEFAULTS=$(cat <<'VSCODE_CONF'
     "editor.bracketPairColorization.enabled": true,
     "editor.linkedEditing": true,
     "editor.inlineSuggest.enabled": true,
+    "editor.tokenColorCustomizations": {
+        "textMateRules": [
+            {
+                "scope": ["comment", "punctuation.definition.comment"],
+                "settings": { "foreground": "#8a88c7" }
+            },
+            {
+                "scope": ["keyword", "storage", "keyword.operator"],
+                "settings": { "foreground": "#ff9fe3" }
+            },
+            {
+                "scope": ["string", "string.quoted"],
+                "settings": { "foreground": "#fff0a8" }
+            },
+            {
+                "scope": ["entity.name.function", "support.function", "meta.function-call"],
+                "settings": { "foreground": "#8af7cf" }
+            },
+            {
+                "scope": ["constant.numeric", "constant.language.boolean"],
+                "settings": { "foreground": "#d4b2ff" }
+            },
+            {
+                "scope": ["entity.name.type", "support.type", "storage.type"],
+                "settings": { "foreground": "#9be7ff" }
+            }
+        ]
+    },
     "files.trimTrailingWhitespace": true,
     "files.insertFinalNewline": true,
     "files.trimFinalNewlines": true,
     "files.eol": "\n",
     "terminal.integrated.fontFamily": "JetBrainsMono Nerd Font",
     "terminal.integrated.defaultProfile.osx": "zsh",
+    "terminal.integrated.minimumContrastRatio": 1,
+    "terminal.integrated.ansiBlack": "#2f3144",
+    "terminal.integrated.ansiRed": "#ff7aa8",
+    "terminal.integrated.ansiGreen": "#8af7cf",
+    "terminal.integrated.ansiYellow": "#fff0a8",
+    "terminal.integrated.ansiBlue": "#9be7ff",
+    "terminal.integrated.ansiMagenta": "#ff9fe3",
+    "terminal.integrated.ansiCyan": "#9be7ff",
+    "terminal.integrated.ansiWhite": "#f8f8f2",
+    "terminal.integrated.ansiBrightBlack": "#8a88c7",
+    "terminal.integrated.ansiBrightRed": "#ff7aa8",
+    "terminal.integrated.ansiBrightGreen": "#8af7cf",
+    "terminal.integrated.ansiBrightYellow": "#fff0a8",
+    "terminal.integrated.ansiBrightBlue": "#d4b2ff",
+    "terminal.integrated.ansiBrightMagenta": "#ffc2ec",
+    "terminal.integrated.ansiBrightCyan": "#9be7ff",
+    "terminal.integrated.ansiBrightWhite": "#ffffff",
     "git.autofetch": true,
     "git.confirmSync": false,
     "explorer.confirmDragAndDrop": false,
