@@ -16,6 +16,8 @@
 
 ### Changed
 
+- **The generated Tiki notebook scaffold now includes a matching root `README.md`** (#446). The notebook already had a themed `index.md` for Tiki's wiki view; it now also gets a plain-repo entry page so Finder previews, editors, terminal listings, and GitHub all open on the same soft Dracula-Sakura explanation of the layout, views, and common `tiki` flows. The post-setup guidance and tool reference were updated to mention the README alongside the landing page and starter folders.
+
 - **The setup now scaffolds Tiki as a real notebook surface, not just an empty repo** (#444). `~/Documents/notes` still lands git-initialized, but it now also gets a managed `index.md` landing page plus a small folder constellation — `inbox`, `journal`, `ideas`, `life-admin`, `projects`, `reference`, `archive` — so the wiki opens onto something welcoming and the notebook has a gentle default shape from the first run. The generated docs were updated alongside it so the post-setup guidance and tool reference point at the seeded layout rather than an unspecified empty directory.
 
 - **The generated Tiki workflow now leans more fully into the house Dracula-Sakura voice, with a softer anime/feminine accent layer** (#442). The workflow keeps its underlying machine-stable status values and trigger behavior, but renames the visible surface toward a gentler presentation: `Ready` becomes `Petals`, `Flow` becomes `Starlight`, roadmap/project/document wording shifts toward `Constellation`, `Arc`, and `Atelier`, and action / field labels now read more like a themed notebook than a bare kanban board. Default tags also begin with `sakura`, so fresh notes arrive already carrying the house motif.
