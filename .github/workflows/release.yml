@@ -27,6 +27,8 @@ jobs:
           cp docs/GUIDE.md build/macos/
           cp docs/SHORTCUTS.md build/macos/
           cp README.md LICENSE build/macos/
+          mkdir -p build/macos/assets/wallpapers
+          cp assets/wallpapers/dracula-sakura.jpg build/macos/assets/wallpapers/
           cd build/macos && zip -r "../../vixygrey-dev-setup-macos-${VERSION}.zip" . && cd ../..
 
       - name: Create GitHub Release

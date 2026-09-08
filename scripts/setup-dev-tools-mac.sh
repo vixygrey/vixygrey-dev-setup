@@ -36,6 +36,10 @@ fi
 SCRIPT_VERSION="7.16.1"
 SCRIPT_START=$(date +%s)
 PYTHON_VERSION="3.12"
+# Absolute directory of this script. Used to resolve bundled assets both from the
+# repo layout (scripts/setup-dev-tools-mac.sh -> ../assets/...) and the release zip
+# layout (setup-dev-tools-mac.sh -> ./assets/...). Read-only; no side effects.
+SETUP_SCRIPT_DIR="$(cd -- "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
 
 # Where `go install` writes binaries. The generated login shell adds
 # $GOPATH/bin (== ~/.local/share/go/bin) to PATH, but `go install` defaults to
@@ -1479,7 +1483,7 @@ if [[ "$UNINSTALL" == "true" ]]; then
     echo "  rm -rf ~/.config/btop ~/.config/lazydocker ~/.config/mise"
     echo "  rm -rf ~/.config/topgrade.toml ~/.config/fastfetch ~/.config/pgcli"
     echo "  rm -rf ~/.config/direnv ~/.config/caddy ~/.config/ghostty"
-    echo "  rm -f ~/.justfile"
+    echo "  rm -f ~/.justfile ~/Media/photos/dracula-sakura.jpg"
     echo ""
     echo "# Remove Rust (installed via rustup):"
     echo "  rustup self uninstall"
@@ -8346,7 +8350,7 @@ fi  # configs (end of second configs segment)
 if should_run "filesystem"; then
 info "Setting up filesystem structure..."
 if [[ "$DRY_RUN" == "true" ]]; then
-    info "[DRY RUN] Would create the ~ directory tree, helper scripts, and Brewfile"
+    info "[DRY RUN] Would create the ~ directory tree, helper scripts, wallpaper asset, and Brewfile"
 else
 
 # ADD-friendly layout: few top-level roots, shallow nesting, no overlapping
@@ -8398,6 +8402,36 @@ for dir in "${DIRS[@]}"; do
     mkdir -p "$dir"
 done
 success "Directory structure created (~/Inbox, ~/Code, ~/Scripts, ~/Documents, ~/Creative, ~/Media, ~/Archive)"
+
+# ---- Wallpaper asset ----
+# Ship the Dracula-Sakura wallpaper onto every machine, but do NOT auto-apply it.
+# Resolve the asset relative to this script so both the repo layout and the release
+# zip layout work: scripts/setup-dev-tools-mac.sh -> ../assets/..., zip root -> ./assets/....
+WALLPAPER_DEST_DIR="$HOME/Media/photos"
+WALLPAPER_DEST="$WALLPAPER_DEST_DIR/dracula-sakura.jpg"
+WALLPAPER_SOURCE=""
+for _wall_root in "$SETUP_SCRIPT_DIR/.." "$SETUP_SCRIPT_DIR"; do
+    if [[ -f "$_wall_root/assets/wallpapers/dracula-sakura.jpg" ]]; then
+        WALLPAPER_SOURCE="$_wall_root/assets/wallpapers/dracula-sakura.jpg"
+        break
+    fi
+done
+unset _wall_root
+if [[ -n "$WALLPAPER_SOURCE" ]]; then
+    if [[ -f "$WALLPAPER_DEST" ]] && cmp -s "$WALLPAPER_SOURCE" "$WALLPAPER_DEST"; then
+        info "Dracula-Sakura wallpaper already current: $WALLPAPER_DEST"
+    else
+        mkdir -p "$WALLPAPER_DEST_DIR"
+        if cp "$WALLPAPER_SOURCE" "$WALLPAPER_DEST"; then
+            info "Installed Dracula-Sakura wallpaper asset: $WALLPAPER_DEST"
+        else
+            warn "Could not install Dracula-Sakura wallpaper asset to $WALLPAPER_DEST"
+        fi
+    fi
+else
+    warn "Wallpaper asset not bundled with this copy of the setup — skipped ~/Media/photos/dracula-sakura.jpg"
+fi
+unset WALLPAPER_DEST_DIR WALLPAPER_DEST WALLPAPER_SOURCE
 
 # Git-init the tiki notes repo so it's ready as a git-backed workspace (idempotent).
 if installed git && [[ ! -d "$HOME/Documents/notes/.git" ]]; then
@@ -11335,6 +11369,7 @@ echo "  [~/.config/glab-cli]    GitLab CLI (mirrors gh: SSH, micro, delta, alias
 echo "  [~/.config/stern]       K8s log tailing"
 echo "  [~/.config/zellij]      Modern terminal multiplexer with Dracula-Sakura theme"
 echo "  [~/.config/mpv]         Video player (hardware accel, save position)"
+echo "  [~/Media/photos/dracula-sakura.jpg]  Dracula-Sakura wallpaper asset"
 echo "  [cliamp]                Music player (self-configured; point at ~/Media/music)"
 echo "  [~/.config/git-cliff]   Changelog generator (conventional commits)"
 echo "  [~/.newsboat]           RSS reader (vim keys, Dracula-Sakura colors, starter URLs)"
@@ -11506,6 +11541,8 @@ A terminal-first macOS setup: GUI apps replaced with TUI/CLI equivalents whereve
 it doesn't cost real capability. Below: what each tool is for, then how it fits
 together.
 
+A bundled Dracula-Sakura wallpaper is also installed to `~/Media/photos/dracula-sakura.jpg`.
+
 ## Editor & AI
 - **croft** — VS Code-style terminal IDE; the **primary editor** (`croft pair` for the AI navigator). **Visual Studio Code** (`code .`) is the GUI editor alongside it, preconfigured with Dracula Official plus a Dracula-Sakura accent layer and the same formatters. **micro** is the `EDITOR` for git/gh/lazygit commit messages and quick edits (non-modal, Dracula, on-screen key menu, trailing whitespace stripped on save).
 - **Claude Code (`claude`)** — agentic coding in the terminal; hosts the MCP servers. Best via `zellij --layout dev` (editor + Claude pane).
@@ -11515,6 +11552,7 @@ together.
 - **SketchyBar** — Dracula-Sakura status bar: app, clock, battery, wifi, volume, cpu, mem, bluetooth, VPN.
 - **Ghostty quick terminal** — global cmd+space dropdown that hosts the launcher.
 - **Launcher functions** — `a` (apps), `ff` (files), `rgf` (contents), `s` (Spotlight index), `clip` (clipboard via clipse).
+- **Wallpaper asset** — Dracula-Sakura wallpaper copied to `~/Media/photos/dracula-sakura.jpg` for use in macOS Wallpaper settings.
 
 ## Files, data & shell
 - **rovr** (file manager, nnn fallback), **eza/bat/fd/ripgrep/zoxide/dust/duf/sd** (modern coreutils), **fzf** (fuzzy), **atuin** (history), **starship** (prompt), **zellij** (multiplexer), **yazi**->rovr.
