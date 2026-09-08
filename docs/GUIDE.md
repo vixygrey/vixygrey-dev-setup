@@ -1017,6 +1017,33 @@ npm run build && terminal-notifier -title "Build" -message "Done" -sound Glass
 
 ## Claude Code
 
+### Session names
+
+New sessions are named automatically, so the `/resume` picker and the terminal title
+are scannable instead of a wall of untitled rows:
+
+```
+2026-09-08-vixygrey-dev-setup
+```
+
+The repo half comes from the **git remote**, not the folder, so a checkout sitting in
+`vixygrey-dev-setup-main/` still reads `vixygrey-dev-setup`. Outside a repo, or in one
+with no remote, it falls back to the directory name.
+
+The name is only ever filled in for a **new** session. Resuming keeps whatever the
+session was already called, since stamping today's date on a session started last week
+would be wrong:
+
+| Invocation | Name |
+|---|---|
+| `claude` | auto: `<date>-<repo>` |
+| `claude --model opus` | auto: `<date>-<repo>` |
+| `claude -r` / `-c` / `--from-pr` | unchanged, the session keeps its own |
+| `claude -n mine` | `mine` — an explicit name always wins |
+
+Rename any session at any time with `/rename <name>`. The wrapper is interactive-only,
+so scripts and agents invoking `claude` are unaffected.
+
 ### Custom Slash Commands
 
 20 custom commands are installed to `~/.claude/commands/`:
