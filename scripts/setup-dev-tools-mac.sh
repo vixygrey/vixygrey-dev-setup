@@ -5579,43 +5579,43 @@ TFLINT_CONF
             || warn "tflint config written; run 'tflint --init' to fetch the AWS ruleset"
     fi
 
-# ---- trippy Dracula theme ----
+# ---- trippy Dracula-Sakura theme ----
 # trippy theme colors are hex WITHOUT the leading '#' (or named colors). Item names
 # come from `trip --print-tui-theme-items`; trippy validates the file, so keep them exact.
 TRIPPY_CONFIG="$HOME/.config/trippy/trippy.toml"
-    info "Creating trippy Dracula theme..."
+    info "Creating trippy Dracula-Sakura theme..."
     write_managed "$TRIPPY_CONFIG" "#" <<'TRIPPY_CONF'
 [theme-colors]
 bg-color = "282a36"
-border-color = "6272a4"
+border-color = "4b4963"
 text-color = "f8f8f2"
-tab-text-color = "bd93f9"
-hops-table-header-bg-color = "44475a"
-hops-table-header-text-color = "f8f8f2"
-hops-table-row-active-text-color = "50fa7b"
-hops-table-row-inactive-text-color = "6272a4"
-hops-chart-selected-color = "bd93f9"
-hops-chart-unselected-color = "6272a4"
-hops-chart-axis-color = "6272a4"
-frequency-chart-bar-color = "bd93f9"
+tab-text-color = "d4b2ff"
+hops-table-header-bg-color = "323448"
+hops-table-header-text-color = "ddd2f7"
+hops-table-row-active-text-color = "ff9fe3"
+hops-table-row-inactive-text-color = "8a88c7"
+hops-chart-selected-color = "d4b2ff"
+hops-chart-unselected-color = "8a88c7"
+hops-chart-axis-color = "8a88c7"
+frequency-chart-bar-color = "d4b2ff"
 frequency-chart-text-color = "f8f8f2"
-flows-chart-bar-selected-color = "50fa7b"
-flows-chart-bar-unselected-color = "6272a4"
-flows-chart-text-current-color = "50fa7b"
-flows-chart-text-non-current-color = "f8f8f2"
-samples-chart-color = "8be9fd"
-samples-chart-lost-color = "ff5555"
-help-dialog-bg-color = "44475a"
+flows-chart-bar-selected-color = "8af7cf"
+flows-chart-bar-unselected-color = "8a88c7"
+flows-chart-text-current-color = "8af7cf"
+flows-chart-text-non-current-color = "ddd2f7"
+samples-chart-color = "9be7ff"
+samples-chart-lost-color = "ff7aa8"
+help-dialog-bg-color = "323448"
 help-dialog-text-color = "f8f8f2"
-settings-dialog-bg-color = "44475a"
-settings-tab-text-color = "bd93f9"
-info-bar-bg-color = "44475a"
+settings-dialog-bg-color = "323448"
+settings-tab-text-color = "d4b2ff"
+info-bar-bg-color = "323448"
 info-bar-text-color = "f8f8f2"
-map-world-color = "f8f8f2"
-map-radius-color = "ffb86c"
-map-selected-color = "50fa7b"
+map-world-color = "ddd2f7"
+map-radius-color = "ffcf93"
+map-selected-color = "ff9fe3"
 TRIPPY_CONF
-    configured "trippy Dracula theme configured"
+    configured "trippy Dracula-Sakura theme configured"
 
 # ---- miller config ----
 MLR_CONFIG="$HOME/.mlrrc"
@@ -5805,7 +5805,7 @@ NEWSBOAT_CONFIG="$NEWSBOAT_DIR/config"
 NEWSBOAT_URLS="$NEWSBOAT_DIR/urls"
     info "Creating newsboat config (vim keys, Dracula colors)..."
     write_managed "$NEWSBOAT_CONFIG" "#" <<'NEWSBOAT_CONF'
-# Newsboat configuration — vim keys, Dracula colors
+# Newsboat configuration — vim keys, Dracula-Sakura colors
 
 # General
 auto-reload yes
@@ -5826,13 +5826,13 @@ bind-key g home
 bind-key l open
 bind-key h quit
 
-# Dracula colors
+# Dracula-Sakura colors
 color background          color253  color236
 color listnormal          color253  color236
-color listfocus           color236  color141  bold
-color listnormal_unread   color154  color236
-color listfocus_unread    color236  color154  bold
-color info                color236  color141
+color listfocus           color236  color183  bold
+color listnormal_unread   color219  color236
+color listfocus_unread    color236  color219  bold
+color info                color236  color153
 color article             color253  color236
 
 # Browser
@@ -5850,7 +5850,7 @@ https://nodejs.org/en/feed/blog.xml "~Node.js Blog"
 https://blog.rust-lang.org/feed.xml "~Rust Blog"
 https://github.blog/feed/ "~GitHub Blog"
 NEWSBOAT_URLS_CONF
-    configured "newsboat configured (vim keys, Dracula colors, starter URLs)"
+    configured "newsboat configured (vim keys, Dracula-Sakura colors, starter URLs)"
 
 # ---- mpv config ----
 MPV_CONFIG_DIR="$HOME/.config/mpv"
@@ -7045,7 +7045,7 @@ BTOP_CONFIG="$BTOP_CONFIG_DIR/btop.conf"
 #? Config file for btop
 
 # Color theme
-color_theme = "dracula"
+color_theme = "dracula-sakura"
 
 # Update time in milliseconds
 update_ms = 1000
@@ -7070,51 +7070,51 @@ rounded_corners = true
 BTOP_CONF
     # Download Dracula theme for btop
     write_managed "$BTOP_CONFIG_DIR/themes/dracula.theme" "#" <<'BTOP_DRACULA'
-# Dracula theme for btop
+# Dracula-Sakura theme for btop
 theme[main_bg]="#282a36"
 theme[main_fg]="#f8f8f2"
-theme[title]="#f8f8f2"
-theme[hi_fg]="#bd93f9"
-theme[selected_bg]="#44475a"
+theme[title]="#ffc2ec"
+theme[hi_fg]="#d4b2ff"
+theme[selected_bg]="#6a5d86"
 theme[selected_fg]="#f8f8f2"
-theme[inactive_fg]="#6272a4"
-theme[graph_text]="#f8f8f2"
-theme[meter_bg]="#44475a"
-theme[proc_misc]="#8be9fd"
-theme[cpu_box]="#bd93f9"
-theme[mem_box]="#50fa7b"
-theme[net_box]="#ff79c6"
-theme[proc_box]="#8be9fd"
-theme[div_line]="#44475a"
-theme[temp_start]="#50fa7b"
-theme[temp_mid]="#ffb86c"
-theme[temp_end]="#ff5555"
-theme[cpu_start]="#bd93f9"
-theme[cpu_mid]="#ff79c6"
-theme[cpu_end]="#ff5555"
-theme[free_start]="#50fa7b"
-theme[free_mid]="#f1fa8c"
-theme[free_end]="#ff5555"
-theme[cached_start]="#8be9fd"
-theme[cached_mid]="#bd93f9"
-theme[cached_end]="#ff79c6"
-theme[available_start]="#50fa7b"
-theme[available_mid]="#f1fa8c"
-theme[available_end]="#ffb86c"
-theme[used_start]="#ff79c6"
-theme[used_mid]="#ffb86c"
-theme[used_end]="#ff5555"
-theme[download_start]="#bd93f9"
-theme[download_mid]="#ff79c6"
-theme[download_end]="#ff5555"
-theme[upload_start]="#50fa7b"
-theme[upload_mid]="#f1fa8c"
-theme[upload_end]="#ffb86c"
-theme[process_start]="#8be9fd"
-theme[process_mid]="#bd93f9"
-theme[process_end]="#ff79c6"
+theme[inactive_fg]="#8a88c7"
+theme[graph_text]="#ddd2f7"
+theme[meter_bg]="#323448"
+theme[proc_misc]="#9be7ff"
+theme[cpu_box]="#d4b2ff"
+theme[mem_box]="#8af7cf"
+theme[net_box]="#ff9fe3"
+theme[proc_box]="#9be7ff"
+theme[div_line]="#4b4963"
+theme[temp_start]="#8af7cf"
+theme[temp_mid]="#ffcf93"
+theme[temp_end]="#ff7aa8"
+theme[cpu_start]="#d4b2ff"
+theme[cpu_mid]="#ff9fe3"
+theme[cpu_end]="#ff7aa8"
+theme[free_start]="#8af7cf"
+theme[free_mid]="#fff0a8"
+theme[free_end]="#ff7aa8"
+theme[cached_start]="#9be7ff"
+theme[cached_mid]="#d4b2ff"
+theme[cached_end]="#ff9fe3"
+theme[available_start]="#8af7cf"
+theme[available_mid]="#fff0a8"
+theme[available_end]="#ffcf93"
+theme[used_start]="#ff9fe3"
+theme[used_mid]="#ffcf93"
+theme[used_end]="#ff7aa8"
+theme[download_start]="#d4b2ff"
+theme[download_mid]="#ff9fe3"
+theme[download_end]="#ff7aa8"
+theme[upload_start]="#8af7cf"
+theme[upload_mid]="#fff0a8"
+theme[upload_end]="#ffcf93"
+theme[process_start]="#9be7ff"
+theme[process_mid]="#d4b2ff"
+theme[process_end]="#ff9fe3"
 BTOP_DRACULA
-    configured "btop configured with Dracula theme"
+    configured "btop configured with Dracula-Sakura theme"
 
 # ---- lazydocker Dracula config ----
 LAZYDOCKER_CONFIG_DIR="$HOME/.config/lazydocker"
@@ -7124,14 +7124,18 @@ LAZYDOCKER_CONFIG="$LAZYDOCKER_CONFIG_DIR/config.yml"
 gui:
   theme:
     activeBorderColor:
-      - "#bd93f9"
+      - "#ff9fe3"
       - bold
     inactiveBorderColor:
-      - "#6272a4"
+      - "#4b4963"
     selectedLineBgColor:
-      - "#44475a"
+      - "#6a5d86"
+    inactiveViewSelectedLineBgColor:
+      - "#323448"
     optionsTextColor:
-      - "#8be9fd"
+      - "#9be7ff"
+    defaultFgColor:
+      - "#ddd2f7"
   returnImmediately: false
   wrapMainPanel: true
 commandTemplates:
