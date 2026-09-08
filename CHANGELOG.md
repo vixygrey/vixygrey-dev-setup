@@ -1,6 +1,16 @@
 # Changelog
 
+The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html). Every version heading links to its compare view; the definitions live at the bottom of this file.
+
+> **Entries cite the issue number, not the PR.** The GitHub release page lists PRs instead, so the same change carries a different number in the two views. That is by design, not an off-by-one typo. Follow the version heading for the diff.
+
 > Release notes for 7.0.0–7.1.1 live in [GitHub Releases](https://github.com/vixygrey/vixygrey-dev-setup/releases) (auto-generated). This file resumes hand-written notes at 7.2.0.
+
+## [Unreleased]
+
+### Changed
+
+- **`CHANGELOG.md` is now linkable, and the agent docs describe the reference convention the repo actually uses** (#466). Every version heading now resolves to a GitHub compare view through link reference definitions at the bottom of the file, which is the one Keep a Changelog principle this file had never implemented. It matters more than it looks: a bare `#N` inside a Markdown file does **not** autolink on GitHub, because autolinking needs a repository context that conversations and commit messages supply and file rendering does not. So until now a reader of this file had no clickable path to anything, neither the release diff nor the issue. The header also states the SemVer policy and warns that entries cite issues while the release page lists PRs, so the mismatch between the two views stops reading as a mistake. Alongside it, `AGENTS.md` stops telling contributors to reference the PR number: the repo moved to issue references around 7.2.0 and never updated the rule, and the `(#193)` in its own example is a PR from the era when the rule was still accurate. `Security` joins the documented group list for future entries; nothing already published was reclassified, because those headings have shipped and been read.
 
 ## [7.17.0] - 2026-09-08
 
@@ -993,3 +1003,41 @@ Minor release rolling up two follow-up PRs to v4.0.0: a tool-discoverability aud
 
 - Document all new tools in `GUIDE-MACOS.md`, `GUIDE-LINUX.md`, `GUIDE-WINDOWS.md` with usage examples (#5)
 - Update `SHORTCUTS-*.md` with new alias rows and a "Terminal Apps" section (#5)
+
+[Unreleased]: https://github.com/vixygrey/vixygrey-dev-setup/compare/v7.17.0...HEAD
+[7.17.0]: https://github.com/vixygrey/vixygrey-dev-setup/compare/v7.16.0...v7.17.0
+[7.16.0]: https://github.com/vixygrey/vixygrey-dev-setup/compare/v7.15.0...v7.16.0
+[7.15.0]: https://github.com/vixygrey/vixygrey-dev-setup/compare/v7.14.3...v7.15.0
+[7.14.3]: https://github.com/vixygrey/vixygrey-dev-setup/compare/v7.14.2...v7.14.3
+[7.14.2]: https://github.com/vixygrey/vixygrey-dev-setup/compare/v7.14.1...v7.14.2
+[7.14.1]: https://github.com/vixygrey/vixygrey-dev-setup/compare/v7.14.0...v7.14.1
+[7.14.0]: https://github.com/vixygrey/vixygrey-dev-setup/compare/v7.13.0...v7.14.0
+[7.13.0]: https://github.com/vixygrey/vixygrey-dev-setup/compare/v7.12.0...v7.13.0
+[7.12.0]: https://github.com/vixygrey/vixygrey-dev-setup/compare/v7.11.0...v7.12.0
+[7.11.0]: https://github.com/vixygrey/vixygrey-dev-setup/compare/v7.10.0...v7.11.0
+[7.10.0]: https://github.com/vixygrey/vixygrey-dev-setup/compare/v7.9.2...v7.10.0
+[7.9.2]: https://github.com/vixygrey/vixygrey-dev-setup/compare/v7.9.1...v7.9.2
+[7.9.1]: https://github.com/vixygrey/vixygrey-dev-setup/compare/v7.9.0...v7.9.1
+[7.9.0]: https://github.com/vixygrey/vixygrey-dev-setup/compare/v7.8.4...v7.9.0
+[7.8.4]: https://github.com/vixygrey/vixygrey-dev-setup/compare/v7.8.3...v7.8.4
+[7.8.3]: https://github.com/vixygrey/vixygrey-dev-setup/compare/v7.8.2...v7.8.3
+[7.8.2]: https://github.com/vixygrey/vixygrey-dev-setup/compare/v7.8.1...v7.8.2
+[7.8.1]: https://github.com/vixygrey/vixygrey-dev-setup/compare/v7.8.0...v7.8.1
+[7.8.0]: https://github.com/vixygrey/vixygrey-dev-setup/compare/v7.7.1...v7.8.0
+[7.7.1]: https://github.com/vixygrey/vixygrey-dev-setup/compare/v7.7.0...v7.7.1
+[7.7.0]: https://github.com/vixygrey/vixygrey-dev-setup/compare/v7.6.1...v7.7.0
+[7.6.1]: https://github.com/vixygrey/vixygrey-dev-setup/compare/v7.6.0...v7.6.1
+[7.6.0]: https://github.com/vixygrey/vixygrey-dev-setup/compare/v7.5.0...v7.6.0
+[7.5.0]: https://github.com/vixygrey/vixygrey-dev-setup/compare/v7.4.0...v7.5.0
+[7.4.0]: https://github.com/vixygrey/vixygrey-dev-setup/compare/v7.3.0...v7.4.0
+[7.3.0]: https://github.com/vixygrey/vixygrey-dev-setup/compare/v7.2.0...v7.3.0
+[7.2.0]: https://github.com/vixygrey/vixygrey-dev-setup/compare/v7.1.1...v7.2.0
+[6.0.0]: https://github.com/vixygrey/vixygrey-dev-setup/compare/v5.0.0...v6.0.0
+[5.0.0]: https://github.com/vixygrey/vixygrey-dev-setup/compare/v4.1.0...v5.0.0
+[4.1.0]: https://github.com/vixygrey/vixygrey-dev-setup/compare/v4.0.0...v4.1.0
+[4.0.0]: https://github.com/vixygrey/vixygrey-dev-setup/compare/v3.2.0...v4.0.0
+[3.2.0]: https://github.com/vixygrey/vixygrey-dev-setup/compare/v3.1.0...v3.2.0
+[3.1.0]: https://github.com/vixygrey/vixygrey-dev-setup/compare/v3.0.0...v3.1.0
+[3.0.0]: https://github.com/vixygrey/vixygrey-dev-setup/compare/v2.2.0...v3.0.0
+[2.2.0]: https://github.com/vixygrey/vixygrey-dev-setup/compare/v2.1.0...v2.2.0
+[2.1.0]: https://github.com/vixygrey/vixygrey-dev-setup/compare/v2.0.0...v2.1.0

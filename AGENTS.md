@@ -278,7 +278,7 @@ The script installs a **global** hook (`git config --global core.hooksPath ~/.co
 
 - **Open a GitHub issue FIRST — before creating a branch or writing a single line of code.** `gh issue create` with a clear title and a `bug`/`feature`/`chore`/`documentation`/`tech-debt`/`security` label (run `gh label list` if unsure — there is no `docs` label; it's `documentation`), then branch, implement, and reference it from the PR body (`Closes #N`) and a comment. This is not optional bookkeeping: the issue is where the problem and its root cause get recorded before the fix shapes your thinking. The only carve-outs are a pure `chore(release)` version bump and a trivial one-liner the user explicitly asked you to just do.
 - Trunk-based: branch off `main` (`feature/`, `fix/`, `chore/`, `docs/`), open a PR, squash-merge. Conventional commit messages.
-- **CHANGELOG.md** is hand-written from 7.2.0 onward. Add entries under `## [Unreleased]` (create it if absent) in `### Added` / `### Changed` / `### Fixed`, and reference the PR number, e.g. `(#193)`. Concurrent PRs both touching `[Unreleased]` will conflict — serialize merges or rebase.
+- **CHANGELOG.md** is hand-written from 7.2.0 onward. Add entries under `## [Unreleased]` (create it if absent) in `### Added` / `### Changed` / `### Fixed` / `### Security`, and reference the **issue** number, e.g. `(#395)`. Not the PR: the repo cited PRs until about 7.2.0, then moved to issues, and that is what the ~97 `#N` references in this script's comments and these docs all point at. The GitHub release page lists PRs instead, so the two views name the same change differently by design — the CHANGELOG header says so, and version headings link to their compare view for the diff. Concurrent PRs both touching `[Unreleased]` will conflict — serialize merges or rebase.
 - When building `gh pr create --body`/`gh issue create --body`, prefer `--body-file`; if you must use a heredoc subshell, call `/bin/cat` (the user's `cat` is aliased to `bat`).
 
 ## Cutting a release
@@ -286,7 +286,8 @@ The script installs a **global** hook (`git config --global core.hooksPath ~/.co
 Releases are hand-prepared in a PR, then **a tag push triggers the GitHub release automatically** — never run `gh release create` by hand.
 
 1. Bump `SCRIPT_VERSION` in `scripts/setup-dev-tools-mac.sh` (semver: new features → minor, fixes-only → patch, breaking → major).
-2. In `CHANGELOG.md`, rename the top `## [Unreleased]` to `## [X.Y.Z] - YYYY-MM-DD` and rewrite its summary line to cover the whole release. Keep the `### Added` / `### Changed` / `### Fixed` groups. Do not leave an empty `[Unreleased]` behind — it's re-added when the next change lands.
+2. In `CHANGELOG.md`, rename the top `## [Unreleased]` to `## [X.Y.Z] - YYYY-MM-DD` and rewrite its summary line to cover the whole release. Keep the `### Added` / `### Changed` / `### Fixed` / `### Security` groups. Do not leave an empty `[Unreleased]` behind — it's re-added when the next change lands.
+   - **Then update the link definitions at the bottom of the file**, or every heading you just wrote points at the wrong diff. Add `[X.Y.Z]: …/compare/v<previous-tag>...vX.Y.Z` and retarget `[Unreleased]` to `…/compare/vX.Y.Z...HEAD`. The previous tag is the one immediately below it in `git tag | sort -V`, which is not always the previous *changelog* entry: 7.2.0 compares against `v7.1.1`, a tag with no section in this file.
 3. Commit as `chore(release): bump version to X.Y.Z`, open a PR, merge (squash) once CI is green.
 4. On updated `main`, create an **annotated** tag and push it:
    ```bash

@@ -479,8 +479,10 @@ own periodic review (see "drift" below).
   Anything in `specs/` at this repo's root would be a single-source
   duplicate of this file.
 - The CHANGELOG. Hand-written from 7.2.0 onward; entries are added under
-  `## [Unreleased]` in `### Added` / `### Changed` / `### Fixed`, then
-  retitled to a versioned heading at release time.
+  `## [Unreleased]` in `### Added` / `### Changed` / `### Fixed` /
+  `### Security`, cite the **issue** number rather than the PR, and are
+  retitled to a versioned heading at release time. The link definitions
+  at the bottom of the file are part of that retitling — see `AGENTS.md`.
 
 ---
 
