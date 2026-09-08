@@ -33,6 +33,11 @@ cw                  # after that: zoxide remembers (alias)
 rg "TODO" .         # ripgrep: fast text search
 f "*.ts"            # fd: fast file search
 fzf                 # interactive fuzzy finder (Ctrl+T in shell)
+ps aux | jc --ps    # classic command output -> JSON
+
+actionlint          # lint GitHub Actions workflows
+duckdb              # local SQL shell for CSV/JSON/Parquet
+yaml-py -c 'import yaml; print(yaml.safe_load("a: 1"))'
 
 # Update everything at once
 update              # topgrade: brew, npm, pip, system updates

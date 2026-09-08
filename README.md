@@ -31,6 +31,15 @@ chmod +x scripts/setup-dev-tools-mac.sh
 ./scripts/setup-dev-tools-mac.sh
 ```
 
+A few good first commands after setup:
+
+```bash
+actionlint                              # lint GitHub Actions workflows
+duckdb                                  # local SQL shell for CSV/JSON/Parquet
+ps aux | jc --ps | jq '.[0]'            # classic command output -> JSON
+yaml-py -c 'import yaml; print(yaml.safe_load("a: 1"))'
+```
+
 ## Bootstrap trust model
 
 This repo is a bootstrapper, so a few first-run install paths intentionally trust
@@ -134,6 +143,7 @@ and prefer tagged release artifacts with the published SHA256 checksum.
 | **Go** | Go programming language |
 | **Python 3.12** | Python runtime (installed via mise) |
 | **uv** | Fast Python package manager -- 10-100x faster than pip |
+| **PyYAML** (`yaml-py`) | Isolated helper Python with the `yaml` module preinstalled for local YAML scripts and one-liners |
 | **Rust** | Rust toolchain via rustup (rustc, cargo, etc.) |
 | **bun** | Fast JS runtime, bundler, and test runner |
 | **pnpm** | Fast, disk-efficient npm alternative |
@@ -268,6 +278,7 @@ Faster, prettier, smarter replacements for standard Unix utilities.
 | **yq** | jq for YAML -- parse and manipulate YAML files (essential for k8s/CDK) |
 | **miller (mlr)** | awk/sed/jq for CSV, JSON, and tabular data |
 | **csvkit** | Suite of CSV tools -- csvcut, csvgrep, csvstat, csvlook |
+| **jc** | Convert many classic CLI outputs into JSON so they pipe cleanly into `jq` and automation |
 | **pandoc** | Universal document converter -- Markdown to PDF, DOCX, HTML, etc. |
 | **tectonic** | Self-contained LaTeX/PDF engine so pandoc can render PDFs (`pandoc in.md -o out.pdf --pdf-engine=tectonic`) -- a bare Mac has no PDF engine |
 | **poppler** | PDF tools -- `pdftoppm` (PDF→PNG), `pdftotext`, `pdfinfo` |
@@ -284,6 +295,7 @@ Faster, prettier, smarter replacements for standard Unix utilities.
 |------|-------------|
 | **shellcheck** | Shell script linter -- catches bugs and bad practices |
 | **shfmt** | Shell script formatter -- consistent style for bash/zsh scripts |
+| **actionlint** | GitHub Actions workflow linter -- catches workflow/expression/job wiring mistakes plain YAML parsing misses |
 | **act** | Run GitHub Actions locally before pushing (`.actrc` forces `linux/amd64` on Apple Silicon) |
 | **act3** | Glance at the last 3 GitHub Actions runs (`gha3` alias) |
 | **hadolint** | Dockerfile linter -- catches bad practices and security issues |
@@ -356,6 +368,7 @@ Faster, prettier, smarter replacements for standard Unix utilities.
 
 | Tool | Description |
 |------|-------------|
+| **duckdb** | Local analytical SQL database -- query CSV/JSON/Parquet and ad hoc datasets with SQL |
 | **pgcli** | Auto-completing PostgreSQL CLI with syntax highlighting |
 | **mycli** | Auto-completing MySQL CLI with syntax highlighting |
 | **lazysql** | TUI for databases -- interactive SQL queries in terminal |
