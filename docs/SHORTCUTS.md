@@ -138,54 +138,337 @@ Quick reference for all **209+ shortcuts** configured by the setup scripts.
 
 ---
 
-## Kiro Keybindings
+## Terminal App Keybindings
 
-Kiro is a VS Code fork, so the standard VS Code shortcuts work. The script also installs these custom bindings, including three Kiro-specific ones for the built-in Claude agent.
+> **How these were verified.** Every binding below was read from the tool on this machine
+> or from its official documentation. None were written from memory. Each section names its
+> source, so a wrong row is traceable rather than mysterious. Where a tool has no
+> machine-readable keymap and no published table, this file lists its in-app help key and
+> says so, instead of printing a plausible guess.
+>
+> Bindings marked **(house)** are set by this repo's generated config, so they differ from
+> the tool's upstream defaults. Everything else is the upstream default.
 
-| Shortcut | Action |
-|----------|--------|
-| `Cmd+`` ` | Toggle terminal |
-| `Cmd+Shift+`` ` | New terminal |
-| `Cmd+\` | Split editor |
-| `Cmd+1` / `2` / `3` | Focus editor group 1/2/3 |
-| `Cmd+P` | Quick Open file |
-| `Cmd+Shift+P` | Command Palette |
-| `Cmd+Shift+O` | Go to symbol in file |
-| `Cmd+T` | Go to symbol in workspace |
-| `Cmd+B` | Toggle sidebar |
-| `Cmd+Shift+M` | Toggle minimap |
-| `Cmd+Shift+[` | Fold code block |
-| `Cmd+Shift+]` | Unfold code block |
-| `Alt+Up/Down` | Move line up/down |
-| `Cmd+Shift+D` | Duplicate line |
-| `Cmd+Shift+K` | Delete line |
-| `Cmd+D` | Multi-select next match |
-| `Cmd+Shift+L` | Select all occurrences |
-| `Cmd+Shift+F` | Format document |
-| `F2` | Rename symbol |
-| `Cmd+.` | Quick fix |
-| `Cmd+W` | Close editor tab |
-| `Cmd+Shift+T` | Reopen closed editor |
-| `Cmd+I` | Open Kiro agent chat |
-| `Cmd+Shift+I` | Inline edit with Kiro agent |
-| `Cmd+Shift+S` | Create a new Kiro spec from a one-line ask |
+### zellij
+
+*Source: `zellij setup --dump-config` on this machine.*
+
+Zellij is **modal**. You press a mode key, then act. The status bar shows the current mode's
+keys, which is why `default_layout` is `"default"` and not `"compact"` — the compact layout
+omits the plugin that draws them.
+
+| Key | Enters mode |
+|-----|-------------|
+| `Ctrl+p` | Pane |
+| `Ctrl+t` | Tab |
+| `Ctrl+n` | Resize |
+| `Ctrl+s` | Scroll |
+| `Ctrl+o` | Session |
+| `Ctrl+h` | Move |
+| `Ctrl+g` | Locked (toggles — the pass-through escape hatch) |
+| `Ctrl+b` | Tmux compatibility |
+
+**Pane mode** (`Ctrl+p`, then):
+
+| Key | Action |
+|-----|--------|
+| `h` `j` `k` `l` / arrows | Move focus left/down/up/right |
+| `n` | New pane |
+| `d` | New pane below |
+| `r` | New pane right |
+| `s` | New stacked pane |
+| `x` | Close focused pane |
+| `p` | Switch focus |
+| `;` | Focus last pane |
+
+**Tab mode** (`Ctrl+t`, then):
+
+| Key | Action |
+|-----|--------|
+| `n` | New tab |
+| `x` | Close tab |
+| `r` | Rename tab |
+| `h` / `k` / arrows | Previous tab |
+| `l` / `j` / arrows | Next tab |
+| `1`…`9` | Go to tab N |
+| `s` | Toggle sync across panes in tab |
+| `b` | Break pane into its own tab |
+| `[` / `]` | Break pane left / right |
+
+**Resize mode** (`Ctrl+n`, then):
+
+| Key | Action |
+|-----|--------|
+| `h` `j` `k` `l` | Increase left/down/up/right |
+| `H` `J` `K` `L` | Decrease left/down/up/right |
+| `=` or `+` | Increase |
+| `-` | Decrease |
+
+**Scroll mode** (`Ctrl+s`, then):
+
+| Key | Action |
+|-----|--------|
+| `j` / `k` | Scroll down / up |
+| `d` / `u` | Half page down / up |
+| `Ctrl+f` / `Ctrl+b` | Page down / up |
+| `[` / `]` | Previous / next prompt |
+| `s` | Search |
+| `e` | Edit scrollback in `$EDITOR` |
+| `Ctrl+c` | Jump to bottom and leave |
+
+**Session mode** (`Ctrl+o`, then):
+
+| Key | Action |
+|-----|--------|
+| `d` | Detach |
+| `f` | Toggle host fullscreen |
+| `[` / `]` | Focus guest / host session |
 
 ---
 
-## Vim Keybindings
+### lazygit
 
-**Leader key:** `Space`
+*Source: `lazygit --config`, which dumps the full default `keybinding:` tree (178 entries).*
 
-| Key | Mode | Action |
-|-----|------|--------|
-| `Space+W` | Normal | Save file |
-| `Space+Q` | Normal | Quit |
-| `Space+H` | Normal | Clear search highlights |
-| `Ctrl+H/J/K/L` | Normal | Navigate splits (vim-style) |
-| `Ctrl+D` | Normal | Half-page down (centered) |
-| `Ctrl+U` | Normal | Half-page up (centered) |
-| `J` | Visual | Move selection down |
-| `K` | Visual | Move selection up |
+**Universal**
+
+| Key | Action |
+|-----|--------|
+| `q` | Quit |
+| `Q` | Quit without changing directory |
+| `Esc` | Return / cancel |
+| `Tab` | Toggle panel |
+| `j` / `k` or arrows | Next / previous item |
+| `,` / `.` | Previous / next page |
+| `<` / `>` | Go to top / bottom |
+| `H` / `L` | Scroll left / right |
+| `v` | Toggle range select |
+| `Ctrl+z` | Suspend |
+
+**Files panel**
+
+| Key | Action |
+|-----|--------|
+| `c` | Commit changes |
+| `w` | Commit without pre-commit hook |
+| `C` | Commit using your editor |
+| `A` | Amend last commit |
+| `s` | Stash all changes |
+| `S` | Stash options |
+| `x` | Discard (confirm) |
+| `i` | Add to `.gitignore` |
+| `r` | Refresh files |
+| `Ctrl+f` | Find base commit for fixup |
+
+**Branches panel**
+
+| Key | Action |
+|-----|--------|
+| `c` | Checkout branch by name |
+| `F` | Force checkout |
+| `-` | Checkout previous branch |
+| `r` | Rebase branch |
+| `o` | Create pull request |
+| `O` | Pull request options |
+| `G` | Open pull request in browser |
+| `Ctrl+y` | Copy pull request URL |
+
+---
+
+### k9s
+
+*Source: [k9scli.io command reference](https://k9scli.io/topics/commands/).*
+
+| Key | Action |
+|-----|--------|
+| `?` | Show active keyboard mnemonics and help |
+| `Ctrl+a` | Show all available resource aliases |
+| `:q` or `Ctrl+c` | Quit |
+| `Esc` | Leave view / command / filter mode |
+| `d` | Describe |
+| `v` | View |
+| `e` | Edit |
+| `l` | View logs |
+| `Ctrl+d` | Delete a resource (Tab and Enter to confirm) |
+| `Ctrl+k` | Kill a resource, no confirmation |
+
+**Command mode** (`:` then):
+
+| Command | Action |
+|---------|--------|
+| `:pod` | View a resource by singular, plural, or short name |
+| `:pod ns-x` | View a resource in a given namespace |
+| `:ctx` | View and switch Kubernetes context |
+| `:ns` | View and switch namespace |
+| `:xray RESOURCE [NS]` | Launch XRay view |
+| `:pulses` or `:pu` | Pulses view |
+
+**Filtering**
+
+| Filter | Effect |
+|--------|--------|
+| `/text` | Regex filter on name |
+| `/! text` | Keep everything that does *not* match |
+| `/-l label-selector` | Filter by label |
+| `/-f text` | Fuzzy find |
+
+---
+
+### lazydocker
+
+*Source: upstream [`Keybindings_en.md`](https://github.com/jesseduffield/lazydocker/blob/master/docs/keybindings/Keybindings_en.md).*
+
+**Global**
+
+| Key | Action |
+|-----|--------|
+| `1` … `6` | Focus projects / services / containers / images / volumes / networks |
+| `+` / `_` | Next / previous screen mode (normal, half, fullscreen) |
+| `[` / `]` | Previous / next tab |
+| `/` | Filter list |
+| `Enter` | Focus main panel |
+| `Esc` | Return (from main panel) |
+
+**Containers**
+
+| Key | Action |
+|-----|--------|
+| `d` | Remove |
+| `s` | Stop |
+| `r` | Restart |
+| `p` | Pause |
+| `a` | Attach |
+| `E` | Exec shell |
+| `m` | View logs |
+| `e` | Hide/show stopped containers |
+| `w` | Open in browser (first http port) |
+| `b` | Bulk commands |
+| `c` | Predefined custom command |
+
+**Services** adds `u` up service, `U` up project, `D` down project, `S` start, `R` restart options.
+**Images / Volumes / Networks** share `d` remove, `b` bulk commands, `c` custom command.
+
+---
+
+### broot
+
+*Source: [dystroy.org/broot](https://dystroy.org/broot/).*
+
+| Key | Action |
+|-----|--------|
+| *type letters* | Fuzzy search files and directories |
+| `Enter` | Focus directory, or open file in default app |
+| `Enter` on root line | Go to parent |
+| `Alt+Enter` | Leave broot and `cd` to selection |
+| `Esc` | Clear search / previous state |
+| `Tab` | Cycle matches |
+| `↑` / `↓` | Move selection |
+| `Ctrl+→` / `Ctrl+←` | Open preview panel / move between panels |
+| `Alt+h` | Toggle hidden files |
+| `Alt+i` | Toggle ignored files |
+| `:q` or `Ctrl+q` | Quit |
+| `:e` | Open in `$EDITOR` |
+| `:gf` / `:gs` | Git file statuses / only git-changed files |
+| `:fs` | Filesystem usage |
+
+Launch it with the shell function `br`, not `broot`, so `Alt+Enter` can change your shell's directory.
+
+---
+
+### jqp
+
+*Source: upstream [README keybindings table](https://github.com/noahgorstein/jqp).*
+
+| Key | Action |
+|-----|--------|
+| `Tab` / `Shift+Tab` | Cycle sections forward / back |
+| `Enter` | Execute query |
+| `↑` / `↓` | Cycle query history |
+| `Ctrl+y` | Copy query to clipboard |
+| `Ctrl+s` | Save output to file |
+| `Ctrl+t` | Toggle input panel |
+| `Ctrl+c` | Quit, or kill a long-running query |
+
+---
+
+### jnv
+
+*Source: upstream [README keymap](https://github.com/ynqa/jnv).*
+
+| Key | Action |
+|-----|--------|
+| `Ctrl+c` | Exit |
+| `Ctrl+q` | Copy jq filter to clipboard |
+| `Ctrl+o` | Copy JSON to clipboard |
+| `Shift+↑` / `Shift+↓` | Switch mode |
+| `Tab` | Enter suggestion |
+| `Ctrl+a` / `Ctrl+e` | Line start / end |
+| `Ctrl+u` | Clear line |
+| `Alt+b` / `Alt+f` | Jump to previous / next jq token |
+
+---
+
+### mpv
+
+*Source: `man mpv`, INTERACTIVE CONTROL section.*
+
+| Key | Action |
+|-----|--------|
+| `q` | Stop and quit |
+| `Q` | Quit, storing playback position |
+| `Enter` | Next in playlist |
+| `.` / `,` | Step forward / backward one frame |
+| `m` | Mute |
+| `f` | Toggle fullscreen |
+| `_` | Cycle video tracks |
+| `#` | Cycle audio tracks |
+| `E` | Cycle editions |
+
+---
+
+### newsboat
+
+*Source: this repo's generated `~/.config/newsboat/config` — these are **house** bindings, not upstream defaults.*
+
+| Key | Action |
+|-----|--------|
+| `j` / `k` | Down / up **(house)** |
+| `J` / `K` | Next / previous feed **(house)** |
+| `g` / `G` | Home / end **(house)** |
+| `l` | Open **(house)** |
+| `h` | Quit **(house)** |
+
+Upstream newsboat uses arrow keys and `q`; the generated config adds this vim layer on top.
+
+---
+
+### wiper
+
+*Source: upstream [README keybindings](https://github.com/ikebastuz/wiper).*
+
+| Key | Action |
+|-----|--------|
+| `j` / `k` or `↓` / `↑` | Navigate |
+| `l` / `→` / `Enter` | Into folder |
+| `h` / `←` / `Backspace` | To parent |
+| `d` | Delete — first press selects, second confirms |
+| `s` | Toggle sort (title / size) |
+| `c` | Toggle size-gradient colouring |
+| `t` | Toggle Trash (removed content goes to Trash) |
+| `q` | Quit |
+
+---
+
+### e1s and lazysql
+
+*Source: upstream READMEs.*
+
+Both ship an in-app keymap that is the authoritative reference, and both are best read there:
+
+| Tool | Help key |
+|------|----------|
+| `e1s` (ECS browser) | `?` |
+| `lazysql` | `?` — upstream states "For a list of keyboard shortcuts press `?`" |
 
 ---
 
@@ -401,6 +684,9 @@ Run from anywhere with `gj <recipe>` (or `just --justfile ~/.justfile <recipe>`)
 | `/ci-fix` | Diagnose and fix CI failures via `gh run view` + `act` |
 | `/changelog` | Generate changelog from conventional commits |
 | `/commit-msg` | Generate conventional commit message from staged changes |
+| `/probe-assumptions` | Pressure-test the assumptions behind a document or plan |
+| `/probe-evidence` | Pressure-test the evidence behind a document or plan |
+| `/probe-implications` | Pressure-test the implications of a document or plan |
 
 ---
 
@@ -417,28 +703,55 @@ Run from anywhere with `gj <recipe>` (or `just --justfile ~/.justfile <recipe>`)
 
 ## macOS App Shortcuts
 
+*Source: this repo's generated Ghostty config, cross-checked against the copy on disk.*
+
+Only Ghostty gets custom bindings from this setup. They are **global** hotkeys, so they work
+from any application:
+
 | App | Shortcut | Action |
 |-----|----------|--------|
-| Slack | `Cmd+K` | Quick switcher |
-| Slack | `Cmd+Shift+M` | Activity feed |
-| TablePlus | `Cmd+Enter` | Run query |
-| TablePlus | `Cmd+S` | Save changes |
-| Snagit | `Ctrl+Shift+4` | Capture screenshot |
-| Raycast | `Cmd+Space` | Open Raycast |
+| Ghostty | `Cmd+Space` | Toggle the quick terminal (the drop-down shelf) **(house)** |
+| Ghostty | `Cmd+Alt+T` | New window **(house)** |
+
+`Cmd+Space` is deliberately taken from Spotlight, which the setup disables for that
+combination. Spotlight-style search moves to the shell functions `a`, `ff`, `rgf`, and `s`.
+
+**Visual Studio Code** uses stock shortcuts. The setup generates its `settings.json` but no
+`keybindings.json`, so there is nothing house-specific to document; use VS Code's own
+`Cmd+K Cmd+S` keyboard-shortcuts editor.
+
+> Earlier revisions of this file listed shortcuts for **Slack**, **TablePlus**, **Snagit**,
+> and **Raycast**. None of the four are installed — all sit in `DEPRECATED_TOOLS` and are
+> actively uninstalled by `--cleanup`. Their replacements are Google Chat, the TUI database
+> tools (`lazysql`, `harlequin`, `pgcli`), Shottr, and the Ghostty quick terminal.
 
 ---
 
 ## Summary
 
+Counts are taken from this file's own tables, so they stay honest as it grows.
+
 | Category | Count |
 |----------|-------|
-| Shell aliases | 65 |
-| Kiro keybindings | 24 |
-| Vim keybindings | 8 |
+| Shell aliases | 70 |
+| Terminal app keybindings | 156 |
 | fzf keybindings | 7 |
-| Git aliases | 30 |
+| Git aliases | 29 |
 | GitHub CLI aliases | 15 |
-| Global justfile recipes | 27 |
-| Hot corners | 4 |
-| Claude Code commands | 20 |
-| **Total** | **212** |
+| Global justfile recipes | 25 |
+| Claude Code commands | 23 |
+| Ghostty global hotkeys | 2 |
+| **Total** | **327** |
+
+### Coverage
+
+Documented in depth, each from a named source: **zellij, lazygit, k9s, lazydocker, broot,
+jqp, jnv, mpv, newsboat, wiper, fzf**, plus the in-app help key for **e1s** and **lazysql**.
+
+Not yet covered: `micro`, `nnn`, `lnav`, `btop`, `atuin`, `trip`, `viddy`, `harlequin`,
+`atac`, `fx`, `mprocs`, `clipse`, `stu`, `bmm`, `rovr`, `pgcli`, `mycli`, `aichat`, `w3m`,
+`bandwhich`, `croft`, `gh-dash`, `herald`, and `tiki`. These are pending verification
+against their upstream documentation rather than omitted by choice.
+
+`kondo` is deliberately absent: it is a CLI with a confirmation prompt, not a TUI, so it has
+no keymap to document.
