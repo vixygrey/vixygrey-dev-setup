@@ -3926,11 +3926,11 @@ STARSHIP_CONFIG="$HOME/.config/starship.toml"
     info "Creating rich Starship prompt config..."
     write_managed "$STARSHIP_CONFIG" "#" <<'STARSHIP_CONF'
 # =============================================================================
-# Starship Prompt — Dracula themed, info-rich
+# Starship Prompt — Dracula-Sakura themed, info-rich
 # =============================================================================
 
-# Use Dracula Sakura colors everywhere
-palette = "dracula"
+# Use the shared Dracula-Sakura house palette.
+palette = "dracula_sakura"
 
 # Prompt format: elegant, informative, two-line
 format = """
@@ -3949,7 +3949,7 @@ add_newline = false
 
 # -- Prompt character ---------------------------------------------------------
 [character]
-success_symbol = "[♡](bold pink)"
+success_symbol = "[♡](bold rose)"
 error_symbol = "[✗](bold red)"
 vimcmd_symbol = "[❮](bold mint)"
 
@@ -3960,7 +3960,7 @@ symbol = " "
 # -- OS icon ------------------------------------------------------------------
 [os]
 disabled = false
-style = "fg:comment"
+style = "fg:dim"
 format = "[$symbol ]($style)"
 
 [os.symbols]
@@ -3975,20 +3975,20 @@ Debian = ""
 # -- Username (only show if SSH or root) --------------------------------------
 [username]
 show_always = false
-style_user = "fg:purple"
+style_user = "fg:lilac"
 style_root = "bold fg:red"
 format = "[$user]($style) "
 
 # -- Hostname (only show if SSH) ----------------------------------------------
 [hostname]
 ssh_only = true
-style = "fg:pink"
+style = "fg:rose"
 format = "[@$hostname]($style) "
 
 # -- Directory ----------------------------------------------------------------
 [directory]
-style = "bold cyan"
-format = "[✿ ](pink)[$path]($style)[$read_only]($read_only_style) "
+style = "bold fg:cyan"
+format = "[✿ ](rose)[$path]($style)[$read_only]($read_only_style) "
 truncation_length = 4
 truncation_symbol = "…/"
 read_only = " 󰌾"
@@ -4012,7 +4012,7 @@ truncation_length = 24
 
 # -- Git status ---------------------------------------------------------------
 [git_status]
-style = "fg:red"
+style = "fg:rose"
 format = '([$all_status$ahead_behind]($style) )'
 conflicted = "⚡${count} "
 ahead = "⇡${count} "
@@ -4027,7 +4027,7 @@ deleted = "✘${count} "
 
 # -- Git state (rebase, merge, etc.) ------------------------------------------
 [git_state]
-style = "bold fg:orange"
+style = "bold fg:peach"
 format = "[$state( $progress_current/$progress_total)]($style) "
 rebase = "REBASING"
 merge = "MERGING"
@@ -4038,7 +4038,7 @@ bisect = "BISECTING"
 # -- Node.js ------------------------------------------------------------------
 [nodejs]
 symbol = " "
-style = "fg:green"
+style = "fg:mint"
 format = "[$symbol$version]($style) "
 detect_files = ["package.json", ".nvmrc"]
 detect_extensions = []
@@ -4053,7 +4053,7 @@ detect_extensions = ["py"]
 # -- Rust ---------------------------------------------------------------------
 [rust]
 symbol = "🦀 "
-style = "fg:orange"
+style = "fg:peach"
 format = "[$symbol$version]($style) "
 
 # -- Go ----------------------------------------------------------------------
@@ -4072,13 +4072,13 @@ only_with_files = true
 # -- AWS profile --------------------------------------------------------------
 [aws]
 symbol = "☁️ "
-style = "bold fg:orange"
+style = "bold fg:peach"
 format = "[$symbol$profile(\\($region\\))]($style) "
 
 # -- Terraform ----------------------------------------------------------------
 [terraform]
 symbol = "💠 "
-style = "fg:purple"
+style = "fg:lilac"
 format = "[$symbol$workspace]($style) "
 
 # -- Command duration (show if > 3 seconds) -----------------------------------
@@ -4105,33 +4105,36 @@ style = "bold fg:red"
 
 [[battery.display]]
 threshold = 30
-style = "fg:orange"
+style = "fg:peach"
 
 # -- Time (always show) -------------------------------------------------------
 [time]
 disabled = false
-style = "fg:comment"
+style = "fg:dim"
 format = "[ $time]($style)"
 time_format = "%H:%M"
 
-# -- Dracula color palette ----------------------------------------------------
-[palettes.dracula]
-background = "#282a36"
-current_line = "#4b4963"
-foreground = "#f8f8f2"
+# -- Dracula-Sakura color palette ---------------------------------------------
+[palettes.dracula_sakura]
+bg = "#282a36"
+panel = "#323448"
+panel_soft = "#2f3144"
+current = "#4b4963"
+selection = "#6a5d86"
+fg = "#f8f8f2"
+muted = "#ddd2f7"
+dim = "#a297cb"
 comment = "#8a88c7"
 cyan = "#9be7ff"
 mint = "#8af7cf"
-green = "#8af7cf"
-orange = "#ffcf93"
 peach = "#ffcf93"
-pink = "#ff9fe3"
-purple = "#d4b2ff"
+rose = "#ff9fe3"
+blush = "#ffc2ec"
 lilac = "#d4b2ff"
 red = "#ff7aa8"
 yellow = "#fff0a8"
 STARSHIP_CONF
-    configured "Starship prompt configured (Dracula Sakura two-line prompt)"
+    configured "Starship prompt configured (Dracula-Sakura two-line prompt)"
 
 fi  # dracula
 
@@ -7789,26 +7792,26 @@ write_managed "$GHOSTTY_CONFIG" "#" <<'GHOSTTY_CONF'
 font-family = "JetBrainsMono Nerd Font"
 font-size = 14
 
-# Dracula theme
+# Dracula-Sakura theme
 background = 282a36
 foreground = f8f8f2
-selection-background = 44475a
+selection-background = 6a5d86
 selection-foreground = f8f8f2
-palette = 0=#21222c
-palette = 1=#ff5555
-palette = 2=#50fa7b
-palette = 3=#f1fa8c
-palette = 4=#bd93f9
-palette = 5=#ff79c6
-palette = 6=#8be9fd
+palette = 0=#2f3144
+palette = 1=#ff7aa8
+palette = 2=#8af7cf
+palette = 3=#fff0a8
+palette = 4=#d4b2ff
+palette = 5=#ff9fe3
+palette = 6=#9be7ff
 palette = 7=#f8f8f2
-palette = 8=#6272a4
-palette = 9=#ff6e6e
-palette = 10=#69ff94
-palette = 11=#ffffa5
-palette = 12=#d6acff
-palette = 13=#ff92df
-palette = 14=#a4ffff
+palette = 8=#8a88c7
+palette = 9=#ff7aa8
+palette = 10=#8af7cf
+palette = 11=#fff0a8
+palette = 12=#d4b2ff
+palette = 13=#ffc2ec
+palette = 14=#9be7ff
 palette = 15=#ffffff
 
 # Window
@@ -7841,7 +7844,7 @@ quick-terminal-autohide = true
 # Space you're actually looking at. Rebind the chord to taste.
 keybind = global:cmd+alt+t=new_window
 GHOSTTY_CONF
-configured "Ghostty configured (JetBrainsMono Nerd Font, Dracula theme, transparent titlebar)"
+configured "Ghostty configured (JetBrainsMono Nerd Font, Dracula-Sakura palette, transparent titlebar)"
 
 # ---- Ghostty auto-start + keep-alive (launchd agent) ----
 # Ghostty's global cmd+space quick-terminal keybind only works while Ghostty is running:
