@@ -8,6 +8,10 @@
 
 - **`CONVENTIONS.md`** (#395). The repo's documentation is now split along a line the codebase already implicitly followed but had not made explicit: `AGENTS.md` stays the procedural / workflow doc for AI coding agents (issue-first rule, generator-vs-output doctrine, verification loop, release prep), and `CONVENTIONS.md` becomes the normative / code-shape doc — helper usage, managed-block discipline, category structure, dependency policy, test architecture. Both files are tracked. When they conflict, follow AGENTS.md's process and CONVENTIONS.md's substance.
 
+### Changed
+
+- **`CONVENTIONS.md` §17 is now grounded in the codebase, not folklore.** A review of each future-considerations item against the current script turned up one item that was already done (the lazygit `--verify` row landed in #387), one whose premise was wrong (the cross-platform path helper bullet assumed a multi-platform repo, but §16 is macOS-only), and several whose wording overstated the gap (the pre-commit hook's claimed Ruby coverage, the shell-startup coverage framing as k9s/nushell-specific). The §17 list now removes the stale items, reframes the partial items with concrete code references, and adds an explicit "§17 itself drifts" item that mandates shrinking the list as items land as real PRs.
+
 ## [7.16.0] - 2026-09-07
 
 This release hardens the setup script end to end: CI now runs it on macOS, generated-config and helper coverage are much broader, dry-run is honest and non-mutating, and several long-lived config-path and tooling defects are fixed alongside the rollback of the pi experiment.

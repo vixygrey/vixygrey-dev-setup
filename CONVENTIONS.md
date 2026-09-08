@@ -417,33 +417,55 @@ A short list of rules that have each caused a regression at least once:
 ## 17. Future considerations
 
 These are conventions the codebase **knows about** but does not yet
-enforce. Treat them as "good ideas, awaiting formalization":
+enforce, or where the existing enforcement is partial. Treat them as
+"good ideas, awaiting formalization" — and as a section that needs its
+own periodic review (see "drift" below).
 
-- **Schema validation of generated files.** The CI `generated-config` job
-  proves each heredoc *parses* — JSON via `jq`, shell via `zsh -n`, etc.
-  It does not prove the file is at an address the tool reads. That's what
-  `--verify` is for, and not all generated files have a `--verify` check
-  yet.
-- **Cross-platform path helpers.** Several `xdg-open` / `open`-style
-  branches exist ad-hoc. A `open_url <url>` helper that respects platform
-  is overdue.
-- **Cleanup audit.** `DEPRECATED_TOOLS` has not had a sweep against
-  installed formulas in some releases. A CI job that diffs the table
-  against `brew list` would catch retired-but-not-removed packages.
-- **Pre-commit hook coverage matrix.** The global hook covers
-  `console.log`, `pdb`, `binding.pry`. It does not cover other debug
-  primitives (`console.debug`, `print(...)` debug-only, Ruby's
-  `byebug`). Adding more languages is straightforward; adding them
-  safely requires test cases.
-- **Shell-startup coverage in `--verify`.** `--verify` runs checks under
-  the shell it was invoked from. A tool that resolves differently in a
-  login shell vs a non-login shell needs both checked. The check exists
-  for k9s and nushell; it does not exist as a general pattern yet.
-- **Documented `--only` matrix.** The relationship between
-  `ALL_CATEGORIES`, `CONFIG_LIVES_IN_CONFIGS`, and the actual config
-  files written in the `configs` segment is implicit. A static check that
-  cross-references them would prevent the "category installs but never
-  configures" foot-gun.
+- **`--verify` coverage gap, honestly reported.** The CI `generated-config`
+  job proves each heredoc *parses* — JSON via `jq`, shell via `zsh -n`,
+  etc. It does not prove the file is at an address the tool reads; that's
+  what `--verify` is for. Coverage is partial (14 path rows at time of
+  writing; the summary prints `Files not verified: N (of M)` so the gap
+  is never silently lost). Adding more rows is bounded by whether the
+  tool itself surfaces where it reads from — when it doesn't, a
+  file-existence probe is the honest answer (see `gh`, `ngrok`, VS Code).
+- **Cleanup audit.** `DEPRECATED_TOOLS` (defined inside the `--cleanup`
+  branch) has 98 rows at time of writing and no CI job diffs them against
+  `brew list --formula` / `brew list --cask`. A static check would catch
+  retired-but-not-removed packages before they accumulate.
+- **Pre-commit hook language coverage.** The hook covers JS/TS
+  (`console.log`, `debugger`) and Python (`import pdb`, `pdb.set_trace`,
+  `breakpoint()`). It does **not** cover Ruby at all (no `binding.pry`,
+  no `byebug`), nor does it catch other JS console methods
+  (`console.debug`, `console.warn`, `console.info`). Adding more languages
+  is straightforward; adding them safely requires bats test cases
+  mirroring the existing language-scoped checks.
+- **`--verify` shell-startup coverage as a documented convention.** The
+  pattern — pin `XDG_CONFIG_HOME` to the value the generated `~/.zshrc`
+  exports before querying a tool, and gate a path row on the relevant
+  env var so it skips itself when the env is unset — is applied per-row
+  (see lazygit, k9s, ripgrep comments), but isn't extracted into a
+  reusable helper or a section in this file. The risk: a future row
+  author reinvents the pattern badly, or misses it entirely, and the
+  row passes on a developer's interactive shell but fails on a bare
+  `sh` (the failure mode the Copilot CLI install exposed via #345/#353/#354
+  for `copilot`).
+- **`--only` category/config cross-check.** `CONFIG_LIVES_IN_CONFIGS` keys
+  are validated against `ALL_CATEGORIES` at startup (a typo fails loudly),
+  but the **values** are hand-written prose lists, with no static
+  cross-check against the actual `write_managed` calls in the `configs`
+  segment. A category could claim to configure X but silently not, and
+  nothing would notice until a user ran `--only <cat>` and reported a
+  missing config.
+- **§17 itself drifts.** This section is a case study: at the time of
+  writing, one of its six items (the cross-platform path helpers item,
+  since removed) was already stale — the repo is macOS-only (per §16),
+  so "cross-platform helpers" was out of scope. Future-considerations
+  lists need their own review cadence: any item that lands as a real
+  PR should be **removed** from §17 in the same PR, and any item whose
+  premise is invalidated by another change should be **reframed or
+  removed** in the PR that invalidates it. §17 should shrink over time,
+  not grow.
 
 ---
 
