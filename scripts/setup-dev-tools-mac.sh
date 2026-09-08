@@ -9957,6 +9957,61 @@ cat > .github/PULL_REQUEST_TEMPLATE.md <<'PRTEMPLATE'
 Closes #
 PRTEMPLATE
 
+# The scaffold mandates issue-first in both agent docs and backed only the second
+# half of that sequence with a template (#473). These mirror the PR template's
+# shape and the writing rules in the scaffolded CONVENTIONS.md: state the problem,
+# the fix, and the verification, without narrative padding.
+#
+# `labels:` names only GitHub's DEFAULT label set. A fresh repo has `bug` and
+# `enhancement` but NOT `feature`, so referencing `feature` here would tag every
+# new issue with a label that does not exist in the repo it was just created in.
+mkdir -p .github/ISSUE_TEMPLATE
+cat > .github/ISSUE_TEMPLATE/bug_report.md <<'BUGTEMPLATE'
+---
+name: Bug report
+about: Something behaves differently than it should
+labels: bug
+---
+
+## Problem
+<!-- What happens, and what should happen instead. -->
+
+## Reproduction
+<!-- The smallest steps or input that show it. -->
+
+## Proposed fix
+<!-- Optional. Leave blank if the cause is not known yet. -->
+
+## Verification
+<!-- How we will know it is fixed. -->
+BUGTEMPLATE
+
+cat > .github/ISSUE_TEMPLATE/feature_request.md <<'FEATTEMPLATE'
+---
+name: Feature request
+about: A new capability, or an improvement to an existing one
+labels: enhancement
+---
+
+## Summary
+<!-- One or two sentences on what should exist. -->
+
+## Problem
+<!-- What is hard or impossible today. -->
+
+## Proposed fix
+<!-- What to build. Note anything deliberately out of scope. -->
+
+## Verification
+<!-- How we will know it is done. -->
+FEATTEMPLATE
+
+# Blank issues stay enabled on purpose: a one-line issue should not have to be
+# filed through a form.
+cat > .github/ISSUE_TEMPLATE/config.yml <<'ISSUECONFIG'
+blank_issues_enabled: true
+ISSUECONFIG
+
 git add -A
 git commit -m "feat: initial project scaffold"
 
@@ -11909,6 +11964,11 @@ Create `CONVENTIONS.md` with normative rules for:
 - Prefer project specific config only when it improves on the scaffold
 
 ## 7. GitHub templates
+Create `.github/ISSUE_TEMPLATE/bug_report.md` and `.github/ISSUE_TEMPLATE/feature_request.md`,
+both following the Problem / Proposed fix / Verification shape with no narrative padding, plus
+`.github/ISSUE_TEMPLATE/config.yml` with `blank_issues_enabled: true`. Reference only labels a
+fresh repo actually has: `bug` and `enhancement` are GitHub defaults, `feature` is not.
+
 Create `.github/PULL_REQUEST_TEMPLATE.md`:
 ```markdown
 ## Summary
