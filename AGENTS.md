@@ -287,7 +287,7 @@ Releases are hand-prepared in a PR, then **a tag push triggers the GitHub releas
 
 1. Bump `SCRIPT_VERSION` in `scripts/setup-dev-tools-mac.sh` (semver: new features → minor, fixes-only → patch, breaking → major).
 2. In `CHANGELOG.md`, rename the top `## [Unreleased]` to `## [X.Y.Z] - YYYY-MM-DD` and rewrite its summary line to cover the whole release. Keep the `### Added` / `### Changed` / `### Fixed` / `### Security` groups. Do not leave an empty `[Unreleased]` behind — it's re-added when the next change lands.
-   - **Then update the link definitions at the bottom of the file**, or every heading you just wrote points at the wrong diff. Add `[X.Y.Z]: …/compare/v<previous-tag>...vX.Y.Z` and retarget `[Unreleased]` to `…/compare/vX.Y.Z...HEAD`. The previous tag is the one immediately below it in `git tag | sort -V`, which is not always the previous *changelog* entry: 7.2.0 compares against `v7.1.1`, a tag with no section in this file.
+   - **Then update the link definitions at the bottom of the file**, or the heading you just wrote points at the wrong diff. Replace the `[Unreleased]: …` line with `[X.Y.Z]: …/compare/v<previous-tag>...vX.Y.Z`. The definition goes when the heading goes: an orphaned `[Unreleased]:` with no `## [Unreleased]` above it breaks the heading-to-definition symmetry, and both come back together when the next change lands. The previous tag is the one immediately below it in `git tag | sort -V`, which is not always the previous *changelog* entry: 7.2.0 compares against `v7.1.1`, a tag with no section in this file.
 3. Commit as `chore(release): bump version to X.Y.Z`, open a PR, merge (squash) once CI is green.
 4. On updated `main`, create an **annotated** tag and push it:
    ```bash
