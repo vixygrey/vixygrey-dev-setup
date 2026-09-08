@@ -12716,7 +12716,6 @@ PI_TIKI_JOURNAL_SKILL
         success "pi: $_pi_linked shared skills linked -> ~/.agents/skills/ (api-testing, d2-diagrams, dbmate-migrations, office-docs, tiki)"
     fi
     unset _pi_linked _pi_missing
-    unset _stale _name _keep _skill
 fi
 
 
