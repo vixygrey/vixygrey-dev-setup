@@ -392,8 +392,8 @@ declare -A CONFIG_LIVES_IN_CONFIGS=(
     [database]="pgcli, mycli, harlequin"
     [containers]="lazydocker, k9s (config + Dracula skin)"
     [networking]="trippy"
-    [dx]="atuin, zellij, Ghostty, VS Code settings, aichat, pi (~/.pi/agent + shared ~/.agents/skills links) — and starship, which is in the \`dracula\` category"
-    [mac-productivity]="tiki workflow"
+    [dx]="atuin, croft config/theme, zellij, Ghostty, VS Code settings, aichat, pi (~/.pi/agent + shared ~/.agents/skills links) — and starship, which is in the \`dracula\` category"
+    [mac-productivity]="tiki workflow, herald theme asset + theme-name merge"
     [mac-focus]="newsboat"
     [mac-media]="mpv"
     [mac-browsers]="w3m"
@@ -5252,6 +5252,97 @@ else
 fi
 unset MICRO_DEFAULTS
 
+# ---- Croft ----
+# Croft keeps its user config under ~/.config/croft and its themes as extension manifests.
+# The JSON config is merged with the on-disk file winning, same rationale as micro/VS Code:
+# user tweaks survive re-runs, while the generator keeps the house theme and chosen layout.
+CROFT_CONFIG_DIR="$HOME/.config/croft"
+CROFT_CONFIG="$CROFT_CONFIG_DIR/config.json"
+CROFT_THEME_DIR="$CROFT_CONFIG_DIR/extensions/dracula-sakura"
+CROFT_THEME_EXT="$CROFT_THEME_DIR/extension.toml"
+CROFT_DEFAULTS=$(cat <<'CROFT_CONF'
+{
+    "theme": "dracula-sakura",
+    "layout": {
+        "activity_bar": true,
+        "status_bar": true,
+        "side_bar_position": "left",
+        "secondary_side_bar": false,
+        "panel_alignment": "center",
+        "quick_input_position": "center"
+    },
+    "explorer_views": {
+        "open_editors": false,
+        "folders": true,
+        "outline": true,
+        "timeline": true,
+        "dependencies": true
+    },
+    "format_on_save": true,
+    "auto_save": false,
+    "copy_on_select": true,
+    "terminal_scrollback": 10000,
+    "disable_inline_blame": false,
+    "disable_inlay_hints": false
+}
+CROFT_CONF
+)
+if [[ "$DRY_RUN" == "true" ]]; then
+    info "[DRY RUN] Would write croft config/theme (Dracula-Sakura)"
+elif [[ ! -f "$CROFT_CONFIG" ]]; then
+    mkdir -p "$CROFT_CONFIG_DIR"
+    printf '%s\n' "$CROFT_DEFAULTS" > "$CROFT_CONFIG"
+    success "croft configured (Dracula-Sakura theme, terminal-first layout)"
+elif command -v jq &>/dev/null; then
+    _croft_tmp=$(mktemp)
+    if jq -s '.[0] * .[1] | .theme = "dracula-sakura"' <(printf '%s\n' "$CROFT_DEFAULTS") "$CROFT_CONFIG" > "$_croft_tmp" 2>/dev/null; then
+        mv "$_croft_tmp" "$CROFT_CONFIG"
+        success "croft settings merged (your changes kept; Dracula-Sakura stays active)"
+    else
+        rm -f "$_croft_tmp"
+        warn "Could not merge croft config — left as-is: $CROFT_CONFIG"
+    fi
+    unset _croft_tmp
+else
+    warn "croft config exists but jq is missing — not merging new defaults"
+fi
+unset CROFT_DEFAULTS
+
+    info "Writing croft Dracula-Sakura theme extension..."
+    write_generated "$CROFT_THEME_EXT" <<'CROFT_THEME_CONF'
+id = "dracula-sakura"
+name = "Dracula Sakura Theme"
+description = "A soft pink-lilac Dracula variant with airy cyan and mint accents."
+
+[[themes]]
+id = "dracula-sakura"
+label = "Dracula Sakura"
+background = "#282a36"
+accent = "#ff9fe3"
+selection = "#6a5d86"
+search = "#2f3144"
+button = "#d4b2ff"
+gradient = false
+osk_key = "#4b4963"
+osk_special = "#2f3144"
+osk_armed = "#ff9fe3"
+tab_strip = "#2b2d3a"
+tab_inactive = "#323448"
+tab_active = "#3a3d52"
+tab_hover = "#454862"
+tab_close_pill = "#ff9fe3"
+syn_comment = "#8a88c7"
+syn_keyword = "#ff9fe3"
+syn_string = "#fff0a8"
+syn_constant = "#d4b2ff"
+syn_function = "#8af7cf"
+syn_type = "#9be7ff"
+syn_tag = "#ffcf93"
+syn_fg = "#f8f8f2"
+ansi = ["#21222c", "#ff7aa8", "#8af7cf", "#fff0a8", "#d4b2ff", "#ff9fe3", "#9be7ff", "#f8f8f2", "#8a88c7", "#ff9fbe", "#b4ffe1", "#fff6c7", "#e4ccff", "#ffc2ec", "#c7f3ff", "#ffffff"]
+CROFT_THEME_CONF
+    configured "croft theme extension written (Dracula-Sakura)"
+
 # ---- Visual Studio Code ----
 # Same shape as the micro block above, and for the same reasons: NOT write_managed,
 # because JSON has no comment syntax for the managed markers and VS Code rewrites this
@@ -8707,8 +8798,138 @@ fi
 mark_done "config:clipse"
 
 # ---- email + calendar (herald) ----
-# herald self-configures through its own onboarding (accounts, calendars, themes) —
-# there is no hand-written config here. Complete setup from the POST_SETUP checklist:
+# Herald owns its account/server/credential config, so the setup script only manages the
+# theme surface: a local Dracula-Sakura theme asset plus a narrow update of theme.name in
+# ~/.herald/conf.yaml. The rest of the file stays user-owned. If the config file doesn't
+# exist yet, seed only the theme block; herald's own onboarding fills in accounts later.
+HERALD_CONFIG_DIR="$HOME/.herald"
+HERALD_CONFIG="$HERALD_CONFIG_DIR/conf.yaml"
+HERALD_THEME_DIR="$HERALD_CONFIG_DIR/themes"
+HERALD_THEME_FILE="$HERALD_THEME_DIR/dracula-sakura.yaml"
+    info "Writing herald Dracula-Sakura theme..."
+    write_generated "$HERALD_THEME_FILE" <<'HERALD_THEME_CONF'
+version: 1
+name: dracula-sakura
+display_name: Dracula Sakura
+inherits: herald-dark
+roles:
+  text.primary:
+    fg: "#f8f8f2"
+  text.muted:
+    fg: "#ddd2f7"
+  text.dim:
+    fg: "#a297cb"
+  chrome.title_bar:
+    fg: "#ffc2ec"
+    bg: "#282a36"
+    bold: true
+  chrome.tab_active:
+    fg: "#282a36"
+    bg: "#ff9fe3"
+    bold: true
+  chrome.tab_inactive:
+    fg: "#ddd2f7"
+    bg: "#323448"
+  chrome.status_bar:
+    fg: "#f8f8f2"
+    bg: "#2f3144"
+  chrome.hint_bar:
+    fg: "#ddd2f7"
+    bg: "#323448"
+  chrome.table_header:
+    fg: "#9be7ff"
+    bg: "#2f3144"
+    bold: true
+  focus.panel_border:
+    fg: "#4b4963"
+  focus.panel_border_focused:
+    fg: "#d4b2ff"
+  focus.selection_active:
+    fg: "#282a36"
+    bg: "#ff9fe3"
+    bold: true
+  focus.selection_inactive:
+    fg: "#f8f8f2"
+    bg: "#4b4963"
+  focus.visual_selection:
+    fg: "#282a36"
+    bg: "#d4b2ff"
+  metadata.label:
+    fg: "#a297cb"
+  metadata.sender:
+    fg: "#8af7cf"
+    bold: true
+  metadata.date:
+    fg: "#ddd2f7"
+  metadata.subject:
+    fg: "#fff0a8"
+    bold: true
+  metadata.tag:
+    fg: "#9be7ff"
+    bold: true
+  severity.info:
+    fg: "#9be7ff"
+  severity.success:
+    fg: "#8af7cf"
+  severity.warning:
+    fg: "#ffcf93"
+  severity.error:
+    fg: "#ff7aa8"
+  severity.destructive:
+    fg: "#fff5f5"
+    bg: "#7a2844"
+    bold: true
+  compose.accent:
+    fg: "#ff9fe3"
+  compose.attachment:
+    fg: "#9be7ff"
+  contacts.keyword_search:
+    fg: "#ff9fe3"
+  contacts.company:
+    fg: "#ddd2f7"
+  rules.title:
+    fg: "#ffc2ec"
+    bold: true
+  rules.selected:
+    fg: "#282a36"
+    bg: "#ff9fe3"
+HERALD_THEME_CONF
+    configured "herald theme asset written (Dracula-Sakura)"
+
+if [[ "$DRY_RUN" == "true" ]]; then
+    if [[ -f "$HERALD_CONFIG" ]]; then
+        info "[DRY RUN] Would set herald theme.name -> dracula-sakura in $HERALD_CONFIG"
+    else
+        info "[DRY RUN] Would seed $HERALD_CONFIG with theme.name = dracula-sakura"
+    fi
+else
+    mkdir -p "$HERALD_CONFIG_DIR"
+    if [[ ! -f "$HERALD_CONFIG" ]]; then
+        printf 'theme:\n  name: dracula-sakura\n' > "$HERALD_CONFIG"
+        configured "herald config seeded (theme only; accounts still self-configure on first run)"
+    else
+        _herald_mode="$(stat -f '%Lp' "$HERALD_CONFIG" 2>/dev/null || true)"
+        _herald_tmp=$(mktemp)
+        if ruby -e '
+require "yaml"
+path = ARGV[0]
+out = ARGV[1]
+cfg = File.exist?(path) ? (YAML.load_file(path) || {}) : {}
+cfg["theme"] ||= {}
+cfg["theme"]["name"] = "dracula-sakura"
+File.write(out, cfg.to_yaml(line_width: -1))
+' "$HERALD_CONFIG" "$_herald_tmp" 2>/dev/null; then
+            mv "$_herald_tmp" "$HERALD_CONFIG"
+            [[ -n "$_herald_mode" ]] && chmod "$_herald_mode" "$HERALD_CONFIG" 2>/dev/null || true
+            configured "herald config merged (theme.name -> dracula-sakura; accounts left untouched)"
+        else
+            rm -f "$_herald_tmp"
+            warn "Could not merge herald config theme name — left as-is: $HERALD_CONFIG"
+        fi
+        unset _herald_mode _herald_tmp
+    fi
+fi
+# Complete setup from the POST_SETUP checklist:
 #   herald                                      # first run: add Gmail + iCloud, CalDAV
 #   herald serve -config ~/.herald/conf.yaml    # background server (MCP mutations need it)
 # The herald MCP server is registered for Claude in the MCP section below.
@@ -11966,6 +12187,8 @@ echo "  [~/.config/mprocs]      Multi-process TUI defaults + per-proc logs"
 echo "  [~/.config/broot]       File-navigation TUI config + Dracula-Sakura skin"
 echo "  [~/.jqp.yaml]           jq playground theme overrides"
 echo "  [~/.config/aichat]      Local AI chat config + Dracula-Sakura dark theme"
+echo "  [~/.config/croft]       Croft config + Dracula-Sakura theme extension"
+echo "  [~/.herald/themes]      Herald Dracula-Sakura theme asset + theme-name merge"
 echo "  [~/.pi/agent]           Pi settings, local models, Dracula-Sakura theme"
 echo "  [~/.agents/skills]      Curated skills shared with Pi"
 echo "  [leaf]                  Terminal Markdown previewer (live watch, fuzzy picker, Mermaid)"
@@ -12271,7 +12494,7 @@ croft
 croft pair
 ```
 
-Croft's extension system is declarative `extension.toml` manifests — languages, LSP servers, themes, debug adapters, test runners, and MCP sidecars — browsable at `Cmd+Shift+X` and installable by dropping a manifest in `~/.config/croft/extensions/<id>/`. There is deliberately no marketplace; the MCP catalog is curated, signed, and hash-checked. Because manifests are pure data, croft has **no EditorConfig support** — indentation is a language default (2 spaces YAML, 4 otherwise) with a per-buffer status-bar override. Use VS Code below on repos where `.editorconfig` matters.
+Croft's extension system is declarative `extension.toml` manifests — languages, LSP servers, themes, debug adapters, test runners, and MCP sidecars — browsable at `Cmd+Shift+X` and installable by dropping a manifest in `~/.config/croft/extensions/<id>/`. This setup writes a Dracula-Sakura theme extension there and keeps `config.json` pointed at it. There is deliberately no marketplace; the MCP catalog is curated, signed, and hash-checked. Because manifests are pure data, croft has **no EditorConfig support** — indentation is a language default (2 spaces YAML, 4 otherwise) with a per-buffer status-bar override. Use VS Code below on repos where `.editorconfig` matters.
 
 ### `code` — Visual Studio Code
 The GUI editor, secondary to croft. It exists for the cases a terminal IDE still loses at — long refactors across many tabs, graphical diffs and merge conflicts, extension-backed previews — and for `.editorconfig` repos, which croft ignores. It is preconfigured to agree with the terminal rather than fight it: Dracula theme, format-on-save, ruff for Python, prettier for web, shfmt for shell, tabs for Go, LF endings.
@@ -14624,7 +14847,7 @@ hexyl --skip 512 file.bin
 ```
 
 ### `herald` — Terminal Email + Calendar
-A unified terminal client for email and calendar — Gmail (work) and iCloud (personal) in one place — with AI-assisted triage and an MCP server so Claude can read (and, with confirmation, act on) your inbox and calendar. It replaces running separate mail and calendar apps.
+A unified terminal client for email and calendar — Gmail (work) and iCloud (personal) in one place — with AI-assisted triage and an MCP server so Claude can read (and, with confirmation, act on) your inbox and calendar. It replaces running separate mail and calendar apps. This setup adds a local Dracula-Sakura theme asset under `~/.herald/themes/` and only merges `theme.name` into `~/.herald/conf.yaml`, leaving account/server/credential fields user-owned.
 
 ```bash
 # first run: interactive onboarding to add accounts
