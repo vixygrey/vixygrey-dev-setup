@@ -279,6 +279,7 @@ Faster, prettier, smarter replacements for standard Unix utilities.
 | **miller (mlr)** | awk/sed/jq for CSV, JSON, and tabular data |
 | **csvkit** | Suite of CSV tools -- csvcut, csvgrep, csvstat, csvlook |
 | **jc** | Convert many classic CLI outputs into JSON so they pipe cleanly into `jq` and automation |
+| **jqp** | Interactive jq playground / TUI -- explore JSON while iterating on jq filters |
 | **pandoc** | Universal document converter -- Markdown to PDF, DOCX, HTML, etc. |
 | **tectonic** | Self-contained LaTeX/PDF engine so pandoc can render PDFs (`pandoc in.md -o out.pdf --pdf-engine=tectonic`) -- a bare Mac has no PDF engine |
 | **poppler** | PDF tools -- `pdftoppm` (PDF→PNG), `pdftotext`, `pdfinfo` |
@@ -334,6 +335,8 @@ Faster, prettier, smarter replacements for standard Unix utilities.
 | Tool | Description |
 |------|-------------|
 | **leaf** | Terminal Markdown previewer -- live watch, fuzzy picker, Mermaid/LaTeX, inline mode |
+| **mprocs** | TUI for running multiple dev processes side by side -- frontend/backend/worker/watchers in one terminal surface |
+| **broot** | Keyboard-driven directory tree and file navigation TUI with shell handoff |
 | **watchexec** | Run commands on file changes -- supports globs, debouncing, process groups |
 | **pv** | Pipe viewer -- add progress bars to any piped command |
 | **parallel** | GNU parallel -- run commands in parallel across multiple cores |
@@ -352,6 +355,7 @@ Faster, prettier, smarter replacements for standard Unix utilities.
 | **has** | Check for the presence/version of CLIs on PATH |
 | **lazyssh** | TUI SSH connection manager |
 | **starlit** | Terminal weather (run `starlit --setup` for an API key) |
+| **kondo** | Clean dependency/build cruft from software projects across many ecosystems |
 
 ---
 
@@ -427,6 +431,7 @@ Faster, prettier, smarter replacements for standard Unix utilities.
 | **Claude Code (`claude`)** | Agentic coding in the terminal; hosts the migrated MCP servers |
 | **GitHub Copilot CLI** | `copilot` -- installed from `@github/copilot` (a standalone npm package now, not a `gh` extension). The VS Code side needs no install: current VS Code ships Copilot **built in**, and installing the marketplace extension fails against the newer bundled `copilot-chat`. Proprietary -- a deliberate exception to the open-source preference |
 | **llm** | Simon Willison's CLI -- one-shot prompts, plugin ecosystem, SQLite logging, embeddings. Installed via `uv tool` with the Anthropic plugin; default model `anthropic/claude-sonnet-4-5` |
+| **aichat** | All-in-one AI CLI chat / shell copilot -- lighter than a full coding agent, with local Ollama support and a configurable REPL |
 | **chezmoi** | Dotfile manager -- backup and restore configs across machines |
 | **mitmproxy** | Free HTTP debugging proxy -- inspect and modify API calls from any app |
 | **Ghostty** | Fast GPU-accelerated terminal -- daily driver, native macOS feel |
@@ -578,6 +583,7 @@ Applied consistently across the machine, with built-in Dracula variants kept whe
 | **bat** | Dracula syntax theme in config |
 | **delta** | Dracula syntax theme for git diffs |
 | **Ghostty** | Full 16-color Dracula-Sakura palette in config |
+| **jqp** | Dracula base theme with Dracula-Sakura override colors in `~/.jqp.yaml` |
 | **fzf** | Dracula colors in `FZF_DEFAULT_OPTS` |
 | **Starship** | Dracula-Sakura palette in `starship.toml` |
 | **lazygit** | Dracula-Sakura color scheme in config |
@@ -587,10 +593,12 @@ Applied consistently across the machine, with built-in Dracula variants kept whe
 | **SketchyBar** | Dracula-Sakura status bar (palette in `colors.sh`) |
 | **btop** | Full Dracula-Sakura theme with custom color palette |
 | **lazydocker** | Dracula-Sakura borders and options colors |
+| **broot** | Custom Dracula-Sakura skin in `~/.config/broot/skins/` |
 | **harlequin** | Built-in Dracula theme set in `~/.harlequin.toml` |
 | **trippy** | Dracula-Sakura `theme-colors` in `~/.config/trippy/trippy.toml` |
 | **zellij** | Dracula-Sakura theme in the config |
 | **newsboat** | Dracula-Sakura colors in the config |
+| **aichat** | Dracula-Sakura dark TextMate theme plus rose/lilac prompt colors in config |
 | **claws** | Built-in `dracula` theme via `claws --theme dracula` alias |
 | **miniserve** | `--color-scheme-dark dracula` in the `serve` alias |
 | **vivid** | Dracula-themed LS_COLORS for file type coloring |
@@ -807,6 +815,7 @@ The script generates config files with sensible defaults:
 | `~/.docker/daemon.json` | Docker | BuildKit enabled, log rotation 10m x 3, DNS, garbage collection |
 | `~/.aria2/aria2.conf` | aria2 | 16 connections, auto-resume, BitTorrent, 64MB cache |
 | `~/.config/atuin/config.toml` | atuin | Fuzzy search, local-only, compact style, enter=paste (not execute), history filter (ls/cd/clear/exit), secrets filter |
+| `~/.config/mprocs/mprocs.yaml` | mprocs | 5k scrollback, wider proc list, per-process logs under the config dir |
 | `~/.config/starship.toml` | Starship | Rich two-line prompt with a Dracula-Sakura palette, OS icon, git status with counts, Node/Python/Rust/Go/Docker/AWS/Terraform versions, battery warning, time, Nerd Font icons |
 | `~/.config/yt-dlp/config` | yt-dlp | Best quality mp4, aria2c downloader, metadata, subtitles |
 | `~/.config/gh-dash/config.yml` | gh-dash | PR/issue sections, Dracula-Sakura theme |
@@ -823,6 +832,9 @@ The script generates config files with sensible defaults:
 | `~/.config/zellij/config.kdl` | zellij | Dracula-Sakura theme, compact layout, mouse, Ctrl-a prefix |
 | `~/.config/mpv/mpv.conf` | mpv | Hardware accel, save position, screenshots to ~/Screenshots |
 | `~/.config/git-cliff/cliff.toml` | git-cliff | Conventional commits changelog template |
+| `~/.config/broot/conf.hjson` + skin | broot | Git-aware defaults plus a custom Dracula-Sakura skin |
+| `~/.jqp.yaml` | jqp | Dracula base theme with Dracula-Sakura color overrides |
+| `~/.config/aichat/config.yaml` + `dark.tmTheme` | aichat | Local Ollama defaults, prompt behavior, document loaders, Dracula-Sakura dark theme |
 | `~/.newsboat/config` | newsboat | Vim keys, Dracula-Sakura colors, auto-reload |
 | `~/.newsboat/urls` | newsboat | Starter RSS feeds (Claude Code, Node, Rust, GitHub) |
 | `~/.config/nushell/env.nu` | nushell | Starship prompt, Homebrew paths |

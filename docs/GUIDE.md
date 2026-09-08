@@ -34,10 +34,15 @@ rg "TODO" .         # ripgrep: fast text search
 f "*.ts"            # fd: fast file search
 fzf                 # interactive fuzzy finder (Ctrl+T in shell)
 ps aux | jc --ps    # classic command output -> JSON
+cat package.json | jqp
 
 actionlint          # lint GitHub Actions workflows
 duckdb              # local SQL shell for CSV/JSON/Parquet
 yaml-py -c 'import yaml; print(yaml.safe_load("a: 1"))'
+br                  # broot (tree/navigation TUI)
+mprocs "npm run dev" "npm test -- --watch"
+aichat --info       # inspect local AI chat config/providers
+kondo --dry-run ~/Code
 
 # Update everything at once
 update              # topgrade: brew, npm, pip, system updates
