@@ -1527,6 +1527,11 @@ if [[ "$CLEANUP" == "true" ]]; then
     # Format: "type:name:display-name:replacement:appname"
     # appname (optional, 5th field) = actual .app name when it differs from display-name.
     # Used as fallback to find apps in /Applications that weren't installed via Homebrew.
+    #
+    # type is one of: formula (alias: brew), cask, mas, npm. `npm` is the canonical
+    # spelling for a package this script once installed with `npm_global_install`
+    # (#399) — deliberately NOT given an alias, because the brew/formula pair is the
+    # one #242 had to clean up after. Anything else hits the loud `*)` default below.
     DEPRECATED_TOOLS=(
         "brew:tmux:tmux:zellij"
         "brew:helix:Helix (hx):micro"
@@ -1536,6 +1541,17 @@ if [[ "$CLEANUP" == "true" ]]; then
         "brew:khal:khal:herald"
         "brew:vdirsyncer:vdirsyncer:herald"
         "brew:tldr:tldr (unmaintained, disabled upstream):tlrc"
+        # npm globals this script installed and later dropped. Until #399 there was no
+        # way to express these at all, so they stayed on every machine that had them.
+        # `repomix` also has a brew: row above — it shipped both ways, and removing the
+        # formula never touched an npm copy.
+        "npm:playwright:Playwright:removed"
+        "npm:storybook:Storybook CLI:removed"
+        "npm:repomix:repomix (npm copy):Claude Code"
+        # NOT listed: @earendil-works/pi-coding-agent. pi was dropped from the script in
+        # #360, but it is a reasonable thing to install by hand afterwards and at least
+        # one machine has done exactly that. --cleanup must not uninstall a tool the user
+        # deliberately brought back; a row here would do that silently on every run.
         "cask:qlmarkdown:QLMarkdown (Quick Look):removed"
         "cask:qlstephen:QLStephen (Quick Look):removed"
         "cask:protonvpn:Proton VPN:Mullvad VPN"
@@ -1635,6 +1651,12 @@ if [[ "$CLEANUP" == "true" ]]; then
     CLEANUP_COUNT=0
     CLEANUP_SKIPPED=0
 
+    # Resolved once rather than per entry: `npm root -g` is a process spawn, and the
+    # loop below would otherwise pay for it on every npm row. Empty when npm is absent,
+    # which makes every npm row a skip instead of an error.
+    _npm_root=""
+    if installed npm; then _npm_root="$(npm root -g 2>/dev/null || true)"; fi
+
     for entry in "${DEPRECATED_TOOLS[@]}"; do
         IFS=':' read -r type name display replacement appname <<< "$entry"
         # appname defaults to display name when not specified (5th field)
@@ -1699,6 +1721,22 @@ if [[ "$CLEANUP" == "true" ]]; then
                         sudo rm -rf "/Applications/$appname.app" 2>/dev/null || true
                         ((CLEANUP_COUNT++))
                         success "$display removed"
+                    fi
+                else
+                    ((CLEANUP_SKIPPED++))
+                fi
+                ;;
+            npm)
+                # A directory probe, not `npm ls -g <name>`: `npm ls` is a slow spawn per
+                # entry and exits non-zero for reasons unrelated to presence (peer-dep
+                # warnings), which would silently turn a real removal into a skip.
+                if [[ -n "$_npm_root" && -d "$_npm_root/$name" ]]; then
+                    if [[ "$DRY_RUN" == "true" ]]; then
+                        info "[DRY RUN] Would remove: $display (replaced by $replacement)"
+                    else
+                        info "Removing $display (replaced by $replacement)..."
+                        if npm uninstall -g "$name" >> "$LOG_FILE" 2>&1; then success "$display removed"; else error "Failed to remove $display"; fi
+                        ((CLEANUP_COUNT++))
                     fi
                 else
                     ((CLEANUP_SKIPPED++))
