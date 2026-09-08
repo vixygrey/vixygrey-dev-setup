@@ -16,6 +16,10 @@
 
 ### Changed
 
+- **The new project template now states its Git process more explicitly** (#459). Scaffolded `AGENTS.md` and `CONVENTIONS.md` now say the quiet part out loud: trunk based development is the default, branches should stay short lived, and the expected sequence for non trivial work is issue first, then branch, then code, then PR. That was already the user's real workflow; the template now encodes it instead of leaving it implicit.
+
+- **`new-project` stays language neutral by default, but can now add an optional starter `Justfile`** (#458). The new Bigpowers-aligned scaffold deliberately does not invent a `package.json` for non-Node projects, but `new-project --justfile` now writes a small honest command spine with placeholder `dev`, `test`, `build`, `lint`, and `preflight` recipes for repos that want one.
+
 - **`new-project` and `/init-project` now point at a fuller Bigpowers-aligned repo scaffold** (#456). New repositories now start with a public `AGENTS.md`, a normative `CONVENTIONS.md`, a `specs/` cockpit with the core YAML state files and architecture/product placeholders Bigpowers expects, plus explicit LF line-ending enforcement through both `.editorconfig` and `.gitattributes`. The older light scaffold was fine for generic repos, but it did not encode the actual planning and documentation shape this machine now wants by default.
 
 - **The global Claude and Pi instruction layers now speak in a tighter Dracula-Sakura house voice and carry stronger durable-context rules** (#454). The generated global `CLAUDE.md` now adds explicit output preferences (no em dashes, less hyphen heavy phrasing), anti-trope writing guidance, durable preference and stable-vs-volatile context rules, two-attempt error recovery, warning intolerance, and compact token discipline. Pi's global `~/.pi/agent/AGENTS.md` is now generator-owned too, so the same house voice and context hygiene land reproducibly on other machines rather than living only on the maintainer's box.

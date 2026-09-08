@@ -9455,15 +9455,32 @@ SCRIPT
 write_managed_script "$HOME/Scripts/bin/new-project" <<'SCRIPT'
 #!/usr/bin/env bash
 # Scaffold a new project with a Bigpowers-aligned repo template.
-# Usage: new-project <name> [work|personal|oss|learning]
+# Usage: new-project <name> [work|personal|oss|learning] [--justfile]
 set -euo pipefail
 
 NAME="${1:-}"
 CONTEXT="${2:-personal}"
+WANT_JUSTFILE="false"
+
+shift_count=0
+if [[ $# -gt 0 ]]; then shift_count=1; fi
+if [[ $# -gt 1 && "$2" != --* ]]; then shift_count=2; fi
+shift "$shift_count" || true
+for arg in "$@"; do
+    case "$arg" in
+        --justfile) WANT_JUSTFILE="true" ;;
+        *)
+            echo "Unknown option: $arg"
+            echo "Usage: new-project <name> [work|personal|oss|learning] [--justfile]"
+            exit 1
+            ;;
+    esac
+done
 
 if [[ -z "$NAME" ]]; then
-    echo "Usage: new-project <name> [work|personal|oss|learning]"
+    echo "Usage: new-project <name> [work|personal|oss|learning] [--justfile]"
     echo "  Contexts: work, personal, oss, learning"
+    echo "  Options:  --justfile   add a minimal starter Justfile"
     exit 1
 fi
 
@@ -9611,6 +9628,32 @@ All notable changes to this project are documented here.
 - Initial project scaffold
 CHANGELOG
 
+if [[ "$WANT_JUSTFILE" == "true" ]]; then
+cat > Justfile <<'JUSTFILE'
+set shell := ["bash", "-cu"]
+
+default:
+    @just --list
+
+dev:
+    @echo "Define the development command for this project"
+
+test:
+    @echo "Define the test command for this project"
+
+build:
+    @echo "Define the build command for this project"
+
+lint:
+    @echo "Define the lint command for this project"
+
+preflight:
+    @just test
+    @just lint
+    @just build
+JUSTFILE
+fi
+
 cat > CONVENTIONS.md <<'CONVENTIONS'
 # CONVENTIONS.md
 
@@ -9632,10 +9675,12 @@ This file defines how the code and project artifacts should look and behave.
 
 ## Git and review
 
-- Use short lived branches off `main`.
+- Use trunk based development with short lived branches off `main`.
+- Open an issue before writing code, unless the change is truly trivial and local.
 - Use conventional commits.
 - Do not commit directly to `main`.
 - Keep pull requests focused and easy to review.
+- Preferred sequence: issue, branch, code, PR.
 
 ## Tests and quality
 
@@ -9684,10 +9729,16 @@ Read `CONVENTIONS.md` first for normative rules. Read `README.md` for human orie
 - Read `specs/state.yaml` before resuming interrupted work.
 - Keep `AGENTS.md` stable. Put changing status in `specs/` documents.
 
+## Git workflow
+- Use trunk based development. Keep branches short lived and merge back to `main` quickly.
+- Create an issue before writing code. Then branch, implement, and open a pull request.
+- Do not skip straight to code and "document later" for non trivial work.
+
 ## Hard stops
 - Do not commit secrets.
 - Do not bypass failing checks without explaining why.
 - Do not rewrite large areas when a smaller change will do.
+- Do not write code before the issue exists for non trivial work.
 AGENTSMD
 
 mkdir -p specs/product/snapshots specs/epics/archive specs/tech-architecture specs/adr specs/verifications specs/bugs specs/metrics
@@ -9776,6 +9827,9 @@ git commit -m "feat: initial project scaffold"
 echo ""
 echo "Project created at: $PROJECT_DIR"
 echo "  cd $PROJECT_DIR"
+if [[ "$WANT_JUSTFILE" == "true" ]]; then
+    echo "  starter Justfile: created"
+fi
 SCRIPT
 
 # -- clone-work: clone a work repo into the right directory --
