@@ -842,6 +842,7 @@ The script generates config files with sensible defaults:
 | `~/.jqp.yaml` | jqp | Dracula base theme with Dracula-Sakura color overrides |
 | `~/.config/aichat/config.yaml` + `dark.tmTheme` | aichat | Local Ollama defaults, prompt behavior, document loaders, Dracula-Sakura dark theme |
 | `~/.pi/agent/settings.json` | pi | Dracula-Sakura theme, telemetry/analytics off, `micro` as external editor, local Ollama defaults (`qwen2.5-coder:14b`) |
+| `~/.pi/agent/AGENTS.md` | pi | Global Pi instruction layer: Dracula-Sakura house voice, durable context rules, token discipline, anti-trope writing guidance |
 | `~/.pi/agent/models.json` | pi | Registers four local Ollama chat/coding models; the embedding-only `nomic-embed-text-v2-moe` stays machine-local for herald/aichat and is intentionally not exposed as a Pi chat model |
 | `~/.pi/agent/themes/dracula-sakura.json` | pi | Full Dracula-Sakura theme with all required Pi color tokens |
 | `~/.pi/agent/extensions/searxng-web.ts` | pi | Local SearXNG-backed web tools: `searxng_search`, `searxng_fetch`, plus `/searxng-check` |
