@@ -657,6 +657,9 @@ The script sets up Claude Code with a comprehensive configuration for full-stack
 | `/ci-fix` | Diagnose CI failures with `gh run view`, fix, verify locally with `act` |
 | `/changelog` | Generate changelog from conventional commits grouped by type |
 | `/commit-msg` | Analyze staged changes and generate conventional commit message |
+| `/probe-assumptions` | Pressure test a document or plan by surfacing hidden assumptions |
+| `/probe-evidence` | Audit whether a document's claims are well supported |
+| `/probe-implications` | Trace first and second order consequences of a proposal |
 
 ### Permissions Pre-approved
 

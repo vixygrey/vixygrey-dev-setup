@@ -11945,7 +11945,49 @@ Generate a conventional commit message for the currently staged changes.
 Keep the first line under 72 characters. Use imperative mood ("add" not "added").
 CMD_COMMIT
 
-configured "Claude Code commands created (20 commands: /pr-review, /test-plan, /dep-audit, /quick-doc, /cleanup, /security-scan, /perf-check, /docker-lint, /iac-review, /convert, /new-feature, /fix-bug, /create-readme, /init-project, /refactor, /add-endpoint, /add-component, /ci-fix, /changelog, /commit-msg)"
+# /probe-assumptions — pressure test a document or plan's assumptions
+write_generated "$CLAUDE_COMMANDS_DIR/probe-assumptions.md" <<'CMD_PROBE_ASSUMPTIONS'
+Analyze the target document, plan, or proposal: $ARGUMENTS
+
+Produce a compact Socratic assumptions review with these sections:
+1. **Bottom line** — 2 or 3 sentences on how assumption-heavy the document is
+2. **Key assumptions** — list the hidden or weakly supported assumptions
+3. **Quoted evidence** — cite the lines or passages that reveal each assumption
+4. **Open risks** — explain what breaks if those assumptions are wrong
+5. **What to validate next** — the smallest checks that would reduce uncertainty
+
+Be direct. Prefer pressure testing over praise. Focus on what is being taken for granted.
+CMD_PROBE_ASSUMPTIONS
+
+# /probe-evidence — audit how well a document is supported
+write_generated "$CLAUDE_COMMANDS_DIR/probe-evidence.md" <<'CMD_PROBE_EVIDENCE'
+Analyze the target document, plan, or proposal: $ARGUMENTS
+
+Produce a compact evidence review with these sections:
+1. **Bottom line** — 2 or 3 sentences on evidence quality
+2. **Key findings** — what is well supported, weakly supported, or unsupported
+3. **Quoted evidence** — show the passages and cited sources that matter most
+4. **Open risks** — where the argument depends on thin, biased, or missing evidence
+5. **What to validate next** — the smallest checks, measurements, or sources that would firm this up
+
+Distinguish sourced facts from inference. Call out confidence plainly.
+CMD_PROBE_EVIDENCE
+
+# /probe-implications — trace downstream consequences of a decision
+write_generated "$CLAUDE_COMMANDS_DIR/probe-implications.md" <<'CMD_PROBE_IMPLICATIONS'
+Analyze the target document, plan, or proposal: $ARGUMENTS
+
+Produce a compact implications review with these sections:
+1. **Bottom line** — 2 or 3 sentences on the downstream impact
+2. **Key implications** — first order and second order consequences
+3. **Quoted evidence** — show the passages that imply those consequences
+4. **Open risks** — unintended costs, failure modes, lock-in, or operational burden
+5. **What to validate next** — the smallest checks that would reduce downstream surprise
+
+Focus on what follows if this plan is adopted, delayed, or wrong.
+CMD_PROBE_IMPLICATIONS
+
+configured "Claude Code commands created (23 commands: /pr-review, /test-plan, /dep-audit, /quick-doc, /cleanup, /security-scan, /perf-check, /docker-lint, /iac-review, /convert, /new-feature, /fix-bug, /create-readme, /init-project, /refactor, /add-endpoint, /add-component, /ci-fix, /changelog, /commit-msg, /probe-assumptions, /probe-evidence, /probe-implications)"
 
 # ---- Claude Code first-party skills (authored here) ----
 # Skills that teach Claude to use tools THIS script installs, written fresh each run

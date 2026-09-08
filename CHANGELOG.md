@@ -16,6 +16,8 @@
 
 ### Changed
 
+- **Claude Code now gets a trimmed Socratic probe trio rather than a sprawling boilerplate command pack** (#463). The generated command set now adds `/probe-assumptions`, `/probe-evidence`, and `/probe-implications` for pressure testing documents, plans, and proposals. Each command stays compact and uses the same output shape: bottom line, key findings, quoted evidence, open risks, and what to validate next.
+
 - **The new project template now states its writing conventions for repo workflow artifacts more explicitly** (#461). Scaffolded `AGENTS.md` and `CONVENTIONS.md` now require conventional commits and conventional pull request titles, keep issues direct and low on narrative overhead, and say that commit, PR, and issue prose should stay first person, clear, accurate, and softly aligned with the Dracula Sakura house style when there is room for voice.
 
 - **The new project template now states its Git process more explicitly** (#459). Scaffolded `AGENTS.md` and `CONVENTIONS.md` now say the quiet part out loud: trunk based development is the default, branches should stay short lived, and the expected sequence for non trivial work is issue first, then branch, then code, then PR. That was already the user's real workflow; the template now encodes it instead of leaving it implicit.
