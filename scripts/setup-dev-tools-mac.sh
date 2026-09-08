@@ -9454,7 +9454,7 @@ SCRIPT
 # -- new-project: scaffold a new project --
 write_managed_script "$HOME/Scripts/bin/new-project" <<'SCRIPT'
 #!/usr/bin/env bash
-# Scaffold a new project with git, .editorconfig, .gitignore
+# Scaffold a new project with a Bigpowers-aligned repo template.
 # Usage: new-project <name> [work|personal|oss|learning]
 set -euo pipefail
 
@@ -9489,32 +9489,64 @@ echo "Creating project: $PROJECT_DIR"
 mkdir -p "$PROJECT_DIR"
 cd "$PROJECT_DIR"
 
-# Initialize git
 git init -b main
 
-# Copy global .editorconfig if it exists
-if [[ -f "$HOME/.editorconfig" ]]; then
-    cp "$HOME/.editorconfig" .editorconfig
-fi
+cat > .editorconfig <<'EDITORCONFIG'
+root = true
 
-# Create .gitignore
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+indent_style = space
+indent_size = 2
+
+[*.md]
+trim_trailing_whitespace = false
+
+[Makefile]
+indent_style = tab
+
+[*.go]
+indent_style = tab
+
+[*.py]
+indent_size = 4
+EDITORCONFIG
+
+cat > .gitattributes <<'GITATTRIBUTES'
+* text=auto eol=lf
+*.bat text eol=crlf
+*.cmd text eol=crlf
+GITATTRIBUTES
+
 cat > .gitignore <<'GITIGNORE'
 # Dependencies
 node_modules/
 .pnpm-store/
 
 # Build
-dist/
-build/
 .next/
 out/
+dist/
+build/
+coverage/
+.nyc_output/
 
-# Environment
+# Environment and secrets
 .env
 .env.local
 .env.*.local
+.env*
+*.pem
+*.key
 
-# IDE
+# Tool state
+.vercel/
+.supabase/
+
+# Editors
 .vscode/settings.json
 .idea/
 
@@ -9522,20 +9554,24 @@ out/
 .DS_Store
 Thumbs.db
 
-# Test & Coverage
-coverage/
-.nyc_output/
-
 # Logs
 *.log
 npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Private agent notes
+CLAUDE.md
 GITIGNORE
 
-# Create README
 cat > README.md <<README
 # $NAME
 
-## Getting Started
+A new project scaffolded with a Bigpowers aligned workflow, public agent instructions,
+and a specs first planning structure.
+
+## Getting started
 
 \`\`\`bash
 # Install dependencies
@@ -9543,52 +9579,183 @@ pnpm install
 
 # Start development
 pnpm dev
+
+# Run tests
+pnpm test
+
+# Build
+pnpm build
 \`\`\`
+
+## Project structure
+
+- \`AGENTS.md\` — public instructions for coding agents
+- \`CONVENTIONS.md\` — normative code, test, and documentation rules
+- \`specs/\` — planning, scope, architecture, release, and verification artifacts
+- \`CHANGELOG.md\` — user facing release history
+
+## Planning workflow
+
+Use the Bigpowers planning and build skills. Keep product and architecture documentation in
+\`specs/\`, not in ad hoc root files.
 README
 
-# Create AGENTS.md — the PUBLIC agent instructions. This is tracked: it is written
-# for whoever contributes, not for you. Personal preferences and private notes go in
-# CLAUDE.md, which is gitignored below and never committed.
-mkdir -p .claude
-cat > AGENTS.md <<AGENTSMD
-# Notes for coding agents — $NAME
+cat > CHANGELOG.md <<'CHANGELOG'
+# Changelog
 
-If you're an AI assistant working in this repository, start here. Keep this file short and
-free of personal preference: point at the documents that already exist rather than
-restating them.
+All notable changes to this project are documented here.
 
-## Overview
-<!-- What this project does, in two or three sentences -->
+## [Unreleased]
 
-## Tech Stack
-<!-- Languages, frameworks, key libraries -->
+### Added
+- Initial project scaffold
+CHANGELOG
 
-## Read these first
-<!-- | File | What it settles | -->
-<!-- |---|---| -->
-<!-- | \`README.md\` | Setup and usage | -->
+cat > CONVENTIONS.md <<'CONVENTIONS'
+# CONVENTIONS.md
 
-## Development
-- Install: \`pnpm install\`
-- Dev: \`pnpm dev\`
-- Test: \`pnpm test\`
-- Build: \`pnpm build\`
+This file defines how the code and project artifacts should look and behave.
 
-## The things most likely to trip you
-<!-- Repo-specific traps: silent failures, things that look wrong but aren't -->
+## Core rules
 
-## Before you commit
-<!-- The command that must pass. Never commit to main — branch, then open a PR. -->
+- All planning, scope, release, and verification artifacts live in `specs/`.
+- Keep `AGENTS.md` procedural and public. Keep `CONVENTIONS.md` normative.
+- Treat warnings as errors. Investigate and resolve them.
+- Prefer the smallest correct change over broad rewrites.
+- Update user facing docs when behavior changes.
+
+## Line endings and text files
+
+- All text files MUST use LF line endings.
+- `.editorconfig` and `.gitattributes` enforce LF. Do not override them.
+- Keep files UTF-8 with a final newline.
+
+## Git and review
+
+- Use short lived branches off `main`.
+- Use conventional commits.
+- Do not commit directly to `main`.
+- Keep pull requests focused and easy to review.
+
+## Tests and quality
+
+- Run existing lint, test, and build commands before merging.
+- Add tests when behavior changes or defects are fixed.
+- Keep tests close to the code they verify when the stack supports it.
+
+## Agent workflow
+
+- Read `AGENTS.md` before making structural changes.
+- Read the relevant files in `specs/` before planning or implementation.
+- Keep evolving state in `specs/`, not in `AGENTS.md`.
+CONVENTIONS
+
+cat > AGENTS.md <<'AGENTSMD'
+# AGENTS.md
+
+Public instructions for coding agents working in this repository.
+
+Read `CONVENTIONS.md` first for normative rules. Read `README.md` for human oriented setup.
+
+## Project
+<!-- Replace with a one sentence project description. -->
+
+## Commands
+| Action | Command |
+|---|---|
+| Install | `pnpm install` |
+| Dev | `pnpm dev` |
+| Test | `pnpm test` |
+| Build | `pnpm build` |
+| Lint | `pnpm lint` |
+| Preflight | `pnpm test && pnpm lint && pnpm build` |
+
+## Architecture
+<!-- Replace with a short module and boundary summary. -->
+
+## Planning and specs
+- All planning and verification artifacts live in `specs/`.
+- Product scope lives under `specs/product/`.
+- Technical architecture lives under `specs/tech-architecture/`.
+- Release and execution state live in `specs/release-plan.yaml`, `specs/planning-status.yaml`, `specs/execution-status.yaml`, and `specs/state.yaml`.
+
+## Bigpowers workflow
+- Use Bigpowers skills for planning, execution, and verification when available.
+- Read `specs/state.yaml` before resuming interrupted work.
+- Keep `AGENTS.md` stable. Put changing status in `specs/` documents.
+
+## Hard stops
+- Do not commit secrets.
+- Do not bypass failing checks without explaining why.
+- Do not rewrite large areas when a smaller change will do.
 AGENTSMD
 
-# CLAUDE.md is private: personal preferences, lessons, anything not for the public.
-# It is in the global gitignore too, but the per-repo line makes the rule visible to
-# anyone reading the repo.
-if ! grep -qxF 'CLAUDE.md' .gitignore 2>/dev/null; then
-    printf '\n# Private agent notes (personal; see AGENTS.md for the public ones)\nCLAUDE.md\n' >> .gitignore
-fi
+mkdir -p specs/product/snapshots specs/epics/archive specs/tech-architecture specs/adr specs/verifications specs/bugs specs/metrics
 
-# Create GitHub PR template
+cat > specs/README.md <<'SPECSREADME'
+# Specs
+
+All planning, scope, architecture, release, and verification artifacts for this project live here.
+SPECSREADME
+
+cat > specs/state.yaml <<STATE
+workflow_mode: solo-git
+active_phase: discover
+project:
+  name: $NAME
+status:
+  summary: Project scaffolded
+handoff:
+  next_skill: survey-context
+STATE
+
+cat > specs/planning-status.yaml <<'PLANNING'
+discover:
+  survey_context: pending
+  scope_work: pending
+  research_first: pending
+  elaborate_spec: pending
+  plan_release: pending
+  slice_tasks: pending
+PLANNING
+
+cat > specs/execution-status.yaml <<'EXECUTION'
+epics: []
+current_epic: null
+current_story: null
+EXECUTION
+
+cat > specs/release-plan.yaml <<'RELEASE'
+epics: []
+RELEASE
+
+cat > specs/product/SCOPE_LATEST.yaml <<'SCOPE'
+in_scope: []
+out_of_scope: []
+success_criteria: []
+SCOPE
+
+cat > specs/product/VISION_LATEST.yaml <<'VISION'
+problem: ""
+users: []
+outcomes: []
+VISION
+
+cat > specs/product/GLOSSARY_LATEST.yaml <<'GLOSSARY'
+terms: []
+GLOSSARY
+
+cat > specs/bugs/registry.yaml <<'BUGS'
+bugs: []
+BUGS
+
+touch specs/tech-architecture/tech-stack.md \
+      specs/tech-architecture/SECURITY_PLAN_LATEST.md \
+      specs/tech-architecture/TEST_PLAN_LATEST.md \
+      specs/tech-architecture/DESIGN_PLAN_LATEST.md \
+      specs/tech-architecture/REFACTOR_LATEST.md \
+      specs/tech-architecture/IMPACT_LATEST.md
+
 mkdir -p .github
 cat > .github/PULL_REQUEST_TEMPLATE.md <<'PRTEMPLATE'
 ## Summary
@@ -9603,9 +9770,8 @@ cat > .github/PULL_REQUEST_TEMPLATE.md <<'PRTEMPLATE'
 Closes #
 PRTEMPLATE
 
-# Initial commit
 git add -A
-git commit -m "Initial project scaffold"
+git commit -m "feat: initial project scaffold"
 
 echo ""
 echo "Project created at: $PROJECT_DIR"
@@ -11486,63 +11652,73 @@ Set up the following in order:
 - Project structure overview
 - Environment variables (with descriptions, not values)
 
-## 3. AGENTS.md (public agent instructions)
-Create a tracked `AGENTS.md` at the repo root. It is written for whoever contributes, so
-keep it free of personal preference and point at documents rather than restating them.
-Add `CLAUDE.md` to `.gitignore` — that file is private, for personal notes only:
-```markdown
-# <Project Name>
+## 3. Project scaffold
+Create a Bigpowers aligned project skeleton with these files and directories:
 
-## Overview
-<One-paragraph description of what this project does>
+- `AGENTS.md` — tracked, public, procedural agent instructions
+- `CONVENTIONS.md` — tracked, normative rules for code, tests, docs, and line endings
+- `README.md` — concise human overview and setup
+- `CHANGELOG.md` — with an `[Unreleased]` section
+- `.editorconfig` — UTF-8, LF, final newline, trim trailing whitespace, 2-space default indent
+- `.gitattributes` — `* text=auto eol=lf`
+- `.gitignore` — dependencies, build output, `.env*`, keys, tool state, `CLAUDE.md`
+- `specs/` — all planning, scope, release, and verification artifacts
 
-## Tech Stack
-<Languages, frameworks, key libraries>
-
-## Architecture
-<How the project is structured, key directories>
-
-## Development
-- Run dev: `just dev` or `npm run dev`
-- Run tests: `just test` or `npm test`
-- Build: `just build` or `npm run build`
-
-## Conventions
-<Any project-specific conventions not in the global instructions>
+Recommended `specs/` shape:
+```text
+specs/
+├── README.md
+├── state.yaml
+├── planning-status.yaml
+├── execution-status.yaml
+├── release-plan.yaml
+├── product/
+│   ├── SCOPE_LATEST.yaml
+│   ├── VISION_LATEST.yaml
+│   ├── GLOSSARY_LATEST.yaml
+│   └── snapshots/
+├── tech-architecture/
+│   ├── tech-stack.md
+│   ├── SECURITY_PLAN_LATEST.md
+│   ├── TEST_PLAN_LATEST.md
+│   ├── DESIGN_PLAN_LATEST.md
+│   ├── REFACTOR_LATEST.md
+│   └── IMPACT_LATEST.md
+├── adr/
+├── verifications/
+├── epics/
+│   └── archive/
+├── bugs/
+│   └── registry.yaml
+└── metrics/
 ```
 
-## 4. Code Quality
-- **EditorConfig**: Copy global defaults or create project-specific
-- **Prettier**: Create .prettierrc if JS/TS project
-- **Linting**: ESLint (TS/JS), ruff.toml (Python), clippy (Rust)
+## 4. AGENTS.md
+Create a tracked `AGENTS.md` that stays short and public. It should:
+- point contributors at `CONVENTIONS.md` and `README.md`
+- list install, dev, test, build, lint, and preflight commands
+- explain that all planning and release state lives in `specs/`
+- tell agents to use Bigpowers skills when available
+- list a few hard stops such as no secrets and no bypassing failing checks casually
 
-## 5. Testing
-- Set up framework: vitest (preferred for TS), pytest (Python), cargo test (Rust)
-- Create example test file
+Do not create a tracked project `CLAUDE.md`. That file is private and should stay in `.gitignore`.
 
-## 6. CI/CD
-Create `.github/workflows/ci.yml`:
-```yaml
-on: [push, pull_request]
-jobs:
-  ci:
-    runs-on: ubuntu-latest
-    steps: [checkout, setup-node/python/rust, install deps, lint, test, build]
-```
+## 5. CONVENTIONS.md
+Create `CONVENTIONS.md` with normative rules for:
+- planning artifacts live in `specs/`
+- `AGENTS.md` is procedural and public
+- `CONVENTIONS.md` is normative
+- warnings are treated as errors
+- line endings are always LF
+- `.editorconfig` and `.gitattributes` are the source of truth for line ending policy
+- run lint, test, and build before merging
 
-## 7. Justfile
-Create with recipes: dev, test, build, lint, format, clean
+## 6. Code quality and line endings
+- Enforce LF always through both `.editorconfig` and `.gitattributes`
+- Keep files UTF-8 with a final newline
+- Prefer project specific config only when it improves on the scaffold
 
-## 8. Docker (if appropriate)
-- Multi-stage Dockerfile (builder + runtime, non-root user)
-- .dockerignore (node_modules, .git, .env, dist)
-- docker-compose.yml for local development
-
-## 9. Environment
-- .env.example with all variables documented
-- .env in .gitignore
-
-## 10. GitHub Templates
+## 7. GitHub templates
 Create `.github/PULL_REQUEST_TEMPLATE.md`:
 ```markdown
 ## Summary
@@ -11557,47 +11733,9 @@ Create `.github/PULL_REQUEST_TEMPLATE.md`:
 Closes #
 ```
 
-Create `.github/ISSUE_TEMPLATE/feature.md`:
-```markdown
----
-name: Feature Request
-about: Suggest a new feature
-labels: feature
----
-## Problem
-<!-- What problem does this solve? -->
-
-## Proposed Solution
-<!-- How should it work? -->
-
-## Acceptance Criteria
-- [ ]
-```
-
-Create `.github/ISSUE_TEMPLATE/bug.md`:
-```markdown
----
-name: Bug Report
-about: Report a bug
-labels: bug
----
-## Bug Description
-<!-- What happened? -->
-
-## Steps to Reproduce
-1.
-
-## Expected Behavior
-## Actual Behavior
-## Environment
-```
-
-## 11. License
-- Add MIT license (or ask which)
-
-## 12. Initial commit and push
+## 8. Initial commit and push
 - `git add -A && git commit -m "feat: initial project scaffold"`
-- Create GitHub repo if not exists: `gh repo create <name> --private --source=.`
+- Create GitHub repo if needed: `gh repo create <name> --private --source=.`
 - Push: `git push -u origin main`
 CMD_INIT
 

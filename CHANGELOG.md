@@ -16,6 +16,8 @@
 
 ### Changed
 
+- **`new-project` and `/init-project` now point at a fuller Bigpowers-aligned repo scaffold** (#456). New repositories now start with a public `AGENTS.md`, a normative `CONVENTIONS.md`, a `specs/` cockpit with the core YAML state files and architecture/product placeholders Bigpowers expects, plus explicit LF line-ending enforcement through both `.editorconfig` and `.gitattributes`. The older light scaffold was fine for generic repos, but it did not encode the actual planning and documentation shape this machine now wants by default.
+
 - **The global Claude and Pi instruction layers now speak in a tighter Dracula-Sakura house voice and carry stronger durable-context rules** (#454). The generated global `CLAUDE.md` now adds explicit output preferences (no em dashes, less hyphen heavy phrasing), anti-trope writing guidance, durable preference and stable-vs-volatile context rules, two-attempt error recovery, warning intolerance, and compact token discipline. Pi's global `~/.pi/agent/AGENTS.md` is now generator-owned too, so the same house voice and context hygiene land reproducibly on other machines rather than living only on the maintainer's box.
 
 - **`bigpowers` is now provisioned again for both Pi and Claude Code CLI, and via the right delivery paths** (#452). The setup now installs the pinned npm package `bigpowers@2.88.1`, merges `npm:bigpowers@2.88.1` into Pi's `packages` array so Pi loads its package-manifest resources on both fresh and already-provisioned machines, and asks bigpowers' own installer helper to link its managed skills/hooks into `~/.claude/`. This keeps Pi package loading and Claude skill linking separate instead of pretending one install surface serves both.
