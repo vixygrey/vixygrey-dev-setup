@@ -6,6 +6,12 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 > Release notes for 7.0.0–7.1.1 live in [GitHub Releases](https://github.com/vixygrey/vixygrey-dev-setup/releases) (auto-generated). This file resumes hand-written notes at 7.2.0.
 
+## [Unreleased]
+
+### Fixed
+
+- **Zellij was hiding its own keybindings, because the generated config chose a layout without the plugin that draws them** (#481). `default_layout` was set to `"compact"`, and `zellij setup --dump-layout` shows the difference is not cosmetic: the `default` layout is `tab-bar` + panes + `status-bar`, while `compact` is panes + `compact-bar`. `status-bar` is the plugin that renders the per-mode keybinding hints, so "compact" did not shrink the hints, it removed them. That matters more for zellij than for most tools, because it is modal (`Ctrl+p` pane, `Ctrl+t` tab, `Ctrl+n` resize, `Ctrl+s` scroll, `Ctrl+o` session, `Ctrl+h` move, `Ctrl+g` lock), and a modal UI with no visible mode line is undiscoverable. The layout is now `"default"`, and `show_startup_tips` and `mouse_hover_tips` are both on. Separately, `layouts/dev.kdl` declared only its two panes: a custom layout replaces the default one wholesale, so the `dev` layout had no bar at all, and it now declares `tab-bar` and `status-bar` explicitly using the exact syntax `zellij setup --dump-layout default` emits. The success line claiming a "compact layout" was corrected too.
+
 ## [7.18.0] - 2026-09-08
 
 This release is a correctness pass over the things that describe other things. `CHANGELOG.md` becomes navigable: every version heading now resolves to a compare view, which is the one Keep a Changelog principle the file had never implemented, and the agent docs stop prescribing a reference convention the repo abandoned fifteen releases ago. The `new-project` scaffold stops asserting facts it does not have, so a deliberately language-neutral template no longer hardcodes `pnpm`, six planning files no longer ship at zero bytes reading as "done" to anything that checks existence, and the project type finally does something beyond picking a parent directory, which means an open source repo now ships with a real LICENSE. New repos also inherit the changelog conventions and issue templates rather than a stub of each. Alongside that, `git cleanup` learns to delete merged branches that never had an upstream, and new Claude Code sessions name themselves `<date>-<repo>` so the `/resume` picker is scannable.
@@ -1022,6 +1028,7 @@ Minor release rolling up two follow-up PRs to v4.0.0: a tool-discoverability aud
 - Document all new tools in `GUIDE-MACOS.md`, `GUIDE-LINUX.md`, `GUIDE-WINDOWS.md` with usage examples (#5)
 - Update `SHORTCUTS-*.md` with new alias rows and a "Terminal Apps" section (#5)
 
+[Unreleased]: https://github.com/vixygrey/vixygrey-dev-setup/compare/v7.18.0...HEAD
 [7.18.0]: https://github.com/vixygrey/vixygrey-dev-setup/compare/v7.17.0...v7.18.0
 [7.17.0]: https://github.com/vixygrey/vixygrey-dev-setup/compare/v7.16.0...v7.17.0
 [7.16.0]: https://github.com/vixygrey/vixygrey-dev-setup/compare/v7.15.0...v7.16.0

@@ -6249,8 +6249,20 @@ themes {
 
 theme "dracula-sakura"
 
-// Default layout
-default_layout "compact"
+// Default layout — "default", NOT "compact" (#481).
+//
+// The difference is not cosmetic. `zellij setup --dump-layout` shows the bars are
+// explicit plugin panes, not implicit chrome:
+//
+//   default:  tab-bar + <panes> + status-bar
+//   compact:            <panes> + compact-bar
+//
+// `status-bar` is the plugin that draws the per-mode keybinding hints, so
+// "compact" does not shrink the hints, it removes them. Zellij is modal
+// (Ctrl+p pane, Ctrl+t tab, Ctrl+n resize, Ctrl+s scroll, Ctrl+o session,
+// Ctrl+h move, Ctrl+g lock), and a modal UI with no visible mode line is
+// undiscoverable. Two rows is the right price for that.
+default_layout "default"
 default_mode "normal"
 
 // Pane frames
@@ -6261,16 +6273,16 @@ pane_frame_style "titles"
 mouse_mode true
 focus_follows_mouse false
 mouse_hover_effects true
-mouse_hover_tips false
+mouse_hover_tips true
 
 // Scroll buffer
 scroll_buffer_size 100000
 styled_underlines true
-show_startup_tips false
+show_startup_tips true
 show_release_notes false
 copy_command "pbcopy"
 ZELLIJ_CONF
-configured "zellij configured (Dracula Sakura theme, compact layout, pane frames, mouse)"
+configured "zellij configured (Dracula Sakura theme, status bar with mode keybindings, pane frames, mouse)"
 
 # 'dev' layout: editor pane + a Claude Code pane side-by-side (AI integration tier 1).
 # Launch with:  zellij --layout dev
@@ -6278,7 +6290,21 @@ ZELLIJ_LAYOUTS="$ZELLIJ_CONFIG_DIR/layouts"
 info "Creating zellij 'dev' layout..."
 write_managed "$ZELLIJ_LAYOUTS/dev.kdl" "//" <<'ZELLIJ_DEV'
 // Editor + Claude Code side-by-side. Run:  zellij --layout dev
+//
+// The tab-bar and status-bar panes are declared explicitly (#481). A custom
+// layout replaces the default one wholesale, and `zellij setup --dump-layout
+// default` shows those bars are ordinary plugin panes rather than implicit
+// chrome — so without these two lines this layout renders with no mode line at
+// all, which is worse than the compact bar it was inheriting nothing from.
+//
+// The bare `location="tab-bar"` form is used deliberately, copied verbatim from
+// `zellij setup --dump-layout default`. The `zellij:tab-bar` scheme form is also
+// valid, but this is zellij's own output for its own built-in layout, so it
+// cannot be wrong for this version.
 layout {
+    pane size=1 borderless=true {
+        plugin location="tab-bar"
+    }
     pane split_direction="vertical" {
         pane {
             name "editor"
@@ -6288,6 +6314,9 @@ layout {
             name "claude"
             command "claude"
         }
+    }
+    pane size=1 borderless=true {
+        plugin location="status-bar"
     }
 }
 ZELLIJ_DEV
