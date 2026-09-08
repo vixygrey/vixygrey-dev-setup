@@ -33,7 +33,7 @@ fi
 #           --interactive/-i, --resume, --cleanup, --uninstall, --version, --help
 # =============================================================================
 
-SCRIPT_VERSION="7.16.0"
+SCRIPT_VERSION="7.16.1"
 SCRIPT_START=$(date +%s)
 PYTHON_VERSION="3.12"
 
@@ -389,6 +389,7 @@ declare -A CONFIG_LIVES_IN_CONFIGS=(
     [containers]="lazydocker, k9s (config + Dracula skin)"
     [networking]="trippy"
     [dx]="atuin, zellij, Ghostty, VS Code settings — and starship, which is in the \`dracula\` category"
+    [mac-productivity]="tiki workflow"
     [mac-focus]="newsboat"
     [mac-media]="mpv"
     [mac-browsers]="w3m"
@@ -3890,32 +3891,13 @@ STARSHIP_CONFIG="$HOME/.config/starship.toml"
 # Starship Prompt — Dracula themed, info-rich
 # =============================================================================
 
-# Use Dracula colors everywhere
+# Use Dracula Sakura colors everywhere
 palette = "dracula"
 
-# Prompt format: directory, git, languages, duration, newline, character
+# Prompt format: elegant, informative, two-line
 format = """
-[┌──](comment)\
-$os\
-$username\
-$hostname\
-$directory\
-$git_branch\
-$git_status\
-$git_state\
-$nodejs\
-$python\
-$rust\
-$go\
-$docker_context\
-$aws\
-$terraform\
-$cmd_duration\
-$jobs\
-$fill\
-$battery\
-$time
-[└─](comment)$character"""
+[╭─](comment)$os$username$hostname$directory$git_branch$git_status$git_state$fill$battery$time
+[╰─](comment)$nodejs$python$rust$go$docker_context$aws$terraform$cmd_duration$jobs$character"""
 
 # Right prompt disabled (everything is on the left two-line prompt)
 right_format = ""
@@ -3929,9 +3911,9 @@ add_newline = false
 
 # -- Prompt character ---------------------------------------------------------
 [character]
-success_symbol = "[❯](bold purple)"
-error_symbol = "[❯](bold red)"
-vimcmd_symbol = "[❮](bold green)"
+success_symbol = "[♡](bold pink)"
+error_symbol = "[✗](bold red)"
+vimcmd_symbol = "[❮](bold mint)"
 
 # -- Fill (pushes battery/time to the right) ----------------------------------
 [fill]
@@ -3944,7 +3926,7 @@ style = "fg:comment"
 format = "[$symbol ]($style)"
 
 [os.symbols]
-Macos = ""
+Macos = "☾"
 Linux = ""
 Windows = ""
 Arch = ""
@@ -3968,25 +3950,25 @@ format = "[@$hostname]($style) "
 # -- Directory ----------------------------------------------------------------
 [directory]
 style = "bold cyan"
-format = "[$path]($style)[$read_only]($read_only_style) "
+format = "[✿ ](pink)[$path]($style)[$read_only]($read_only_style) "
 truncation_length = 4
 truncation_symbol = "…/"
 read_only = " 󰌾"
 read_only_style = "fg:red"
 
 [directory.substitutions]
-"Inbox" = "📥 "
-"Documents" = "󰈙 "
-"Downloads" = " "
-"Code" = " "
+"Inbox" = "📥"
+"Documents" = "󰈙"
+"Downloads" = "⇣"
+"Code" = ""
 "Creative" = "🎨"
 "Media" = "🎵"
-"Archive" = "📦 "
+"Archive" = "📦"
 
 # -- Git branch ---------------------------------------------------------------
 [git_branch]
-symbol = " "
-style = "fg:purple"
+symbol = " "
+style = "fg:lilac"
 format = "[$symbol$branch(:$remote_branch)]($style) "
 truncation_length = 24
 
@@ -4025,7 +4007,7 @@ detect_extensions = []
 
 # -- Python -------------------------------------------------------------------
 [python]
-symbol = " "
+symbol = " "
 style = "fg:yellow"
 format = '[$symbol$version( \($virtualenv\))]($style) '
 detect_extensions = ["py"]
@@ -4038,13 +4020,13 @@ format = "[$symbol$version]($style) "
 
 # -- Go ----------------------------------------------------------------------
 [golang]
-symbol = " "
+symbol = " "
 style = "fg:cyan"
 format = "[$symbol$version]($style) "
 
 # -- Docker context -----------------------------------------------------------
 [docker_context]
-symbol = " "
+symbol = " "
 style = "fg:cyan"
 format = "[$symbol$context]($style) "
 only_with_files = true
@@ -4064,8 +4046,8 @@ format = "[$symbol$workspace]($style) "
 # -- Command duration (show if > 3 seconds) -----------------------------------
 [cmd_duration]
 min_time = 3_000
-style = "fg:yellow"
-format = "[⏱ $duration]($style) "
+style = "fg:peach"
+format = "[󱎫 $duration]($style) "
 show_milliseconds = false
 
 # -- Background jobs ----------------------------------------------------------
@@ -4073,7 +4055,7 @@ show_milliseconds = false
 symbol = "✦"
 style = "bold fg:cyan"
 number_threshold = 1
-format = "[$symbol$number]($style) "
+format = "[$symbol $number]($style) "
 
 # -- Battery (show if < 30%) --------------------------------------------------
 [battery]
@@ -4091,24 +4073,27 @@ style = "fg:orange"
 [time]
 disabled = false
 style = "fg:comment"
-format = "[$time]($style)"
+format = "[ $time]($style)"
 time_format = "%H:%M"
 
 # -- Dracula color palette ----------------------------------------------------
 [palettes.dracula]
 background = "#282a36"
-current_line = "#44475a"
+current_line = "#4b4963"
 foreground = "#f8f8f2"
-comment = "#6272a4"
-cyan = "#8be9fd"
-green = "#50fa7b"
-orange = "#ffb86c"
-pink = "#ff79c6"
-purple = "#bd93f9"
-red = "#ff5555"
-yellow = "#f1fa8c"
+comment = "#8a88c7"
+cyan = "#9be7ff"
+mint = "#8af7cf"
+green = "#8af7cf"
+orange = "#ffcf93"
+peach = "#ffcf93"
+pink = "#ff9fe3"
+purple = "#d4b2ff"
+lilac = "#d4b2ff"
+red = "#ff7aa8"
+yellow = "#fff0a8"
 STARSHIP_CONF
-    configured "Starship prompt configured (rich two-line prompt, Dracula theme)"
+    configured "Starship prompt configured (Dracula Sakura two-line prompt)"
 
 fi  # dracula
 
@@ -4422,7 +4407,7 @@ LAZYGIT_CONFIG_DIR="$(XDG_CONFIG_HOME="$HOME/.config" lazygit --print-config-dir
 LAZYGIT_CONFIG_DIR="${LAZYGIT_CONFIG_DIR:-$HOME/.config/lazygit}"
 LAZYGIT_CONFIG="$LAZYGIT_CONFIG_DIR/config.yml"
 LAZYGIT_SUPERSEDED="$HOME/Library/Application Support/lazygit/config.yml"
-    info "Creating lazygit Dracula config..."
+    info "Creating lazygit Dracula Sakura config..."
     write_managed "$LAZYGIT_CONFIG" "#" <<'LAZYGIT_CONF'
 gui:
   nerdFontsVersion: "3"
@@ -4431,24 +4416,30 @@ gui:
   showRandomTip: false
   showCommandLog: false
   border: rounded
+  branchColors:
+    '*': '#d4b2ff'
   theme:
     activeBorderColor:
-      - "#bd93f9"  # purple
+      - "#ff9fe3"
       - bold
     inactiveBorderColor:
-      - "#6272a4"  # comment
+      - "#8a88c7"
+    optionsTextColor:
+      - "#9be7ff"
     selectedLineBgColor:
-      - "#44475a"  # current_line
+      - "#6a5d86"
+    inactiveViewSelectedLineBgColor:
+      - "#3a3d52"
     cherryPickedCommitFgColor:
-      - "#50fa7b"  # green
+      - "#8af7cf"
     cherryPickedCommitBgColor:
-      - "#44475a"  # current_line
+      - "#4b4963"
     unstagedChangesColor:
-      - "#ff5555"  # red
+      - "#ff7aa8"
     defaultFgColor:
-      - "#f8f8f2"  # foreground
+      - "#f8f8f2"
     searchingActiveBorderColor:
-      - "#ffb86c"  # orange
+      - "#ffcf93"
 git:
   paging:
     colorArg: always
@@ -4459,7 +4450,7 @@ git:
   autoRefresh: true
   branchLogCmd: "git log --graph --color=always --abbrev-commit --decorate --date=relative --pretty=medium {{branchName}} --"
 os:
-  edit: 'micro {{filename}}'
+  edit: 'croft --open-file {{filename}} .'
   editAtLine: 'micro {{filename}} +{{line}}'
   editAtLineAndWait: 'micro {{filename}} +{{line}}'
   editInTerminal: true
@@ -4470,8 +4461,398 @@ promptToReturnFromSubprocess: false
 LAZYGIT_CONF
     remove_superseded_managed "$LAZYGIT_SUPERSEDED" \
         "lazygit reads $LAZYGIT_CONFIG" "(#333)"
-    configured "lazygit configured (Dracula theme, delta pager, auto-fetch, micro editor)"
+    configured "lazygit configured (Dracula Sakura theme, delta pager, croft open-file)"
 fi  # installed lazygit
+
+# ---- tiki workflow ----
+if installed tiki; then
+TIKI_CONFIG_DIR="$HOME/.config/tiki"
+TIKI_WORKFLOW="$TIKI_CONFIG_DIR/workflow.yaml"
+    info "Creating tiki workflow..."
+    write_managed "$TIKI_WORKFLOW" "#" <<'TIKI_WORKFLOW_CONF'
+version: "0.6.1"
+description: |
+  Dracula Sakura workflow for small-team software work. Four statuses
+  (Moonpool → Ready → Flow → Bloom) and four task types
+  (Story, Bug, Spike, Project). Tuned for elegant, readable task flow.
+fields:
+  - name: status
+    type: enum
+    caption: "Status"
+    values:
+      - value: inbox
+        label: Moonpool
+        visual: "☾"
+        default: true
+      - value: ready
+        label: Ready
+        visual: "✿"
+      - value: inProgress
+        label: "Flow"
+        visual: "✦"
+      - value: done
+        label: Bloom
+        visual: "♡"
+  - name: type
+    type: enum
+    caption: "Type"
+    values:
+      - value: story
+        label: Story
+        visual: "✿"
+        default: true
+      - value: bug
+        label: Bug
+        visual: "⚡"
+      - value: spike
+        label: Spike
+        visual: "☄"
+      - value: project
+        label: Project
+        visual: "☾"
+  - name: priority
+    type: enum
+    caption: "Priority"
+    values:
+      - {value: high, label: High, visual: "❤"}
+      - {value: medium-high, label: "Medium High", visual: "✦"}
+      - {value: medium, label: Medium, visual: "✿", default: true}
+      - {value: medium-low, label: "Medium Low", visual: "◌"}
+      - {value: low, label: Low, visual: "☾"}
+  - name: points
+    type: enum
+    caption: "Points"
+    values:
+      - {value: "11", label: "11", visual: "<action>❚❚❚❚❚❚❚❚❚❚❚"}
+      - {value: "7",  label: "7",  visual: "<action>❚❚❚❚❚❚❚<muted>❘❘❘❘"}
+      - {value: "3",  label: "3",  visual: "<action>❚❚❚<muted>❘❘❘❘❘❘❘❘", default: true}
+      - {value: "1",  label: "1",  visual: "<action>❚<muted>❘❘❘❘❘❘❘❘❘❘"}
+  - name: tags
+    type: stringList
+    caption: "Tags"
+    default: ["idea"]
+  - name: dependsOn
+    type: tikiIdList
+    caption: "Deps"
+  - name: due
+    type: date
+    caption: "Due"
+  - name: recurrence
+    type: recurrence
+    caption: "Recurrence"
+  - name: assignee
+    type: user
+    caption: "Assignee"
+
+actions:
+  - key: "y"
+    label: "Copy ID"
+    action: select id where id = id() | clipboard()
+  - key: "Y"
+    label: "Copy content"
+    action: select title, description where filepath = filepath() | clipboard()
+  - key: "o"
+    label: "Open in croft"
+    action: select filepath where filepath = filepath() | run("croft --open-file \"$1\" .")
+    hot: false
+  - key: "u"
+    label: "Flag urgent"
+    action: update where id = id() set priority="high" tags=tags+["urgent"]
+    hot: false
+  - key: "A"
+    label: "Assign to..."
+    action: update where id = id() set assignee=input()
+    input: string
+    hot: false
+  - key: "t"
+    label: "Add tag"
+    action: update where filepath = filepath() set tags=tags+[input()]
+    input: string
+    hot: false
+  - key: "T"
+    label: "Remove tag"
+    action: update where filepath = filepath() set tags=tags-[input()]
+    input: string
+    hot: false
+  - key: Ctrl-Q
+    label: "Quick create"
+    action: create title=input() tags=tags+["sakura"]
+    input: string
+    hot: false
+
+views:
+  - name: Moonboard
+    kind: board
+    description: "Move tiki through Moonpool → Ready → Flow → Bloom\nShift Left/Right to move"
+    default: true
+    key: "F1"
+    layout: |
+      type.visual + " " + id
+      <text.secondary>title
+      "priority " + priority.visual + "  points " + points.visual
+    lanes:
+      - name: Moonpool
+        filter: select where status = "inbox" and type != "project" and has(priority) order by priority, createdAt
+        action: update where id = id() set status="inbox"
+      - name: Ready
+        filter: select where status = "ready" and type != "project" and has(priority) order by priority, createdAt
+        action: update where id = id() set status="ready"
+      - name: Flow
+        filter: select where status = "inProgress" and type != "project" and has(priority) order by priority, createdAt
+        action: update where id = id() set status="inProgress"
+      - name: Bloom
+        filter: select where status = "done" and type != "project" and has(priority) order by priority, createdAt
+        action: update where id = id() set status="done"
+    actions:
+      - key: Enter
+        label: Open
+        kind: view
+        view: Detail
+        require: ["selection:one"]
+      - key: "a"
+        label: "Add to project"
+        action: update where id = choose(select where type = "project" and outer.id not in dependsOn) set dependsOn = dependsOn + id()
+      - key: "e"
+        label: Edit
+        kind: view
+        view: Detail
+        mode: edit
+        require: ["selection:one"]
+      - key: "n"
+        label: New
+        kind: view
+        view: Detail
+        mode: new
+      - key: "m"
+        label: "Assign to me"
+        action: update where id = id() set assignee=user()
+      - key: "d"
+        label: "Add dependency"
+        action: update where id = id() set dependsOn = dependsOn + choose(select where has(type) and type != "project" and id != id() and id not in outer.dependsOn)
+      - key: "D"
+        label: "Remove dependency"
+        action: update where id = id() set dependsOn = dependsOn - choose(select where id in outer.dependsOn)
+      - key: "+"
+        label: "Priority up"
+        action: update where id = id() set priority = prev_enum(priority)
+      - key: "-"
+        label: "Priority down"
+        action: update where id = id() set priority = next_enum(priority)
+      - key: "Delete"
+        label: Delete
+        action: delete where id = id()
+        require: ["selection:one"]
+
+  - name: Recent
+    kind: board
+    description: "Tasks changed in the last 24 hours, most recent first"
+    key: Ctrl-R
+    layout: |
+      type.visual + " " + id
+      <text.secondary>title
+      "priority " + priority.visual + "  points " + points.visual
+    lanes:
+      - name: Recent
+        columns: 4
+        filter: select where now() - updatedAt < 24hour and has(type) and type != "project" order by updatedAt desc
+    actions:
+      - key: Enter
+        label: Open
+        kind: view
+        view: Detail
+        require: ["selection:one"]
+      - key: "e"
+        label: Edit
+        kind: view
+        view: Detail
+        mode: edit
+        require: ["selection:one"]
+      - key: "n"
+        label: New
+        kind: view
+        view: Detail
+        mode: new
+      - key: "m"
+        label: "Assign to me"
+        action: update where id = id() set assignee=user()
+      - key: "d"
+        label: "Add dependency"
+        action: update where id = id() set dependsOn = dependsOn + choose(select where has(type) and type != "project" and id != id() and id not in outer.dependsOn)
+      - key: "D"
+        label: "Remove dependency"
+        action: update where id = id() set dependsOn = dependsOn - choose(select where id in outer.dependsOn)
+      - key: "+"
+        label: "Priority up"
+        action: update where id = id() set priority = prev_enum(priority)
+      - key: "-"
+        label: "Priority down"
+        action: update where id = id() set priority = next_enum(priority)
+      - key: "Delete"
+        label: Delete
+        action: delete where id = id()
+        require: ["selection:one"]
+
+  - name: Roadmap
+    kind: board
+    description: "Projects organized by Now, Next, and Later horizons"
+    key: "F4"
+    layout: |
+      type.visual + " " + id
+      <text.secondary>title
+      <text.muted>dependsOn.count + <text.muted>" tasks"
+      _
+      <text.muted>"tags: " + <text.value>tags
+      "priority " + priority.visual + "  points " + points.visual
+    lanes:
+      - name: Now
+        columns: 1
+        width: 25
+        filter: select where type = "project" and status in ["ready", "inProgress", "done"] and has(priority) and has(points) order by priority, points
+        action: update where id = id() set status="ready"
+      - name: Next
+        columns: 1
+        width: 25
+        filter: select where type = "project" and status = "inbox" and has(priority) and priority = "high" and has(points) order by priority, points
+        action: update where id = id() set status="inbox" priority="high"
+      - name: Later
+        columns: 2
+        width: 50
+        filter: select where type = "project" and status = "inbox" and has(priority) and priority > "high" and has(points) order by priority, points
+        action: update where id = id() set status="inbox" priority="medium-high"
+    actions:
+      - key: Enter
+        label: Open
+        kind: view
+        view: Project
+        require: ["selection:one"]
+      - key: "l"
+        label: "Add tiki to project"
+        action: update where id = id() set dependsOn = dependsOn + choose(select where has(type) and type != "project" and id not in outer.dependsOn)
+      - key: "e"
+        label: Edit
+        kind: view
+        view: Project
+        mode: edit
+        require: ["selection:one"]
+      - key: "n"
+        label: New
+        kind: view
+        view: Project
+        mode: new
+        # seed the draft as a project so a Roadmap "new" lands on this board
+        # (Roadmap lanes filter type = "project"); persisted only on form commit
+        action: create type="project"
+      - key: "m"
+        label: "Assign to me"
+        action: update where id = id() set assignee=user()
+      - key: "+"
+        label: "Priority up"
+        action: update where id = id() set priority = prev_enum(priority)
+      - key: "-"
+        label: "Priority down"
+        action: update where id = id() set priority = next_enum(priority)
+      - key: "Delete"
+        label: Delete
+        action: delete where id = id()
+        require: ["selection:one"]
+
+  - name: Docs
+    kind: wiki
+    description: "Project notes and documentation files"
+    path: "index.md"
+    key: "F2"
+
+  - name: Detail
+    kind: detail
+    description: "View and edit selected task"
+    require: ["selection:one"]
+    layout: |
+      <highlight>title             | --                                        | --                            | --            | --                             | --          | --                       | --
+      _                            | _                                         | _                             | _             | _                              | _           | _                        | _
+      <text.label>status.caption   | (status.label + " " + status.visual):16.. | <text.label>assignee.caption  | assignee:18.. | <text.label>due.caption        | due:12..    | <text.label>tags.caption | <text.label>dependsOn.caption
+      <text.label>type.caption     | type.label + " " + type.visual            | <text.muted>createdBy.caption | createdBy     | <text.label>recurrence.caption | recurrence? | tags?:18..               | dependsOn?:16..fr
+      <text.label>priority.caption | priority                                  | <text.muted>createdAt.caption | createdAt     | _                              | _           | ^                        | ^
+      <text.label>points.caption   | points                                    | <text.muted>updatedAt.caption | updatedAt     | _                              | _           | ^                        | ^
+    actions:
+      - key: "R"
+        label: "Make recurring"
+        action: update where id = id() set recurrence=daily() due=next_date(daily())
+      - key: "d"
+        label: "Add dependency"
+        action: update where id = id() set dependsOn = dependsOn + choose(select where has(type) and type != "project" and id != id() and id not in outer.dependsOn)
+      - key: "D"
+        label: "Remove dependency"
+        action: update where id = id() set dependsOn = dependsOn - choose(select where id in outer.dependsOn)
+      - key: "L"
+        label: "List dependencies"
+        kind: view
+        view: Detail
+        choose: select where id in target.dependsOn
+
+  - name: Project
+    kind: detail
+    description: "View and edit selected project"
+    require: ["selection:one"]
+    layout: |
+      <highlight>title             | --                                 | --                    | --        | --                       | --    | --                                                                                                                                                                                                                                                                                    | --
+      _                            | _                                  | _                     | _         | _                        | _     | _                                                                                                                                                                                                                                                                                     | _
+      <text.label>status.caption   | (status.label + " " + status.visual):16.. | <text.muted>createdBy.caption  | createdBy | <text.label>tags.caption | tags?:18.. | (<text.muted>"Projects gather related tasks — stories, bugs, and spikes — into a single unit of planning. Press " + <status.warn>"<L>" + <text.muted>" to see every task linked to this project. Move it across Now, Next, and Later as priorities shift; it auto-completes when all its tasks are done."):fr | _
+      <text.label>priority.caption | priority                           | <text.muted>createdAt.caption  | createdAt | ^                        | ^     | ^                                                                                                                                                                                                                                                                                     | _
+      <text.label>points.caption   | points                             | <text.muted>updatedAt.caption  | updatedAt | ^                        | ^     | ^                                                                                                                                                                                                                                                                                     | _
+    actions:
+      - key: "L"
+        label: "List tasks"
+        kind: view
+        view: Detail
+        choose: select where id in target.dependsOn
+      - key: "a"
+        label: "Add to project"
+        action: update where id = id() set dependsOn = dependsOn + choose(select where has(type) and type != "project" and id not in outer.dependsOn)
+
+triggers:
+  - description: block completion with open dependencies
+    ruki: >
+      before update
+        where new.status = "done" and new.dependsOn any status != "done"
+        deny "cannot complete: has open dependencies"
+  - description: tasks must pass through in-progress before completion
+    ruki: >
+      before update
+        where new.status = "done" and old.status != "inProgress"
+        deny "tasks must be in-progress before marking done"
+  - description: remove deleted task from dependency lists
+    ruki: >
+      after delete
+        update where old.id in dependsOn set dependsOn = dependsOn - [old.id]
+  - description: clean up completed tasks after 24 hours
+    ruki: >
+      every 1day
+        delete where status = "done" and updatedAt < now() - 1day
+  - description: tasks must have an assignee before starting
+    ruki: >
+      before update
+        where new.status = "inProgress" and new.assignee is empty and new.type != "project"
+        deny "assign someone before moving to in-progress"
+  - description: auto-complete projects when all child tasks finish
+    ruki: >
+      after update
+        where new.status = "done" and new.type != "project"
+        update where type = "project" and new.id in dependsOn and dependsOn all status = "done"
+        set status="done"
+  - description: cannot delete tasks that are actively being worked
+    ruki: >
+      before delete
+        where old.status = "inProgress"
+        deny "cannot delete an in-progress task — move to inbox or done first"
+  - description: spawn next occurrence when recurring task completes
+    ruki: >
+      after update
+        where new.status = "done" and old.recurrence is not empty
+        create title=old.title priority=old.priority tags=old.tags
+               recurrence=old.recurrence due=next_date(old.recurrence) status="inbox"
+TIKI_WORKFLOW_CONF
+    configured "tiki workflow configured (Dracula Sakura board, roadmap, triggers)"
+fi  # installed tiki
 
 # ---- k9s Dracula skin ----
 # k9s follows XDG too, so the Library path this used to write was read by nobody and
@@ -5231,50 +5612,54 @@ fi  # installed stern
 if installed zellij; then
 ZELLIJ_CONFIG_DIR="$HOME/.config/zellij"
 ZELLIJ_CONFIG="$ZELLIJ_CONFIG_DIR/config.kdl"
-info "Configuring zellij (Dracula theme, tmux-like keybindings)..."
+info "Configuring zellij (Dracula Sakura theme, close to stock behavior)..."
 write_managed "$ZELLIJ_CONFIG" "//" <<'ZELLIJ_CONF'
-// Zellij configuration — Dracula theme, tmux-like prefix
-
-// Use Ctrl-a as prefix (matches tmux config)
-keybinds {
-    unbind "Ctrl b"
-}
+// Zellij configuration — Dracula Sakura theme, close to stock behavior
 
 // Copy on select
 copy_on_select true
 
-// Dracula color theme
+// Dracula Sakura color theme
 themes {
-    dracula {
+    dracula-sakura {
         fg "#f8f8f2"
         bg "#282a36"
         black "#21222c"
-        red "#ff5555"
-        green "#50fa7b"
-        yellow "#f1fa8c"
-        blue "#bd93f9"
-        magenta "#ff79c6"
-        cyan "#8be9fd"
+        red "#ff7aa8"
+        green "#8af7cf"
+        yellow "#fff0a8"
+        blue "#d4b2ff"
+        magenta "#ff9fe3"
+        cyan "#9be7ff"
         white "#f8f8f2"
-        orange "#ffb86c"
+        orange "#ffcf93"
     }
 }
 
-theme "dracula"
+theme "dracula-sakura"
 
 // Default layout
 default_layout "compact"
+default_mode "normal"
 
 // Pane frames
-pane_frames false
+pane_frames true
+pane_frame_style "titles"
 
 // Mouse mode
 mouse_mode true
+focus_follows_mouse false
+mouse_hover_effects true
+mouse_hover_tips false
 
 // Scroll buffer
-scroll_buffer_size 50000
+scroll_buffer_size 100000
+styled_underlines true
+show_startup_tips false
+show_release_notes false
+copy_command "pbcopy"
 ZELLIJ_CONF
-configured "zellij configured (Dracula theme, compact layout, mouse)"
+configured "zellij configured (Dracula Sakura theme, compact layout, pane frames, mouse)"
 
 # 'dev' layout: editor pane + a Claude Code pane side-by-side (AI integration tier 1).
 # Launch with:  zellij --layout dev
