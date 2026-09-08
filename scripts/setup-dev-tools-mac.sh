@@ -1140,10 +1140,21 @@ _ensure_npm_snapshot() {
     _NPM_GLOBALS="$(npm ls -g --depth=0 --parseable 2>/dev/null)"
     _npm_snapshot_ready=1
 }
+_npm_pkg_name() {
+    local spec="$1"
+    if [[ "$spec" == @*/*@* ]]; then
+        printf '%s\n' "${spec%@*}"
+    elif [[ "$spec" != @* && "$spec" == *@* ]]; then
+        printf '%s\n' "${spec%@*}"
+    else
+        printf '%s\n' "$spec"
+    fi
+}
 _npm_has() {
     _ensure_npm_snapshot
+    local name; name="$(_npm_pkg_name "$1")"
     local line
-    while IFS= read -r line; do [[ "$line" == */node_modules/"$1" ]] && return 0; done <<< "$_NPM_GLOBALS"
+    while IFS= read -r line; do [[ "$line" == */node_modules/"$name" ]] && return 0; done <<< "$_NPM_GLOBALS"
     return 1
 }
 
@@ -1172,6 +1183,8 @@ npm_global_install() {
     else
         info "Installing $name globally..."
         if npm install -g "${npm_flags[@]}" "$pkg" >> "$LOG_FILE" 2>&1; then
+            _npm_snapshot_ready=
+            _NPM_GLOBALS=
             success "$name installed"
             mark_done "npm:$pkg"
         else
@@ -1575,8 +1588,9 @@ if [[ "$UNINSTALL" == "true" ]]; then
     echo "# Remove Claude Code config (CAREFUL — contains your custom rules):"
     echo "  rm -rf ~/.claude/settings.json ~/.claude/CLAUDE.md ~/.claude/rules ~/.claude/hooks ~/.claude/commands ~/.claude/agents ~/.claude/statusline.sh"
     echo ""
-    echo "# Remove pi config and shared-skill links (if you want pi gone too):"
+    echo "# Remove pi config, bigpowers, and shared-skill links (if you want pi gone too):"
     echo "  rm -rf ~/.pi/agent"
+    echo "  npm uninstall -g bigpowers"
     echo "  rm -f ~/.agents/skills/api-testing ~/.agents/skills/d2-diagrams ~/.agents/skills/dbmate-migrations ~/.agents/skills/office-docs ~/.agents/skills/tiki"
     echo ""
     echo "# Remove Helix config:"
@@ -3523,8 +3537,10 @@ if installed npm; then
 else
     progress  # keep progress bar accurate when npm unavailable
 fi
-# Claude Code (installed via npm, not brew)
+# Claude Code (installed via npm, not brew). bigpowers is installed globally too so its
+# own Claude-side helper can link skills/hooks from the package tree in the configs pass.
 if installed npm; then
+    npm_global_install "bigpowers@2.88.1" "bigpowers (third-party skill pack for Pi + Claude Code)"
     npm_global_install "@anthropic-ai/claude-code" "Claude Code (AI-assisted coding in terminal)"
     # GitHub Copilot CLI (#356). A STANDALONE npm package now — `gh extension install
     # github/gh-copilot` is the retired path, and the uninstall notes still pointed at it.
@@ -11941,14 +11957,26 @@ else
     if command -v jq &>/dev/null; then
         PI_TMP=$(mktemp)
         [[ -f "$PI_SETTINGS_FILE" ]] || echo '{}' > "$PI_SETTINGS_FILE"
-        if jq '.theme = "dracula-sakura"
+        if jq '
+               def bp: "npm:bigpowers@2.88.1";
+               .theme = "dracula-sakura"
                | .enableInstallTelemetry = false
                | .enableAnalytics = false
                | .externalEditor = (.externalEditor // "micro")
                | .enableSkillCommands = (.enableSkillCommands // true)
                | .defaultProvider = (.defaultProvider // "ollama")
                | .defaultModel = (.defaultModel // "qwen2.5-coder:14b")
-               | .defaultThinkingLevel = (.defaultThinkingLevel // "minimal")' \
+               | .defaultThinkingLevel = (.defaultThinkingLevel // "minimal")
+               | .packages = (
+                   (.packages // [])
+                   | map(
+                       if type == "string" and (. == "npm:bigpowers" or startswith("npm:bigpowers@")) then bp
+                       elif type == "object" and (.source? | type == "string") and ((.source == "npm:bigpowers") or (.source | startswith("npm:bigpowers@"))) then .source = bp
+                       else .
+                       end
+                     )
+                   | if any((type == "string" and . == bp) or (type == "object" and .source? == bp)) then . else . + [bp] end
+                 )' \
              "$PI_SETTINGS_FILE" > "$PI_TMP" 2>/dev/null; then
             mv "$PI_TMP" "$PI_SETTINGS_FILE"
             success "pi: settings written (Dracula-Sakura, local Ollama default, telemetry off)"
@@ -12354,6 +12382,31 @@ export default function searxngWebExtension(pi: ExtensionAPI) {
 }
 PI_SEARXNG_WEB_EXT
     success "pi: SearXNG web extension written (~/.pi/agent/extensions/searxng-web.ts)"
+
+    # -- Claude Code: bigpowers skills/hooks --------------------------------------
+    if [[ "$DRY_RUN" == "true" ]]; then
+        info "[DRY RUN] Would link bigpowers into Claude Code (~/.claude/skills + hooks)"
+    elif installed npm && _npm_has "bigpowers@2.88.1"; then
+        _bp_root="$(npm root -g 2>/dev/null)/bigpowers"
+        if [[ -d "$_bp_root" ]]; then
+            if node - <<'NODE' "$_bp_root" >> "$LOG_FILE" 2>&1
+const path = require('path');
+const root = process.argv[2];
+const { installGlobal } = require(path.join(root, 'scripts', 'lib', 'install-helpers.js'));
+installGlobal({ id: 'claude', name: 'Claude Code' }, root);
+NODE
+            then
+                success "bigpowers linked into Claude Code (~/.claude/skills + hooks)"
+            else
+                warn "bigpowers install helper failed for Claude Code — inspect the log"
+            fi
+        else
+            warn "bigpowers npm package not found under npm root — skipping Claude link"
+        fi
+        unset _bp_root
+    else
+        warn "bigpowers not installed globally — skipping Claude link"
+    fi
 
     write_generated "$PI_SKILLS_DIR/searxng-web/SKILL.md" <<'PI_SEARXNG_WEB_SKILL'
 ---
@@ -13689,7 +13742,7 @@ unscriptable. Work through it once, then keep it only as long as it's useful.
 - [ ] **infracost** (IaC cost estimates): run `infracost auth login` for a free API key — `infracost breakdown` errors with "No INFRACOST_API_KEY" until then.
 - [ ] **borgmatic backups:** the setup scaffolds `~/.config/borgmatic/config.yaml`. Set `repositories`, store the passphrase in Keychain (`security add-generic-password -a "$USER" -s borg-passphrase -w`), run `borgmatic init --encryption repokey-blake2`, check with `borgmatic create --dry-run`, then enable a daily run (e.g. a LaunchAgent calling `borgmatic --verbosity -1`). ClamAV's virus DB downloads itself in the background after setup.
 - [ ] **Claude AI in croft:** `croft pair` (the AI navigator in your primary IDE) defaults to `--provider claude`, which hands off to your existing `claude` CLI — so it just works on whatever auth that already has (a Claude Pro/Max subscription **or** an API key), no separate `ANTHROPIC_API_KEY` required. Want a fully local model with no key at all? Ollama is installed and running — use the `gemma3:4b` that setup already pulled (`croft pair --provider ollama --model gemma3:4b`) or the heavier `qwen2.5-coder:14b` that's also pre-pulled for coding-oriented local loops. An Anthropic API key is **optional** here — the only thing that uses one is the `llm` CLI, and `llm` itself is optional: if Claude Code and the Claude desktop app already cover you, you can skip it entirely. If you do want `llm` for one-off prompts (e.g. `> ! llm …` from micro's command bar) or shell scripting, run `llm keys set anthropic` — setup already installs the plugin (via uv) and sets the default model to `anthropic/claude-sonnet-4-5`. (Email/calendar AI is built into **herald** — configured separately above.)
-- [ ] **Pi** (optional second agent): `pi` is installed with the local Ollama provider preconfigured and `qwen2.5-coder:14b` as the default model, plus the shared skills bridge in `~/.agents/skills/`, five Pi-local Tiki companions in `~/.pi/agent/skills/` (`tiki-capture`, `tiki-review`, `tiki-groom`, `tiki-arc`, `tiki-journal`), and a local SearXNG web-research layer (`~/.pi/agent/extensions/searxng-web.ts` + `~/.pi/agent/skills/searxng-web/`). Set `SEARXNG_BASE_URL` if your instance is not on `http://127.0.0.1:8080`, then run `pi` and `/searxng-check`. If you want a remote provider instead, run `pi` then `/login`; if you only want the local path, nothing else is required.
+- [ ] **Pi** (optional second agent): `pi` is installed with the local Ollama provider preconfigured and `qwen2.5-coder:14b` as the default model, plus the shared skills bridge in `~/.agents/skills/`, five Pi-local Tiki companions in `~/.pi/agent/skills/` (`tiki-capture`, `tiki-review`, `tiki-groom`, `tiki-arc`, `tiki-journal`), a local SearXNG web-research layer (`~/.pi/agent/extensions/searxng-web.ts` + `~/.pi/agent/skills/searxng-web/`), and the pinned third-party `bigpowers` package through Pi's `packages` setting. Set `SEARXNG_BASE_URL` if your instance is not on `http://127.0.0.1:8080`, then run `pi` and `/searxng-check`. Claude Code also gets bigpowers' linked skills/hooks under `~/.claude/` from the same setup run. If you want a remote provider instead, run `pi` then `/login`; if you only want the local path, nothing else is required.
 - [ ] **croft** (primary IDE): installed from git `main` via cargo — run `croft` in a project to open the workspace; re-run `cargo install --git https://github.com/vitali87/croft.git --locked` to upgrade.
 - [ ] **AI side-pane:** `zellij --layout dev` opens your editor + a Claude Code pane side by side (the strongest AI workflow).
 - [ ] **chezmoi:** `chezmoi init <your-dotfiles-repo>` to bring these configs under version control across the MacBook + Mac mini.
@@ -13962,7 +14015,7 @@ aichat --execute "find the 20 largest files in Downloads"
 > Tip: because it already points at local Ollama here, `aichat` is a good low-friction AI surface when you want a conversational CLI without leaving the terminal or spending Claude-agent budget.
 
 ### `pi` — Pi
-A second, deliberately minimal coding agent: four core tools (`read`, `write`, `edit`, `bash`), a custom Dracula-Sakura TUI theme, and a small curated skill set shared from the machine's Claude skills. It is the lightweight counterpoint to Claude Code rather than a replacement for it — useful for tight one-repo edit/bash loops and local-model sessions where you want a smaller harness.
+A second, deliberately minimal coding agent: four core tools (`read`, `write`, `edit`, `bash`), a custom Dracula-Sakura TUI theme, a local SearXNG-backed web extension, the pinned `bigpowers` Pi package, and a small curated skill set shared from the machine's Claude skills. It is the lightweight counterpoint to Claude Code rather than a replacement for it — useful for tight one-repo edit/bash loops and local-model sessions where you want a smaller harness.
 
 ```bash
 # list the models this setup wires into Pi

@@ -846,6 +846,7 @@ The script generates config files with sensible defaults:
 | `~/.pi/agent/themes/dracula-sakura.json` | pi | Full Dracula-Sakura theme with all required Pi color tokens |
 | `~/.pi/agent/extensions/searxng-web.ts` | pi | Local SearXNG-backed web tools: `searxng_search`, `searxng_fetch`, plus `/searxng-check` |
 | `~/.pi/agent/skills/*` | pi | Pi-local skills: Tiki companions (`tiki-capture`, `tiki-review`, `tiki-groom`, `tiki-arc`, `tiki-journal`) plus `searxng-web` for local web research |
+| `~/.pi/agent/settings.json` (`packages`) | pi | Pins the third-party `bigpowers` Pi package so its extension / skills / prompts load reproducibly |
 | `~/.agents/skills/*` | pi | Symlinks to the curated shared skills (`api-testing`, `d2-diagrams`, `dbmate-migrations`, `office-docs`, `tiki`) |
 | `~/.newsboat/config` | newsboat | Vim keys, Dracula-Sakura colors, auto-reload |
 | `~/.newsboat/urls` | newsboat | Starter RSS feeds (Claude Code, Node, Rust, GitHub) |
@@ -1055,9 +1056,10 @@ a custom Dracula-Sakura theme under `~/.pi/agent/themes/`, a small Pi-local skil
 under `~/.pi/agent/` — Tiki companions in `skills/` (`tiki-capture`, `tiki-review`,
 `tiki-groom`, `tiki-arc`, `tiki-journal`), a `searxng-web` research skill, and a local
 SearXNG-backed web extension in `extensions/searxng-web.ts` that exposes
-`searxng_search`, `searxng_fetch`, and `/searxng-check` — plus a curated five-skill
-bridge via `~/.agents/skills/` (`api-testing`, `d2-diagrams`, `dbmate-migrations`,
-`office-docs`, `tiki`). Its config is written under `~/.pi/agent/`, not `~/.config`.
+`searxng_search`, `searxng_fetch`, and `/searxng-check` — plus the pinned third-party
+`bigpowers` package through Pi's `packages` setting, and a curated five-skill bridge via
+`~/.agents/skills/` (`api-testing`, `d2-diagrams`, `dbmate-migrations`, `office-docs`,
+`tiki`). Its config is written under `~/.pi/agent/`, not `~/.config`.
 
 The default Pi path here is **local Ollama**, with `qwen2.5-coder:14b` as the startup
 model and three other local chat/coding models registered alongside it. The embedding-only
