@@ -254,6 +254,31 @@ EOF
     [ "$(printf "%s" "$output" | grep -c '^payload$')" -eq 1 ]
 }
 
+@test "write_generated: dry-run reports create when the file is absent (#426)" {
+    run run_with_helpers '
+        export DRY_RUN=true
+        write_generated "$HOME/generated.txt" <<"EOF"
+hello
+EOF
+    '
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"[DRY RUN] Would create $TEST_TMP/generated.txt"* ]]
+    [ ! -e "$TEST_TMP/generated.txt" ]
+}
+
+@test "write_generated: dry-run reports refresh when the file differs (#426)" {
+    run run_with_helpers '
+        export DRY_RUN=true
+        printf "old\n" > "$HOME/generated.txt"
+        write_generated "$HOME/generated.txt" <<"EOF"
+new
+EOF
+    '
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"[DRY RUN] Would refresh $TEST_TMP/generated.txt"* ]]
+    [ "$(cat "$TEST_TMP/generated.txt")" = "old" ]
+}
+
 @test "SETUP_LIB_ONLY: loading the script writes no files under HOME" {
     run run_with_helpers '
         # Anything the test had to create is fine; anything that snuck out of the
