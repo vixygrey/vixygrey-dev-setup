@@ -1454,7 +1454,7 @@ echo -e "${BOLD}${MAGENTA}"
 echo "  ╔══════════════════════════════════════════════════════════════╗"
 echo "  ║           macOS Dev Environment Setup v${SCRIPT_VERSION}              ║"
 echo "  ║                                                              ║"
-echo "  ║  200+ tools · 50+ configs · Dracula-Sakura theme · macOS defaults  ║"
+echo "  ║  200+ tools · 50+ configs · Dracula-Sakura terminal-first Mac  ║"
 echo "  ╚══════════════════════════════════════════════════════════════╝"
 echo -e "${NC}"
 
@@ -2723,7 +2723,7 @@ fi  # security
 
 # =============================================================================
 if should_run "replacements"; then
-banner "Modern Tool Replacements"
+banner "Modern CLI Replacements"
 echo "  (upgrades for standard macOS/Unix utilities)"
 echo ""
 
@@ -3185,7 +3185,7 @@ fi  # networking
 
 # =============================================================================
 if should_run "dx"; then
-banner "Developer Experience"
+banner "Developer Experience & Editor Flow"
 
 # Terminal tools
 brew_install "fzf" "fzf (fuzzy finder)"
@@ -4144,7 +4144,7 @@ fi  # dracula
 
 # =============================================================================
 if should_run "configs"; then
-banner "Tool Configurations"
+banner "Configuration Layer"
 
 # ---- git global config ----
 info "Configuring git global settings..."
@@ -6909,16 +6909,16 @@ FASTFETCH_CONFIG="$HOME/.config/fastfetch/config.jsonc"
     "logo": {
         "type": "small",
         "color": {
-            "1": "magenta",
-            "2": "cyan"
+            "1": "#ff79c6",
+            "2": "#bd93f9"
         },
-        "padding": { "top": 1, "left": 2, "right": 2 }
+        "padding": { "top": 1, "left": 2, "right": 3 }
     },
     "display": {
         "separator": "  ",
         "color": {
-            "keys": "magenta",
-            "title": "cyan"
+            "keys": "#bd93f9",
+            "title": "#8be9fd"
         },
         "bar": {
             "char": {
@@ -6929,45 +6929,45 @@ FASTFETCH_CONFIG="$HOME/.config/fastfetch/config.jsonc"
         }
     },
     "modules": [
-        { "type": "title", "format": "{user-name}@{host-name}" },
+        { "type": "title", "format": "{user-name} ✦ {host-name}" },
         { "type": "separator", "string": "─" },
-        { "type": "os", "key": "  OS" },
-        { "type": "host", "key": " 󰒋 Host" },
-        { "type": "kernel", "key": "  Kernel" },
-        { "type": "uptime", "key": " 󰅐 Uptime" },
-        { "type": "packages", "key": " 󰏗 Packages" },
-        { "type": "shell", "key": "  Shell" },
-        { "type": "terminal", "key": "  Terminal" },
+        { "type": "os", "key": "  󰀵 OS" },
+        { "type": "host", "key": "  󰒋 Host" },
+        { "type": "kernel", "key": "  󰌽 Kernel" },
+        { "type": "uptime", "key": "  󰅐 Uptime" },
+        { "type": "packages", "key": "  󰏗 Packages" },
+        { "type": "shell", "key": "  󰆍 Shell" },
+        { "type": "terminal", "key": "   Terminal" },
         { "type": "separator", "string": "─" },
-        { "type": "cpu", "key": " 󰍛 CPU", "showPeCoreCount": false },
-        { "type": "gpu", "key": " 󰢮 GPU" },
-        { "type": "memory", "key": "  Memory" },
-        { "type": "disk", "key": " 󰋊 Disk", "folders": "/" },
-        { "type": "battery", "key": " 󰁹 Battery" },
+        { "type": "cpu", "key": "  󰍛 CPU", "showPeCoreCount": false },
+        { "type": "gpu", "key": "  󰢮 GPU" },
+        { "type": "memory", "key": "  󰘚 Memory" },
+        { "type": "disk", "key": "  󰋊 Disk", "folders": "/" },
+        { "type": "battery", "key": "  󰁹 Battery" },
         { "type": "separator", "string": "─" },
         {
             "type": "command",
-            "key": "  Node",
+            "key": "   Node",
             "text": "node --version 2>/dev/null | tr -d 'v' || echo '—'"
         },
         {
             "type": "command",
-            "key": "  Python",
+            "key": "   Python",
             "text": "python3 --version 2>/dev/null | cut -d' ' -f2 || echo '—'"
         },
         {
             "type": "command",
-            "key": "  Go",
+            "key": "  󰟓 Go",
             "text": "go version 2>/dev/null | awk '{print $3}' | tr -d 'go' || echo '—'"
         },
         {
             "type": "command",
-            "key": " 🦀 Rust",
+            "key": "  🦀 Rust",
             "text": "rustc --version 2>/dev/null | awk '{print $2}' || echo '—'"
         },
         {
             "type": "command",
-            "key": " 󰜫 Docker",
+            "key": "  󰜫 Docker",
             "text": "docker --version 2>/dev/null | cut -d' ' -f3 | tr -d ',' || echo '—'"
         },
         { "type": "separator", "string": "─" },
@@ -6975,7 +6975,7 @@ FASTFETCH_CONFIG="$HOME/.config/fastfetch/config.jsonc"
     ]
 }
 FASTFETCH_CONF
-    configured "fastfetch configured (themed layout, Nerd Font icons, dev tool versions)"
+    configured "fastfetch configured (Dracula-Sakura layout, Nerd Font icons, dev tool versions)"
 
 # ---- ripgrep config ----
 RIPGREPRC="$HOME/.ripgreprc"
@@ -10223,22 +10223,26 @@ CLAUDE_STATUSLINE="$HOME/.claude/statusline.sh"
 info "Configuring Claude Code Dracula statusline..."
 write_managed_script "$CLAUDE_STATUSLINE" <<'STATUSLINE'
 #!/usr/bin/env bash
-# Claude Code statusline — Dracula. Reads session JSON on stdin.
-input=$(cat)
+# Claude Code statusline — Dracula-Sakura. Reads session JSON on stdin.
+input=$(/bin/cat)
 model=$(printf '%s' "$input" | jq -r '.model.display_name // "Claude"' 2>/dev/null)
 cwd=$(printf '%s' "$input" | jq -r '.workspace.current_dir // .cwd // "."' 2>/dev/null)
-dir=$(basename "$cwd")
+if [[ "$cwd" == "$HOME" ]]; then
+    dir='~'
+else
+    dir=$(basename "$cwd")
+fi
 branch=$(git -C "$cwd" branch --show-current 2>/dev/null)
-P='\033[38;2;189;147;249m'   # purple
-C='\033[38;2;139;233;253m'   # cyan
-G='\033[38;2;80;250;123m'    # green
-D='\033[38;2;98;114;164m'    # comment
+ROSE='\033[38;2;255;121;198m'
+CYAN='\033[38;2;139;233;253m'
+MINT='\033[38;2;80;250;123m'
+MUTED='\033[38;2;98;114;164m'
 R='\033[0m'
-out="${P}${model}${R} ${D}in${R} ${C}${dir}${R}"
-[ -n "$branch" ] && out="${out} ${D}on${R} ${G}${branch}${R}"
+out="${ROSE}${model}${R} ${MUTED}•${R} ${CYAN}${dir}${R}"
+[ -n "$branch" ] && out="${out} ${MUTED}•${R} ${MINT}${branch}${R}"
 printf '%b' "$out"
 STATUSLINE
-configured "Claude Code Dracula statusline created (model, dir, git branch)"
+configured "Claude Code Dracula-Sakura statusline created (model, dir, git branch)"
 
 # ---- Claude Code subagents ----
 CLAUDE_AGENTS_DIR="$HOME/.claude/agents"
@@ -11033,15 +11037,17 @@ if [[ -o interactive && -z "$CLAUDECODE" && -z "$AI_AGENT" ]]; then
     command -v assume &>/dev/null && alias assume="source assume"
 fi
 
-# fzf — Dracula colors + fd for file finding + bat for preview
+# fzf — Dracula-Sakura colors + fd for file finding + bat for preview
 export FZF_DEFAULT_OPTS=" \
-  --color=fg:#f8f8f2,bg:#282a36,hl:#bd93f9 \
-  --color=fg+:#f8f8f2,bg+:#44475a,hl+:#bd93f9 \
-  --color=info:#ffb86c,prompt:#50fa7b,pointer:#ff79c6 \
-  --color=marker:#ff79c6,spinner:#ffb86c,header:#6272a4 \
-  --color=border:#6272a4 \
+  --color=fg:#f8f8f2,bg:#282a36,hl:#8be9fd \
+  --color=fg+:#f8f8f2,bg+:#44475a,hl+:#8be9fd \
+  --color=info:#ffb86c,prompt:#ff79c6,pointer:#bd93f9 \
+  --color=marker:#50fa7b,spinner:#ff79c6,header:#6272a4 \
+  --color=border:#bd93f9 \
   --height=60% --layout=reverse --border=rounded \
-  --prompt='❯ ' --pointer='▶' --marker='✓' \
+  --prompt='find ❯ ' --pointer='▶' --marker='✓' \
+  --header='ctrl-/ preview • ctrl-y copy • ctrl-u/d scroll' \
+  --header-first \
   --bind='ctrl-/:toggle-preview' \
   --bind='ctrl-d:half-page-down,ctrl-u:half-page-up' \
   --bind='ctrl-y:execute-silent(echo -n {+} | pbcopy)+abort' \
@@ -11205,25 +11211,26 @@ export D2_THEME=200                     # d2 diagrams — dark theme (d2 has no 
 export D2_DARK_THEME=200
 
 # -- Terminal launcher & search (replaces Raycast / Spotlight) ----------------
-# Run these in the Ghostty quick terminal (global cmd+space) for a launcher feel.
+# Run these in the Ghostty quick terminal (global cmd+space) for a quick,
+# keyboard-first launcher flow.
 # a: fuzzy-launch an installed macOS app
 a() {
   local app
   app=$(mdfind "kMDItemContentType == 'com.apple.application-bundle'" 2>/dev/null \
-        | sort -u | fzf --prompt='launch ❯ ' --with-nth=-1 --delimiter=/) \
+        | sort -u | fzf --prompt='apps ❯ ' --header='↩ open app' --with-nth=-1 --delimiter=/) \
     && [[ -n "$app" ]] && open "$app"
 }
 # ff: find a file by name and open it
 ff() {
   local file
   file=$(fd --type f --hidden --exclude .git 2>/dev/null \
-         | fzf --prompt='files ❯ ' --preview 'bat --color=always {} 2>/dev/null | head -100') \
+         | fzf --prompt='files ❯ ' --header='↩ open file • ctrl-/ preview' --preview 'bat --color=always {} 2>/dev/null | head -100') \
     && [[ -n "$file" ]] && open "$file"
 }
 # rgf: live content search (ripgrep + fzf with a bat preview)
 rgf() {
   rg --line-number --no-heading --color=always "${1:-}" 2>/dev/null \
-    | fzf --ansi --delimiter=: \
+    | fzf --ansi --delimiter=: --prompt='matches ❯ ' --header='live code matches' \
           --preview 'bat --color=always {1} --highlight-line {2} 2>/dev/null'
 }
 # s: Spotlight-index search from the terminal
@@ -11315,7 +11322,8 @@ if [[ -o interactive ]] && [[ "$TERM_PROGRAM" != "vscode" ]] && [[ -z "$INSIDE_E
         fastfetch --logo small 2>/dev/null
     fi
     echo ""
-    printf "\033[0;35m  %s\033[0m\n" "$(date '+%A, %B %d %Y  •  %H:%M')"
+    printf "\033[38;2;189;147;249m  %s\033[0m\n" "$(date '+%A, %B %d %Y  •  %H:%M')"
+    printf "\033[38;2;98;114;164m  quick flow:\033[0m \033[38;2;255;121;198ma\033[0m apps  \033[38;2;139;233;253mff\033[0m files  \033[38;2;80;250;123mrgf\033[0m code  \033[38;2;255;184;108mzellij --layout dev\033[0m pair\n"
     echo ""
 fi
 
@@ -11325,7 +11333,7 @@ MANAGED_ZSHRC
 fi  # shell
 
 # =============================================================================
-banner "Export Brewfile"
+banner "Brewfile Snapshot"
 
 BREWFILE_DIR="$HOME/.config/brewfile"
 BREWFILE="$BREWFILE_DIR/Brewfile"
@@ -11345,10 +11353,10 @@ fi  # DRY_RUN (#380)
 # -----------------------------------------------------------------------------
 echo ""
 echo "=========================================="
-echo "  Setup Complete!"
+echo "  Setup complete — machine ready"
 echo "=========================================="
 echo ""
-info "What was configured:"
+info "Configured highlights:"
 echo "  [~/.zshrc]              Shell config (auto-written with managed block)"
 echo "  [~/.ssh/config]         SSH multiplexing, keychain, keep-alive"
 echo "  [~/.gitignore_global]   Global gitignore (.DS_Store, .env, node_modules)"
@@ -11386,26 +11394,26 @@ echo "  [Finder]                Hidden files, path bar, list view"
 echo "  [macOS]                 Dock, keyboard, screenshots, Spotlight hotkey, Stage Manager"
 echo "  [Claude Code]           Custom commands (/pr-review, /test-plan, /dep-audit, /quick-doc, /cleanup)"
 echo ""
-info "Optional Chrome extensions to install manually:"
+info "Optional Chrome extensions (manual install):"
 echo "  - axe DevTools (accessibility testing)"
 echo "  - React Developer Tools"
 echo "  - Lighthouse"
 echo "  - JSON Formatter"
 echo ""
-info "Terminal launcher & window management (replaces Raycast/Spotlight):"
+info "Terminal launcher & window management (keyboard-first, quick-terminal style):"
 echo "  - cmd+space           Ghostty quick terminal (Spotlight's cmd+space auto-disabled; log out/in)"
-echo "  - a                   fuzzy-launch an app        ff   find & open a file"
-echo "  - rgf <pattern>       search file contents        s <q>  Spotlight-index search"
+echo "  - a                   open an installed app       ff   find & open a file"
+echo "  - rgf <pattern>       live code/content search    s <q>  Spotlight-index search"
 echo "  - clip                clipboard history (clipse)"
 echo "  - taproom             browse/install Homebrew;    k9s / lazydocker  containers"
 echo ""
-info "Chezmoi quickstart (dotfile backup):"
+info "Chezmoi quickstart (bring dotfiles under version control):"
 echo "  chezmoi init                          # Initialize"
 echo "  chezmoi add ~/.zshrc                  # Track dotfiles"
 echo "  chezmoi cd && git remote add origin <repo>  # Link to git repo"
 echo "  chezmoi update                        # Pull on new machine"
 echo ""
-info "Tips:"
+info "A few useful next moves:"
 echo "  - Keep ~/Desktop empty — use 'ff' / 's' (mdfind) to find files from the terminal"
 echo "  - Disable iCloud Desktop & Documents: System Settings > Apple ID > iCloud > iCloud Drive > Options"
 echo "  - hyperfine: benchmark commands with 'hyperfine \"command1\" \"command2\"'"
@@ -11426,9 +11434,9 @@ if [[ "$DRY_RUN" != "true" ]]; then
     cat > "$DESKTOP/POST_SETUP_CHECKLIST.md" <<'CHECKLIST_EOF'
 # Post-Setup Checklist
 
-Everything the setup script could **not** do for you — credentials, external
-accounts, and macOS permissions that are (deliberately) unscriptable. Work down
-the list, then delete this file.
+Everything the setup script could **not** do on your behalf — credentials,
+external accounts, and macOS permissions that are (deliberately)
+unscriptable. Work through it once, then keep it only as long as it's useful.
 
 ## macOS permissions & settings
 - [ ] **Accessibility** — grant to **Ghostty** and **SketchyBar**: System Settings -> Privacy & Security -> Accessibility. (Ghostty: global launcher hotkey; SketchyBar: front-app observation + click actions.)
@@ -11437,6 +11445,7 @@ the list, then delete this file.
 - [ ] **Reminders** — run `reminders show-lists` once and approve the prompt. macOS gates Reminders behind a per-app consent dialog that only appears on first use, and it is granted to the **terminal** (Ghostty), not to `reminders` itself — so approve it from the terminal you actually use. Until then every `reminders` command returns an empty list rather than an error, which is easy to mistake for "no reminders". Claude uses this tool whenever you say "remind me".
 - [ ] **Spotlight's cmd+space** is disabled by the script (freed for the Ghostty quick terminal) — **log out/in** for it to take effect. To keep Spotlight on cmd+space instead, re-enable it (System Settings -> Keyboard -> Keyboard Shortcuts -> Spotlight) and change the Ghostty bind to `global:cmd+backquote` in `~/.config/ghostty/config`.
 - [ ] **Menu bar auto-hide** is set by the script (`_HIHideMenuBar`) so SketchyBar owns the top — **log out/in (or restart)** for it to take effect. If it doesn't stick, toggle System Settings -> Control Center -> "Automatically hide and show the menu bar" -> Always.
+- [ ] **Wallpaper (optional)** — the bundled Dracula-Sakura wallpaper is already installed at `~/Media/photos/dracula-sakura.jpg`. Setup does **not** auto-apply it; if you want it, choose that file in System Settings -> Wallpaper.
 
 ## Email + calendar — herald (one app, self-configured)
 - [ ] Run `herald` and follow its onboarding to add both accounts + their calendars:
@@ -11484,13 +11493,16 @@ CHECKLIST_EOF
     cat > "$DESKTOP/KEYBOARD_SHORTCUTS.md" <<'SHORTCUTS_EOF'
 # Keyboard Shortcuts
 
+A compact map of the highest-frequency keys, launchers, and click actions this
+setup wires in.
+
 ## Launcher & search (Ghostty quick terminal)
 | Keys / command | Action |
 |------|--------|
 | `cmd + space` | Toggle the Ghostty quick terminal (global dropdown) |
-| `a` | Fuzzy-launch an installed app |
+| `a` | Open an installed app from a fuzzy launcher |
 | `ff` | Find a file by name and open it |
-| `rgf <pattern>` | Live content search (ripgrep + fzf) |
+| `rgf <pattern>` | Live code/content search (ripgrep + fzf) |
 | `s <query>` | Spotlight-index search (mdfind) |
 | `clip` | Clipboard history (clipse) |
 
@@ -11537,11 +11549,13 @@ SHORTCUTS_EOF
     cat > "$DESKTOP/TOOLKIT_SUMMARY.md" <<'SUMMARY_EOF'
 # Toolkit Summary
 
-A terminal-first macOS setup: GUI apps replaced with TUI/CLI equivalents wherever
-it doesn't cost real capability. Below: what each tool is for, then how it fits
-together.
+A terminal-first macOS setup, tuned to keep the keyboard path smooth without
+giving up real capability. This is the quick orientation pass: what each layer
+is for, then how the pieces fit together.
 
-A bundled Dracula-Sakura wallpaper is also installed to `~/Media/photos/dracula-sakura.jpg`.
+A bundled Dracula-Sakura wallpaper is also installed at
+`~/Media/photos/dracula-sakura.jpg`; the setup places the file, but leaves
+applying it to you.
 
 ## Editor & AI
 - **croft** — VS Code-style terminal IDE; the **primary editor** (`croft pair` for the AI navigator). **Visual Studio Code** (`code .`) is the GUI editor alongside it, preconfigured with Dracula Official plus a Dracula-Sakura accent layer and the same formatters. **micro** is the `EDITOR` for git/gh/lazygit commit messages and quick edits (non-modal, Dracula, on-screen key menu, trailing whitespace stripped on save).
@@ -11550,9 +11564,9 @@ A bundled Dracula-Sakura wallpaper is also installed to `~/Media/photos/dracula-
 
 ## Status bar & launcher
 - **SketchyBar** — Dracula-Sakura status bar: app, clock, battery, wifi, volume, cpu, mem, bluetooth, VPN.
-- **Ghostty quick terminal** — global cmd+space dropdown that hosts the launcher.
-- **Launcher functions** — `a` (apps), `ff` (files), `rgf` (contents), `s` (Spotlight index), `clip` (clipboard via clipse).
-- **Wallpaper asset** — Dracula-Sakura wallpaper copied to `~/Media/photos/dracula-sakura.jpg` for use in macOS Wallpaper settings.
+- **Ghostty quick terminal** — global cmd+space dropdown that acts as the machine's quick-launch shelf.
+- **Launcher functions** — `a` (apps), `ff` (files), `rgf` (live code/content search), `s` (Spotlight index), `clip` (clipboard via clipse).
+- **Wallpaper asset** — Dracula-Sakura wallpaper copied to `~/Media/photos/dracula-sakura.jpg`, ready for macOS Wallpaper settings and deliberately not auto-applied.
 
 ## Files, data & shell
 - **rovr** (file manager, nnn fallback), **eza/bat/fd/ripgrep/zoxide/dust/duf/sd** (modern coreutils), **fzf** (fuzzy), **atuin** (history), **starship** (prompt), **zellij** (multiplexer), **yazi**->rovr.
@@ -11601,10 +11615,10 @@ SUMMARY_EOF
     cat > "$DESKTOP/TOOL_REFERENCE.md" <<'REFERENCE_EOF'
 # Tool Reference
 
-Every command-line tool, TUI, and app this setup installs, grouped by what you
-reach for it to do. Each entry says what the tool is, what it replaces or when
-you'd use it, and a few worked examples. Written so someone new to the machine
-can be productive without already knowing the toolkit.
+The long-form field guide to the machine: every command-line tool, TUI, and app
+this setup installs, grouped by when you'd actually reach for it. Each entry
+says what the tool is, what it replaces when relevant, and a few worked
+examples, so a freshly provisioned machine still feels legible.
 
 **How to read this:** headings show the command you actually type (e.g. `rg`,
 not "ripgrep"). Where a tool replaces a classic command, that's called out.
@@ -14412,7 +14426,7 @@ SECONDS_REMAINING=$((DURATION % 60))
 
 echo ""
 echo -e "${MAGENTA}${BOLD}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-echo -e "${MAGENTA}${BOLD}  Setup Complete!${NC}"
+echo -e "${MAGENTA}${BOLD}  Setup complete — machine ready${NC}"
 echo -e "${MAGENTA}${BOLD}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
 echo ""
 echo -e "  ${GREEN}${BOLD}Installed:${NC}  $INSTALL_SUCCESS"
@@ -14507,14 +14521,14 @@ if [[ "$DRY_RUN" == "false" ]]; then
     source_confirm=$(prompt_ask "Source ~/.zshrc now to activate everything? [Y/n] " "n")
     if [[ ! "$source_confirm" =~ ^[Nn]$ ]]; then
         # Use exec to replace the current shell so the new zshrc takes effect
-        echo -e "${GREEN}${BOLD}  Reloading shell...${NC}"
+        echo -e "${GREEN}${BOLD}  Reloading shell for the new session...${NC}"
         release_lock
         exec zsh -l
     else
-        echo -e "${GREEN}${BOLD}  Run 'source ~/.zshrc' or restart your terminal to activate.${NC}"
+        echo -e "${GREEN}${BOLD}  Run 'source ~/.zshrc' or restart your terminal when you're ready to activate it.${NC}"
     fi
 else
-    echo -e "${GREEN}${BOLD}  Restart your terminal to activate everything.${NC}"
+    echo -e "${GREEN}${BOLD}  Restart your terminal when you're ready to activate it.${NC}"
 fi
 echo ""
 
