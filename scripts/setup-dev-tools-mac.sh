@@ -9620,7 +9620,26 @@ README
 cat > CHANGELOG.md <<'CHANGELOG'
 # Changelog
 
-All notable changes to this project are documented here.
+All notable changes to this project are documented here. The format follows
+[Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to
+[Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+Groups, in this order, using only the ones that apply: `Added`, `Changed`, `Deprecated`,
+`Removed`, `Fixed`, `Security`.
+
+> Entries cite the **issue** number, for example `(#12)`. A GitHub release page lists pull
+> requests instead, so the same change carries a different number in the two views. That is
+> expected, not a mistake.
+
+At the first release, add link reference definitions at the bottom of this file so every
+version heading resolves to a diff, then add one row per release. A bare `#12` inside a
+Markdown file does not become a link on GitHub, so the version heading is what makes this
+file navigable:
+
+```text
+[Unreleased]: https://github.com/OWNER/REPO/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/OWNER/REPO/releases/tag/v0.1.0
+```
 
 ## [Unreleased]
 
@@ -9672,6 +9691,13 @@ This file defines how the code and project artifacts should look and behave.
 - All text files MUST use LF line endings.
 - `.editorconfig` and `.gitattributes` enforce LF. Do not override them.
 - Keep files UTF-8 with a final newline.
+
+## Changelog
+
+- `CHANGELOG.md` follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project follows Semantic Versioning.
+- Groups are `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, and `Security`. Use only the ones that apply.
+- Entries cite the issue number, not the pull request number.
+- Version headings MUST resolve to a diff through link reference definitions at the bottom of the file. Add one row per release.
 
 ## Git and review
 
@@ -9748,6 +9774,11 @@ Read `CONVENTIONS.md` first for normative rules. Read `README.md` for human orie
 - Write commits, pull requests, and issues in the first person when prose is needed.
 - When style has room to breathe, keep it calm, polished, clear, and lightly feminine.
 - Do not skip straight to code and "document later" for non trivial work.
+
+## Changelog
+- Update `CHANGELOG.md` under `## [Unreleased]` as part of the change, not as a later pass.
+- Cite the issue number, for example `(#12)`. See `CONVENTIONS.md` for the group list and the format rules.
+- At release, retitle `## [Unreleased]` to `## [X.Y.Z] - YYYY-MM-DD` and add the matching link reference definition at the bottom of the file. Skipping that step leaves every version heading pointing at nothing.
 
 ## Hard stops
 - Do not commit secrets.
@@ -11727,7 +11758,7 @@ Create a Bigpowers aligned project skeleton with these files and directories:
 - `AGENTS.md` — tracked, public, procedural agent instructions
 - `CONVENTIONS.md` — tracked, normative rules for code, tests, docs, and line endings
 - `README.md` — concise human overview and setup
-- `CHANGELOG.md` — with an `[Unreleased]` section
+- `CHANGELOG.md` — Keep a Changelog format with SemVer declared, an `[Unreleased]` section, the six standard groups, entries citing the issue number rather than the PR, and a note to add compare-link definitions at the first release
 - `.editorconfig` — UTF-8, LF, final newline, trim trailing whitespace, 2-space default indent
 - `.gitattributes` — `* text=auto eol=lf`
 - `.gitignore` — dependencies, build output, `.env*`, keys, tool state, `CLAUDE.md`
