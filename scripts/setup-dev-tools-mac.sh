@@ -352,7 +352,7 @@ declare -A CATEGORY_DESC=(
     [containers]="lazydocker, dive, kubectl, k9s"
     [api]="ATAC, grpcurl"
     [networking]="mtr, bandwhich, nmap"
-    [dx]="fzf, starship, atuin, croft, micro, VS Code (+ extensions), Ghostty, zellij, llm, aichat"
+    [dx]="fzf, starship, atuin, croft, micro, VS Code (+ extensions), Ghostty, zellij, llm, aichat, pi"
     [ux]="Lighthouse"
     [docs]="d2, Mermaid CLI"
     [mac-system]="Pearcleaner, dockutil, terminal-notifier"
@@ -392,7 +392,7 @@ declare -A CONFIG_LIVES_IN_CONFIGS=(
     [database]="pgcli, mycli, harlequin"
     [containers]="lazydocker, k9s (config + Dracula skin)"
     [networking]="trippy"
-    [dx]="atuin, zellij, Ghostty, VS Code settings, aichat — and starship, which is in the \`dracula\` category"
+    [dx]="atuin, zellij, Ghostty, VS Code settings, aichat, pi (~/.pi/agent + shared ~/.agents/skills links) — and starship, which is in the \`dracula\` category"
     [mac-productivity]="tiki workflow"
     [mac-focus]="newsboat"
     [mac-media]="mpv"
@@ -1563,6 +1563,7 @@ if [[ "$UNINSTALL" == "true" ]]; then
     echo ""
     echo "# Remove tools not managed by brew (--cleanup can't reach these):"
     echo "  npm uninstall -g @github/copilot         # GitHub Copilot CLI"
+    echo "  npm uninstall -g --ignore-scripts @earendil-works/pi-coding-agent  # pi"
     echo "  gh extension remove github/gh-copilot   # the RETIRED gh-extension Copilot CLI, if still present"
     echo "  rm -f ~/.local/share/go/bin/helix-assist  # dropped Claude LSP for Helix"
     echo "  cargo uninstall croft                    # the terminal IDE (if you want it gone)"
@@ -1573,6 +1574,10 @@ if [[ "$UNINSTALL" == "true" ]]; then
     echo ""
     echo "# Remove Claude Code config (CAREFUL — contains your custom rules):"
     echo "  rm -rf ~/.claude/settings.json ~/.claude/CLAUDE.md ~/.claude/rules ~/.claude/hooks ~/.claude/commands ~/.claude/agents ~/.claude/statusline.sh"
+    echo ""
+    echo "# Remove pi config and shared-skill links (if you want pi gone too):"
+    echo "  rm -rf ~/.pi/agent"
+    echo "  rm -f ~/.agents/skills/api-testing ~/.agents/skills/d2-diagrams ~/.agents/skills/dbmate-migrations ~/.agents/skills/office-docs ~/.agents/skills/tiki"
     echo ""
     echo "# Remove Helix config:"
     echo "  rm -rf ~/.config/helix"
@@ -1625,10 +1630,6 @@ if [[ "$CLEANUP" == "true" ]]; then
         "npm:playwright:Playwright:removed"
         "npm:storybook:Storybook CLI:removed"
         "npm:repomix:repomix (npm copy):Claude Code"
-        # NOT listed: @earendil-works/pi-coding-agent. pi was dropped from the script in
-        # #360, but it is a reasonable thing to install by hand afterwards and at least
-        # one machine has done exactly that. --cleanup must not uninstall a tool the user
-        # deliberately brought back; a row here would do that silently on every run.
         "cask:qlmarkdown:QLMarkdown (Quick Look):removed"
         "cask:qlstephen:QLStephen (Quick Look):removed"
         "cask:protonvpn:Proton VPN:Mullvad VPN"
@@ -2083,6 +2084,7 @@ if [[ "$VERIFY" == "true" ]]; then
     }
 
     VERIFY_TARGETS=(
+        "validate|pi|$HOME/.pi/agent/models.json|pi --list-models 2>/dev/null | grep -q '^ollama'"
         "validate|ghostty|$HOME/.config/ghostty/config|ghostty +validate-config"
         "validate|zellij|$HOME/.config/zellij/config.kdl|zellij setup --check 2>&1 | grep -q 'Well defined'"
         "validate|ngrok|$HOME/Library/Application Support/ngrok/ngrok.yml|ngrok config check"
@@ -3512,6 +3514,15 @@ fi
 
 # AI tools
 brew_install "aichat" "aichat (all-in-one AI CLI chat / shell copilot)"
+# Pi — a second, deliberately minimal coding harness. Install from npm with
+# --ignore-scripts, which current Pi docs recommend and which this helper can pass
+# through directly. Pi itself is the package here; its managed settings/theme/models
+# live in the configs section further down.
+if installed npm; then
+    npm_global_install "@earendil-works/pi-coding-agent" "pi (minimal coding agent — secondary agent alongside Claude Code)" --ignore-scripts
+else
+    progress  # keep progress bar accurate when npm unavailable
+fi
 # Claude Code (installed via npm, not brew)
 if installed npm; then
     npm_global_install "@anthropic-ai/claude-code" "Claude Code (AI-assisted coding in terminal)"
@@ -3672,15 +3683,21 @@ brew_install "herald-email/herald/herald" "herald (terminal email + calendar —
 # 127.0.0.1:11434, so without it that "local, no-key" AI path is dead. The formula (not the
 # GUI cask) gives the `ollama` CLI + server; it stores models under ~/.ollama and needs no
 # config file of its own. We run it as a login service so herald's default endpoint is always
-# live, then seed the two models herald needs: gemma3:4b for text tasks (triage, summaries,
-# compose styler) + croft pair, and nomic-embed-text-v2-moe as the embedding model for
-# herald's semantic search. Every step is idempotent and honors --dry-run.
+# live, then seed the local model inventory this machine wants available. Two are
+# load-bearing for existing features here — gemma3:4b for herald text tasks + croft pair,
+# and nomic-embed-text-v2-moe for herald semantic search — and the additional chat/coding
+# models are restored so Pi can be wired to the same local model set in #436. Every step is
+# idempotent and honors --dry-run.
 brew_install "ollama" "ollama (local LLM runtime — backs herald AI + croft pair --provider ollama)"
-# Default model set, pulled on every run (skipped if already present). Keep the chat model
-# first — docs/onboarding refer to it as the default general model.
+# Default model set, pulled on every run (skipped if already present). Keep the general
+# chat/coding models before the embedding model so docs and first-run guidance can name the
+# human-usable ones first.
 OLLAMA_DEFAULT_MODELS=(
-    "gemma3:4b"                 # chat: herald triage/summaries/compose + croft pair (~3.3 GB)
-    "nomic-embed-text-v2-moe"   # embeddings: herald semantic search (~0.96 GB)
+    "qwen2.5-coder:14b"         # local coding model for Pi / Ollama-heavy loops (~9.0 GB)
+    "llama3.1:8b"              # general local assistant (~4.9 GB)
+    "gemma3:4b"                # herald triage/summaries/compose + croft pair (~3.3 GB)
+    "llama3.2:latest"          # smaller local general model (~2.0 GB)
+    "nomic-embed-text-v2-moe"  # embeddings: herald semantic search (~0.96 GB)
 )
 # A model is "present" if its name matches an `ollama list` row exactly — either as given
 # (an explicit tag like gemma3:4b) or with the implicit :latest tag Ollama adds to untagged
@@ -11311,6 +11328,193 @@ SKILL_API
     success "First-party Claude skills written: office-docs, d2-diagrams, dbmate-migrations, api-testing -> ~/.claude/skills/"
 fi
 
+# ---- pi coding agent (~/.pi/agent) ----
+# Pi ignores XDG_CONFIG_HOME completely. Settings, themes, sessions, models, and auth all
+# live under ~/.pi/agent, so that is the one path family to manage — not ~/.config/pi.
+# Credentials stay user-owned: `pi` then `/login` writes ~/.pi/agent/auth.json and this
+# script never reads or writes it.
+PI_DIR="$HOME/.pi/agent"
+PI_THEME_DIR="$PI_DIR/themes"
+PI_THEME_FILE="$PI_THEME_DIR/dracula-sakura.json"
+PI_MODELS_FILE="$PI_DIR/models.json"
+PI_SETTINGS_FILE="$PI_DIR/settings.json"
+AGENTS_SKILLS="$HOME/.agents/skills"
+PI_SHARED_SKILLS=(api-testing d2-diagrams dbmate-migrations office-docs tiki)
+
+if [[ "$DRY_RUN" == "true" ]]; then
+    info "[DRY RUN] Would write pi config -> $PI_DIR (settings.json, models.json, themes/dracula-sakura.json)"
+    info "[DRY RUN] Would link ${#PI_SHARED_SKILLS[@]} shared skills -> $AGENTS_SKILLS/"
+else
+    mkdir -p "$PI_THEME_DIR" "$AGENTS_SKILLS"
+
+    # -- models.json --------------------------------------------------------------
+    # Pi's custom-model support is chat-model oriented. The local embedding model
+    # `nomic-embed-text-v2-moe:latest` is therefore deliberately NOT exposed here even
+    # though setup still pulls it for herald/aichat; listing it as a chat model would make
+    # it selectable in pi while remaining useless for the agent loop.
+    PI_OLLAMA_PROVIDER='{"ollama":{"baseUrl":"http://127.0.0.1:11434/v1","api":"openai-completions","apiKey":"ollama","compat":{"supportsDeveloperRole":false,"supportsReasoningEffort":false},"models":[{"id":"qwen2.5-coder:14b","name":"Qwen2.5 Coder 14B (local)"},{"id":"llama3.1:8b","name":"Llama 3.1 8B (local)"},{"id":"gemma3:4b","name":"Gemma 3 4B (local)"},{"id":"llama3.2:latest","name":"Llama 3.2 (local)"}]}}'
+    if command -v jq &>/dev/null; then
+        PI_TMP=$(mktemp)
+        [[ -f "$PI_MODELS_FILE" ]] || echo '{}' > "$PI_MODELS_FILE"
+        if jq --argjson prov "$PI_OLLAMA_PROVIDER" '.providers = ((.providers // {}) + $prov)' "$PI_MODELS_FILE" > "$PI_TMP" 2>/dev/null; then
+            mv "$PI_TMP" "$PI_MODELS_FILE"
+            success "pi: local Ollama models registered (~/.pi/agent/models.json)"
+        else
+            rm -f "$PI_TMP"
+            warn "pi: could not merge models.json"
+        fi
+    else
+        warn "pi: jq missing — skipping models.json"
+    fi
+
+    # -- settings.json ------------------------------------------------------------
+    if command -v jq &>/dev/null; then
+        PI_TMP=$(mktemp)
+        [[ -f "$PI_SETTINGS_FILE" ]] || echo '{}' > "$PI_SETTINGS_FILE"
+        if jq '.theme = "dracula-sakura"
+               | .enableInstallTelemetry = false
+               | .enableAnalytics = false
+               | .externalEditor = (.externalEditor // "micro")
+               | .enableSkillCommands = (.enableSkillCommands // true)
+               | .defaultProvider = (.defaultProvider // "ollama")
+               | .defaultModel = (.defaultModel // "qwen2.5-coder:14b")
+               | .defaultThinkingLevel = (.defaultThinkingLevel // "minimal")' \
+             "$PI_SETTINGS_FILE" > "$PI_TMP" 2>/dev/null; then
+            mv "$PI_TMP" "$PI_SETTINGS_FILE"
+            success "pi: settings written (Dracula-Sakura, local Ollama default, telemetry off)"
+        else
+            rm -f "$PI_TMP"
+            warn "pi: could not merge settings.json"
+        fi
+    else
+        warn "pi: jq missing — skipping settings.json merge"
+    fi
+
+    # -- Dracula-Sakura theme -----------------------------------------------------
+    write_generated "$PI_THEME_FILE" <<'PI_THEME_CONF'
+{
+  "$schema": "https://raw.githubusercontent.com/earendil-works/pi/main/packages/coding-agent/src/modes/interactive/theme/theme-schema.json",
+  "name": "dracula-sakura",
+  "vars": {
+    "bg": "#282a36",
+    "panel": "#323448",
+    "panelSoft": "#2f3144",
+    "current": "#4b4963",
+    "selection": "#6a5d86",
+    "fg": "#f8f8f2",
+    "muted": "#ddd2f7",
+    "dim": "#a297cb",
+    "comment": "#8a88c7",
+    "cyan": "#9be7ff",
+    "mint": "#8af7cf",
+    "peach": "#ffcf93",
+    "rose": "#ff9fe3",
+    "blush": "#ffc2ec",
+    "lilac": "#d4b2ff",
+    "red": "#ff7aa8",
+    "yellow": "#fff0a8"
+  },
+  "colors": {
+    "accent": "rose",
+    "border": "lilac",
+    "borderAccent": "cyan",
+    "borderMuted": "current",
+    "success": "mint",
+    "error": "red",
+    "warning": "peach",
+    "muted": "muted",
+    "dim": "dim",
+    "text": "fg",
+    "thinkingText": "comment",
+    "selectedBg": "selection",
+    "scrollbarTrack": "current",
+    "scrollbarThumb": "lilac",
+    "searchMatchBg": "yellow",
+    "searchMatchText": "bg",
+    "userMessageBg": "panel",
+    "userMessageText": "fg",
+    "customMessageBg": "panelSoft",
+    "customMessageText": "fg",
+    "customMessageLabel": "cyan",
+    "toolPendingBg": "#34364b",
+    "toolSuccessBg": "#233b36",
+    "toolErrorBg": "#4a3040",
+    "toolTitle": "rose",
+    "toolOutput": "muted",
+    "mdHeading": "blush",
+    "mdLink": "cyan",
+    "mdLinkUrl": "comment",
+    "mdCode": "mint",
+    "mdCodeBlock": "yellow",
+    "mdCodeBlockBorder": "current",
+    "mdQuote": "muted",
+    "mdQuoteBorder": "lilac",
+    "mdHr": "current",
+    "mdListBullet": "rose",
+    "toolDiffAdded": "mint",
+    "toolDiffRemoved": "red",
+    "toolDiffContext": "comment",
+    "syntaxComment": "comment",
+    "syntaxKeyword": "rose",
+    "syntaxFunction": "mint",
+    "syntaxVariable": "peach",
+    "syntaxString": "yellow",
+    "syntaxNumber": "lilac",
+    "syntaxType": "cyan",
+    "syntaxOperator": "rose",
+    "syntaxPunctuation": "fg",
+    "thinkingOff": "current",
+    "thinkingMinimal": "comment",
+    "thinkingLow": "lilac",
+    "thinkingMedium": "cyan",
+    "thinkingHigh": "rose",
+    "thinkingXhigh": "blush",
+    "thinkingMax": "red",
+    "bashMode": "mint"
+  },
+  "export": {
+    "pageBg": "#1f2030",
+    "cardBg": "#282a36",
+    "infoBg": "#3e3148"
+  }
+}
+PI_THEME_CONF
+    success "pi: Dracula-Sakura theme written (~/.pi/agent/themes/dracula-sakura.json)"
+
+    # -- Shared skills ------------------------------------------------------------
+    # pi discovers ~/.agents/skills automatically. Share a curated subset rather than the
+    # whole Claude skill tree so pi's startup prompt stays lean.
+    _pi_linked=0 _pi_missing=0
+    for _skill in "${PI_SHARED_SKILLS[@]}"; do
+        if [[ -d "$HOME/.claude/skills/$_skill" ]]; then
+            ln -sfn "$HOME/.claude/skills/$_skill" "$AGENTS_SKILLS/$_skill"
+            _pi_linked=$((_pi_linked + 1))
+        else
+            _pi_missing=$((_pi_missing + 1))
+        fi
+    done
+    for _stale in "$AGENTS_SKILLS"/*; do
+        [[ -L "$_stale" ]] || continue
+        case "$(readlink "$_stale")" in
+            "$HOME/.claude/skills/"*) ;;
+            *) continue ;;
+        esac
+        _name="$(basename "$_stale")"
+        _keep=false
+        for _skill in "${PI_SHARED_SKILLS[@]}"; do
+            [[ "$_name" == "$_skill" ]] && _keep=true && break
+        done
+        [[ "$_keep" == "false" ]] && rm -f "$_stale"
+    done
+    unset _stale _name _keep _skill
+    if [[ "$_pi_missing" -gt 0 ]]; then
+        warn "pi: $_pi_linked shared skill(s) linked -> ~/.agents/skills/ ($_pi_missing missing from ~/.claude/skills)"
+    else
+        success "pi: $_pi_linked shared skills linked -> ~/.agents/skills/ (api-testing, d2-diagrams, dbmate-migrations, office-docs, tiki)"
+    fi
+    unset _pi_linked _pi_missing
+fi
+
 
 fi  # configs (Claude Code)
 
@@ -11762,6 +11966,8 @@ echo "  [~/.config/mprocs]      Multi-process TUI defaults + per-proc logs"
 echo "  [~/.config/broot]       File-navigation TUI config + Dracula-Sakura skin"
 echo "  [~/.jqp.yaml]           jq playground theme overrides"
 echo "  [~/.config/aichat]      Local AI chat config + Dracula-Sakura dark theme"
+echo "  [~/.pi/agent]           Pi settings, local models, Dracula-Sakura theme"
+echo "  [~/.agents/skills]      Curated skills shared with Pi"
 echo "  [leaf]                  Terminal Markdown previewer (live watch, fuzzy picker, Mermaid)"
 echo "  [~/.config/yt-dlp]      Best quality, aria2c downloader"
 echo "  [~/.config/gh-dash]     GitHub dashboard, Dracula-Sakura theme"
@@ -11863,7 +12069,8 @@ unscriptable. Work through it once, then keep it only as long as it's useful.
 - [ ] **MCP servers:** export tokens your Claude Code MCP servers need, e.g. `export GITHUB_TOKEN=...` (and `AWS_REGION` / `AWS_PROFILE` for the AWS servers). Requires `claude auth login` at least once.
 - [ ] **infracost** (IaC cost estimates): run `infracost auth login` for a free API key — `infracost breakdown` errors with "No INFRACOST_API_KEY" until then.
 - [ ] **borgmatic backups:** the setup scaffolds `~/.config/borgmatic/config.yaml`. Set `repositories`, store the passphrase in Keychain (`security add-generic-password -a "$USER" -s borg-passphrase -w`), run `borgmatic init --encryption repokey-blake2`, check with `borgmatic create --dry-run`, then enable a daily run (e.g. a LaunchAgent calling `borgmatic --verbosity -1`). ClamAV's virus DB downloads itself in the background after setup.
-- [ ] **Claude AI in croft:** `croft pair` (the AI navigator in your primary IDE) defaults to `--provider claude`, which hands off to your existing `claude` CLI — so it just works on whatever auth that already has (a Claude Pro/Max subscription **or** an API key), no separate `ANTHROPIC_API_KEY` required. Want a fully local model with no key at all? Ollama is installed and running — use the `gemma3:4b` that setup already pulled (`croft pair --provider ollama --model gemma3:4b`), or `ollama pull qwen3-coder:30b` first for a heavier coding-tuned model. An Anthropic API key is **optional** here — the only thing that uses one is the `llm` CLI, and `llm` itself is optional: if Claude Code and the Claude desktop app already cover you, you can skip it entirely. If you do want `llm` for one-off prompts (e.g. `> ! llm …` from micro's command bar) or shell scripting, run `llm keys set anthropic` — setup already installs the plugin (via uv) and sets the default model to `anthropic/claude-sonnet-4-5`. (Email/calendar AI is built into **herald** — configured separately above.)
+- [ ] **Claude AI in croft:** `croft pair` (the AI navigator in your primary IDE) defaults to `--provider claude`, which hands off to your existing `claude` CLI — so it just works on whatever auth that already has (a Claude Pro/Max subscription **or** an API key), no separate `ANTHROPIC_API_KEY` required. Want a fully local model with no key at all? Ollama is installed and running — use the `gemma3:4b` that setup already pulled (`croft pair --provider ollama --model gemma3:4b`) or the heavier `qwen2.5-coder:14b` that's also pre-pulled for coding-oriented local loops. An Anthropic API key is **optional** here — the only thing that uses one is the `llm` CLI, and `llm` itself is optional: if Claude Code and the Claude desktop app already cover you, you can skip it entirely. If you do want `llm` for one-off prompts (e.g. `> ! llm …` from micro's command bar) or shell scripting, run `llm keys set anthropic` — setup already installs the plugin (via uv) and sets the default model to `anthropic/claude-sonnet-4-5`. (Email/calendar AI is built into **herald** — configured separately above.)
+- [ ] **Pi** (optional second agent): `pi` is installed with the local Ollama provider preconfigured and `qwen2.5-coder:14b` as the default model, plus the shared skills bridge in `~/.agents/skills/`. If you want a remote provider instead, run `pi` then `/login`; if you only want the local path, nothing else is required.
 - [ ] **croft** (primary IDE): installed from git `main` via cargo — run `croft` in a project to open the workspace; re-run `cargo install --git https://github.com/vitali87/croft.git --locked` to upgrade.
 - [ ] **AI side-pane:** `zellij --layout dev` opens your editor + a Claude Code pane side by side (the strongest AI workflow).
 - [ ] **chezmoi:** `chezmoi init <your-dotfiles-repo>` to bring these configs under version control across the MacBook + Mac mini.
@@ -11953,6 +12160,7 @@ applying it to you.
 - **croft** — VS Code-style terminal IDE; the **primary editor** (`croft pair` for the AI navigator). **Visual Studio Code** (`code .`) is the GUI editor alongside it, preconfigured with Dracula Official plus a Dracula-Sakura accent layer and the same formatters. **micro** is the `EDITOR` for git/gh/lazygit commit messages and quick edits (non-modal, Dracula, on-screen key menu, trailing whitespace stripped on save).
 - **Claude Code (`claude`)** — agentic coding in the terminal; hosts the MCP servers. Best via `zellij --layout dev` (editor + Claude pane).
 - **Claude in croft** — croft's `croft pair` AI navigator (primary IDE) defaults to `--provider claude`, riding your existing `claude` CLI auth (subscription or key, no separate `ANTHROPIC_API_KEY`); `--provider ollama` runs a local model with no key. The one path that uses an Anthropic key is the **`llm`** CLI (`llm-anthropic`) — and it's optional: reach for it only when you want Claude in a shell pipe or a `> ! llm …` one-off from micro's command bar, then run `llm keys set anthropic`. **herald** integrates with Claude two ways, neither needing a key: Claude Code reads and searches your mail/calendar through herald's **MCP** (it rides your `claude` login), and herald's *own* built-in AI (triage, summaries, compose styler, semantic search) is optional and runs on local **Ollama** models that setup installs, runs as a login service, and seeds with `gemma3:4b` (chat) + `nomic-embed-text-v2-moe` (embeddings).
+- **Pi (`pi`)** — the smaller second agent: local-model-first, themed to match the machine, and pointed at a curated skill bridge (`~/.agents/skills/`) instead of the whole Claude skills tree. Good for tight edit/bash loops on `qwen2.5-coder:14b`; anything MCP-heavy or broader-scope still belongs to Claude Code.
 
 ## Status bar & launcher
 - **SketchyBar** — Dracula-Sakura status bar: app, clock, battery, wifi, volume, cpu, mem, bluetooth, VPN.
@@ -12129,20 +12337,34 @@ aichat --info
 # start the interactive REPL
 aichat
 # ask for a shell command
- aichat --execute "find the 20 largest files in Downloads"
+aichat --execute "find the 20 largest files in Downloads"
 ```
 
 > Tip: because it already points at local Ollama here, `aichat` is a good low-friction AI surface when you want a conversational CLI without leaving the terminal or spending Claude-agent budget.
 
+### `pi` — Pi
+A second, deliberately minimal coding agent: four core tools (`read`, `write`, `edit`, `bash`), a custom Dracula-Sakura TUI theme, and a small curated skill set shared from the machine's Claude skills. It is the lightweight counterpoint to Claude Code rather than a replacement for it — useful for tight one-repo edit/bash loops and local-model sessions where you want a smaller harness.
+
+```bash
+# list the models this setup wires into Pi
+pi --list-models
+# start Pi on the default local coding model
+pi
+# explicitly use a local model
+pi --provider ollama --model qwen2.5-coder:14b
+```
+
+> Tip: Pi's config lives entirely under `~/.pi/agent/`, not `~/.config`. This setup points Pi at four local Ollama chat/coding models and shares exactly five skills through `~/.agents/skills/` so the startup prompt stays lean.
+
 ### `ollama` — Local LLM Runtime
-Runs open-weight LLMs entirely on your Mac — no API key, no data leaving the machine. Setup installs it, runs it as a login service on `127.0.0.1:11434`, and pulls `gemma3:4b` (a small, fast general chat model) plus `nomic-embed-text-v2-moe` (the embedding model behind semantic search). It's the local backend for **herald**'s built-in AI (triage, summaries, compose styler, semantic search) and for `croft pair --provider ollama`; both talk to that same endpoint. Models live under `~/.ollama`, and there's no config file to maintain.
+Runs open-weight LLMs entirely on your Mac — no API key, no data leaving the machine. Setup installs it, runs it as a login service on `127.0.0.1:11434`, and seeds the local model set this machine wants ready: `qwen2.5-coder:14b`, `llama3.1:8b`, `gemma3:4b`, `llama3.2:latest`, plus `nomic-embed-text-v2-moe` for embeddings. It's the local backend for **herald**'s built-in AI, `croft pair --provider ollama`, `aichat`, and Pi's local-model path.
 
 ```bash
 # list installed models
 ollama list
-# pull another model (e.g. a coding-tuned one for croft pair)
-ollama pull qwen3-coder:30b
-# quick one-off prompt against a local model
+# quick local coding/chat session
+ollama run qwen2.5-coder:14b
+# quick one-off prompt against the lighter general model
 ollama run gemma3:4b "summarize this in one line: ..."
 ```
 

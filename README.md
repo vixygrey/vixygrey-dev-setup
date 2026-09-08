@@ -38,6 +38,7 @@ actionlint                              # lint GitHub Actions workflows
 duckdb                                  # local SQL shell for CSV/JSON/Parquet
 ps aux | jc --ps | jq '.[0]'            # classic command output -> JSON
 yaml-py -c 'import yaml; print(yaml.safe_load("a: 1"))'
+pi --list-models                        # local Pi model inventory
 ```
 
 ## Bootstrap trust model
@@ -432,6 +433,7 @@ Faster, prettier, smarter replacements for standard Unix utilities.
 | **GitHub Copilot CLI** | `copilot` -- installed from `@github/copilot` (a standalone npm package now, not a `gh` extension). The VS Code side needs no install: current VS Code ships Copilot **built in**, and installing the marketplace extension fails against the newer bundled `copilot-chat`. Proprietary -- a deliberate exception to the open-source preference |
 | **llm** | Simon Willison's CLI -- one-shot prompts, plugin ecosystem, SQLite logging, embeddings. Installed via `uv tool` with the Anthropic plugin; default model `anthropic/claude-sonnet-4-5` |
 | **aichat** | All-in-one AI CLI chat / shell copilot -- lighter than a full coding agent, with local Ollama support and a configurable REPL |
+| **pi** | A second, deliberately minimal coding agent -- four core tools, custom Dracula-Sakura theme, curated shared skills, and local Ollama models wired through `~/.pi/agent/` |
 | **chezmoi** | Dotfile manager -- backup and restore configs across machines |
 | **mitmproxy** | Free HTTP debugging proxy -- inspect and modify API calls from any app |
 | **Ghostty** | Fast GPU-accelerated terminal -- daily driver, native macOS feel |
@@ -599,6 +601,7 @@ Applied consistently across the machine, with built-in Dracula variants kept whe
 | **zellij** | Dracula-Sakura theme in the config |
 | **newsboat** | Dracula-Sakura colors in the config |
 | **aichat** | Dracula-Sakura dark TextMate theme plus rose/lilac prompt colors in config |
+| **pi** | Full Dracula-Sakura custom theme in `~/.pi/agent/themes/dracula-sakura.json` |
 | **claws** | Built-in `dracula` theme via `claws --theme dracula` alias |
 | **miniserve** | `--color-scheme-dark dracula` in the `serve` alias |
 | **vivid** | Dracula-themed LS_COLORS for file type coloring |
@@ -835,6 +838,10 @@ The script generates config files with sensible defaults:
 | `~/.config/broot/conf.hjson` + skin | broot | Git-aware defaults plus a custom Dracula-Sakura skin |
 | `~/.jqp.yaml` | jqp | Dracula base theme with Dracula-Sakura color overrides |
 | `~/.config/aichat/config.yaml` + `dark.tmTheme` | aichat | Local Ollama defaults, prompt behavior, document loaders, Dracula-Sakura dark theme |
+| `~/.pi/agent/settings.json` | pi | Dracula-Sakura theme, telemetry/analytics off, `micro` as external editor, local Ollama defaults (`qwen2.5-coder:14b`) |
+| `~/.pi/agent/models.json` | pi | Registers four local Ollama chat/coding models; the embedding-only `nomic-embed-text-v2-moe` stays machine-local for herald/aichat and is intentionally not exposed as a Pi chat model |
+| `~/.pi/agent/themes/dracula-sakura.json` | pi | Full Dracula-Sakura theme with all required Pi color tokens |
+| `~/.agents/skills/*` | pi | Symlinks to the curated shared skills (`api-testing`, `d2-diagrams`, `dbmate-migrations`, `office-docs`, `tiki`) |
 | `~/.newsboat/config` | newsboat | Vim keys, Dracula-Sakura colors, auto-reload |
 | `~/.newsboat/urls` | newsboat | Starter RSS feeds (Claude Code, Node, Rust, GitHub) |
 | `~/.config/nushell/env.nu` | nushell | Starship prompt, Homebrew paths |
@@ -1035,6 +1042,23 @@ Set `ANTHROPIC_API_KEY` (for `croft pair`) and run `llm keys set anthropic` (for
 `llm` pipe bind). The script installs `llm` via `uv tool` with the `llm-anthropic`
 plugin and sets the default model to `anthropic/claude-sonnet-4-5`, so only the key is
 left to add.
+
+### Secondary agent — Pi
+
+**Pi** (`pi`) is also installed as a deliberately smaller coding harness: four core tools,
+a custom Dracula-Sakura theme under `~/.pi/agent/themes/`, and a curated five-skill
+bridge via `~/.agents/skills/` (`api-testing`, `d2-diagrams`, `dbmate-migrations`,
+`office-docs`, `tiki`). Its config is written under `~/.pi/agent/`, not `~/.config`.
+
+The default Pi path here is **local Ollama**, with `qwen2.5-coder:14b` as the startup
+model and three other local chat/coding models registered alongside it. The embedding-only
+`nomic-embed-text-v2-moe` model still exists on the machine for herald/aichat, but is
+intentionally **not** exposed as a Pi chat model. If you want a remote provider instead,
+run `pi` and then `/login`.
+
+What Pi is **not** in this setup: not the MCP-capable agent, not the mail/calendar/AWS/GitHub
+surface, and not the place for the broadest automation. That remains **Claude Code**.
+Pi is the smaller loop for local model work and tight edit/bash sessions.
 
 ### Claude Code MCP Servers
 

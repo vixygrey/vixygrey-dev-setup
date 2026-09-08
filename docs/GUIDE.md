@@ -42,6 +42,7 @@ yaml-py -c 'import yaml; print(yaml.safe_load("a: 1"))'
 br                  # broot (tree/navigation TUI)
 mprocs "npm run dev" "npm test -- --watch"
 aichat --info       # inspect local AI chat config/providers
+pi --list-models    # see the local Ollama models wired into Pi
 kondo --dry-run ~/Code
 
 # Update everything at once
