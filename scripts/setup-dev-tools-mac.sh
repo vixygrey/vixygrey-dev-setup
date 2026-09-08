@@ -9678,9 +9678,20 @@ This file defines how the code and project artifacts should look and behave.
 - Use trunk based development with short lived branches off `main`.
 - Open an issue before writing code, unless the change is truly trivial and local.
 - Use conventional commits.
+- Use conventional pull request titles.
 - Do not commit directly to `main`.
 - Keep pull requests focused and easy to review.
 - Preferred sequence: issue, branch, code, PR.
+
+## Writing conventions for issues, commits, and PRs
+
+- Use straightforward, low narrative writing for issues. State the problem, the fix, and the verification plainly.
+- Use conventional commit types and keep commit titles concise.
+- Use conventional pull request titles and a compact body with summary, changes, and test plan.
+- Write in the first person when prose is needed.
+- Favor a polished Dracula Sakura tone when there is room for voice: refined, calm, clear, and lightly feminine without becoming vague or overly cute.
+- Do not pad issues, commits, or pull requests with unnecessary backstory, hype, or filler.
+- Clarity and accuracy win over style every time.
 
 ## Tests and quality
 
@@ -9732,6 +9743,10 @@ Read `CONVENTIONS.md` first for normative rules. Read `README.md` for human orie
 ## Git workflow
 - Use trunk based development. Keep branches short lived and merge back to `main` quickly.
 - Create an issue before writing code. Then branch, implement, and open a pull request.
+- Use conventional commits and conventional pull request titles.
+- Keep issues straightforward and to the point. Skip unnecessary narrative.
+- Write commits, pull requests, and issues in the first person when prose is needed.
+- When style has room to breathe, keep it calm, polished, clear, and lightly feminine.
 - Do not skip straight to code and "document later" for non trivial work.
 
 ## Hard stops

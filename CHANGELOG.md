@@ -16,6 +16,8 @@
 
 ### Changed
 
+- **The new project template now states its writing conventions for repo workflow artifacts more explicitly** (#461). Scaffolded `AGENTS.md` and `CONVENTIONS.md` now require conventional commits and conventional pull request titles, keep issues direct and low on narrative overhead, and say that commit, PR, and issue prose should stay first person, clear, accurate, and softly aligned with the Dracula Sakura house style when there is room for voice.
+
 - **The new project template now states its Git process more explicitly** (#459). Scaffolded `AGENTS.md` and `CONVENTIONS.md` now say the quiet part out loud: trunk based development is the default, branches should stay short lived, and the expected sequence for non trivial work is issue first, then branch, then code, then PR. That was already the user's real workflow; the template now encodes it instead of leaving it implicit.
 
 - **`new-project` stays language neutral by default, but can now add an optional starter `Justfile`** (#458). The new Bigpowers-aligned scaffold deliberately does not invent a `package.json` for non-Node projects, but `new-project --justfile` now writes a small honest command spine with placeholder `dev`, `test`, `build`, `lint`, and `preflight` recipes for repos that want one.
