@@ -6,6 +6,11 @@ Everything installed by `scripts/setup-dev-tools-mac.sh` -- tools, apps, workflo
 > If `bash --version` shows 3.2, install Homebrew if needed, then run
 > `brew install bash` before starting setup.
 
+> **Bootstrap trust note:** first-run setup fetches a few upstream installer scripts
+> directly — currently Homebrew, rustup, and pnpm. Those payloads are not
+> checksum-pinned by this repo today, so if you want to inspect first, run
+> `--dry-run` and read the script before executing it.
+
 ---
 
 ## Quick Start

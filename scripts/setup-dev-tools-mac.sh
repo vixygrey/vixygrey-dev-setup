@@ -9429,10 +9429,11 @@ CLAUDE_SETTINGS="$HOME/.claude/settings.json"
 if [[ -f "$CLAUDE_SETTINGS" ]]; then
     # MERGE into an existing settings.json (preserves your own keys), and SECURITY-HARDEN
     # the allowlist: add safe read-only entries + scoped git reads, and STRIP the
-    # dangerous auto-approvals (interpreters, network, cloud/infra mutation, secret
-    # reveal, broad git/gh, file destruction, unrestricted Write) so old machines get
-    # cleaned too. Note: re-runs re-strip these — re-add any you truly want by editing
-    # the CLAUDE_DENY_ALLOW list below, not settings.json.
+    # dangerous auto-approvals (interpreters, package installs, network / remote-model
+    # fetch, trust-store mutation, cloud/infra mutation, secret reveal, broad git/gh,
+    # file destruction, unrestricted Write) so old machines get cleaned too. Note:
+    # re-runs re-strip these — re-add any you truly want by editing the
+    # CLAUDE_DENY_ALLOW list below, not settings.json.
     #
     # This branch also MIGRATES three defects written by older versions of this script
     # (see #206), since machines provisioned before the fix never re-run the create
@@ -9443,7 +9444,7 @@ if [[ -f "$CLAUDE_SETTINGS" ]]; then
     #      outright) — dropped; ~/.ignore below replaces it.
     #   3. A Linux-flavoured deny list (/dev/sda, mkfs) on a macOS-only target.
     CLAUDE_ADD_ALLOW='["Bash(qalc *)","Bash(has *)","Bash(doxx *)","Bash(mdfind *)","Bash(atac *)","Bash(leaf *)","Bash(manly *)","Bash(soffice *)","Bash(office-py *)","Bash(pdftoppm *)","Bash(pdftotext *)","Bash(pdfinfo *)","Bash(tiki exec *)","Bash(reminders show*)","Bash(git status *)","Bash(git diff *)","Bash(git log *)","Bash(git show *)","Bash(git branch *)","Bash(git remote -v)","Bash(git stash list)"]'
-    CLAUDE_DENY_ALLOW='["Bash(npm *)","Bash(npx *)","Bash(pnpm *)","Bash(bun *)","Bash(node *)","Bash(tsx *)","Bash(ts-node *)","Bash(python3 *)","Bash(pip *)","Bash(uv *)","Bash(uvx *)","Bash(cargo *)","Bash(go *)","Bash(just *)","Bash(make *)","Bash(nu *)","Bash(nushell *)","Bash(topgrade *)","Bash(watchexec *)","Bash(viddy *)","Bash(parallel *)","Bash(act *)","Bash(curl *)","Bash(xh *)","Bash(wget *)","Bash(curlie *)","Bash(aria2c *)","Bash(grpcurl *)","Bash(yt-dlp *)","Bash(aws *)","Bash(cdk *)","Bash(sam *)","Bash(docker *)","Bash(docker-compose *)","Bash(docker compose *)","Bash(kubectl *)","Bash(tofu *)","Bash(s5cmd *)","Bash(dynein *)","Bash(steampipe *)","Bash(iamlive *)","Bash(granted *)","Bash(assume *)","Bash(mitmproxy *)","Bash(mitmdump *)","Bash(nmap *)","Bash(chezmoi *)","Bash(dbmate *)","Bash(env *)","Bash(export *)","Bash(git *)","Bash(git-*)","Bash(gh *)","Bash(glab *)","Bash(cp *)","Bash(mv *)","Bash(trash *)","Bash(sd *)","Bash(sed *)","Bash(awk *)","Bash(find *)","Bash(npkill *)","Bash(ouch *)","Bash(7z *)","Write"]'
+    CLAUDE_DENY_ALLOW='["Bash(npm *)","Bash(npm install *)","Bash(npx *)","Bash(pnpm *)","Bash(bun *)","Bash(node *)","Bash(tsx *)","Bash(ts-node *)","Bash(python3 *)","Bash(pip *)","Bash(uv *)","Bash(uvx *)","Bash(cargo *)","Bash(go *)","Bash(just *)","Bash(make *)","Bash(nu *)","Bash(nushell *)","Bash(topgrade *)","Bash(watchexec *)","Bash(viddy *)","Bash(parallel *)","Bash(act *)","Bash(curl *)","Bash(xh *)","Bash(wget *)","Bash(curlie *)","Bash(aria2c *)","Bash(grpcurl *)","Bash(yt-dlp *)","Bash(llm *)","WebFetch","Bash(aws *)","Bash(cdk *)","Bash(sam *)","Bash(docker *)","Bash(docker-compose *)","Bash(docker compose *)","Bash(kubectl *)","Bash(tofu *)","Bash(s5cmd *)","Bash(dynein *)","Bash(steampipe *)","Bash(iamlive *)","Bash(granted *)","Bash(assume *)","Bash(mitmproxy *)","Bash(mitmdump *)","Bash(nmap *)","Bash(chezmoi *)","Bash(dbmate *)","Bash(env *)","Bash(export *)","Bash(git *)","Bash(git-*)","Bash(gh *)","Bash(glab *)","Bash(cp *)","Bash(mv *)","Bash(trash *)","Bash(sd *)","Bash(sed *)","Bash(awk *)","Bash(find *)","Bash(npkill *)","Bash(ouch *)","Bash(7z *)","Bash(mkcert *)","Write"]'
     # Allowlist entries that are dead rather than dangerous: renamed binaries or rules
     # already covered by a broader prefix. Stripped on re-run so they don't accumulate.
     CLAUDE_STALE_ALLOW='["Bash(trippy *)","Bash(wc -l *)"]'
@@ -9488,7 +9489,6 @@ else
   "permissions": {
     "allow": [
       "Bash(npm run *)",
-      "Bash(npm install *)",
       "Bash(npm test *)",
       "Bash(git status *)",
       "Bash(git diff *)",
@@ -9588,14 +9588,12 @@ else
       "Bash(newsboat *)",
       "Bash(zellij *)",
       "Bash(gum *)",
-      "Bash(llm *)",
       "Bash(dockutil *)",
       "Bash(terminal-notifier *)",
       "Bash(harlequin *)",
       "Bash(hq *)",
       "Bash(git-absorb *)",
       "Bash(act3 *)",
-      "Bash(mkcert *)",
       "Bash(bandwhich *)",
       "Bash(gping *)",
       "Bash(doggo *)",
@@ -9609,8 +9607,7 @@ else
       "Bash(doxx *)",
       "Bash(mdfind *)",
       "Read",
-      "Edit",
-      "WebFetch"
+      "Edit"
     ],
     "deny": [
       "Bash(rm -rf /)",
