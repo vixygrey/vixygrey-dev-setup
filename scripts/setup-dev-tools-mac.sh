@@ -3898,7 +3898,9 @@ tiki exec --format json 'select createdAt, createdBy where id = "X7F4K2"'
 - An id is exactly 6 characters, uppercase letters and digits only (e.g. `X7F4K2`); a value of any other shape is rejected. Ids are assigned by tiki on create — obtain one from a query or `created` output, never invent or reformat it.
 - Exit codes: 0 = ok, 2 = usage error, 3 = startup failure, 4 = query error.
 SKILL_TIKI
-success "tiki Claude/Pi skill written (~/.claude/skills/tiki/)"
+if [[ "$DRY_RUN" != "true" ]]; then
+    success "tiki Claude/Pi skill written (~/.claude/skills/tiki/)"
+fi
 # Terminal email + calendar → herald: one app for email AND calendar (Gmail work +
 # iCloud personal, IMAP/SMTP + CalDAV), with built-in AI triage/summaries and an MCP
 # server for Claude. Replaced aerc + khal + vdirsyncer (three tools → one). Herald
