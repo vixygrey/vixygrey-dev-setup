@@ -9473,32 +9473,43 @@ SCRIPT
 write_managed_script "$HOME/Scripts/bin/new-project" <<'SCRIPT'
 #!/usr/bin/env bash
 # Scaffold a new project with a Bigpowers-aligned repo template.
-# Usage: new-project <name> [work|personal|oss|learning] [--justfile]
+# Usage: new-project <name> [work|personal|oss|learning] [--justfile] [--license SPDX]
 set -euo pipefail
 
 NAME="${1:-}"
 CONTEXT="${2:-personal}"
 WANT_JUSTFILE="false"
+LICENSE_ID="MIT"
 
+# A `while` loop rather than `for arg in "$@"`, because --license consumes a
+# value and a for-loop cannot advance past it (#474).
 shift_count=0
 if [[ $# -gt 0 ]]; then shift_count=1; fi
 if [[ $# -gt 1 && "$2" != --* ]]; then shift_count=2; fi
 shift "$shift_count" || true
-for arg in "$@"; do
-    case "$arg" in
-        --justfile) WANT_JUSTFILE="true" ;;
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --justfile) WANT_JUSTFILE="true"; shift ;;
+        --license)
+            if [[ -z "${2:-}" || "$2" == --* ]]; then
+                echo "--license requires an SPDX identifier, e.g. --license ISC"
+                exit 1
+            fi
+            LICENSE_ID="$2"; shift 2 ;;
+        --license=*) LICENSE_ID="${1#*=}"; shift ;;
         *)
-            echo "Unknown option: $arg"
-            echo "Usage: new-project <name> [work|personal|oss|learning] [--justfile]"
+            echo "Unknown option: $1"
+            echo "Usage: new-project <name> [work|personal|oss|learning] [--justfile] [--license SPDX]"
             exit 1
             ;;
     esac
 done
 
 if [[ -z "$NAME" ]]; then
-    echo "Usage: new-project <name> [work|personal|oss|learning] [--justfile]"
+    echo "Usage: new-project <name> [work|personal|oss|learning] [--justfile] [--license SPDX]"
     echo "  Contexts: work, personal, oss, learning"
-    echo "  Options:  --justfile   add a minimal starter Justfile"
+    echo "  Options:  --justfile        add a minimal starter Justfile"
+    echo "            --license SPDX    license for an oss project (default MIT)"
     exit 1
 fi
 
@@ -9512,6 +9523,26 @@ case "$CONTEXT" in
         exit 1
         ;;
 esac
+
+# Validate the license BEFORE anything is created, so a typo fails on an empty
+# machine rather than leaving a half-scaffolded directory behind. Unbundled
+# identifiers fail loudly instead of writing a stub: a placeholder LICENSE is
+# worse than none, because it looks like a license to a scanner and grants
+# nothing (#474).
+if [[ "$CONTEXT" == "oss" ]]; then
+    case "$LICENSE_ID" in
+        MIT|ISC|BSD-2-Clause|BSD-3-Clause|Unlicense) ;;
+        *)
+            echo "No bundled LICENSE text for: $LICENSE_ID"
+            echo "  Bundled: MIT (default), ISC, BSD-2-Clause, BSD-3-Clause, Unlicense"
+            echo "  For anything else, scaffold without --license and add the text from"
+            echo "  https://spdx.org/licenses/${LICENSE_ID}.html yourself."
+            exit 1
+            ;;
+    esac
+elif [[ "$LICENSE_ID" != "MIT" ]]; then
+    echo "Note: --license applies to oss projects only; ignoring it for '$CONTEXT'."
+fi
 
 PROJECT_DIR="$BASE/$NAME"
 
@@ -10011,6 +10042,205 @@ FEATTEMPLATE
 cat > .github/ISSUE_TEMPLATE/config.yml <<'ISSUECONFIG'
 blank_issues_enabled: true
 ISSUECONFIG
+
+# -- oss only ---------------------------------------------------------------
+# The project type was captured at the call site and then used for nothing but
+# picking a parent directory, so a repo explicitly declared open source shipped
+# with no LICENSE — which leaves it under exclusive copyright by default, the
+# opposite of the intent (#474). work/personal/learning are unchanged.
+if [[ "$CONTEXT" == "oss" ]]; then
+    LICENSE_YEAR="$(date +%Y)"
+    LICENSE_HOLDER="$(git config user.name 2>/dev/null || true)"
+    [[ -z "$LICENSE_HOLDER" ]] && LICENSE_HOLDER="the authors"
+
+    case "$LICENSE_ID" in
+    MIT)
+cat > LICENSE <<LICENSETEXT
+MIT License
+
+Copyright (c) $LICENSE_YEAR $LICENSE_HOLDER
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+LICENSETEXT
+        ;;
+    ISC)
+cat > LICENSE <<LICENSETEXT
+ISC License
+
+Copyright (c) $LICENSE_YEAR $LICENSE_HOLDER
+
+Permission to use, copy, modify, and/or distribute this software for any
+purpose with or without fee is hereby granted, provided that the above
+copyright notice and this permission notice appear in all copies.
+
+THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH
+REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY
+AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT,
+INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM
+LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR
+OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
+PERFORMANCE OF THIS SOFTWARE.
+LICENSETEXT
+        ;;
+    BSD-2-Clause|BSD-3-Clause)
+cat > LICENSE <<LICENSETEXT
+BSD $([[ "$LICENSE_ID" == "BSD-2-Clause" ]] && echo 2-Clause || echo 3-Clause) License
+
+Copyright (c) $LICENSE_YEAR $LICENSE_HOLDER
+All rights reserved.
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are met:
+
+1. Redistributions of source code must retain the above copyright notice, this
+   list of conditions and the following disclaimer.
+
+2. Redistributions in binary form must reproduce the above copyright notice,
+   this list of conditions and the following disclaimer in the documentation
+   and/or other materials provided with the distribution.
+LICENSETEXT
+        if [[ "$LICENSE_ID" == "BSD-3-Clause" ]]; then
+cat >> LICENSE <<'LICENSETEXT'
+
+3. Neither the name of the copyright holder nor the names of its contributors
+   may be used to endorse or promote products derived from this software
+   without specific prior written permission.
+LICENSETEXT
+        fi
+cat >> LICENSE <<'LICENSETEXT'
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+LICENSETEXT
+        ;;
+    Unlicense)
+cat > LICENSE <<'LICENSETEXT'
+This is free and unencumbered software released into the public domain.
+
+Anyone is free to copy, modify, publish, use, compile, sell, or distribute this
+software, either in source code form or as a compiled binary, for any purpose,
+commercial or non-commercial, and by any means.
+
+In jurisdictions that recognize copyright laws, the author or authors of this
+software dedicate any and all copyright interest in the software to the public
+domain. We make this dedication for the benefit of the public at large and to
+the detriment of our heirs and successors. We intend this dedication to be an
+overt act of relinquishment in perpetuity of all present and future rights to
+this software under copyright law.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN
+ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+For more information, please refer to <https://unlicense.org>
+LICENSETEXT
+        ;;
+    esac
+
+    # Points at AGENTS.md and CONVENTIONS.md rather than restating them, the same
+    # way the rest of this scaffold's docs cross-reference instead of duplicating.
+cat > CONTRIBUTING.md <<'CONTRIBUTING'
+# Contributing
+
+Thanks for taking the time to contribute.
+
+## Before you start
+
+Two files define how this repository works, and this document does not repeat them:
+
+- **[`AGENTS.md`](AGENTS.md)** — procedural rules: workflow, branching, and how changes get made.
+- **[`CONVENTIONS.md`](CONVENTIONS.md)** — normative rules: code shape, tests, line endings, changelog format.
+
+Read both before opening a pull request. They apply to human contributors and coding agents alike.
+
+## The short version
+
+1. Open an issue first, unless the change is trivial and local.
+2. Branch from `main` and keep the branch short lived.
+3. Use conventional commits and a conventional pull request title.
+4. Update `CHANGELOG.md` under `## [Unreleased]` as part of the change, not afterwards.
+5. Open a pull request with a summary, the changes, and a test plan.
+
+## Reporting bugs and requesting features
+
+Use the templates in `.github/ISSUE_TEMPLATE/`. State the problem, the proposed fix, and how we will know it worked.
+
+## Security
+
+Do not open a public issue for a security problem. See [`SECURITY.md`](SECURITY.md).
+CONTRIBUTING
+
+    # Deliberately routes through GitHub's private advisory flow rather than an
+    # email address, because the scaffold has no way to know one and a wrong
+    # contact is worse than a working default.
+cat > SECURITY.md <<'SECURITY'
+# Security Policy
+
+## Reporting a vulnerability
+
+Report security issues **privately**, not as a public issue.
+
+Use GitHub's private vulnerability reporting: open the **Security** tab on this
+repository and choose **Report a vulnerability**. That creates an advisory
+visible only to the maintainers.
+
+If private reporting is not enabled, open a normal issue asking for a private
+channel, without including any detail of the vulnerability itself.
+
+## What to expect
+
+- Acknowledgement that the report arrived.
+- An assessment of whether it reproduces and is in scope.
+- A fix or a documented decision, with credit in the release notes if you want it.
+
+## Scope
+
+The default branch and the most recent release.
+SECURITY
+
+cat > CODE_OF_CONDUCT.md <<'COC'
+# Code of Conduct
+
+This project follows the [Contributor Covenant](https://www.contributor-covenant.org/version/2/1/code_of_conduct/), version 2.1.
+
+In short: be respectful, assume good faith, and keep discussion on the work.
+Harassment, personal attacks, and demeaning comments are not welcome here.
+
+## Enforcement
+
+Report unacceptable behaviour to the maintainers.
+
+<!-- TODO: add a contact address or a private reporting channel above. A code of
+     conduct with no working enforcement contact cannot actually be enforced. -->
+COC
+fi
 
 git add -A
 git commit -m "feat: initial project scaffold"
@@ -11906,8 +12136,10 @@ Create a Bigpowers aligned project skeleton with these files and directories:
 - `CHANGELOG.md` — Keep a Changelog format with SemVer declared, an `[Unreleased]` section, the six standard groups, entries citing the issue number rather than the PR, and a note to add compare-link definitions at the first release
 - `.editorconfig` — UTF-8, LF, final newline, trim trailing whitespace, 2-space default indent
 - `.gitattributes` — `* text=auto eol=lf`
-- `.gitignore` — dependencies, build output, `.env*`, keys, tool state, `CLAUDE.md`
-- `specs/` — all planning, scope, release, and verification artifacts
+- `.gitignore` — a language-neutral core (env, secrets, build output, editors, OS, logs, `CLAUDE.md`) plus labelled per-ecosystem blocks a project can delete as a unit. `.env*` is negated with `!.env.example` so a committed template stays visible
+- `specs/` — all planning, scope, release, and verification artifacts. Every placeholder carries a heading and a one-line brief naming which skill fills it; none are empty, because an empty file reads as "done" to anything checking existence
+
+For an **open source** project, also create `LICENSE` (MIT by default), `CONTRIBUTING.md` pointing at `AGENTS.md` and `CONVENTIONS.md` rather than restating them, `SECURITY.md` routing reports through GitHub's private advisory flow, and `CODE_OF_CONDUCT.md`. Without a LICENSE the code is under exclusive copyright by default, which is the opposite of the intent. Do not write a placeholder LICENSE: a stub looks like a license to a scanner and grants nothing.
 
 Recommended `specs/` shape:
 ```text
