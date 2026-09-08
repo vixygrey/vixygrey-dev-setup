@@ -6,6 +6,14 @@ This file is **public and tracked**: it describes the repo, not the maintainer. 
 preferences and private notes belong in `CLAUDE.md`, which is gitignored here and machine-wide.
 Nothing in a private `CLAUDE.md` binds a contribution you are helping someone else write.
 
+> **Companion doc:** This file documents the **procedural rules AI coding
+> agents must follow** in this repo. For the **normative rules about how
+> the code itself should look and behave** (helper usage, managed-block
+> discipline, category structure, dependency policy, test architecture,
+> release prep), see [`CONVENTIONS.md`](CONVENTIONS.md). The two are
+> complementary: when they conflict, follow this file's process and
+> CONVENTIONS.md's substance.
+
 ## What this repo is
 
 A single idempotent Bash script, [`scripts/setup-dev-tools-mac.sh`](scripts/setup-dev-tools-mac.sh) (~10k lines), that provisions a macOS developer machine: installs CLI/GUI tools via Homebrew, writes dotfiles/config, and **generates the user's Claude Code environment** — `~/.claude/CLAUDE.md`, `~/.claude/rules/*`, agents, commands, skills, MCP servers — plus Desktop docs (`POST_SETUP_CHECKLIST.md`, `TOOL_REFERENCE.md`, `KEYBOARD_SHORTCUTS.md`, `TOOLKIT_SUMMARY.md`). Almost all work happens in that one script.
