@@ -14233,6 +14233,52 @@ br() {
   fi
 }
 
+# -- Claude Code session auto-naming (#478) ----------------------------------
+# `claude -n <name>` sets the display name shown in the prompt box, the /resume
+# picker, and the terminal title. Unset, every session is untitled and /resume
+# becomes a wall of identical rows, so the name has to be typed by hand with
+# /rename. This fills it in.
+#
+# It lives in THIS block on purpose. The name only ever surfaces in interactive
+# UI, and a `claude` function defined unguarded in ~/.zshrc would be inherited by
+# every agent and script that sources it.
+_claude_session_name() {
+  local url label
+  # The REMOTE name, not the directory name. This checkout is
+  # "vixygrey-dev-setup-main" on disk but "vixygrey-dev-setup" on GitHub, and the
+  # remote is what the project is actually called. Falls back to the repo root
+  # directory, then to $PWD, so it always produces something.
+  url=$(git config --get remote.origin.url 2>/dev/null) || url=""
+  label=""
+  if [[ -n "$url" ]]; then
+    label=${url%/}          # tolerate a trailing slash
+    label=${label##*/}      # basename of the URL
+    label=${label%.git}     # SSH remotes keep the .git suffix
+  fi
+  if [[ -z "$label" ]]; then
+    label=$(git rev-parse --show-toplevel 2>/dev/null) || label=$PWD
+    label=${label:t}
+  fi
+  # Zero-padded deliberately: 2026-9-8 does not sort lexically, so an unpadded
+  # /resume list orders 10 September before 9 September.
+  print -r -- "$(date +%Y-%m-%d)-$label"
+}
+claude() {
+  local arg
+  # Pass through untouched when the name is already spoken for: the user set one
+  # explicitly, or the session is being RESUMED — stamping today's date over a
+  # session started last week would be wrong. --from-pr resumes too.
+  for arg in "$@"; do
+    case "$arg" in
+      -n|--name|--name=*|-r|--resume|--resume=*|-c|--continue|--from-pr|--from-pr=*)
+        command claude "$@"
+        return
+        ;;
+    esac
+  done
+  command claude --name "$(_claude_session_name)" "$@"
+}
+
 # -- Database -----------------------------------------------------------------
 alias hq="harlequin"
 
@@ -14565,7 +14611,7 @@ applying it to you.
 
 ## Editor & AI
 - **croft** — VS Code-style terminal IDE; the **primary editor** (`croft pair` for the AI navigator). **Visual Studio Code** (`code .`) is the GUI editor alongside it, preconfigured with Dracula Official plus a Dracula-Sakura accent layer and the same formatters. **micro** is the `EDITOR` for git/gh/lazygit commit messages and quick edits (non-modal, Dracula, on-screen key menu, trailing whitespace stripped on save).
-- **Claude Code (`claude`)** — agentic coding in the terminal; hosts the MCP servers. Best via `zellij --layout dev` (editor + Claude pane).
+- **Claude Code (`claude`)** — agentic coding in the terminal; hosts the MCP servers. Best via `zellij --layout dev` (editor + Claude pane). New sessions are **auto-named `<YYYY-MM-DD>-<repo>`** (from the git remote, so this checkout reads `vixygrey-dev-setup`, not its `-main` folder), which is what the `/resume` picker and the terminal title show. Resuming (`-r`, `-c`, `--from-pr`) keeps the original name, and an explicit `-n/--name` always wins. Rename any session at any time with `/rename`.
 - **Claude in croft** — croft's `croft pair` AI navigator (primary IDE) defaults to `--provider claude`, riding your existing `claude` CLI auth (subscription or key, no separate `ANTHROPIC_API_KEY`); `--provider ollama` runs a local model with no key. The one path that uses an Anthropic key is the **`llm`** CLI (`llm-anthropic`) — and it's optional: reach for it only when you want Claude in a shell pipe or a `> ! llm …` one-off from micro's command bar, then run `llm keys set anthropic`. **herald** integrates with Claude two ways, neither needing a key: Claude Code reads and searches your mail/calendar through herald's **MCP** (it rides your `claude` login), and herald's *own* built-in AI (triage, summaries, compose styler, semantic search) is optional and runs on local **Ollama** models that setup installs, runs as a login service, and seeds with `gemma3:4b` (chat) + `nomic-embed-text-v2-moe` (embeddings).
 - **Pi (`pi`)** — the smaller second agent: local-model-first, themed to match the machine, and pointed at a curated skill bridge (`~/.agents/skills/`) instead of the whole Claude skills tree. Good for tight edit/bash loops on `qwen2.5-coder:14b`; anything MCP-heavy or broader-scope still belongs to Claude Code.
 
