@@ -342,17 +342,17 @@ declare -A CATEGORY_DESC=(
     [iac]="OpenTofu (Terraform), tflint, terraform-docs, checkov, infracost"
     [security]="detect-secrets, gitleaks, trivy, semgrep, ClamAV, Objective-See"
     [replacements]="eza, bat, fd, ripgrep, zoxide, btop, sd, dust, just, rovr, fx, etc."
-    [data-processing]="yq, miller, csvkit, jc, pandoc, ffmpeg, ImageMagick"
+    [data-processing]="yq, miller, csvkit, jc, jqp, pandoc, ffmpeg, ImageMagick"
     [code-quality]="shellcheck, shfmt, actionlint, act, act3, hadolint, ruff, prettier, commitizen, ni"
     [perf-testing]="hyperfine, oha"
     [dev-servers]="ngrok, miniserve, caddy"
-    [terminal-productivity]="leaf, watchexec, gum, nushell, topgrade, fastfetch, nnn, doxx, taproom, qalc, vhs, lazyssh/rsync/npm, lazyenv, keyward, bmm, manly, cheznav, apw, has, jolt, wiper, starlit"
+    [terminal-productivity]="leaf, watchexec, gum, nushell, topgrade, fastfetch, mprocs, broot, nnn, doxx, taproom, qalc, vhs, lazyssh/rsync/npm, lazyenv, keyward, bmm, manly, cheznav, apw, has, jolt, wiper, starlit, kondo"
     [k8s-github]="stern, gh-dash"
     [database]="duckdb, pgcli, mycli, lazysql, harlequin, usql, sq"
     [containers]="lazydocker, dive, kubectl, k9s"
     [api]="ATAC, grpcurl"
     [networking]="mtr, bandwhich, nmap"
-    [dx]="fzf, starship, atuin, croft, micro, VS Code (+ extensions), Ghostty, zellij, llm"
+    [dx]="fzf, starship, atuin, croft, micro, VS Code (+ extensions), Ghostty, zellij, llm, aichat"
     [ux]="Lighthouse"
     [docs]="d2, Mermaid CLI"
     [mac-system]="Pearcleaner, dockutil, terminal-notifier"
@@ -386,13 +386,13 @@ declare -A CONFIG_LIVES_IN_CONFIGS=(
     [iac]="tflint"
     [code-quality]="shellcheck, act, prettier, editorconfig"
     [replacements]="btop, ripgreprc, fdignore, aria2"
-    [data-processing]="yt-dlp, miller"
-    [terminal-productivity]="leaf, nushell, topgrade, fastfetch, asciinema"
+    [data-processing]="yt-dlp, miller, jqp"
+    [terminal-productivity]="leaf, nushell, topgrade, fastfetch, asciinema, mprocs, broot"
     [k8s-github]="stern, gh-dash"
     [database]="pgcli, mycli, harlequin"
     [containers]="lazydocker, k9s (config + Dracula skin)"
     [networking]="trippy"
-    [dx]="atuin, zellij, Ghostty, VS Code settings — and starship, which is in the \`dracula\` category"
+    [dx]="atuin, zellij, Ghostty, VS Code settings, aichat — and starship, which is in the \`dracula\` category"
     [mac-productivity]="tiki workflow"
     [mac-focus]="newsboat"
     [mac-media]="mpv"
@@ -2974,6 +2974,9 @@ brew_install "csvkit" "csvkit (CSV tools — csvcut, csvgrep, csvstat)"
 # jc: convert classic CLI output into JSON for jq/automation
 brew_install "jc" "jc (convert command output to JSON for jq/automation)"
 
+# jqp: interactive jq playground / JSON TUI
+brew_install "jqp" "jqp (interactive jq playground / JSON TUI)"
+
 # pandoc: universal document converter
 brew_install "pandoc" "pandoc (universal document converter — md, pdf, docx, html)"
 
@@ -3154,6 +3157,8 @@ brew_install "gum" "gum (shell script UI toolkit — prompts, spinners, confirma
 brew_install "nushell" "nushell (structured data shell — pipelines output tables)"
 brew_install "topgrade" "topgrade (update everything — brew, npm, pip, macOS, all at once)"
 brew_install "fastfetch" "fastfetch (quick system info display — faster neofetch)"
+brew_install "mprocs" "mprocs (TUI for running multiple dev processes)"
+brew_install "broot" "broot (directory tree/file navigation TUI)"
 brew_install "nano" "nano (latest — better than macOS built-in)"
 brew_install "lnav" "lnav (advanced log file viewer — auto-format, SQL queries on logs)"
 brew_install "nnn" "nnn (tiny, fast terminal file manager)"
@@ -3196,6 +3201,8 @@ uv_tool_install manly manly "manly (man-page explainer — 'manly tar -xzf')" "m
 # starlit (weather CLI) — PyPI package 'starlit-cli', installed via uv.
 uv_tool_install starlit-cli starlit "starlit (weather CLI)" \
     "starlit installed (run 'starlit --setup' to add an OpenWeatherMap key)"
+# kondo — interactive-ish cleanup tool for build/dependency cruft across many ecosystems.
+brew_install "kondo" "kondo (clean dependency/build cruft from projects)"
 
 fi  # terminal-productivity
 
@@ -3504,6 +3511,7 @@ if [[ "$DRY_RUN" != "true" ]]; then
 fi
 
 # AI tools
+brew_install "aichat" "aichat (all-in-one AI CLI chat / shell copilot)"
 # Claude Code (installed via npm, not brew)
 if installed npm; then
     npm_global_install "@anthropic-ai/claude-code" "Claude Code (AI-assisted coding in terminal)"
@@ -7087,6 +7095,264 @@ FASTFETCH_CONFIG="$HOME/.config/fastfetch/config.jsonc"
 }
 FASTFETCH_CONF
     configured "fastfetch configured (Dracula-Sakura layout, Nerd Font icons, dev tool versions)"
+
+# ---- mprocs config ----
+MPROCS_CONFIG="$HOME/.config/mprocs/mprocs.yaml"
+    info "Creating mprocs configuration..."
+    write_managed "$MPROCS_CONFIG" "#" <<'MPROCS_CONF'
+# mprocs global config — local ./mprocs.yaml overrides these defaults.
+hide_keymap_window: false
+mouse_scroll_speed: 4
+scrollback: 5000
+proc_list_width: 28
+proc_log:
+  enabled: true
+  dir: "<CONFIG_DIR>/logs"
+  mode: append
+MPROCS_CONF
+    configured "mprocs configured (scrollback, pane width, per-proc logs)"
+
+# ---- broot config + Dracula-Sakura skin ----
+BROOT_CONFIG_DIR="$HOME/.config/broot"
+BROOT_CONF="$BROOT_CONFIG_DIR/conf.hjson"
+BROOT_SKIN="$BROOT_CONFIG_DIR/skins/dracula-sakura.hjson"
+    info "Creating broot configuration..."
+    write_managed "$BROOT_CONF" "#" <<'BROOT_CONF_HJSON'
+imports: [
+  "skins/dracula-sakura.hjson"
+]
+
+default_flags: "-g"
+BROOT_CONF_HJSON
+    write_managed "$BROOT_SKIN" "#" <<'BROOT_SKIN_HJSON'
+syntax_theme: MochaDark
+
+skin: {
+    default: rgb(248, 248, 242) none / rgb(221, 210, 247) rgb(40, 42, 54)
+    tree: rgb(138, 136, 199) none / rgb(98, 114, 164) none
+    parent: rgb(155, 231, 255) none bold / rgb(155, 231, 255) rgb(40, 42, 54) italic
+    file: none none / none none
+    directory: rgb(212, 178, 255) none bold / rgb(212, 178, 255) none
+    exe: rgb(138, 247, 207) none
+    link: rgb(255, 207, 147) none
+    pruning: rgb(162, 151, 203) none italic
+    perm__: rgb(162, 151, 203) none
+    perm_r: rgb(255, 207, 147) none
+    perm_w: rgb(255, 122, 168) none
+    perm_x: rgb(138, 247, 207) none
+    owner: rgb(155, 231, 255) none
+    group: rgb(212, 178, 255) none
+    count: rgb(255, 159, 227) rgb(50, 52, 72)
+    dates: rgb(162, 151, 203) none
+    sparse: rgb(255, 122, 168) none
+    content_extract: rgb(255, 122, 168) none italic
+    content_match: rgb(255, 240, 168) rgb(75, 73, 99) bold
+    git_branch: rgb(255, 159, 227) none
+    git_insertions: rgb(138, 247, 207) none
+    git_deletions: rgb(255, 122, 168) none
+    git_status_current: rgb(162, 151, 203) none
+    git_status_modified: rgb(255, 207, 147) none
+    git_status_staged: rgb(138, 247, 207) none
+    git_status_new: rgb(155, 231, 255) none bold
+    git_status_ignored: rgb(98, 114, 164) none
+    git_status_conflicted: rgb(255, 122, 168) none
+    git_status_other: rgb(255, 122, 168) none
+    selected_line: none rgb(75, 73, 99) / none rgb(50, 52, 72)
+    char_match: rgb(255, 240, 168) none bold
+    file_error: rgb(255, 122, 168) none
+    flag_label: rgb(162, 151, 203) none
+    flag_value: rgb(255, 159, 227) none bold
+    input: rgb(248, 248, 242) rgb(47, 49, 68) / rgb(221, 210, 247) rgb(47, 49, 68)
+    status_error: rgb(248, 248, 242) rgb(74, 48, 64)
+    status_job: rgb(40, 42, 54) rgb(255, 207, 147)
+    status_normal: rgb(162, 151, 203) rgb(47, 49, 68) / none none
+    status_italic: rgb(212, 178, 255) rgb(47, 49, 68) italic / none none
+    status_bold: rgb(255, 159, 227) rgb(47, 49, 68) bold / none none
+    status_code: rgb(248, 248, 242) rgb(47, 49, 68) / none none
+    status_ellipsis: rgb(248, 248, 242) rgb(47, 49, 68) bold / none none
+    purpose_normal: none none
+    purpose_italic: rgb(155, 231, 255) none italic
+    purpose_bold: rgb(155, 231, 255) none bold
+    purpose_ellipsis: none none
+    scrollbar_track: rgb(50, 52, 72) none / rgb(50, 52, 72) none
+    scrollbar_thumb: rgb(106, 93, 134) none / rgb(106, 93, 134) none
+    help_paragraph: none none
+    help_bold: rgb(255, 207, 147) none bold
+    help_italic: rgb(212, 178, 255) none italic
+    help_code: rgb(138, 247, 207) rgb(50, 52, 72)
+    help_headers: rgb(255, 194, 236) none bold
+    help_table_border: rgb(98, 114, 164) none
+    preview_title: rgb(248, 248, 242) rgb(40, 42, 54) / rgb(221, 210, 247) rgb(40, 42, 54)
+    preview: rgb(248, 248, 242) none / rgb(221, 210, 247) none
+    preview_line_number: rgb(138, 136, 199) rgb(40, 42, 54) / rgb(138, 136, 199) none
+    preview_separator: rgb(98, 114, 164) none / rgb(98, 114, 164) none
+    preview_match: none rgb(255, 240, 168) bold
+    diff_line_number: rgb(138, 136, 199) rgb(50, 52, 72)
+    diff_added: rgb(248, 248, 242) rgb(35, 59, 54)
+    diff_removed: rgb(248, 248, 242) rgb(74, 48, 64)
+    hex_null: rgb(138, 136, 199) none
+    hex_ascii_graphic: rgb(255, 207, 147) none
+    hex_ascii_whitespace: rgb(138, 247, 207) none
+    hex_ascii_other: rgb(155, 231, 255) none
+    hex_non_ascii: rgb(255, 122, 168) none
+    staging_area_title: rgb(248, 248, 242) rgb(40, 42, 54) / rgb(221, 210, 247) rgb(40, 42, 54)
+    mode_command_mark: rgb(40, 42, 54) rgb(255, 159, 227) bold
+    good_to_bad_0: rgb(138, 247, 207)
+    good_to_bad_1: rgb(138, 247, 207)
+    good_to_bad_2: rgb(155, 231, 255)
+    good_to_bad_3: rgb(212, 178, 255)
+    good_to_bad_4: rgb(255, 207, 147)
+    good_to_bad_5: rgb(255, 207, 147)
+    good_to_bad_6: rgb(255, 159, 227)
+    good_to_bad_7: rgb(255, 159, 227)
+    good_to_bad_8: rgb(255, 122, 168)
+    good_to_bad_9: rgb(255, 122, 168)
+}
+BROOT_SKIN_HJSON
+    configured "broot configured (Dracula-Sakura skin, git-aware defaults)"
+
+# ---- jqp config ----
+JQP_CONFIG="$HOME/.jqp.yaml"
+    info "Creating jqp configuration..."
+    write_managed "$JQP_CONFIG" "#" <<'JQP_CONF'
+theme:
+  name: "dracula"
+  styleOverrides:
+    primary: "#ff9fe3"
+    secondary: "#a297cb"
+    error: "#ff7aa8"
+    inactive: "#8a88c7"
+    success: "#8af7cf"
+  chromaStyleOverrides:
+    kc: "#ff9fe3 bold"
+    s: "#fff0a8"
+    p: "#f8f8f2"
+    nb: "#d4b2ff"
+    nx: "#9be7ff"
+JQP_CONF
+    configured "jqp configured (Dracula-Sakura theme overrides)"
+
+# ---- aichat config + Dracula-Sakura dark theme ----
+AICHAT_CONFIG_DIR="$HOME/.config/aichat"
+AICHAT_CONFIG="$AICHAT_CONFIG_DIR/config.yaml"
+AICHAT_DARK_THEME="$AICHAT_CONFIG_DIR/dark.tmTheme"
+    info "Creating aichat configuration..."
+    write_managed "$AICHAT_CONFIG" "#" <<'AICHAT_CONF'
+model: "ollama:gemma3:4b"
+stream: true
+save: true
+keybindings: emacs
+editor: micro
+wrap: auto
+wrap_code: false
+save_session: null
+compress_threshold: 4000
+function_calling: true
+light_theme: false
+left_prompt:
+  '{color.purple}{?session {?agent {agent}>}{session}{?role /}}{!session {?agent {agent}>}}{role}{?rag @{rag}}{color.cyan}{?session )}{!session >}{color.reset} '
+right_prompt:
+  '{color.magenta}{?session {?consume_tokens {consume_tokens}({consume_percent}%)}{!consume_tokens {consume_tokens}}}{color.reset}'
+document_loaders:
+  pdf: 'pdftotext $1 -'
+  docx: 'pandoc --to plain $1'
+clients:
+  - type: openai-compatible
+    name: ollama
+    api_base: "http://127.0.0.1:11434/v1"
+    models:
+      - name: "gemma3:4b"
+        max_input_tokens: 32768
+      - name: "nomic-embed-text-v2-moe:latest"
+        type: embedding
+        default_chunk_size: 1000
+        max_batch_size: 32
+AICHAT_CONF
+    write_generated "$AICHAT_DARK_THEME" <<'AICHAT_THEME'
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>name</key>
+  <string>Dracula Sakura</string>
+  <key>settings</key>
+  <array>
+    <dict>
+      <key>settings</key>
+      <dict>
+        <key>background</key>
+        <string>#282A36</string>
+        <key>foreground</key>
+        <string>#F8F8F2</string>
+        <key>caret</key>
+        <string>#FF9FE3</string>
+        <key>selection</key>
+        <string>#4B4963</string>
+        <key>lineHighlight</key>
+        <string>#323448</string>
+      </dict>
+    </dict>
+    <dict>
+      <key>name</key>
+      <string>Comment</string>
+      <key>scope</key>
+      <string>comment</string>
+      <key>settings</key>
+      <dict><key>foreground</key><string>#8A88C7</string></dict>
+    </dict>
+    <dict>
+      <key>name</key>
+      <string>Keyword</string>
+      <key>scope</key>
+      <string>keyword, storage</string>
+      <key>settings</key>
+      <dict><key>foreground</key><string>#FF9FE3</string></dict>
+    </dict>
+    <dict>
+      <key>name</key>
+      <string>String</string>
+      <key>scope</key>
+      <string>string</string>
+      <key>settings</key>
+      <dict><key>foreground</key><string>#FFF0A8</string></dict>
+    </dict>
+    <dict>
+      <key>name</key>
+      <string>Function</string>
+      <key>scope</key>
+      <string>entity.name.function, support.function</string>
+      <key>settings</key>
+      <dict><key>foreground</key><string>#8AF7CF</string></dict>
+    </dict>
+    <dict>
+      <key>name</key>
+      <string>Variable</string>
+      <key>scope</key>
+      <string>variable, entity.name.variable</string>
+      <key>settings</key>
+      <dict><key>foreground</key><string>#FFCF93</string></dict>
+    </dict>
+    <dict>
+      <key>name</key>
+      <string>Type</string>
+      <key>scope</key>
+      <string>entity.name.type, support.type</string>
+      <key>settings</key>
+      <dict><key>foreground</key><string>#9BE7FF</string></dict>
+    </dict>
+    <dict>
+      <key>name</key>
+      <string>Number</string>
+      <key>scope</key>
+      <string>constant.numeric</string>
+      <key>settings</key>
+      <dict><key>foreground</key><string>#D4B2FF</string></dict>
+    </dict>
+  </array>
+</dict>
+</plist>
+AICHAT_THEME
+    configured "aichat configured (local Ollama defaults, Dracula-Sakura dark theme)"
 
 # ---- ripgrep config ----
 RIPGREPRC="$HOME/.ripgreprc"
@@ -11343,6 +11609,20 @@ rgf() {
 }
 # s: Spotlight-index search from the terminal
 s() { mdfind "$@"; }
+# br: broot's shell-integrated launcher (supports cd on Alt+Enter)
+br() {
+  local cmd cmd_file code
+  cmd_file=$(mktemp)
+  if broot --outcmd "$cmd_file" "$@"; then
+    cmd=$(<"$cmd_file")
+    command rm -f "$cmd_file"
+    eval "$cmd"
+  else
+    code=$?
+    command rm -f "$cmd_file"
+    return "$code"
+  fi
+}
 
 # -- Database -----------------------------------------------------------------
 alias hq="harlequin"
@@ -11478,6 +11758,10 @@ echo "  [~/.docker/daemon.json] BuildKit, log rotation"
 echo "  [~/.aria2/aria2.conf]   16 connections, auto-resume"
 echo "  [~/.config/starship]    Dracula-Sakura prompt"
 echo "  [~/.config/atuin]       Fuzzy search, local-only"
+echo "  [~/.config/mprocs]      Multi-process TUI defaults + per-proc logs"
+echo "  [~/.config/broot]       File-navigation TUI config + Dracula-Sakura skin"
+echo "  [~/.jqp.yaml]           jq playground theme overrides"
+echo "  [~/.config/aichat]      Local AI chat config + Dracula-Sakura dark theme"
 echo "  [leaf]                  Terminal Markdown previewer (live watch, fuzzy picker, Mermaid)"
 echo "  [~/.config/yt-dlp]      Best quality, aria2c downloader"
 echo "  [~/.config/gh-dash]     GitHub dashboard, Dracula-Sakura theme"
@@ -11836,6 +12120,20 @@ llm chat
 
 > Tip: Set your key once with `llm keys set anthropic`; after that the model is available to every `llm` invocation without extra flags.
 
+### `aichat` — AIChat
+A shell-native chat/copilot CLI that sits between one-shot `llm` use and a full coding agent: interactive REPL, quick command-generation mode, sessions, and local-model support. In this setup it is wired to the existing local Ollama service with `gemma3:4b` as the default chat model, plus the document loaders already on the machine (`pdftotext`, `pandoc`) and a Dracula-Sakura dark theme.
+
+```bash
+# inspect the current config and providers
+aichat --info
+# start the interactive REPL
+aichat
+# ask for a shell command
+ aichat --execute "find the 20 largest files in Downloads"
+```
+
+> Tip: because it already points at local Ollama here, `aichat` is a good low-friction AI surface when you want a conversational CLI without leaving the terminal or spending Claude-agent budget.
+
 ### `ollama` — Local LLM Runtime
 Runs open-weight LLMs entirely on your Mac — no API key, no data leaving the machine. Setup installs it, runs it as a login service on `127.0.0.1:11434`, and pulls `gemma3:4b` (a small, fast general chat model) plus `nomic-embed-text-v2-moe` (the embedding model behind semantic search). It's the local backend for **herald**'s built-in AI (triage, summaries, compose styler, semantic search) and for `croft pair --provider ollama`; both talk to that same endpoint. Models live under `~/.ollama`, and there's no config file to maintain.
 
@@ -11903,6 +12201,34 @@ zellij attach <session-name>
 ```
 
 > Tip: `Ctrl+g` locks/unlocks keybinding mode — if keys stop doing anything inside a pane, you've probably entered a plugin's own input mode.
+
+### `mprocs` — Multi-Process TUI
+A terminal UI for running several long-lived development processes at once — app server, frontend watcher, tests, worker — with each command's output in its own pane instead of interleaved in one scrollback. Use it when a project normally costs you three terminal tabs just to boot the stack.
+
+```bash
+# run a few commands directly
+mprocs "npm run dev" "npm test -- --watch"
+# run the processes declared in ./mprocs.yaml
+mprocs
+# load scripts from package.json without starting them automatically
+mprocs --npm
+```
+
+> Tip: this setup writes a global `~/.config/mprocs/mprocs.yaml` with sane scrollback and per-process logging, while a project-local `mprocs.yaml` overrides it whenever you need a real stack definition.
+
+### `broot` — Broot
+A tree-oriented file navigator that doubles as a shell-aware launcher: fuzzy-search a directory tree, preview files, then jump back to the shell in the selected directory. In this setup the `br` shell function is available automatically, so `Alt+Enter` can actually `cd` your shell rather than just print a path.
+
+```bash
+# launch with shell integration
+br
+# open focused on a path
+br ~/Code
+# whale-spotting mode for large directories
+br -w
+```
+
+> Tip: broot is configured here with a custom Dracula-Sakura skin and git-aware defaults, so it feels like part of the same terminal surface rather than a stock file browser.
 
 ### `nu` — Nushell
 A shell where pipelines pass structured tables and typed data instead of raw text, so commands like filtering, sorting, and reformatting output work like a query language rather than a chain of `grep`/`awk`/`cut`. It's not the default login shell here — zsh still owns that — but it's the tool to reach for when you're wrangling CSV, JSON, or command output that plain text pipes make painful. Drop into it for a data-heavy task, then drop back out to zsh.
@@ -12147,6 +12473,20 @@ wiper ~/Downloads
 ```
 
 > Tip: because deletions go to Trash, `wiper` is safe to use aggressively — empty the Trash afterward once you're sure.
+
+### `kondo` — Kondo
+A project-cleanup CLI that hunts down non-essential dependency/build directories — `node_modules`, `target`, `build`, cache-like output folders, and similar weight — across many language ecosystems. It's the blunt cleanup cousin to `wiper`: less about browsing the disk and more about safely identifying "this repo is huge because of generated cruft".
+
+```bash
+# preview what would be cleaned under the current directory
+kondo --dry-run
+# clean stale projects under ~/Code
+kondo ~/Code
+# only consider projects not touched for 3 months
+kondo --older 3M ~/Code
+```
+
+> Tip: treat `kondo` as a deliberate maintenance sweep, not a background cleaner — it is essentially a smart, prompt-driven `rm -rf` for build artifacts.
 
 ### `npkill` — npkill
 Scans a directory tree for stray `node_modules` folders and lets you interactively select and delete them to reclaim disk space — a common problem after years of JS project churn. Use it periodically on `~/Code` to clean up old, abandoned project dependencies without deleting the projects themselves.
@@ -12394,6 +12734,20 @@ curl -s api.example.com/data | jnv
 ```
 
 > Tip: once you land on the right filter, copy it out and drop it straight into a jq command for scripting.
+
+### `jqp` — jq Playground TUI
+A TUI for experimenting with `jq` filters against live JSON or NDJSON input. Compared with `jnv`, which is about interactively arriving at a useful filter, `jqp` feels more like a focused jq workbench — query editor, live output, themeable UI — and is especially nice when you already think in jq but want a less blind feedback loop.
+
+```bash
+# open a file in the playground
+jqp -f data.json
+# stream API output into it
+curl -s api.example.com/data | jqp
+# start with an initial jq query
+jqp '.items[] | {name, id}' -f data.json
+```
+
+> Tip: this setup writes `~/.jqp.yaml` with a Dracula-Sakura-flavored override layer on top of jqp's built-in Dracula theme, so it matches the rest of the terminal palette.
 
 ### `miller` [mlr] — Record Processor for CSV/TSV/JSON
 Miller is like awk, sed, cut, and jq combined, but name-aware and format-aware across CSV, TSV, and JSON. It processes records by field name instead of column position, so scripts stay readable and survive reordered columns. Reach for it when you need to filter, join, or aggregate tabular data faster than pandas but with more structure than raw awk.

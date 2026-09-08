@@ -180,9 +180,13 @@ jobs:
           P_SHOT|bash -n /tmp/generated
           DOCKER_CONF|jq empty /tmp/generated
           FASTFETCH_CONF|jq empty /tmp/generated
+          MPROCS_CONF|yq eval '.' /tmp/generated
+          JQP_CONF|yq eval '.' /tmp/generated
+          AICHAT_CONF|yq eval '.' /tmp/generated
           K9S_CFG|yq eval '.' /tmp/generated
           GEM_CONF|yq eval '.' /tmp/generated
           GHOSTTY_PLIST_EOF|python3 -c 'import plistlib, sys; plistlib.load(open("/tmp/generated","rb"))'
+          AICHAT_THEME|python3 -c 'import plistlib, sys; plistlib.load(open("/tmp/generated","rb"))'
           CLAUDE_SETTINGS_CONF|jq empty /tmp/generated
           PRETTIER_CONF|jq empty /tmp/generated
           VSCODE_CONF|jq empty /tmp/generated
