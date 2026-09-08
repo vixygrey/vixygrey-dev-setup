@@ -3655,22 +3655,251 @@ brew_cask_install "claude" "Claude (AI assistant)"
 # Notion (GUI) replaced by tiki — terminal Markdown workspace (tasks/docs/kanban/wiki, git-backed).
 trust_tap boolean-maybe/tap
 brew_install "boolean-maybe/tap/tiki" "tiki (terminal Markdown workspace — tasks, docs, kanban, wiki; git-backed)"
-# tiki's official Claude Code skill — teaches Claude to manage the user's notes/tasks
-# via `tiki exec '<ruki>'` (CRUD with auto git-staging). The brew formula ships only
-# the binary, so fetch the skill into ~/.claude/skills/ (refreshed each run to track
-# upstream). See https://github.com/boolean-maybe/tiki/tree/main/ai/skills/tiki
-if [[ "$DRY_RUN" == "true" ]]; then
-    info "[DRY RUN] Would install tiki's Claude Code skill -> ~/.claude/skills/tiki/SKILL.md"
-else
-    _tiki_skill_dir="$HOME/.claude/skills/tiki"
-    mkdir -p "$_tiki_skill_dir"
-    if curl -fsSL "https://raw.githubusercontent.com/boolean-maybe/tiki/main/ai/skills/tiki/SKILL.md" \
-        -o "$_tiki_skill_dir/SKILL.md" 2>>"$LOG_FILE" && [[ -s "$_tiki_skill_dir/SKILL.md" ]]; then
-        success "tiki Claude Code skill installed (~/.claude/skills/tiki/)"
-    else
-        warn "Could not fetch tiki Claude skill — install manually from github.com/boolean-maybe/tiki (ai/skills/tiki)"
-    fi
-    unset _tiki_skill_dir
+# tiki skill — teaches Claude/Pi to manage the user's notes/tasks via `tiki exec`
+# (CRUD with auto git-staging). Keep a local generated copy rather than blindly
+# fetching upstream so the machine gets the notebook-specific workflow cautions,
+# JSON-first query guidance, and softer note-taking examples this setup relies on.
+write_generated "$HOME/.claude/skills/tiki/SKILL.md" <<'SKILL_TIKI'
+---
+name: tiki
+description: Manage Tiki markdown workspaces with `tiki exec` and ruki — query, create, update, delete, organize dependencies, and inspect note/task metadata. Use when working with tikis, workflow.yaml-driven boards, or a git-backed notes workspace.
+---
+
+# Tiki
+
+A `tiki` is a Markdown file in the project workspace — the current working directory — identified by a
+bare `id` in its frontmatter and carrying an open field map. Only `id` and `title` are intrinsic;
+**every other field is defined by the `workflow.yaml` that applies to the current project**. There are no
+hard-coded workflow fields — the names, types, allowed values, and defaults below are those of the
+built-in workflow, which is what a project gets when no `workflow.yaml` overrides it. A different
+resolved workflow declares a different field set. All fields beyond `id` and `title` are optional.
+
+The applicable `workflow.yaml` is resolved by the project's lookup chain (user config
+`~/.config/tiki/workflow.yaml`, then a `workflow.yaml` in the cwd, last match wins; a built-in workflow
+when neither exists). **The field names, types, values, and defaults in this skill describe that
+built-in workflow — they are examples, not guarantees.** The project you are working in may define
+different ones. Before relying on any field or value below, read the applicable `workflow.yaml` (check the
+cwd and `~/.config/tiki/` for one; if neither exists the built-in applies and this skill's tables hold).
+
+For agent-driven queries, prefer `tiki exec --format json '...'` and parse the result rather than relying
+on ASCII table output.
+
+If `~/.config/tiki/workflow.yaml` or a project `workflow.yaml` exists, read it before assuming visible
+labels or field captions. Stored enum values may remain stable while user-facing labels differ.
+
+- A tiki's identity is its `id:` frontmatter field, independent of the filename: a bare 6-character
+  uppercase alphanumeric value (e.g. `X7F4K2`). Locate, reference, and update a tiki by this `id`, not by
+  its filename — a file may be renamed or moved without changing which tiki it is. The `id:` value must be
+  exactly 6 characters of `[A-Z0-9]`; anything else (wrong length, lowercase, or a prefix/separator such
+  as `x7f4k2` or `task-1234`) fails to load and must be edited to the valid form manually.
+- Tikis are read from and written to the current working directory — the cwd is the scan/write root, and
+  no setup step is needed to start using it. Creating a tiki (via `tiki exec`, below) writes a new file
+  named after a slug of its title: `<cwd>/<slug>.md` (e.g. title "Weekly reset" → `weekly-reset.md`),
+  with a numeric suffix on collision (`weekly-reset-2.md`, …). Tikis may live at any depth under the cwd
+  and can be moved into subfolders without breaking references (`[[ID]]` wikilinks and `dependsOn` entries
+  are id-based). A `.doc/` subdirectory, if the project has one, is also scanned.
+- Use this skill for every tiki, whether it carries workflow-declared fields (in the built-in workflow:
+  `status:`, `type:`, `priority:`, `points:`, `dependsOn:`, …) or is a notes-only document with just
+  `id:` and `title:`. Workflow tikis appear on board / list views; notes-only tikis are reachable by id
+  and path, render in wiki and detail views, and fall outside any view whose lane filter requires
+  workflow-declared fields. To turn a notes-only tiki into a tracked one, just assign a workflow field
+  (e.g. `set status = "..."`) — that writes the key into its frontmatter and it starts appearing on the
+  relevant views.
+
+All CRUD operations go through `tiki exec '<ruki-statement>'`. `ruki` is the query-and-mutation language
+`tiki exec` accepts: SQL-like `select` / `create` / `update` / `delete` statements over tikis. The
+statements in this skill cover routine work; run `tiki exec --help` for the invocation reference. For full
+`ruki` syntax (operators, builtins, custom-field and extraction rules), fetch the language reference at
+https://github.com/boolean-maybe/tiki/blob/main/docs/ruki/index.md and the pages it links.
+Running a statement handles validation, triggers, file persistence, and git staging automatically. Never
+manually edit tiki files or run `git add` / `git rm` for tracked workflow tikis — `tiki exec` does it
+all. (Notes-only tikis with no workflow fields can be edited directly with `read` / `write` / `edit`; the
+frontmatter `id:` must be preserved unchanged. Resolve their path from the id via
+`select filepath where id = "..."` rather than assuming a filename.)
+
+## Field reference
+
+### Intrinsic fields (every project)
+
+These seven fields exist regardless of workflow and cannot be redeclared by a `workflow.yaml`:
+
+| Field | Type | Notes |
+|---|---|---|
+| `id` | `id` | immutable, auto-generated bare 6-char uppercase alphanumeric (e.g. `X7F4K2`) |
+| `title` | `string` | required on create |
+| `description` | `string` | markdown body content |
+| `createdBy` | `string` | immutable |
+| `createdAt` | `timestamp` | immutable |
+| `updatedAt` | `timestamp` | immutable |
+| `filepath` | `string` | synthetic — the tiki's absolute path on disk |
+
+### Workflow fields — EXAMPLE ONLY, not guaranteed
+
+> ⚠️ **The table below is an example, not a specification.** Every field in it — including its name,
+> type, allowed values, and default — is declared by a `workflow.yaml`, and **the project you are working
+> in may declare entirely different fields, values, and defaults, or none of these at all.** These rows
+> show only what the **built-in** workflow happens to declare, included so the `ruki` examples elsewhere
+> in this skill are concrete. **Never assume a field or value from this table exists in the current
+> project — read its `workflow.yaml` first** (see the lookup chain above) to find the real set. Naming a
+> field the workflow does not declare (e.g. `assignee` under a workflow that has no such field) is a hard
+> `unknown field` parse error in `select`, `where`, and `set` alike — not an empty result — so reference
+> only the intrinsic fields plus the fields this project's workflow actually declares.
+
+| Field (built-in example) | Type (example) | Built-in values (example) |
+|---|---|---|
+| `status` | enum | `inbox`, `ready`, `inProgress`, `done` (default `inbox`) |
+| `type` | enum | `story` (default), `bug`, `spike` |
+| `priority` | enum | `"high"`, `"medium-high"`, `"medium"` (default), `"medium-low"`, `"low"` — pass the key as a string |
+| `points` | enum | `"1"`, `"3"` (default), `"7"`, `"11"` — pass the key as a string |
+| `assignee` | user | free text; ruki still treats it as `string` |
+| `tags` | list<string> | e.g. `["writing", "urgent"]` |
+| `dependsOn` | list<ref> | bare tiki ids, e.g. `["ABC123", "DEF456"]` |
+| `due` | date | `YYYY-MM-DD` (a date, not a timestamp) — compare against date literals, not `now()` |
+| `recurrence` | recurrence | set with a constructor: `daily()`, `weekly("monday")` (full lowercase day name), `monthly(1)` (day 1–31). Stored as cron; a raw cron string is rejected on assignment |
+
+The `ruki` examples throughout this skill use these built-in values (e.g. `status="done"`,
+`priority="high"`) purely as illustrations — substitute the values your project's `workflow.yaml` actually
+defines. The built-in workflow may also guard some status transitions with triggers — see the Update
+section.
+
+## Query
+
+```sh
+tiki exec --format json 'select'                                         # all tikis under the cwd
+tiki exec --format json 'select where has(status)'                       # tikis carrying a status
+tiki exec --format json 'select title, status'                           # field projection
+tiki exec --format json 'select id, title where status = "done"'         # filter
+tiki exec --format json 'select where "writing" in tags order by priority' # tag filter + sort
+tiki exec --format json 'select where has(due) and due < 2026-07-15'     # due before a date
+tiki exec --format json 'select where dependsOn any status != "done"'    # blocked cards
+tiki exec --format json 'select where assignee = user()'                 # my cards
+```
+
+Output is JSON when `--format json` is used; prefer that for agent workflows. To read a tiki's full
+markdown body, either project it via `select description where id = "ABC123"` or read the file directly —
+get the path with `select filepath where id = "ABC123"`.
+
+**Scope note.** Bare `select` iterates every tiki under the cwd, including those with no workflow-declared
+fields. Predicates on absent fields are well-defined: `where status = "done"` is false for tikis with no
+status, and `where status != "done"` is true. Use `has(<field>)` to scope explicitly when needed — for
+example, `select where has(status)` lists only tikis that carry a status, regardless of value.
+
+## Create
+
+```sh
+tiki exec 'create title="Book dentist appointment"'
+tiki exec 'create title="Weekly reset" priority="medium-high" status="ready" tags=["ritual"]'
+tiki exec 'create title="Reading notes" due=2026-04-01 + 2day'
+tiki exec 'create title="Water the plants" recurrence=weekly("monday")'
+tiki exec 'create title="Story fragment: moonlit station" tags=["writing"]'
+```
+
+Output: `created <ID>` (bare 6-char id).
+Defaults: `status` from the `default: true` status in `workflow.yaml`, `type` from the `default: true`
+type (or the first type), `priority` from the `default: true` priority value.
+
+### Create from file
+
+When asked to create a tiki from a file:
+1. Read the source file.
+2. Summarize its content into a short title.
+3. Use the file content as the description.
+4. Escape content safely before embedding it in a `tiki exec` string.
+
+If the content is large or awkward to escape, prefer creating a minimal tiki first and then editing the
+resulting notes-only markdown file directly while preserving its `id:` frontmatter.
+
+## Update
+
+```sh
+tiki exec 'update where id = "X7F4K2" set status="done"'                   # status change
+tiki exec 'update where id = "X7F4K2" set priority="high"'                 # priority
+tiki exec 'update where status = "ready" set status="inProgress"'          # bulk update
+tiki exec 'update where id = "X7F4K2" set tags=tags + ["urgent"]'          # add tag
+tiki exec 'update where id = "X7F4K2" set due=2026-04-01'                  # set due date
+tiki exec 'update where id = "X7F4K2" set due=empty'                       # clear due date
+tiki exec 'update where id = "X7F4K2" set recurrence=weekly("monday")'     # set recurrence
+tiki exec 'update where id = "X7F4K2" set recurrence=empty'                # clear recurrence
+```
+
+Output: `updated N tikis`. `set status=` accepts only values the applicable `workflow.yaml` declares. A
+workflow may also guard transitions with triggers, which report `updated 0 tikis (1 failed)` with a
+reason when they refuse. Read the failure reason and satisfy the precondition in the same statement when
+possible.
+
+Assigning a field writes that key into the tiki's frontmatter — this is also how a notes-only tiki
+becomes a tracked one (`set status = "..."`).
+
+### Start work on a card
+
+When the user wants to begin actively working on a tiki, advance it to the workflow's in-progress state
+and satisfy any workflow preconditions in the same statement. Example for the built-in workflow:
+
+```sh
+tiki exec 'update where id = "X7F4K2" set assignee=user() status="inProgress"'
+```
+
+## Delete
+
+```sh
+tiki exec 'delete where id = "X7F4K2"'              # by ID
+tiki exec 'delete where status = "inbox"'           # bulk
+```
+
+Output: `deleted N tikis`. Delete works on any tiki regardless of which fields it carries.
+
+## Dependencies
+
+```sh
+# view a tiki's dependencies
+tiki exec --format json 'select id, title, status, dependsOn where id = "X7F4K2"'
+
+# find what depends on a tiki (reverse lookup)
+tiki exec --format json 'select id, title where dependsOn any id = "X7F4K2"'
+
+# find blocked cards (any dependency not done)
+tiki exec --format json 'select id, title where dependsOn any status != "done"'
+
+# add a dependency (bare id)
+tiki exec 'update where id = "X7F4K2" set dependsOn=dependsOn + ["ABC123"]'
+
+# remove a dependency
+tiki exec 'update where id = "X7F4K2" set dependsOn=dependsOn - ["ABC123"]'
+```
+
+`dependsOn` entries must each be a valid id — 6 characters of `[A-Z0-9]` (e.g. `ABC123`) — and must
+reference a tiki that exists, or the update is rejected.
+
+## Provenance
+
+`ruki` does not access git history. Use git commands for authorship questions — but first resolve the
+tiki's path from its id, since files can live anywhere under the cwd:
+
+```sh
+# get the tiki's path
+path=$(tiki exec --format json 'select filepath where id = "X7F4K2"' | jq -r '.[0].filepath')
+
+# who created this tiki
+git log --follow --diff-filter=A -- "$path"
+
+# who last edited this tiki
+git blame "$path"
+```
+
+Created timestamp and author are also available via:
+```sh
+tiki exec --format json 'select createdAt, createdBy where id = "X7F4K2"'
+```
+
+## Important
+
+- `tiki exec` handles `git add` and `git rm` automatically — never do manual git staging for tracked workflow tikis.
+- Never commit without user permission.
+- An id is exactly 6 characters, uppercase letters and digits only (e.g. `X7F4K2`); a value of any other shape is rejected. Ids are assigned by tiki on create — obtain one from a query or `created` output, never invent or reformat it.
+- Exit codes: 0 = ok, 2 = usage error, 3 = startup failure, 4 = query error.
+SKILL_TIKI
+if [[ "$DRY_RUN" != "true" ]]; then
+    success "tiki Claude/Pi skill written (~/.claude/skills/tiki/)"
 fi
 # Terminal email + calendar → herald: one app for email AND calendar (Gmail work +
 # iCloud personal, IMAP/SMTP + CalDAV), with built-in AI triage/summaries and an MCP
@@ -11674,14 +11903,17 @@ PI_THEME_DIR="$PI_DIR/themes"
 PI_THEME_FILE="$PI_THEME_DIR/dracula-sakura.json"
 PI_MODELS_FILE="$PI_DIR/models.json"
 PI_SETTINGS_FILE="$PI_DIR/settings.json"
+PI_SKILLS_DIR="$PI_DIR/skills"
 AGENTS_SKILLS="$HOME/.agents/skills"
 PI_SHARED_SKILLS=(api-testing d2-diagrams dbmate-migrations office-docs tiki)
+PI_LOCAL_TIKI_SKILLS=(tiki-capture tiki-review tiki-groom tiki-arc tiki-journal)
 
 if [[ "$DRY_RUN" == "true" ]]; then
     info "[DRY RUN] Would write pi config -> $PI_DIR (settings.json, models.json, themes/dracula-sakura.json)"
+    info "[DRY RUN] Would write ${#PI_LOCAL_TIKI_SKILLS[@]} Pi-local Tiki skills -> $PI_SKILLS_DIR/"
     info "[DRY RUN] Would link ${#PI_SHARED_SKILLS[@]} shared skills -> $AGENTS_SKILLS/"
 else
-    mkdir -p "$PI_THEME_DIR" "$AGENTS_SKILLS"
+    mkdir -p "$PI_THEME_DIR" "$PI_SKILLS_DIR" "$AGENTS_SKILLS"
 
     # -- models.json --------------------------------------------------------------
     # Pi's custom-model support is chat-model oriented. The local embedding model
@@ -11816,6 +12048,643 @@ else
 }
 PI_THEME_CONF
     success "pi: Dracula-Sakura theme written (~/.pi/agent/themes/dracula-sakura.json)"
+
+    # -- Pi-local Tiki skills -----------------------------------------------------
+    # Keep the general tiki CRUD skill shared with Claude via ~/.agents/skills/, but add
+    # a small Pi-native companion set for capture/review/groom/arc/journal flows.
+    write_generated "$PI_SKILLS_DIR/tiki-capture/SKILL.md" <<'PI_TIKI_CAPTURE_SKILL'
+---
+name: tiki-capture
+description: Fast capture into a Tiki notebook — create inbox notes, journal entries, ideas, life-admin cards, or recurring rituals with sensible titles, tags, and optional due dates. Use when the user wants to quickly save a thought, task, reflection, or plan into Tiki.
+---
+
+# Tiki Capture
+
+Use this skill for quick intake into a Tiki notebook, especially one shaped like:
+
+- `inbox/`
+- `journal/`
+- `ideas/`
+- `life-admin/`
+- `projects/`
+- `reference/`
+- `archive/`
+
+Default to the smallest useful capture. If the user gives only a fragment, preserve it rather than over-structuring it.
+
+## Before capture
+
+1. Work in the notebook root the user intends. If unclear, ask or use the current directory.
+2. Read `workflow.yaml` if the request depends on workflow fields like `status`, `priority`, `type`, or `assignee`.
+3. Prefer `tiki exec` for tracked cards. For plain notes, `echo "..." | tiki` or `tiki exec 'create ...'` is fine.
+
+## Capture routing
+
+Map intent to destination and defaults:
+
+| Intent | Folder | Suggested defaults |
+|---|---|---|
+| quick unsorted thought | `inbox/` | `tags=["sakura"]` |
+| reflection / diary / check-in | `journal/` | `tags=["journal"]` |
+| concept / prompt / future maybe | `ideas/` | `tags=["idea"]` |
+| errand / bill / appointment / paperwork | `life-admin/` | `status="ready"` when appropriate; tags like `home`, `finance`, `health`, `travel` |
+| larger ongoing effort | `projects/` | consider `type="project"` or the local workflow's arc/project equivalent |
+| evergreen notes / recipes / saved context | `reference/` | tags by topic |
+
+If the workflow is unknown or the note is plainly freeform, avoid guessing fields that may not exist.
+
+## Good capture behavior
+
+- Keep titles short, concrete, and easy to scan.
+- Preserve user wording when it carries emotional or journal meaning.
+- Add only a few high-confidence tags.
+- Do not invent dates, recurrence, or assignees.
+- If the user provides a due date in natural language, convert it to `YYYY-MM-DD` before writing.
+
+## Common capture patterns
+
+### Quick inbox note
+
+```sh
+tiki exec 'create title="Call landlord" tags=["sakura"]'
+```
+
+### Journal entry
+
+Prefer a dated, readable title:
+
+```sh
+tiki exec 'create title="Journal - 2026-09-08" tags=["journal"]'
+```
+
+If the user provides body text, include it as `description=...` or create first and then edit the file directly if safer.
+
+### Life-admin card
+
+```sh
+tiki exec 'create title="Renew passport" status="ready" tags=["travel","life-admin"]'
+```
+
+Only set `status` when you have confirmed the workflow declares it.
+
+### Recurring ritual
+
+```sh
+tiki exec 'create title="Water plants" recurrence=weekly("sunday") tags=["ritual","home"]'
+```
+
+### Capture from a pasted note
+
+1. Distill the first useful line into a title.
+2. Keep the remaining content as description.
+3. Choose the lightest sensible tags.
+
+## When folder placement matters
+
+Tiki creates files in the cwd by default. If the user wants the note physically inside a notebook subfolder:
+
+1. Capture the tiki.
+2. Resolve its path with `tiki exec --format json 'select filepath where id = "..."'`.
+3. Move the file into the target folder, keeping the same contents and `id:`.
+
+Because tiki identity is id-based, moving the file does not break references.
+
+## Suggested tag palette
+
+Use only when clearly helpful:
+
+- `sakura`
+- `journal`
+- `idea`
+- `ritual`
+- `home`
+- `finance`
+- `health`
+- `travel`
+- `writing`
+- `reading`
+- `wishlist`
+
+## Safety notes
+
+- Read the active `workflow.yaml` before setting workflow fields.
+- Prefer minimal captures over over-modeled ones.
+- Never fabricate a tiki id.
+- Never commit without user permission.
+PI_TIKI_CAPTURE_SKILL
+
+    write_generated "$PI_SKILLS_DIR/tiki-review/SKILL.md" <<'PI_TIKI_REVIEW_SKILL'
+---
+name: tiki-review
+description: Review and summarize a Tiki notebook — inspect inbox, ready, overdue, recurring, stale, or tagged cards and produce a daily or weekly reset. Use when the user wants a Tiki review, triage session, focus list, or notebook summary.
+---
+
+# Tiki Review
+
+Use this skill to help the user reset, triage, and understand their Tiki notebook.
+
+## Review style
+
+Aim for calm, actionable summaries:
+- surface the smallest meaningful next step
+- group related cards
+- distinguish urgent from merely noisy
+- keep summaries compact unless the user asks for a deeper review
+
+Prefer `tiki exec --format json '...'` for queries.
+
+## First steps
+
+1. Confirm the notebook root if needed.
+2. Read the active `workflow.yaml` before assuming fields like `status`, `priority`, `due`, `assignee`, `dependsOn`, or `tags`.
+3. Query only the fields the workflow actually declares, plus intrinsic fields.
+
+## Useful review slices
+
+Use whichever fit the current workflow.
+
+### Inbox / unsorted
+
+```sh
+tiki exec --format json 'select id, title, updatedAt where status = "inbox" order by updatedAt desc'
+```
+
+### Ready / next-up
+
+```sh
+tiki exec --format json 'select id, title, priority, due where status = "ready" order by priority, due, updatedAt desc'
+```
+
+### In progress
+
+```sh
+tiki exec --format json 'select id, title, assignee, due where status = "inProgress" order by due, updatedAt desc'
+```
+
+### Overdue
+
+```sh
+tiki exec --format json 'select id, title, due where has(due) and due < 2026-09-08 order by due'
+```
+
+Replace the date literal with today's date.
+
+### Recurring
+
+```sh
+tiki exec --format json 'select id, title, recurrence, due where has(recurrence) order by due, updatedAt desc'
+```
+
+### Blocked
+
+```sh
+tiki exec --format json 'select id, title where dependsOn any status != "done"'
+```
+
+### By tag
+
+```sh
+tiki exec --format json 'select id, title, tags where "finance" in tags or "health" in tags order by updatedAt desc'
+```
+
+### Stale
+
+```sh
+tiki exec --format json 'select id, title, updatedAt where updatedAt < now() - 30day order by updatedAt'
+```
+
+## Daily review output
+
+A good daily review usually includes:
+- inbox count
+- ready / next-up cards
+- overdue items
+- active in-progress cards
+- 1-3 suggested focus items
+
+## Weekly review output
+
+A good weekly review usually includes:
+- what changed recently
+- overdue / lingering items
+- recurring rituals coming up
+- neglected tags or areas such as `home`, `finance`, `health`, `writing`
+- cards worth archiving, retagging, or turning into arcs
+
+## Optional artifact
+
+If the user wants the review saved, create a notes-only markdown tiki or a journal-style review note summarizing:
+- date
+- counts / categories
+- suggested next steps
+- any follow-up cleanup actions
+
+## Safety notes
+
+- Never assume a workflow field exists without checking.
+- When the notebook is mostly freeform notes, summarize rather than force task vocabulary.
+- Never commit without user permission.
+PI_TIKI_REVIEW_SKILL
+
+    write_generated "$PI_SKILLS_DIR/tiki-groom/SKILL.md" <<'PI_TIKI_GROOM_SKILL'
+---
+name: tiki-groom
+description: Tidy and reorganize a Tiki notebook — clean up inbox notes, retag cards, find stale or duplicate-ish entries, normalize titles, and turn loose notes into tracked cards. Use when the user wants to prune, organize, or maintain a Tiki workspace.
+---
+
+# Tiki Groom
+
+Use this skill when the notebook feels a little overgrown and the user wants help restoring shape without losing softness.
+
+## What this skill is for
+
+- triaging `inbox/`
+- retagging or lightly normalizing notes
+- finding stale cards or neglected areas
+- identifying likely duplicates or near-duplicates for user review
+- moving notes into a better folder
+- converting freeform notes into tracked cards by adding workflow fields
+- suggesting archive candidates
+
+Prefer the smallest high-leverage cleanup first.
+
+## First steps
+
+1. Confirm the notebook root if needed.
+2. Read the active `workflow.yaml` before using workflow fields like `status`, `type`, `priority`, `due`, or `assignee`.
+3. Prefer `tiki exec --format json '...'` for inventory and selection.
+4. For notes-only tikis, direct file edits are allowed if the `id:` frontmatter is preserved.
+
+## Good grooming behavior
+
+- Preserve meaning over consistency theater.
+- Do not rewrite the user's voice unless asked.
+- Suggest destructive cleanup before doing it.
+- Batch small safe changes together when appropriate.
+- When unsure whether two notes are duplicates, present them as candidates rather than merging or deleting.
+
+## Common grooming moves
+
+### Triage inbox
+
+Start by listing recent inbox items:
+
+```sh
+tiki exec --format json 'select id, title, updatedAt where status = "inbox" order by updatedAt desc'
+```
+
+For each item, consider:
+- leave as inbox
+- add a few tags
+- move to `journal/`, `ideas/`, `life-admin/`, `projects/`, `reference/`, or `archive/`
+- promote into a tracked card by adding `status` or another workflow field
+
+### Find stale notes or cards
+
+```sh
+tiki exec --format json 'select id, title, updatedAt where updatedAt < now() - 30day order by updatedAt'
+```
+
+Use this to suggest:
+- archive candidates
+- items worth closing
+- notes that need retagging or reframing
+
+### Review by tag
+
+```sh
+tiki exec --format json 'select id, title, tags where "home" in tags or "finance" in tags order by updatedAt desc'
+```
+
+Use tag reviews to spot:
+- overloaded tags
+- inconsistent tag spelling
+- notes missing obvious tags
+
+### Normalize titles lightly
+
+Good title cleanup is small and reversible:
+- remove accidental ALL CAPS unless intentional
+- trim obvious prefixes/suffix clutter
+- make titles easier to scan
+- keep journal or emotionally meaningful wording intact
+
+If the title lives in frontmatter, edit only that exact field.
+
+### Move notes into better folders
+
+Tiki identity is id-based, so files can be moved safely as long as contents and `id:` stay intact.
+
+Recommended flow:
+1. resolve path via `tiki exec --format json 'select filepath where id = "..."'`
+2. move the file to the target folder
+3. re-check that the tiki still resolves by id
+
+### Convert a loose note into a tracked card
+
+If a notes-only tiki should appear on boards, add a workflow field the active workflow declares.
+
+Example:
+
+```sh
+tiki exec 'update where id = "X7F4K2" set status="ready"'
+```
+
+Only do this after checking the workflow supports the field/value.
+
+### Suggest duplicate candidates
+
+There is no built-in semantic dedupe in tiki, so use a conservative process:
+- scan titles for near-matches
+- inspect tags and nearby timestamps
+- present candidate pairs to the user
+- delete or merge only with explicit approval
+
+## Useful folder heuristics
+
+Use these gently, not rigidly:
+
+- `inbox/` — unsorted capture
+- `journal/` — dated reflections and personal texture
+- `ideas/` — concepts, prompts, fragments, future maybes
+- `life-admin/` — errands, renewals, health, travel, money, paperwork
+- `projects/` — multi-note arcs
+- `reference/` — durable lookup notes
+- `archive/` — quiet storage, not deletion
+
+## Suggested tag cleanup patterns
+
+Common tidy tag palette:
+- `sakura`
+- `journal`
+- `idea`
+- `ritual`
+- `home`
+- `finance`
+- `health`
+- `travel`
+- `writing`
+- `reading`
+- `wishlist`
+
+Possible grooming actions:
+- collapse duplicates like `errands` -> `errand` if the user wants singular tags
+- add one contextual tag to otherwise opaque notes
+- remove noisy tags that do not help retrieval
+
+## Archive guidance
+
+Archive is a soft ending, not destruction.
+
+Suggest archiving when notes are:
+- complete and unlikely to need active visibility
+- superseded by a newer note
+- useful for record-keeping but no longer current
+
+Prefer moving to `archive/` over deletion unless the user explicitly wants removal.
+
+## Safety notes
+
+- Never assume workflow fields without reading `workflow.yaml`.
+- Never delete or merge ambiguous notes without explicit user approval.
+- Preserve `id:` exactly when editing or moving a tiki file.
+- Never commit without user permission.
+PI_TIKI_GROOM_SKILL
+
+    write_generated "$PI_SKILLS_DIR/tiki-arc/SKILL.md" <<'PI_TIKI_ARC_SKILL'
+---
+name: tiki-arc
+description: Manage larger Tiki arcs — create and organize project-like parent cards, attach linked notes, inspect blockers, and summarize arc state. Use when the user wants to plan, review, or restructure a multi-note effort in Tiki.
+---
+
+# Tiki Arc
+
+Use this skill for bigger clusters of work or thought: moving house, planning travel, a writing project, a life-admin campaign, a learning path, or any longer thread that gathers many related notes.
+
+In some workflows, an arc is stored as `type="project"` or an equivalent enum value. Always read the active `workflow.yaml` before assuming the field name or value.
+
+## What an arc is
+
+An arc is a parent tiki that gathers related child notes or cards through dependency links such as `dependsOn`.
+
+Typical arc uses:
+- apartment move
+- trip planning
+- health admin
+- annual reset
+- writing project
+- research topic
+- home reorganization
+
+## First steps
+
+1. Confirm the notebook root if needed.
+2. Read the active `workflow.yaml` to confirm how the workflow represents project/arc-like items.
+3. Prefer `tiki exec --format json '...'` for inspection and selection.
+4. Preserve id-based linking; never assume filenames are stable identifiers.
+
+## Common arc operations
+
+### Create a new arc
+
+If the workflow has a project-like type, create the parent with that type.
+
+Example:
+
+```sh
+tiki exec 'create title="Apartment move" type="project" status="inbox" tags=["home","life-admin"]'
+```
+
+Only use fields and enum values confirmed by the active workflow.
+
+### Find existing arcs
+
+```sh
+tiki exec --format json 'select id, title, status, priority where type = "project" order by updatedAt desc'
+```
+
+If the workflow uses a different value than `project`, substitute it.
+
+### Add a note or card to an arc
+
+```sh
+tiki exec 'update where id = "ARC123" set dependsOn = dependsOn + ["ABC123"]'
+```
+
+Before linking:
+- confirm both ids exist
+- avoid duplicate links
+- avoid linking the arc to itself
+
+### List everything in an arc
+
+```sh
+tiki exec --format json 'select id, title, status where id in target.dependsOn'
+```
+
+If `target` is not available in the current query context, first query the parent arc's `dependsOn` list, then query those ids directly.
+
+### Find arcs blocked by open items
+
+```sh
+tiki exec --format json 'select id, title where type = "project" and dependsOn any status != "done"'
+```
+
+### Find arcs ready to close
+
+```sh
+tiki exec --format json 'select id, title where type = "project" and dependsOn all status = "done"'
+```
+
+Only mark an arc done after checking whether local triggers already auto-complete it.
+
+## Arc review
+
+A useful arc summary includes:
+- parent arc title and id
+- current status / priority / due date if present
+- number of linked notes
+- open vs done linked items
+- blocked items
+- likely next step
+
+Suggested review flow:
+1. query the parent arc
+2. query its linked notes/cards
+3. group linked items by status or tag if the workflow supports that
+4. summarize the arc in plain language
+
+## Restructuring arcs
+
+Use this skill when an arc has become messy.
+
+Possible cleanup moves:
+- split one large arc into two clearer arcs
+- move unrelated notes out of an arc
+- add missing tags to child notes
+- create a parent arc for an already-related cluster
+- archive a finished arc and its quiet support notes
+
+Be conservative with bulk relinking. Show the user the proposed before/after shape for non-trivial changes.
+
+## Folder and notebook fit
+
+Arcs often live well in `projects/`, but the linked notes may belong elsewhere:
+- `life-admin/` for paperwork-heavy arcs
+- `ideas/` for conceptual arcs
+- `reference/` for support material
+- `journal/` for reflective notes linked to a personal arc
+
+Because tiki links by id, physical file location and conceptual grouping can differ safely.
+
+## Safety notes
+
+- Read `workflow.yaml` before assuming `type`, `status`, `priority`, or enum values.
+- Never fabricate tiki ids.
+- Avoid self-links and duplicate dependency links.
+- Do not delete or heavily restructure an arc without user approval.
+- Never commit without user permission.
+PI_TIKI_ARC_SKILL
+
+    write_generated "$PI_SKILLS_DIR/tiki-journal/SKILL.md" <<'PI_TIKI_JOURNAL_SKILL'
+---
+name: tiki-journal
+description: Create and maintain journal-style notes in a Tiki notebook — morning pages, evening reflections, check-ins, and themed review entries with gentle prompts and links to related notes or arcs. Use when the user wants to journal in Tiki.
+---
+
+# Tiki Journal
+
+Use this skill for reflective notebook work inside Tiki: daily entries, mood logs, creative check-ins, weekly reflections, and soft summaries that link life texture to plans or arcs.
+
+## First steps
+
+1. Confirm the notebook root if needed.
+2. Prefer `journal/` for physically journal-like entries when that folder exists.
+3. Read `workflow.yaml` only if the user wants the entry to participate in workflow fields such as `status`, `type`, `due`, or `tags`.
+4. Preserve the user's voice; do not sand away feeling in the name of structure.
+
+## Good journal behavior
+
+- Keep the title readable and date-forward.
+- Preserve emotional nuance.
+- Add only a few helpful tags.
+- Prefer notes-first capture; do not force task structure onto reflections.
+- When a reflection clearly implies an action item, ask whether to also create or link a separate card.
+
+## Common journal patterns
+
+### Morning entry
+
+```sh
+tiki exec 'create title="Morning notes - 2026-09-08" tags=["journal","ritual"]'
+```
+
+### Evening reflection
+
+```sh
+tiki exec 'create title="Evening reflection - 2026-09-08" tags=["journal"]'
+```
+
+### Weekly reset note
+
+```sh
+tiki exec 'create title="Weekly reset - 2026-09-08" tags=["journal","ritual"]'
+```
+
+### Creative check-in
+
+```sh
+tiki exec 'create title="Writing check-in - 2026-09-08" tags=["journal","writing"]'
+```
+
+## Suggested prompt shapes
+
+Use or adapt lightly:
+- what feels bright today?
+- what feels heavy or snagged?
+- what wants attention next?
+- what am I avoiding?
+- what softened, improved, or bloomed this week?
+- what should become a separate card or arc?
+
+## Linking reflection to action
+
+When a journal note surfaces a concrete follow-up:
+1. keep the journal note intact
+2. ask whether to create a separate card
+3. optionally link the journal note to an existing arc or related note
+
+This keeps reflection from being flattened into task management.
+
+## Folder placement
+
+If the entry should physically live in `journal/`:
+1. create the tiki
+2. resolve its path by id
+3. move it into `journal/`
+4. keep the `id:` unchanged
+
+## Suggested tags
+
+Use sparingly:
+- `journal`
+- `ritual`
+- `writing`
+- `reading`
+- `health`
+- `home`
+- `travel`
+- `sakura`
+
+## Safety notes
+
+- Preserve the user's voice over stylistic normalization.
+- Do not infer private emotional conclusions the user did not state.
+- Read `workflow.yaml` before setting workflow fields.
+- Never commit without user permission.
+PI_TIKI_JOURNAL_SKILL
+
+    success "pi: local Tiki skills written (~/.pi/agent/skills: tiki-capture, tiki-review, tiki-groom, tiki-arc, tiki-journal)"
 
     # -- Shared skills ------------------------------------------------------------
     # pi discovers ~/.agents/skills automatically. Share a curated subset rather than the
@@ -12408,7 +13277,7 @@ unscriptable. Work through it once, then keep it only as long as it's useful.
 - [ ] **infracost** (IaC cost estimates): run `infracost auth login` for a free API key — `infracost breakdown` errors with "No INFRACOST_API_KEY" until then.
 - [ ] **borgmatic backups:** the setup scaffolds `~/.config/borgmatic/config.yaml`. Set `repositories`, store the passphrase in Keychain (`security add-generic-password -a "$USER" -s borg-passphrase -w`), run `borgmatic init --encryption repokey-blake2`, check with `borgmatic create --dry-run`, then enable a daily run (e.g. a LaunchAgent calling `borgmatic --verbosity -1`). ClamAV's virus DB downloads itself in the background after setup.
 - [ ] **Claude AI in croft:** `croft pair` (the AI navigator in your primary IDE) defaults to `--provider claude`, which hands off to your existing `claude` CLI — so it just works on whatever auth that already has (a Claude Pro/Max subscription **or** an API key), no separate `ANTHROPIC_API_KEY` required. Want a fully local model with no key at all? Ollama is installed and running — use the `gemma3:4b` that setup already pulled (`croft pair --provider ollama --model gemma3:4b`) or the heavier `qwen2.5-coder:14b` that's also pre-pulled for coding-oriented local loops. An Anthropic API key is **optional** here — the only thing that uses one is the `llm` CLI, and `llm` itself is optional: if Claude Code and the Claude desktop app already cover you, you can skip it entirely. If you do want `llm` for one-off prompts (e.g. `> ! llm …` from micro's command bar) or shell scripting, run `llm keys set anthropic` — setup already installs the plugin (via uv) and sets the default model to `anthropic/claude-sonnet-4-5`. (Email/calendar AI is built into **herald** — configured separately above.)
-- [ ] **Pi** (optional second agent): `pi` is installed with the local Ollama provider preconfigured and `qwen2.5-coder:14b` as the default model, plus the shared skills bridge in `~/.agents/skills/`. If you want a remote provider instead, run `pi` then `/login`; if you only want the local path, nothing else is required.
+- [ ] **Pi** (optional second agent): `pi` is installed with the local Ollama provider preconfigured and `qwen2.5-coder:14b` as the default model, plus the shared skills bridge in `~/.agents/skills/` and five Pi-local Tiki companions in `~/.pi/agent/skills/` (`tiki-capture`, `tiki-review`, `tiki-groom`, `tiki-arc`, `tiki-journal`). If you want a remote provider instead, run `pi` then `/login`; if you only want the local path, nothing else is required.
 - [ ] **croft** (primary IDE): installed from git `main` via cargo — run `croft` in a project to open the workspace; re-run `cargo install --git https://github.com/vitali87/croft.git --locked` to upgrade.
 - [ ] **AI side-pane:** `zellij --layout dev` opens your editor + a Claude Code pane side by side (the strongest AI workflow).
 - [ ] **chezmoi:** `chezmoi init <your-dotfiles-repo>` to bring these configs under version control across the MacBook + Mac mini.
@@ -12692,7 +13561,7 @@ pi
 pi --provider ollama --model qwen2.5-coder:14b
 ```
 
-> Tip: Pi's config lives entirely under `~/.pi/agent/`, not `~/.config`. This setup points Pi at four local Ollama chat/coding models and shares exactly five skills through `~/.agents/skills/` so the startup prompt stays lean.
+> Tip: Pi's config lives entirely under `~/.pi/agent/`, not `~/.config`. This setup points Pi at four local Ollama chat/coding models, shares exactly five general skills through `~/.agents/skills/` so the startup prompt stays lean, and adds five Pi-local Tiki companion skills under `~/.pi/agent/skills/`.
 
 ### `ollama` — Local LLM Runtime
 Runs open-weight LLMs entirely on your Mac — no API key, no data leaving the machine. Setup installs it, runs it as a login service on `127.0.0.1:11434`, and seeds the local model set this machine wants ready: `qwen2.5-coder:14b`, `llama3.1:8b`, `gemma3:4b`, `llama3.2:latest`, plus `nomic-embed-text-v2-moe` for embeddings. It's the local backend for **herald**'s built-in AI, `croft pair --provider ollama`, `aichat`, and Pi's local-model path.
