@@ -4653,10 +4653,10 @@ TIKI_WORKFLOW="$TIKI_CONFIG_DIR/workflow.yaml"
     write_managed "$TIKI_WORKFLOW" "#" <<'TIKI_WORKFLOW_CONF'
 version: "0.6.1"
 description: |
-  Dracula Sakura workflow for small-team software work. Four statuses
-  (Moonpool → Petals → Starlight → Bloom) and four task types
-  (Story, Bug, Research, Arc). Tuned for elegant, readable task flow
-  with a softer anime-feminine accent layer.
+  Dracula Sakura workflow for notes, errands, ideas, and longer arcs.
+  Four statuses (Moonpool → Petals → Starlight → Bloom) and four card
+  kinds (Note, Friction, Research, Arc). Tuned for elegant, readable
+  flow with a softer anime-feminine accent layer.
 fields:
   - name: status
     type: enum
@@ -4680,11 +4680,11 @@ fields:
     caption: "Kind"
     values:
       - value: story
-        label: Story
+        label: Note
         visual: "✿"
         default: true
       - value: bug
-        label: Bug
+        label: Friction
         visual: "⚡"
       - value: spike
         label: Research
@@ -4792,7 +4792,7 @@ views:
         view: Detail
         require: ["selection:one"]
       - key: "a"
-        label: "Add to project"
+        label: "Add to arc"
         action: update where id = choose(select where type = "project" and outer.id not in dependsOn) set dependsOn = dependsOn + id()
       - key: "e"
         label: Edit
@@ -4827,7 +4827,7 @@ views:
 
   - name: Petal Trail
     kind: board
-    description: "Tasks changed in the last 24 hours, newest sparkles first"
+    description: "Cards changed in the last 24 hours, newest sparkles first"
     key: Ctrl-R
     layout: |
       type.visual + " " + id
@@ -4881,7 +4881,7 @@ views:
     layout: |
       type.visual + " " + id
       <text.secondary>title
-      <text.muted>dependsOn.count + <text.muted>" tasks"
+      <text.muted>dependsOn.count + <text.muted>" linked notes"
       _
       <text.muted>"tags: " + <text.value>tags
       "priority " + priority.visual + "  points " + points.visual
@@ -4908,7 +4908,7 @@ views:
         view: Project
         require: ["selection:one"]
       - key: "l"
-        label: "Add tiki to project"
+        label: "Add note to arc"
         action: update where id = id() set dependsOn = dependsOn + choose(select where has(type) and type != "project" and id not in outer.dependsOn)
       - key: "e"
         label: Edit
@@ -4921,8 +4921,8 @@ views:
         kind: view
         view: Project
         mode: new
-        # seed the draft as a project so a Roadmap "new" lands on this board
-        # (Roadmap lanes filter type = "project"); persisted only on form commit
+        # seed the draft as an arc so a Constellation "new" lands on this board
+        # (Constellation lanes filter type = "project"); persisted only on form commit
         action: create type="project"
       - key: "m"
         label: "Assign to me"
@@ -4983,45 +4983,45 @@ views:
       <text.label>points.caption   | points                             | <text.muted>updatedAt.caption  | updatedAt | ^                        | ^     | ^                                                                                                                                                                                                                                                                                     | _
     actions:
       - key: "L"
-        label: "List tasks"
+        label: "List linked notes"
         kind: view
         view: Detail
         choose: select where id in target.dependsOn
       - key: "a"
-        label: "Add to project"
+        label: "Add note to arc"
         action: update where id = id() set dependsOn = dependsOn + choose(select where has(type) and type != "project" and id not in outer.dependsOn)
 
 triggers:
-  - description: block completion with open dependencies
+  - description: block completion with open linked notes
     ruki: >
       before update
         where new.status = "done" and new.dependsOn any status != "done"
         deny "cannot complete: has open dependencies"
-  - description: tasks must pass through in-progress before completion
+  - description: cards must pass through in-progress before completion
     ruki: >
       before update
         where new.status = "done" and old.status != "inProgress"
-        deny "tasks must be in-progress before marking done"
-  - description: remove deleted task from dependency lists
+        deny "cards must be in-progress before marking done"
+  - description: remove deleted card from dependency lists
     ruki: >
       after delete
         update where old.id in dependsOn set dependsOn = dependsOn - [old.id]
-  - description: clean up completed tasks after 24 hours
+  - description: clean up completed cards after 24 hours
     ruki: >
       every 1day
         delete where status = "done" and updatedAt < now() - 1day
-  - description: tasks must have an assignee before starting
+  - description: cards must have a keeper before starting
     ruki: >
       before update
         where new.status = "inProgress" and new.assignee is empty and new.type != "project"
-        deny "assign someone before moving to in-progress"
-  - description: auto-complete projects when all child tasks finish
+        deny "assign a keeper before moving to in-progress"
+  - description: auto-complete arcs when all linked notes finish
     ruki: >
       after update
         where new.status = "done" and new.type != "project"
         update where type = "project" and new.id in dependsOn and dependsOn all status = "done"
         set status="done"
-  - description: cannot delete tasks that are actively being worked
+  - description: cannot delete cards that are actively being worked
     ruki: >
       before delete
         where old.status = "inProgress"
@@ -8999,7 +8999,14 @@ DIRS=(
     "$HOME/Documents/admin"      # legal, insurance, contracts
     "$HOME/Documents/receipts"
     "$HOME/Documents/travel"
-    "$HOME/Documents/notes"      # tiki notes/tasks repo (git-backed; git-initialized below)
+    "$HOME/Documents/notes"                  # tiki notebook repo (git-backed; git-initialized below)
+    "$HOME/Documents/notes/inbox"            # quick capture / unsorted sparks
+    "$HOME/Documents/notes/journal"          # dated entries, reflections
+    "$HOME/Documents/notes/ideas"            # concepts, sketches, prompts
+    "$HOME/Documents/notes/life-admin"       # planning, checklists, personal ops
+    "$HOME/Documents/notes/projects"         # longer-running arcs
+    "$HOME/Documents/notes/reference"        # evergreen notes, links, recipes
+    "$HOME/Documents/notes/archive"          # older / closed material
 
     # -- Creative (flat) ------------------------------------------------------
     "$HOME/Creative/writing"
@@ -9057,6 +9064,60 @@ if installed git && [[ ! -d "$HOME/Documents/notes/.git" ]]; then
         warn "Could not git init ~/Documents/notes"
     fi
 fi
+
+# Seed the tiki notebook with a managed landing page so the wiki view has a home.
+TIKI_NOTES_DIR="$HOME/Documents/notes"
+TIKI_INDEX="$TIKI_NOTES_DIR/index.md"
+write_managed "$TIKI_INDEX" "[//]:" <<'TIKI_INDEX_CONF'
+# 🌙 Dracula-Sakura Notebook
+
+Welcome to your Tiki notebook — a soft little command center for notes, plans,
+errands, journal fragments, project arcs, and half-formed sparks.
+
+## Constellation map
+
+- [inbox/](inbox/) — quick captures and uncategorized thoughts
+- [journal/](journal/) — dated reflections, diary notes, mood logs
+- [ideas/](ideas/) — concepts, prompts, sketches, things to explore
+- [life-admin/](life-admin/) — planning, checklists, renewals, budgets, paperwork
+- [projects/](projects/) — longer arcs with linked notes and support material
+- [reference/](reference/) — evergreen notes, recipes, setup snippets, saved context
+- [archive/](archive/) — closed loops, finished arcs, older notes worth keeping
+
+## Gentle rituals
+
+- Use **Moonboard** for active cards and small moving pieces.
+- Use **Constellation** for bigger arcs that gather related notes.
+- Drop anything fast into `inbox/` first; sort it later when the mood is better.
+- Let `journal/` hold daily texture, not just action items.
+- Use tags like `sakura`, `ritual`, `errand`, `finance`, `health`, `writing`, or `home`.
+
+## Starter note ideas
+
+- Morning reset
+- Weekly glow-up checklist
+- Bills / renewals / appointments
+- Reading notes
+- Story fragments
+- Wish list
+- Packing list
+
+## Tiny command spells
+
+```bash
+cd ~/Documents/notes
+
+tiki
+
+echo "Pay electricity bill" | tiki
+
+tiki exec 'select id, title where status = "ready"'
+```
+
+Make it useful first, pretty second, and let the prettiness still stay.
+TIKI_INDEX_CONF
+info "Seeded tiki notebook landing page: ~/Documents/notes/index.md"
+unset TIKI_NOTES_DIR TIKI_INDEX
 
 # ---- Helper Scripts ----
 info "Creating helper scripts in ~/Scripts/bin..."
@@ -12298,7 +12359,7 @@ unscriptable. Work through it once, then keep it only as long as it's useful.
 - [ ] **croft** (primary IDE): installed from git `main` via cargo — run `croft` in a project to open the workspace; re-run `cargo install --git https://github.com/vitali87/croft.git --locked` to upgrade.
 - [ ] **AI side-pane:** `zellij --layout dev` opens your editor + a Claude Code pane side by side (the strongest AI workflow).
 - [ ] **chezmoi:** `chezmoi init <your-dotfiles-repo>` to bring these configs under version control across the MacBook + Mac mini.
-- [ ] **tiki** (notes): your personal notes repo is pre-created and git-initialized at `~/Documents/notes`. Run `cd ~/Documents/notes && tiki` to start. Claude can manage tikis there — its skill is installed at `~/.claude/skills/tiki/` (CRUD via `tiki exec`, quick-capture via `echo "note" | tiki`).
+- [ ] **tiki** (notes): your personal notes repo is pre-created and git-initialized at `~/Documents/notes`, with a themed `index.md` landing page plus starter folders (`inbox`, `journal`, `ideas`, `life-admin`, `projects`, `reference`, `archive`). Run `cd ~/Documents/notes && tiki` to start. Claude can manage tikis there — its skill is installed at `~/.claude/skills/tiki/` (CRUD via `tiki exec`, quick-capture via `echo "note" | tiki`).
 - [ ] **cliamp** (music): drop music into `~/Media/music`, then run `cliamp ~/Media/music` (or set the folder in its UI). Streaming (YouTube/SoundCloud/Spotify/radio) + EQ + 20+ visualizers are built in.
 - [ ] **leaf** (Markdown): if tab-completion isn't working, run `leaf --auto-complete` and restart your shell (the script attempts this automatically).
 
@@ -14877,7 +14938,7 @@ gws sheets spreadsheets create --json '{"properties": {"title": "Q1 Budget"}}'
 > Tip: add `--dry-run` to preview the request before it's sent — invaluable before anything that mutates data.
 
 ### `tiki` — Terminal Markdown Workspace
-A git-backed workspace for tasks, docs, kanban boards, and a wiki — all stored as plain Markdown files you can browse and edit as a TUI or from the CLI. It replaces a Notion-style app with something that lives in a repo, diffs like code, and syncs via git.
+A git-backed workspace for notes, errands, journal entries, kanban cards, and a wiki — all stored as plain Markdown files you can browse and edit as a TUI or from the CLI. It replaces a Notion-style app with something that lives in a repo, diffs like code, and syncs via git. This setup also seeds `~/Documents/notes` with a themed landing page and a small notebook structure for `inbox`, `journal`, `ideas`, `life-admin`, `projects`, `reference`, and `archive`.
 
 ```bash
 # launch the TUI over the Markdown files in this directory
