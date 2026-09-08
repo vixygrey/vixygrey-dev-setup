@@ -680,7 +680,7 @@ Spotlight to find things) rather than agonizing over where it "should" go.
 |   +-- video/                   # Video projects, raw footage
 |
 |-- Media/                       # -- Personal Media --
-|   |-- photos/
+|   |-- photos/                  # Includes the bundled Dracula-Sakura wallpaper asset
 |   |-- videos/
 |   +-- music/
 |
@@ -789,6 +789,7 @@ The script generates config files with sensible defaults:
 | `~/.config/micro/settings.json` | micro | Dracula (`dracula-tc`), the $EDITOR for git/gh/lazygit and leaf's Ctrl+Ents, auto-format on save (ruff for Python, taplo/marksman/TS/CSS/bash/yaml servers, rust-analyzer, gopls) |
 | `~/Library/.../Code/User/settings.json` | VS Code | Dracula Official + Dracula-Sakura accent layer, format-on-save, ruff + basedpyright (Python; Pylance disabled), prettier (web), shfmt (shell), tabs for Go, LF, telemetry off. **Merged, not overwritten** — your keys and Settings Sync win |
 | `~/.config/sketchybar/` | SketchyBar | Dracula-Sakura bar: app, clock, battery, wifi, volume, cpu, mem, bluetooth, VPN |
+| `~/Media/photos/dracula-sakura.jpg` | Wallpaper | Bundled Dracula-Sakura wallpaper asset copied onto every provisioned machine |
 | _(cliamp)_ | cliamp | Music player — self-configured on first run (point at `~/Media/music`) |
 | `~/.herald/conf.yaml` | herald | Email + calendar — **self-configured** by herald on first run (not written by setup) |
 | `~/.config/zellij/config.kdl` | zellij | Dracula-Sakura theme, compact layout, mouse, Ctrl-a prefix |
