@@ -61,7 +61,7 @@ chmod +x scripts/setup-dev-tools-mac.sh
 1. **Pre-flight checks** -- verifies macOS version, disk space, internet, admin privileges
 2. Installs all tools via Homebrew, Cask, npm, `go install`, and `uv tool` with **progress tracking**
 3. Configures every tool with sensible defaults
-4. Applies the **Dracula** theme everywhere
+4. Applies a cohesive **Dracula-Sakura** theme across the terminal, editor, and TUI surfaces
 5. Sets macOS system defaults (Dock, keyboard, Finder, screenshots, screensaver, etc.)
 6. Configures Finder sidebar with custom favorites via **LSSharedFileList** API
 7. Sets the Dock to auto-hide and installs `dockutil` so you can curate pins yourself (no automatic pin list — see GUIDE.md for examples)
@@ -539,30 +539,30 @@ Apps under `/System/Applications` (News, Journal, Chess, Stocks, Tips, Voice Mem
 
 ---
 
-## Dracula Theme
+## Dracula-Sakura Theme
 
-Applied consistently across all tools:
+Applied consistently across the machine, with built-in Dracula variants kept where a tool exposes only a named theme:
 
 | Tool | How |
 |------|-----|
 | **micro** | Dracula (`dracula-tc`) set in `settings.json` |
-| **VS Code** | Dracula Official extension, set as `workbench.colorTheme` in the merged `settings.json` |
+| **VS Code** | Dracula Official as the base theme, with a Dracula-Sakura workbench/token/terminal overlay in merged `settings.json` |
 | **bat** | Dracula syntax theme in config |
 | **delta** | Dracula syntax theme for git diffs |
-| **Ghostty** | Full 16-color Dracula palette in config |
+| **Ghostty** | Full 16-color Dracula-Sakura palette in config |
 | **fzf** | Dracula colors in `FZF_DEFAULT_OPTS` |
-| **Starship** | Dracula color palette in `starship.toml` |
-| **lazygit** | Full Dracula color scheme in config |
-| **k9s** | Dracula skin with all view colors |
+| **Starship** | Dracula-Sakura palette in `starship.toml` |
+| **lazygit** | Dracula-Sakura color scheme in config |
+| **k9s** | Dracula skin recolored to the Dracula-Sakura house palette |
 | **leaf** | Terminal Markdown previewer (runs on defaults) |
-| **gh-dash** | Dracula border and highlight colors |
-| **SketchyBar** | Dracula status bar (palette in `colors.sh`) |
-| **btop** | Full Dracula theme with custom color palette |
-| **lazydocker** | Dracula borders and options colors |
-| **harlequin** | Dracula theme set in config.toml |
-| **trippy** | Dracula `theme-colors` in `~/.config/trippy/trippy.toml` |
-| **zellij** | Dracula theme in the config |
-| **newsboat** | Dracula colors in the config |
+| **gh-dash** | Dracula-Sakura border, text, and selection colors |
+| **SketchyBar** | Dracula-Sakura status bar (palette in `colors.sh`) |
+| **btop** | Full Dracula-Sakura theme with custom color palette |
+| **lazydocker** | Dracula-Sakura borders and options colors |
+| **harlequin** | Built-in Dracula theme set in `~/.harlequin.toml` |
+| **trippy** | Dracula-Sakura `theme-colors` in `~/.config/trippy/trippy.toml` |
+| **zellij** | Dracula-Sakura theme in the config |
+| **newsboat** | Dracula-Sakura colors in the config |
 | **claws** | Built-in `dracula` theme via `claws --theme dracula` alias |
 | **miniserve** | `--color-scheme-dark dracula` in the `serve` alias |
 | **vivid** | Dracula-themed LS_COLORS for file type coloring |
@@ -779,34 +779,34 @@ The script generates config files with sensible defaults:
 | `~/.docker/daemon.json` | Docker | BuildKit enabled, log rotation 10m x 3, DNS, garbage collection |
 | `~/.aria2/aria2.conf` | aria2 | 16 connections, auto-resume, BitTorrent, 64MB cache |
 | `~/.config/atuin/config.toml` | atuin | Fuzzy search, local-only, compact style, enter=paste (not execute), history filter (ls/cd/clear/exit), secrets filter |
-| `~/.config/starship.toml` | Starship | Rich two-line prompt with Dracula palette, OS icon, git status with counts, Node/Python/Rust/Go/Docker/AWS/Terraform versions, battery warning, time, Nerd Font icons |
+| `~/.config/starship.toml` | Starship | Rich two-line prompt with a Dracula-Sakura palette, OS icon, git status with counts, Node/Python/Rust/Go/Docker/AWS/Terraform versions, battery warning, time, Nerd Font icons |
 | `~/.config/yt-dlp/config` | yt-dlp | Best quality mp4, aria2c downloader, metadata, subtitles |
-| `~/.config/gh-dash/config.yml` | gh-dash | PR/issue sections, Dracula theme |
+| `~/.config/gh-dash/config.yml` | gh-dash | PR/issue sections, Dracula-Sakura theme |
 | `~/.config/stern/config.yaml` | stern | 50 tail lines, 5m lookback, timestamps |
 | `~/Library/Application Support/ngrok/ngrok.yml` | ngrok | Base config (add authtoken). ngrok's real macOS path — **not** `~/.config/ngrok`, which it never reads; a stranded copy there is removed on the next run |
 | `~/.config/caddy/Caddyfile` | Caddy | Development server template |
 | `~/.config/asciinema/config.toml` | asciinema | 2s idle limit, no keystroke recording. TOML, for asciinema 3.x — a 2.x `config` left beside it is removed on the next run |
 | `~/.config/micro/settings.json` | micro | Dracula (`dracula-tc`), the $EDITOR for git/gh/lazygit and leaf's Ctrl+Ents, auto-format on save (ruff for Python, taplo/marksman/TS/CSS/bash/yaml servers, rust-analyzer, gopls) |
-| `~/Library/.../Code/User/settings.json` | VS Code | Dracula, format-on-save, ruff + basedpyright (Python; Pylance disabled), prettier (web), shfmt (shell), tabs for Go, LF, telemetry off. **Merged, not overwritten** — your keys and Settings Sync win |
-| `~/.config/sketchybar/` | SketchyBar | Dracula bar: app, clock, battery, wifi, volume, cpu, mem, bluetooth, VPN |
+| `~/Library/.../Code/User/settings.json` | VS Code | Dracula Official + Dracula-Sakura accent layer, format-on-save, ruff + basedpyright (Python; Pylance disabled), prettier (web), shfmt (shell), tabs for Go, LF, telemetry off. **Merged, not overwritten** — your keys and Settings Sync win |
+| `~/.config/sketchybar/` | SketchyBar | Dracula-Sakura bar: app, clock, battery, wifi, volume, cpu, mem, bluetooth, VPN |
 | _(cliamp)_ | cliamp | Music player — self-configured on first run (point at `~/Media/music`) |
 | `~/.herald/conf.yaml` | herald | Email + calendar — **self-configured** by herald on first run (not written by setup) |
-| `~/.config/zellij/config.kdl` | zellij | Dracula theme, compact layout, mouse, Ctrl-a prefix |
+| `~/.config/zellij/config.kdl` | zellij | Dracula-Sakura theme, compact layout, mouse, Ctrl-a prefix |
 | `~/.config/mpv/mpv.conf` | mpv | Hardware accel, save position, screenshots to ~/Screenshots |
 | `~/.config/git-cliff/cliff.toml` | git-cliff | Conventional commits changelog template |
-| `~/.newsboat/config` | newsboat | Vim keys, Dracula colors, auto-reload |
+| `~/.newsboat/config` | newsboat | Vim keys, Dracula-Sakura colors, auto-reload |
 | `~/.newsboat/urls` | newsboat | Starter RSS feeds (Claude Code, Node, Rust, GitHub) |
 | `~/.config/nushell/env.nu` | nushell | Starship prompt, Homebrew paths |
-| `~/.config/ghostty/config` | Ghostty | JetBrainsMono Nerd Font, Dracula palette, transparent titlebar |
+| `~/.config/ghostty/config` | Ghostty | JetBrainsMono Nerd Font, Dracula-Sakura palette, transparent titlebar |
 | `~/.config/fastfetch/config.jsonc` | fastfetch | Nerd Font icons, package counts, Node/Python/Go/Rust/Docker versions, battery, disk, colored output |
 | `~/.config/mise/config.toml` | mise | Auto-install, trust ~/Code |
 | `~/.config/topgrade.toml` | topgrade | Cleanup, greedy cask updates |
 | `~/.config/direnv/direnv.toml` | direnv | Hidden env diff, auto-trust ~/Code, load .env |
-| `~/.config/btop/` | btop | Dracula theme with full color palette |
-| `~/.config/lazydocker/` | lazydocker | Dracula theme, timestamps, compose support |
+| `~/.config/btop/` | btop | Dracula-Sakura theme with full color palette |
+| `~/.config/lazydocker/` | lazydocker | Dracula-Sakura theme, timestamps, compose support |
 | `~/.config/pip/pip.conf` | pip | Require virtualenv, no telemetry |
 | `~/.config/pgcli/config` | pgcli | Multi-line, auto-expand, destructive warnings, bat pager |
-| `~/.config/harlequin/config.toml` | harlequin | Dracula theme, vscode keymap, file tree on |
+| `~/.harlequin.toml` | harlequin | Built-in Dracula theme, vscode keymap, file tree on |
 | `~/.config/gh/config.yml` | GitHub CLI | SSH protocol, micro editor, delta pager, aliases (co, pv, pc, pl, il, pm, rel) |
 | `~/.config/glab-cli/config.yml` | GitLab CLI | SSH, micro; same alias names as gh mapped to GitLab merge requests + CI |
 | `~/.aws/config` | AWS CLI | Default region, json output, bat pager, auto-prompt, SSO template |
@@ -814,9 +814,9 @@ The script generates config files with sensible defaults:
 | `~/.config/brewfile/Brewfile` | Homebrew | Snapshot of all installed packages with descriptions |
 | `~/.justfile` | just | 26 global task-runner recipes (system, git, Docker, network, cleanup, info) |
 | `~/.shellcheckrc` | shellcheck | External sources, disabled false positives |
-| `~/.config/k9s/config.yaml` + skin | k9s | Dracula skin (edit-resource uses your `$EDITOR`) |
+| `~/.config/k9s/config.yaml` + skin | k9s | Dracula skin recolored to the Dracula-Sakura house palette (edit-resource uses your `$EDITOR`) |
 | `~/.config/leaf/config.toml` | leaf | Ctrl+E hands off to micro at the current line |
-| `~/.config/trippy/trippy.toml` | trippy | Dracula theme-colors |
+| `~/.config/trippy/trippy.toml` | trippy | Dracula-Sakura theme-colors |
 | `~/.tflint.hcl` | tflint | Recommended preset + AWS ruleset (fetched via `tflint --init`) |
 | `~/.czrc` | commitizen | Points `cz` at the cz-conventional-changelog adapter |
 | `~/.actrc` | act | Ubuntu images, container reuse, `--container-architecture linux/amd64` |
@@ -834,8 +834,8 @@ The script generates config files with sensible defaults:
 | `~/.myclirc` | mycli | Multi-line, auto-expand, destructive warnings |
 | `~/.gemrc` | Ruby | No docs on gem install |
 | `~/.claude.json` (mcpServers) | Claude Code MCP | User-scope MCP servers (migrated from Kiro via `claude mcp add`) — filesystem, github, git, fetch, context7, aws-docs, aws-pricing, aws-iac, aws-knowledge, cloudwatch, iam, herald, GitKraken. Opt-in per project: playwright, postgres, several AWS servers. (Notion server dropped.) |
-| `~/.config/lazygit/config.yml` | lazygit | Dracula theme, delta pager, nerd fonts, auto-fetch, micro editor (`hx`), rounded borders |
-| `~/.config/k9s/skins/dracula.yaml` | k9s | Full Dracula skin |
+| `~/.config/lazygit/config.yml` | lazygit | Dracula-Sakura theme, delta pager, nerd fonts, auto-fetch, micro editor (`hx`), rounded borders |
+| `~/.config/k9s/skins/dracula.yaml` | k9s | Full Dracula-Sakura-colored skin |
 | `~/.local/bin/*` (36 links) | mise | Symlinks to every mise shim except the Python family and `corepack`, so `claude`, `prettier`, `tsc`, `copilot` and the language servers are reachable from git hooks, launchd and GUI-launched editors — not only from zsh, where `mise activate` runs |
 
 ---

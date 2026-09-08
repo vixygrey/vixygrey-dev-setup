@@ -358,7 +358,7 @@ declare -A CATEGORY_DESC=(
     [mac-cloud]="rclone, borg"
     [mac-focus]="newsboat"
     [mac-bloat]="Remove pre-installed Apple apps (GarageBand)"
-    [dracula]="Dracula theme for all tools"
+    [dracula]="Dracula-Sakura theme pass for terminal, editor, and TUI surfaces"
     [configs]="EVERY tool's generated config + git hooks + Claude setup (not in the tool's own category)"
     [filesystem]="Directory structure, helper scripts, git identity"
     [macos-defaults]="Dock, Finder, keyboard, screenshots, Touch ID, DNS"
@@ -1450,7 +1450,7 @@ echo -e "${BOLD}${MAGENTA}"
 echo "  ╔══════════════════════════════════════════════════════════════╗"
 echo "  ║           macOS Dev Environment Setup v${SCRIPT_VERSION}              ║"
 echo "  ║                                                              ║"
-echo "  ║  200+ tools · 50+ configs · Dracula theme · macOS defaults  ║"
+echo "  ║  200+ tools · 50+ configs · Dracula-Sakura theme · macOS defaults  ║"
 echo "  ╚══════════════════════════════════════════════════════════════╝"
 echo -e "${NC}"
 
@@ -3889,7 +3889,7 @@ fi  # mac-bloat
 
 # =============================================================================
 if should_run "dracula"; then
-banner "Dracula Theme"
+banner "Dracula-Sakura Theme"
 
 # micro - Dracula (dracula-tc) is bundled with micro and set via ~/.config/micro/settings.json
 # (see the micro config block below). No theme file to install.
@@ -5803,7 +5803,7 @@ fi  # installed zellij
 NEWSBOAT_DIR="$HOME/.newsboat"
 NEWSBOAT_CONFIG="$NEWSBOAT_DIR/config"
 NEWSBOAT_URLS="$NEWSBOAT_DIR/urls"
-    info "Creating newsboat config (vim keys, Dracula colors)..."
+    info "Creating newsboat config (vim keys, Dracula-Sakura colors)..."
     write_managed "$NEWSBOAT_CONFIG" "#" <<'NEWSBOAT_CONF'
 # Newsboat configuration — vim keys, Dracula-Sakura colors
 
@@ -7037,9 +7037,11 @@ __pycache__/
 FD_CONF
     configured "$HOME/.fdignore created"
 
-# ---- btop Dracula theme ----
+# ---- btop Dracula-Sakura theme ----
 BTOP_CONFIG_DIR="$HOME/.config/btop"
 BTOP_CONFIG="$BTOP_CONFIG_DIR/btop.conf"
+BTOP_THEME="$BTOP_CONFIG_DIR/themes/dracula-sakura.theme"
+BTOP_OLD_THEME="$BTOP_CONFIG_DIR/themes/dracula.theme"
     info "Creating btop configuration..."
     write_managed "$BTOP_CONFIG" "#" <<'BTOP_CONF'
 #? Config file for btop
@@ -7068,8 +7070,8 @@ truecolor = true
 # Rounded corners
 rounded_corners = true
 BTOP_CONF
-    # Download Dracula theme for btop
-    write_managed "$BTOP_CONFIG_DIR/themes/dracula.theme" "#" <<'BTOP_DRACULA'
+    # Write the Dracula-Sakura theme file btop actually reads.
+    write_managed "$BTOP_THEME" "#" <<'BTOP_DRACULA'
 # Dracula-Sakura theme for btop
 theme[main_bg]="#282a36"
 theme[main_fg]="#f8f8f2"
@@ -7114,9 +7116,11 @@ theme[process_start]="#9be7ff"
 theme[process_mid]="#d4b2ff"
 theme[process_end]="#ff9fe3"
 BTOP_DRACULA
+    remove_superseded_managed "$BTOP_OLD_THEME" \
+        "btop reads $BTOP_THEME" "(#414)"
     configured "btop configured with Dracula-Sakura theme"
 
-# ---- lazydocker Dracula config ----
+# ---- lazydocker Dracula-Sakura config ----
 LAZYDOCKER_CONFIG_DIR="$HOME/.config/lazydocker"
 LAZYDOCKER_CONFIG="$LAZYDOCKER_CONFIG_DIR/config.yml"
     info "Creating lazydocker configuration..."
@@ -7145,7 +7149,7 @@ logs:
   timestamps: true
   since: "60m"
 LAZYDOCKER_CONF
-    configured "lazydocker configured with Dracula theme"
+    configured "lazydocker configured with Dracula-Sakura theme"
 
 # ---- Git commit template ----
 GIT_COMMIT_TEMPLATE="$HOME/.gitmessage"
@@ -11322,27 +11326,27 @@ echo "  [~/.prettierrc]         Global Prettier defaults"
 echo "  [~/.curlrc]             Follow redirects, retry, compression"
 echo "  [~/.docker/daemon.json] BuildKit, log rotation"
 echo "  [~/.aria2/aria2.conf]   16 connections, auto-resume"
-echo "  [~/.config/starship]    Dracula prompt"
+echo "  [~/.config/starship]    Dracula-Sakura prompt"
 echo "  [~/.config/atuin]       Fuzzy search, local-only"
 echo "  [leaf]                  Terminal Markdown previewer (live watch, fuzzy picker, Mermaid)"
 echo "  [~/.config/yt-dlp]      Best quality, aria2c downloader"
-echo "  [~/.config/gh-dash]     GitHub dashboard, Dracula theme"
+echo "  [~/.config/gh-dash]     GitHub dashboard, Dracula-Sakura theme"
 echo "  [~/.config/glab-cli]    GitLab CLI (mirrors gh: SSH, micro, delta, aliases)"
 echo "  [~/.config/stern]       K8s log tailing"
-echo "  [~/.config/zellij]      Modern terminal multiplexer with Dracula theme"
+echo "  [~/.config/zellij]      Modern terminal multiplexer with Dracula-Sakura theme"
 echo "  [~/.config/mpv]         Video player (hardware accel, save position)"
 echo "  [cliamp]                Music player (self-configured; point at ~/Media/music)"
 echo "  [~/.config/git-cliff]   Changelog generator (conventional commits)"
-echo "  [~/.newsboat]           RSS reader (vim keys, Dracula colors, starter URLs)"
+echo "  [~/.newsboat]           RSS reader (vim keys, Dracula-Sakura colors, starter URLs)"
 echo "  [~/.config/ghostty]     GPU-accelerated terminal + quick-terminal launcher (cmd+space)"
-echo "  [~/.config/sketchybar]  Dracula status bar (app, clock, battery/wifi/vpn/cpu/mem, Shottr menu)"
+echo "  [~/.config/sketchybar]  Dracula-Sakura status bar (app, clock, battery/wifi/vpn/cpu/mem, Shottr menu)"
 echo "  [~/.herald]             herald email + calendar (self-configured on first run)"
 echo "  [~/.ollama]             Ollama local models (herald AI + croft pair --provider ollama)"
 echo "  [~/.justfile]           Global task runner recipes (run them with: gj --list)"
 echo "  [~/.config/brewfile]    Brewfile snapshot for reproducibility"
 echo "  [~/.config/micro]       micro — Dracula, on-screen key menu, house indent rules"
-echo "  [lazygit]               Dracula theme, delta pager"
-echo "  [k9s]                   Dracula skin"
+echo "  [lazygit]               Dracula-Sakura theme, delta pager"
+echo "  [k9s]                   Dracula-Sakura-colored skin"
 echo "  [Finder]                Hidden files, path bar, list view"
 echo "  [macOS]                 Dock, keyboard, screenshots, Spotlight hotkey, Stage Manager"
 echo "  [Claude Code]           Custom commands (/pr-review, /test-plan, /dep-audit, /quick-doc, /cleanup)"
@@ -11503,12 +11507,12 @@ it doesn't cost real capability. Below: what each tool is for, then how it fits
 together.
 
 ## Editor & AI
-- **croft** — VS Code-style terminal IDE; the **primary editor** (`croft pair` for the AI navigator). **Visual Studio Code** (`code .`) is the GUI editor alongside it, preconfigured with Dracula and the same formatters. **micro** is the `EDITOR` for git/gh/lazygit commit messages and quick edits (non-modal, Dracula, on-screen key menu, trailing whitespace stripped on save).
+- **croft** — VS Code-style terminal IDE; the **primary editor** (`croft pair` for the AI navigator). **Visual Studio Code** (`code .`) is the GUI editor alongside it, preconfigured with Dracula Official plus a Dracula-Sakura accent layer and the same formatters. **micro** is the `EDITOR` for git/gh/lazygit commit messages and quick edits (non-modal, Dracula, on-screen key menu, trailing whitespace stripped on save).
 - **Claude Code (`claude`)** — agentic coding in the terminal; hosts the MCP servers. Best via `zellij --layout dev` (editor + Claude pane).
 - **Claude in croft** — croft's `croft pair` AI navigator (primary IDE) defaults to `--provider claude`, riding your existing `claude` CLI auth (subscription or key, no separate `ANTHROPIC_API_KEY`); `--provider ollama` runs a local model with no key. The one path that uses an Anthropic key is the **`llm`** CLI (`llm-anthropic`) — and it's optional: reach for it only when you want Claude in a shell pipe or a `> ! llm …` one-off from micro's command bar, then run `llm keys set anthropic`. **herald** integrates with Claude two ways, neither needing a key: Claude Code reads and searches your mail/calendar through herald's **MCP** (it rides your `claude` login), and herald's *own* built-in AI (triage, summaries, compose styler, semantic search) is optional and runs on local **Ollama** models that setup installs, runs as a login service, and seeds with `gemma3:4b` (chat) + `nomic-embed-text-v2-moe` (embeddings).
 
 ## Status bar & launcher
-- **SketchyBar** — Dracula status bar: app, clock, battery, wifi, volume, cpu, mem, bluetooth, VPN.
+- **SketchyBar** — Dracula-Sakura status bar: app, clock, battery, wifi, volume, cpu, mem, bluetooth, VPN.
 - **Ghostty quick terminal** — global cmd+space dropdown that hosts the launcher.
 - **Launcher functions** — `a` (apps), `ff` (files), `rgf` (contents), `s` (Spotlight index), `clip` (clipboard via clipse).
 
@@ -14033,7 +14037,7 @@ would cost real capability — plus the invisible plumbing the toolkit depends o
 but you rarely invoke by hand.
 
 ### Ghostty — Terminal Emulator
-The fast, GPU-accelerated terminal that hosts this whole setup, themed Dracula.
+The fast, GPU-accelerated terminal that hosts this whole setup, themed Dracula-Sakura.
 Its global **quick terminal** drops down from anywhere on `cmd+space` and hosts
 the launcher functions (`a`, `ff`, `rgf`, `s`, `clip`). Config lives at
 `~/.config/ghostty/config`.
@@ -14052,7 +14056,7 @@ A lightweight PDF reader/annotator, faster than Preview and good for reading
 papers and marking up documents.
 
 ### SketchyBar — Status Bar
-The customizable macOS status bar (Dracula-themed) shown at the top: front app,
+The customizable macOS status bar (Dracula-Sakura-themed) shown at the top: front app,
 clock, battery, wifi, volume, cpu, mem, bluetooth, VPN. The clock opens herald;
 the VPN pill drives `mullvad`; the bluetooth pill drives `blueutil`. Needs
 **Accessibility** permission. Config: `~/.config/sketchybar/`.

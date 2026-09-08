@@ -428,7 +428,7 @@ lazysql                      # interactive database TUI
 
 ### harlequin (terminal SQL IDE)
 
-Multi-tab SQL IDE with autocomplete, query history, and a results grid. Configured with the Dracula theme and vscode keymap at `~/.config/harlequin/config.toml`.
+Multi-tab SQL IDE with autocomplete, query history, and a results grid. Configured with the built-in Dracula theme and vscode keymap at `~/.harlequin.toml`.
 
 ```bash
 hq                           # alias for harlequin (opens last DB or DuckDB in-memory)
@@ -874,7 +874,7 @@ sops --decrypt secrets.yaml  # decrypt to stdout
 
 ### Ghostty (Terminal)
 
-Already configured by the script with Dracula theme and JetBrains Mono font. Optional tweaks:
+Already configured by the script with the Dracula-Sakura palette and JetBrains Mono font. Optional tweaks:
 1. **Font size:** Edit `~/.config/ghostty/config`, change `font-size`
 2. **Opacity:** Add `background-opacity = 0.95` for slight transparency
 3. **Shell integration:** Automatic (zsh integration built-in)
