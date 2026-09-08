@@ -2,7 +2,9 @@
 
 > Release notes for 7.0.0–7.1.1 live in [GitHub Releases](https://github.com/vixygrey/vixygrey-dev-setup/releases) (auto-generated). This file resumes hand-written notes at 7.2.0.
 
-## [Unreleased]
+## [7.17.0] - 2026-09-08
+
+This release is about identity and coherence. Pi returns as a fully generator-owned second agent, with local models, a house theme, curated skills, a SearXNG-backed research path, and bigpowers provisioned through the delivery path each of the two agents actually uses. Tiki becomes a real notebook surface rather than an empty git repo. The Dracula-Sakura palette finishes its sweep across the terminal, prompt, editors, bar, and the remaining TUIs, and the docs now distinguish the tools that use the house palette from the ones still on a stock Dracula variant. Alongside that, nine workflow and data tools join the machine with generator-owned config where it earns one, `new-project` scaffolds a Bigpowers-aligned repo with an optional starter Justfile, `CONVENTIONS.md` splits the normative code-shape rules out of `AGENTS.md`, and the CI and release path gain `actionlint`, a published SHA256, tighter branch protection, and a single audited remote-installer helper.
 
 ### Added
 
