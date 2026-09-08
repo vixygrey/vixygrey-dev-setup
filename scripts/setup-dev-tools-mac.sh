@@ -4591,38 +4591,55 @@ git_global alias.standup "!git log --oneline --since='yesterday' --author=\"\$(g
 
 # Branch management
 git_global alias.recent "branch --sort=-committerdate --format='%(committerdate:relative)%09%(refname:short)' -n 15"
-# `gone` deletes local branches whose upstream is gone — which is exactly what a
-# squash merge plus `--delete-branch` leaves behind. Two things it must NOT do,
-# both of which the pre-#321 one-liners did:
+# `cleanup` deletes local branches that are finished with. "Finished" has TWO
+# shapes here, and each selector is blind to the other's population (#321, #470):
 #
-#   * Select by ancestry. `git branch --merged main` is an ancestry test, and a
-#     squash merge writes a NEW commit that the branch tip is not an ancestor of.
-#     Every squash-merged branch is invisible to it, so `cleanup` selected
-#     nothing, forever, on a workflow that squash-merges everything — then died
-#     on `xargs` with `fatal: branch name required`, which reads as a usage error
-#     rather than "nothing to do".
-#   * Delete with `-d`. That applies the same ancestry test and refuses a
-#     squash-merged branch, so `gone` — whose SELECTION was always correct —
-#     failed at the last step instead of the first.
+#   * Upstream `[gone]` — what a squash merge plus `--delete-branch` leaves
+#     behind. This is the common case in this workflow.
+#   * Merged by ancestry — a branch that never had an upstream at all, so it can
+#     never be `[gone]`. Anything created locally and never pushed, or pushed
+#     without `-u`. #470 found one of these sitting fully merged and permanently
+#     invisible to the alias.
 #
-# So: select on upstream `[gone]`, delete with `-D`, and print each deleted
-# branch with the SHA to restore it from. `-D` gives up git's safety net, and the
-# echoed SHA is what replaces it: recovery is `git branch <name> <sha>`, with the
-# reflog behind that. Silence is the bug here, not politeness — an alias that
-# finds nothing says so.
+# Ancestry ALONE was the pre-#321 bug and must not come back as the only test:
+# `git branch --merged main` is an ancestry test, and a squash merge writes a NEW
+# commit that the branch tip is not an ancestor of. Every squash-merged branch is
+# invisible to it, so `cleanup` selected nothing, forever, then died on `xargs`
+# with `fatal: branch name required`, which reads as a usage error rather than
+# "nothing to do". The fix is the UNION of both selectors, not a swap.
+#
+# Deleting with `-d` is equally not an option: it applies that same ancestry test
+# and refuses a squash-merged branch, so selection would be right and the delete
+# would fail at the last step. `-D` gives up git's safety net, and the echoed SHA
+# is what replaces it: recovery is `git branch <name> <sha>`, with the reflog
+# behind that. Silence is the bug here, not politeness — an alias that finds
+# nothing says so.
+#
+# The default branch is read from origin/HEAD rather than hardcoded, and is
+# excluded from its own merged list (every branch is merged into itself). The
+# `--merged` call is guarded so a repo without that branch reports nothing
+# instead of erroring.
 #
 # Single-quoted so the body reaches git verbatim; keep single quotes OUT of it.
 # `for-each-ref` rather than `branch -vv | awk` so that no `$1` has to survive
 # three levels of quoting.
-git_global alias.gone '!f() {
+git_global alias.cleanup '!f() {
     git fetch --prune --quiet
     current=$(git branch --show-current)
+    default=$(git symbolic-ref --quiet --short refs/remotes/origin/HEAD 2>/dev/null | sed "s|^origin/||")
+    [ -z "$default" ] && default=main
+    git show-ref --verify --quiet "refs/heads/$default" || default=master
     stale=$(git for-each-ref --format="%(refname:short) %(upstream:track)" refs/heads | grep "\[gone\]$" | cut -d" " -f1)
-    if [ -z "$stale" ]; then
-        echo "No local branches whose upstream is gone - nothing to delete."
+    merged=""
+    if git show-ref --verify --quiet "refs/heads/$default"; then
+        merged=$(git branch --merged "$default" --format="%(refname:short)" | grep -vx "$default")
+    fi
+    targets=$(printf "%s\n%s\n" "$stale" "$merged" | grep -v "^$" | sort -u)
+    if [ -z "$targets" ]; then
+        echo "Nothing to delete - no branch has a gone upstream or is merged into $default."
         return 0
     fi
-    echo "$stale" | while read -r b; do
+    echo "$targets" | while read -r b; do
         if [ "$b" = "$current" ]; then
             echo "skipped  $b - checked out, switch away first"
             continue
@@ -4636,9 +4653,10 @@ git_global alias.gone '!f() {
     done
 }; f'
 
-# cleanup delegates: ancestry selection is the bug above, so there is only one
-# correct implementation and this is a second name for it (#321).
-git_global alias.cleanup "!git gone"
+# gone delegates. The implementation moved here from `gone` in #470: once the
+# behaviour is "gone OR merged", `cleanup` is the honest name for it. `gone` stays
+# as a second name for the same one implementation, per #321.
+git_global alias.gone "!git cleanup"
 
 # Diff
 git_global alias.dft "!git -c diff.external=difft diff"
@@ -11117,7 +11135,7 @@ Rules that follow from this:
 - Always `git pull --rebase` on main before creating any new branch
 - Always `git checkout main` after submitting a PR — feature branches are ephemeral
 - Use `git standup` to see yesterday's work
-- Use `git cleanup` to prune merged branches
+- Use `git cleanup` to prune finished branches: both those whose upstream is gone (what a squash merge leaves behind) and those merged into the default branch. It force-deletes with `-D`, because a squash-merged branch fails git's own ancestry check, and prints a `git branch <name> <sha>` line to restore anything it removed
 - Use `git recent` to see branches by last commit date
 
 ## PR Workflow

@@ -346,7 +346,7 @@ git wip                      # stage all + commit "WIP"
 git save                     # stage all + commit "chore: savepoint"
 git standup                  # your commits since yesterday
 git recent                   # 15 most recent branches
-git cleanup                  # delete branches merged into main
+git cleanup                  # delete finished branches (upstream gone, or merged)
 git dft                      # difftastic (syntax-aware diff)
 ```
 
