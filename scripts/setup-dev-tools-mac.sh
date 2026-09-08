@@ -11900,6 +11900,7 @@ fi
 # script never reads or writes it.
 PI_DIR="$HOME/.pi/agent"
 PI_THEME_DIR="$PI_DIR/themes"
+PI_EXTENSIONS_DIR="$PI_DIR/extensions"
 PI_THEME_FILE="$PI_THEME_DIR/dracula-sakura.json"
 PI_MODELS_FILE="$PI_DIR/models.json"
 PI_SETTINGS_FILE="$PI_DIR/settings.json"
@@ -11910,10 +11911,11 @@ PI_LOCAL_TIKI_SKILLS=(tiki-capture tiki-review tiki-groom tiki-arc tiki-journal)
 
 if [[ "$DRY_RUN" == "true" ]]; then
     info "[DRY RUN] Would write pi config -> $PI_DIR (settings.json, models.json, themes/dracula-sakura.json)"
+    info "[DRY RUN] Would write Pi extension(s) -> $PI_EXTENSIONS_DIR/"
     info "[DRY RUN] Would write ${#PI_LOCAL_TIKI_SKILLS[@]} Pi-local Tiki skills -> $PI_SKILLS_DIR/"
     info "[DRY RUN] Would link ${#PI_SHARED_SKILLS[@]} shared skills -> $AGENTS_SKILLS/"
 else
-    mkdir -p "$PI_THEME_DIR" "$PI_SKILLS_DIR" "$AGENTS_SKILLS"
+    mkdir -p "$PI_THEME_DIR" "$PI_EXTENSIONS_DIR" "$PI_SKILLS_DIR" "$AGENTS_SKILLS"
 
     # -- models.json --------------------------------------------------------------
     # Pi's custom-model support is chat-model oriented. The local embedding model
@@ -12048,6 +12050,416 @@ else
 }
 PI_THEME_CONF
     success "pi: Dracula-Sakura theme written (~/.pi/agent/themes/dracula-sakura.json)"
+
+    # -- Pi extension: local SearXNG-backed web access ----------------------------
+    write_generated "$PI_EXTENSIONS_DIR/searxng-web.ts" <<'PI_SEARXNG_WEB_EXT'
+/**
+ * SearXNG Web Tools for Pi
+ *
+ * Custom tools:
+ * - searxng_search: query a local SearXNG instance and return normalized results
+ * - searxng_fetch: fetch and lightly extract readable text from a URL
+ *
+ * Configuration:
+ *   SEARXNG_BASE_URL=http://127.0.0.1:8080
+ *
+ * Notes:
+ * - Only the configured SearXNG host may be local/private.
+ * - Other fetched URLs must be public http/https addresses.
+ */
+
+import { lookup } from "node:dns/promises";
+import net from "node:net";
+import { Type } from "@earendil-works/pi-ai";
+import { defineTool, type ExtensionAPI } from "@earendil-works/pi-coding-agent";
+
+const DEFAULT_BASE_URL = "http://127.0.0.1:8080";
+const DEFAULT_TIMEOUT_MS = 12_000;
+const DEFAULT_MAX_CHARS = 12_000;
+const MAX_FETCH_CHARS = 50_000;
+const MAX_SEARCH_RESULTS = 10;
+
+function getBaseUrl(): URL {
+	const raw = (process.env.SEARXNG_BASE_URL || DEFAULT_BASE_URL).trim();
+	return new URL(raw.endsWith("/") ? raw : `${raw}/`);
+}
+
+function withTimeout(signal: AbortSignal, timeoutMs: number): AbortSignal {
+	const controller = new AbortController();
+	const timer = setTimeout(() => controller.abort(new Error(`Timed out after ${timeoutMs}ms`)), timeoutMs);
+	const abort = () => controller.abort(signal.reason);
+	if (signal.aborted) abort();
+	else signal.addEventListener("abort", abort, { once: true });
+	controller.signal.addEventListener(
+		"abort",
+		() => {
+			clearTimeout(timer);
+			signal.removeEventListener("abort", abort);
+		},
+		{ once: true },
+	);
+	return controller.signal;
+}
+
+function isPrivateIp(ip: string): boolean {
+	if (net.isIP(ip) === 4) {
+		if (ip.startsWith("10.")) return true;
+		if (ip.startsWith("127.")) return true;
+		if (ip.startsWith("192.168.")) return true;
+		const [a, b] = ip.split(".").map(Number);
+		if (a === 172 && b >= 16 && b <= 31) return true;
+		if (a === 169 && b === 254) return true;
+		if (a === 0) return true;
+		return false;
+	}
+	if (net.isIP(ip) === 6) {
+		const normalized = ip.toLowerCase();
+		return normalized === "::1" || normalized.startsWith("fc") || normalized.startsWith("fd") || normalized.startsWith("fe80:");
+	}
+	return false;
+}
+
+async function assertAllowedUrl(target: URL, searxngBase: URL): Promise<void> {
+	if (!["http:", "https:"].includes(target.protocol)) {
+		throw new Error(`Unsupported protocol: ${target.protocol}`);
+	}
+
+	const hostname = target.hostname.toLowerCase();
+	const searxHost = searxngBase.hostname.toLowerCase();
+	if (hostname === searxHost) return;
+
+	if (hostname === "localhost" || hostname.endsWith(".local")) {
+		throw new Error(`Refusing local/private hostname: ${hostname}`);
+	}
+
+	if (net.isIP(hostname) && isPrivateIp(hostname)) {
+		throw new Error(`Refusing local/private IP: ${hostname}`);
+	}
+
+	try {
+		const answers = await lookup(hostname, { all: true });
+		if (answers.some((entry) => isPrivateIp(entry.address))) {
+			throw new Error(`Refusing hostname that resolves to a private IP: ${hostname}`);
+		}
+	} catch (error) {
+		if (error instanceof Error && error.message.startsWith("Refusing")) throw error;
+	}
+}
+
+function decodeEntities(text: string): string {
+	return text
+		.replace(/&nbsp;/gi, " ")
+		.replace(/&amp;/gi, "&")
+		.replace(/&lt;/gi, "<")
+		.replace(/&gt;/gi, ">")
+		.replace(/&quot;/gi, '"')
+		.replace(/&#39;/gi, "'")
+		.replace(/&#x27;/gi, "'")
+		.replace(/&#x2F;/gi, "/")
+		.replace(/&#([0-9]+);/g, (_m, dec) => String.fromCodePoint(Number(dec)))
+		.replace(/&#x([0-9a-f]+);/gi, (_m, hex) => String.fromCodePoint(parseInt(hex, 16)));
+}
+
+function stripHtml(html: string): string {
+	return decodeEntities(
+		html
+			.replace(/<br\s*\/?>/gi, "\n")
+			.replace(/<\/p>/gi, "\n\n")
+			.replace(/<\/div>/gi, "\n")
+			.replace(/<\/li>/gi, "\n")
+			.replace(/<\/h[1-6]>/gi, "\n\n")
+			.replace(/<[^>]+>/g, " ")
+			.replace(/[ \t]+/g, " ")
+			.replace(/\n{3,}/g, "\n\n")
+			.trim(),
+	);
+}
+
+function extractTag(html: string, pattern: RegExp): string | undefined {
+	const match = html.match(pattern);
+	return match?.[1] ? decodeEntities(stripHtml(match[1])) : undefined;
+}
+
+function extractReadableContent(html: string): string {
+	let work = html;
+	for (const pattern of [
+		/<script\b[^>]*>[\s\S]*?<\/script>/gi,
+		/<style\b[^>]*>[\s\S]*?<\/style>/gi,
+		/<svg\b[^>]*>[\s\S]*?<\/svg>/gi,
+		/<noscript\b[^>]*>[\s\S]*?<\/noscript>/gi,
+		/<nav\b[^>]*>[\s\S]*?<\/nav>/gi,
+		/<footer\b[^>]*>[\s\S]*?<\/footer>/gi,
+		/<header\b[^>]*>[\s\S]*?<\/header>/gi,
+		/<form\b[^>]*>[\s\S]*?<\/form>/gi,
+		/<aside\b[^>]*>[\s\S]*?<\/aside>/gi,
+	]) {
+		work = work.replace(pattern, " ");
+	}
+
+	const candidates = [
+		extractTag(work, /<main\b[^>]*>([\s\S]*?)<\/main>/i),
+		extractTag(work, /<article\b[^>]*>([\s\S]*?)<\/article>/i),
+		extractTag(work, /<section\b[^>]*itemprop=["']articleBody["'][^>]*>([\s\S]*?)<\/section>/i),
+		extractTag(work, /<div\b[^>]*itemprop=["']articleBody["'][^>]*>([\s\S]*?)<\/div>/i),
+		extractTag(work, /<body\b[^>]*>([\s\S]*?)<\/body>/i),
+		stripHtml(work),
+	].filter((value): value is string => Boolean(value && value.trim()));
+
+	return candidates.sort((a, b) => b.length - a.length)[0].replace(/\n{3,}/g, "\n\n").trim();
+}
+
+function truncate(text: string, maxChars: number): { text: string; truncated: boolean } {
+	if (text.length <= maxChars) return { text, truncated: false };
+	return { text: `${text.slice(0, maxChars).trimEnd()}\n\n[truncated to ${maxChars} characters]`, truncated: true };
+}
+
+async function fetchText(url: URL, signal: AbortSignal, timeoutMs = DEFAULT_TIMEOUT_MS): Promise<Response> {
+	return fetch(url, {
+		headers: {
+			"accept": "application/json, text/html, text/plain, application/xhtml+xml;q=0.9, */*;q=0.8",
+			"user-agent": "pi-searxng-web/1.0",
+		},
+		signal: withTimeout(signal, timeoutMs),
+		redirect: "follow",
+	});
+}
+
+const searxngSearch = defineTool({
+	name: "searxng_search",
+	label: "SearXNG Search",
+	description: "Search the web through a local SearXNG instance and return normalized results with titles, URLs, snippets, and engines.",
+	parameters: Type.Object({
+		query: Type.String({ description: "Search query" }),
+		categories: Type.Optional(Type.Array(Type.String(), { description: "Optional SearXNG categories, e.g. general, it, science" })),
+		engines: Type.Optional(Type.Array(Type.String(), { description: "Optional specific engines to use" })),
+		language: Type.Optional(Type.String({ description: "Language code, e.g. en-US" })),
+		limit: Type.Optional(Type.Number({ minimum: 1, maximum: MAX_SEARCH_RESULTS, description: "Maximum number of results to return (default 5)" })),
+		timeRange: Type.Optional(Type.String({ description: "Optional time range such as day, month, or year if your SearXNG instance supports it" })),
+		safeSearch: Type.Optional(Type.Number({ minimum: 0, maximum: 2, description: "SearXNG safesearch level: 0, 1, or 2" })),
+	}),
+	async execute(_toolCallId, params, signal) {
+		const base = getBaseUrl();
+		await assertAllowedUrl(base, base);
+		const limit = Math.min(Math.max(Math.trunc(params.limit ?? 5), 1), MAX_SEARCH_RESULTS);
+		const url = new URL("search", base);
+		url.searchParams.set("q", params.query);
+		url.searchParams.set("format", "json");
+		url.searchParams.set("pageno", "1");
+		if (params.categories?.length) url.searchParams.set("categories", params.categories.join(","));
+		if (params.engines?.length) url.searchParams.set("engines", params.engines.join(","));
+		if (params.language) url.searchParams.set("language", params.language);
+		if (params.timeRange) url.searchParams.set("time_range", params.timeRange);
+		if (params.safeSearch !== undefined) url.searchParams.set("safesearch", String(params.safeSearch));
+
+		const response = await fetchText(url, signal);
+		if (!response.ok) throw new Error(`SearXNG search failed: HTTP ${response.status} ${response.statusText}`);
+		const payload = (await response.json()) as {
+			results?: Array<{ title?: string; url?: string; content?: string; engine?: string; category?: string; score?: number; publishedDate?: string }>;
+			query?: string;
+			answers?: string[];
+		};
+
+		const results = (payload.results ?? [])
+			.filter((r) => r.url && r.title)
+			.slice(0, limit)
+			.map((r, index) => ({
+				rank: index + 1,
+				title: r.title ?? "(untitled)",
+				url: r.url ?? "",
+				snippet: (r.content ?? "").trim(),
+				engine: r.engine ?? undefined,
+				category: r.category ?? undefined,
+				score: r.score ?? undefined,
+				publishedDate: r.publishedDate ?? undefined,
+			}));
+
+		const lines = [`SearXNG results for: ${payload.query || params.query}`, `Base URL: ${base.origin}`, `Returned: ${results.length}`];
+		if (payload.answers?.length) lines.push("", `Direct answers: ${payload.answers.join(" | ")}`);
+		for (const result of results) {
+			lines.push("", `${result.rank}. ${result.title}`, result.url, result.snippet || "(no snippet)", [result.engine, result.category].filter(Boolean).join(" · ") || "");
+		}
+
+		return { content: [{ type: "text", text: lines.filter(Boolean).join("\n") }], details: { baseUrl: base.toString(), query: payload.query || params.query, resultCount: results.length, answers: payload.answers ?? [], results } };
+	},
+});
+
+const searxngFetch = defineTool({
+	name: "searxng_fetch",
+	label: "SearXNG Fetch",
+	description: "Fetch a URL directly, reject private/local targets, and return raw or lightly extracted readable text with the page title.",
+	parameters: Type.Object({
+		url: Type.String({ description: "Public http(s) URL to fetch" }),
+		extract: Type.Optional(Type.String({ description: "Extraction mode: readable (default), raw, or html" })),
+		maxChars: Type.Optional(Type.Number({ minimum: 500, maximum: MAX_FETCH_CHARS, description: "Maximum characters to return (default 12000)" })),
+		timeoutMs: Type.Optional(Type.Number({ minimum: 1000, maximum: 30000, description: "Request timeout in milliseconds" })),
+	}),
+	async execute(_toolCallId, params, signal) {
+		const base = getBaseUrl();
+		const target = new URL(params.url);
+		await assertAllowedUrl(target, base);
+		const extract = (params.extract || "readable").toLowerCase();
+		const maxChars = Math.min(Math.max(Math.trunc(params.maxChars ?? DEFAULT_MAX_CHARS), 500), MAX_FETCH_CHARS);
+		const timeoutMs = Math.max(Math.trunc(params.timeoutMs ?? DEFAULT_TIMEOUT_MS), 1000);
+
+		const response = await fetchText(target, signal, timeoutMs);
+		if (!response.ok) throw new Error(`Fetch failed: HTTP ${response.status} ${response.statusText}`);
+		const finalUrl = response.url || target.toString();
+		const contentType = response.headers.get("content-type") || "";
+		const body = await response.text();
+
+		const title = extractTag(body, /<title\b[^>]*>([\s\S]*?)<\/title>/i) || extractTag(body, /<meta\s+property=["']og:title["']\s+content=["']([\s\S]*?)["'][^>]*>/i);
+		const description = extractTag(body, /<meta\s+name=["']description["']\s+content=["']([\s\S]*?)["'][^>]*>/i) || extractTag(body, /<meta\s+property=["']og:description["']\s+content=["']([\s\S]*?)["'][^>]*>/i);
+
+		let extracted = body;
+		if (extract === "readable") extracted = contentType.includes("html") ? extractReadableContent(body) : body.trim();
+		else if (extract === "raw") extracted = contentType.includes("html") ? stripHtml(body) : body.trim();
+		else if (extract !== "html") throw new Error(`Unknown extract mode: ${extract}`);
+
+		const clipped = truncate(extracted, maxChars);
+		const summary = [
+			`Fetched: ${finalUrl}`,
+			title ? `Title: ${title}` : undefined,
+			description ? `Description: ${description}` : undefined,
+			`Content-Type: ${contentType || "unknown"}`,
+			clipped.truncated ? `Truncated: yes (${maxChars} chars)` : `Truncated: no`,
+			"",
+			clipped.text,
+		].filter(Boolean).join("\n");
+
+		return { content: [{ type: "text", text: summary }], details: { url: finalUrl, requestedUrl: target.toString(), title, description, contentType, extract, truncated: clipped.truncated, maxChars, content: clipped.text } };
+	},
+});
+
+export default function searxngWebExtension(pi: ExtensionAPI) {
+	pi.registerTool(searxngSearch);
+	pi.registerTool(searxngFetch);
+
+	pi.registerCommand("searxng-check", {
+		description: "Check local SearXNG connectivity",
+		handler: async (_args, ctx) => {
+			const base = getBaseUrl();
+			try {
+				const url = new URL("search", base);
+				url.searchParams.set("q", "pi");
+				url.searchParams.set("format", "json");
+				const response = await fetch(url, { signal: AbortSignal.timeout(5000) });
+				if (!response.ok) throw new Error(`HTTP ${response.status} ${response.statusText}`);
+				ctx.ui.notify(`SearXNG reachable at ${base.origin}`, "info");
+			} catch (error) {
+				const message = error instanceof Error ? error.message : String(error);
+				ctx.ui.notify(`SearXNG check failed: ${message}`, "error");
+			}
+		},
+	});
+}
+PI_SEARXNG_WEB_EXT
+    success "pi: SearXNG web extension written (~/.pi/agent/extensions/searxng-web.ts)"
+
+    write_generated "$PI_SKILLS_DIR/searxng-web/SKILL.md" <<'PI_SEARXNG_WEB_SKILL'
+---
+name: searxng-web
+description: Search and read the web through a local SearXNG instance using Pi tools. Use when the user wants web research, documentation lookup, source comparison, or URL fetching without relying on a remote search API.
+---
+
+# SearXNG Web
+
+Use this skill when the user wants web access through the local SearXNG-backed Pi setup.
+
+This skill assumes two custom Pi tools exist:
+- `searxng_search` — search via the local SearXNG instance
+- `searxng_fetch` — fetch a public URL and return readable content
+
+## What this skill is for
+
+- finding official docs
+- comparing multiple sources
+- reading a specific webpage or article
+- gathering citations for an answer
+- verifying current information when local files are not enough
+
+## Preferred workflow
+
+1. Search first with `searxng_search` unless the user already gave a URL.
+2. Prefer primary sources when available:
+   - official docs
+   - vendor pages
+   - project READMEs / source repos
+   - standards/specs
+3. Fetch only the most relevant few pages with `searxng_fetch`.
+4. Summarize findings compactly.
+5. Cite URLs in the final answer when web findings matter.
+
+## Search guidance
+
+Use focused queries, not broad ones.
+
+Good patterns:
+- `pi coding agent extensions docs`
+- `site:github.com boolean-maybe tiki ruki docs`
+- `site:docs.anthropic.com prompt caching`
+- `site:ollama.com gpt-oss model`
+
+When appropriate, narrow by:
+- `categories`
+- `engines`
+- `language`
+- `timeRange`
+
+If the first search is noisy:
+- refine the query
+- prefer official domains
+- reduce result count
+- compare 2-3 strong candidates rather than scanning everything
+
+## Fetch guidance
+
+Use `searxng_fetch` when:
+- the user gives a URL directly
+- a search result looks promising
+- you need the actual page content, not just the snippet
+
+Prefer:
+- `extract: "readable"` for most pages
+- `extract: "raw"` when structure matters but full HTML does not
+- `extract: "html"` only when markup itself matters
+
+Keep `maxChars` modest unless the user asks for a deeper read.
+
+## Answer style
+
+When using web results:
+- distinguish confirmed facts from synthesis
+- cite the URL(s)
+- say when evidence is weak or mixed
+- prefer a short answer first, then key references
+
+## Example flows
+
+### Find docs
+1. `searxng_search` for the topic
+2. choose the official docs result
+3. `searxng_fetch` the docs page
+4. answer with a short summary and link
+
+### Compare sources
+1. `searxng_search` with a targeted query
+2. fetch 2-3 strong results
+3. compare agreements/disagreements
+4. give the user a concise verdict with citations
+
+### Read a URL directly
+1. call `searxng_fetch`
+2. extract the key points
+3. summarize with the source URL
+
+## Safety and quality notes
+
+- Use the local SearXNG route instead of remote search APIs.
+- Do not treat search snippets as the full source when the exact wording matters.
+- Prefer public web pages; the fetch tool intentionally refuses private/local targets other than the configured SearXNG host.
+- If the user wants exhaustive research, say so and work in passes rather than pretending one search is complete.
+PI_SEARXNG_WEB_SKILL
+    success "pi: SearXNG web skill written (~/.pi/agent/skills/searxng-web/)"
 
     # -- Pi-local Tiki skills -----------------------------------------------------
     # Keep the general tiki CRUD skill shared with Claude via ~/.agents/skills/, but add
@@ -13277,7 +13689,7 @@ unscriptable. Work through it once, then keep it only as long as it's useful.
 - [ ] **infracost** (IaC cost estimates): run `infracost auth login` for a free API key — `infracost breakdown` errors with "No INFRACOST_API_KEY" until then.
 - [ ] **borgmatic backups:** the setup scaffolds `~/.config/borgmatic/config.yaml`. Set `repositories`, store the passphrase in Keychain (`security add-generic-password -a "$USER" -s borg-passphrase -w`), run `borgmatic init --encryption repokey-blake2`, check with `borgmatic create --dry-run`, then enable a daily run (e.g. a LaunchAgent calling `borgmatic --verbosity -1`). ClamAV's virus DB downloads itself in the background after setup.
 - [ ] **Claude AI in croft:** `croft pair` (the AI navigator in your primary IDE) defaults to `--provider claude`, which hands off to your existing `claude` CLI — so it just works on whatever auth that already has (a Claude Pro/Max subscription **or** an API key), no separate `ANTHROPIC_API_KEY` required. Want a fully local model with no key at all? Ollama is installed and running — use the `gemma3:4b` that setup already pulled (`croft pair --provider ollama --model gemma3:4b`) or the heavier `qwen2.5-coder:14b` that's also pre-pulled for coding-oriented local loops. An Anthropic API key is **optional** here — the only thing that uses one is the `llm` CLI, and `llm` itself is optional: if Claude Code and the Claude desktop app already cover you, you can skip it entirely. If you do want `llm` for one-off prompts (e.g. `> ! llm …` from micro's command bar) or shell scripting, run `llm keys set anthropic` — setup already installs the plugin (via uv) and sets the default model to `anthropic/claude-sonnet-4-5`. (Email/calendar AI is built into **herald** — configured separately above.)
-- [ ] **Pi** (optional second agent): `pi` is installed with the local Ollama provider preconfigured and `qwen2.5-coder:14b` as the default model, plus the shared skills bridge in `~/.agents/skills/` and five Pi-local Tiki companions in `~/.pi/agent/skills/` (`tiki-capture`, `tiki-review`, `tiki-groom`, `tiki-arc`, `tiki-journal`). If you want a remote provider instead, run `pi` then `/login`; if you only want the local path, nothing else is required.
+- [ ] **Pi** (optional second agent): `pi` is installed with the local Ollama provider preconfigured and `qwen2.5-coder:14b` as the default model, plus the shared skills bridge in `~/.agents/skills/`, five Pi-local Tiki companions in `~/.pi/agent/skills/` (`tiki-capture`, `tiki-review`, `tiki-groom`, `tiki-arc`, `tiki-journal`), and a local SearXNG web-research layer (`~/.pi/agent/extensions/searxng-web.ts` + `~/.pi/agent/skills/searxng-web/`). Set `SEARXNG_BASE_URL` if your instance is not on `http://127.0.0.1:8080`, then run `pi` and `/searxng-check`. If you want a remote provider instead, run `pi` then `/login`; if you only want the local path, nothing else is required.
 - [ ] **croft** (primary IDE): installed from git `main` via cargo — run `croft` in a project to open the workspace; re-run `cargo install --git https://github.com/vitali87/croft.git --locked` to upgrade.
 - [ ] **AI side-pane:** `zellij --layout dev` opens your editor + a Claude Code pane side by side (the strongest AI workflow).
 - [ ] **chezmoi:** `chezmoi init <your-dotfiles-repo>` to bring these configs under version control across the MacBook + Mac mini.
@@ -13561,7 +13973,7 @@ pi
 pi --provider ollama --model qwen2.5-coder:14b
 ```
 
-> Tip: Pi's config lives entirely under `~/.pi/agent/`, not `~/.config`. This setup points Pi at four local Ollama chat/coding models, shares exactly five general skills through `~/.agents/skills/` so the startup prompt stays lean, and adds five Pi-local Tiki companion skills under `~/.pi/agent/skills/`.
+> Tip: Pi's config lives entirely under `~/.pi/agent/`, not `~/.config`. This setup points Pi at four local Ollama chat/coding models, shares exactly five general skills through `~/.agents/skills/` so the startup prompt stays lean, adds five Pi-local Tiki companion skills under `~/.pi/agent/skills/`, and wires in a local SearXNG web extension + matching `searxng-web` skill.
 
 ### `ollama` — Local LLM Runtime
 Runs open-weight LLMs entirely on your Mac — no API key, no data leaving the machine. Setup installs it, runs it as a login service on `127.0.0.1:11434`, and seeds the local model set this machine wants ready: `qwen2.5-coder:14b`, `llama3.1:8b`, `gemma3:4b`, `llama3.2:latest`, plus `nomic-embed-text-v2-moe` for embeddings. It's the local backend for **herald**'s built-in AI, `croft pair --provider ollama`, `aichat`, and Pi's local-model path.
