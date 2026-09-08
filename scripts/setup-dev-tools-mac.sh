@@ -7971,22 +7971,34 @@ fi
 # wifi/bt/vpn on-off, volume level). Glyphs need JetBrainsMono Nerd Font (installed).
 SBAR_DIR="$HOME/.config/sketchybar"
 SBAR_PLUGINS="$SBAR_DIR/plugins"
-    info "Creating SketchyBar configuration (Dracula, system widgets)..."
+    info "Creating SketchyBar configuration (Dracula-Sakura, system widgets)..."
 
-    # Shared Dracula palette (sourced by plugins)
+    # Shared Dracula-Sakura palette (sourced by plugins)
     write_managed_script "$SBAR_DIR/colors.sh" <<'SBAR_COLORS'
 #!/usr/bin/env bash
 export BG=0xff282a36
+export PANEL=0xff323448
+export PANEL_SOFT=0xff2f3144
+export CURRENT=0xff4b4963
+export SELECTION=0xff6a5d86
 export FG=0xfff8f8f2
-export LINE=0xff44475a
-export COMMENT=0xff6272a4
-export CYAN=0xff8be9fd
-export GREEN=0xff50fa7b
-export ORANGE=0xffffb86c
-export PINK=0xffff79c6
-export PURPLE=0xffbd93f9
-export RED=0xffff5555
-export YELLOW=0xfff1fa8c
+export MUTED=0xffddd2f7
+export DIM=0xffa297cb
+export COMMENT=0xff8a88c7
+export CYAN=0xff9be7ff
+export MINT=0xff8af7cf
+export PEACH=0xffffcf93
+export ROSE=0xffff9fe3
+export BLUSH=0xffffc2ec
+export LILAC=0xffd4b2ff
+export RED=0xffff7aa8
+export YELLOW=0xfffff0a8
+# Back-compat aliases for older plugin snippets.
+export LINE=$CURRENT
+export GREEN=$MINT
+export ORANGE=$PEACH
+export PINK=$ROSE
+export PURPLE=$LILAC
 # Nerd Font glyphs (sourced here so every plugin + the rc get them via colors.sh).
 [ -r "$HOME/.config/sketchybar/icons.sh" ] && source "$HOME/.config/sketchybar/icons.sh"
 SBAR_COLORS
@@ -8018,7 +8030,7 @@ SBAR_ICONS
 
     write_managed_script "$SBAR_DIR/sketchybarrc" <<'SBAR_RC'
 #!/usr/bin/env bash
-# SketchyBar — Dracula. Docs: https://felixkratz.github.io/SketchyBar
+# SketchyBar — Dracula-Sakura. Docs: https://felixkratz.github.io/SketchyBar
 source "$HOME/.config/sketchybar/colors.sh"
 PLUGIN_DIR="$HOME/.config/sketchybar/plugins"
 FONT="JetBrainsMono Nerd Font"
@@ -8029,22 +8041,23 @@ sketchybar --bar height=32 position=top blur_radius=30 color=$BG \
 sketchybar --default updates=when_shown \
                      icon.font="$FONT:Bold:13.0" icon.color=$FG \
                      icon.padding_left=6 icon.padding_right=3 \
-                     label.font="$FONT:Semibold:13.0" label.color=$FG \
-                     label.padding_left=3 label.padding_right=6 \
-                     padding_left=6 padding_right=6 \
-                     background.color=$LINE background.corner_radius=6 background.height=22
+                     label.font="$FONT:Semibold:13.0" label.color=$MUTED \
+                     label.padding_left=3 label.padding_right=8 \
+                     padding_left=8 padding_right=8 \
+                     background.color=$PANEL background.border_color=$CURRENT \
+                     background.border_width=1 background.corner_radius=8 background.height=22
 
 # --- Left: date/time (far left), then focused app ---
 # Click the clock to open herald's calendar in a Ghostty quick terminal.
 sketchybar --add item clock left \
-           --set clock update_freq=10 icon="$ICON_CLOCK" icon.color=$PURPLE \
+           --set clock update_freq=10 icon="$ICON_CLOCK" icon.color=$BLUSH label.color=$DIM \
                  label.padding_left=6 \
                  click_script="open -a Ghostty; sleep 0.2; osascript -e 'tell application \"System Events\" to keystroke \"herald\" & return' >/dev/null 2>&1" \
                  script="$PLUGIN_DIR/clock.sh"
 
 sketchybar --add item front_app left \
            --subscribe front_app front_app_switched \
-           --set front_app icon.drawing=off label.color=$PURPLE label.font="$FONT:Bold:13.0" \
+           --set front_app icon.drawing=off label.color=$ROSE label.font="$FONT:Bold:13.0" \
                  label.padding_left=6 \
                  script="$PLUGIN_DIR/front_app.sh"
 
@@ -8059,7 +8072,7 @@ sketchybar --add item bluetooth right \
                  script="$PLUGIN_DIR/bluetooth.sh"
 
 sketchybar --add item wifi right \
-           --set wifi update_freq=30 label.color=$GREEN \
+           --set wifi update_freq=30 label.color=$CYAN \
                  script="$PLUGIN_DIR/wifi.sh"
 
 sketchybar --add item volume right \
@@ -8067,11 +8080,11 @@ sketchybar --add item volume right \
            --set volume script="$PLUGIN_DIR/volume.sh"
 
 sketchybar --add item cpu right \
-           --set cpu update_freq=5 icon="$ICON_CPU" icon.color=$ORANGE label.color=$ORANGE \
+           --set cpu update_freq=5 icon="$ICON_CPU" icon.color=$PEACH label.color=$PEACH \
                  script="$PLUGIN_DIR/cpu.sh"
 
 sketchybar --add item mem right \
-           --set mem update_freq=10 icon="$ICON_MEM" icon.color=$YELLOW label.color=$YELLOW \
+           --set mem update_freq=10 icon="$ICON_MEM" icon.color=$LILAC label.color=$LILAC \
                  script="$PLUGIN_DIR/mem.sh"
 
 sketchybar --add item vpn right \
@@ -8085,28 +8098,29 @@ sketchybar --add item vpn right \
 # drives Shottr via its shottr:// URL scheme. Auto-closes on mouse.exited.global.
 sketchybar --add item shottr right \
            --set shottr icon="$ICON_SHOT" icon.color=$CYAN icon.font="$FONT:Bold:14.0" \
-                 label.drawing=off \
-                 popup.horizontal=off popup.background.color=$BG \
-                 popup.background.corner_radius=8 popup.background.border_width=2 \
-                 popup.background.border_color=$LINE popup.background.shadow.drawing=on \
+                 label.drawing=off background.color=$PANEL_SOFT background.border_color=$LILAC \
+                 background.border_width=1 \
+                 popup.horizontal=off popup.background.color=$PANEL \
+                 popup.background.corner_radius=10 popup.background.border_width=1 \
+                 popup.background.border_color=$LILAC popup.background.shadow.drawing=on \
                  click_script="$PLUGIN_DIR/shottr_click.sh" \
                  script="$PLUGIN_DIR/shottr.sh" \
            --subscribe shottr mouse.exited.global
 
 sketchybar --add item shottr.area popup.shottr \
-           --set shottr.area icon="$ICON_SHOT_AREA" icon.color=$CYAN label="Area" \
+           --set shottr.area icon="$ICON_SHOT_AREA" icon.color=$CYAN label="Area" label.color=$FG \
                  background.drawing=off label.padding_right=14 \
                  click_script="open 'shottr://grab/area'; sketchybar --set shottr popup.drawing=off"
 sketchybar --add item shottr.window popup.shottr \
-           --set shottr.window icon="$ICON_SHOT_WINDOW" icon.color=$CYAN label="Window" \
+           --set shottr.window icon="$ICON_SHOT_WINDOW" icon.color=$CYAN label="Window" label.color=$FG \
                  background.drawing=off label.padding_right=14 \
                  click_script="open 'shottr://grab/window'; sketchybar --set shottr popup.drawing=off"
 sketchybar --add item shottr.full popup.shottr \
-           --set shottr.full icon="$ICON_SHOT_FULL" icon.color=$CYAN label="Fullscreen" \
+           --set shottr.full icon="$ICON_SHOT_FULL" icon.color=$CYAN label="Fullscreen" label.color=$FG \
                  background.drawing=off label.padding_right=14 \
                  click_script="open 'shottr://grab/fullscreen'; sketchybar --set shottr popup.drawing=off"
 sketchybar --add item shottr.scroll popup.shottr \
-           --set shottr.scroll icon="$ICON_SHOT_SCROLL" icon.color=$CYAN label="Scrolling" \
+           --set shottr.scroll icon="$ICON_SHOT_SCROLL" icon.color=$CYAN label="Scrolling" label.color=$FG \
                  background.drawing=off label.padding_right=14 \
                  click_script="open 'shottr://grab/scrolling'; sketchybar --set shottr popup.drawing=off"
 
@@ -8131,8 +8145,8 @@ PCT=$(pmset -g batt | grep -Eo '[0-9]+%' | head -1 | tr -d '%')
 # Mac mini / no battery: hide the item entirely.
 if [ -z "$PCT" ]; then sketchybar --set "$NAME" drawing=off; exit 0; fi
 CHARGING=$(pmset -g batt | grep -c 'AC Power')
-COLOR=$GREEN
-[ "$PCT" -lt 40 ] && COLOR=$YELLOW
+COLOR=$MINT
+[ "$PCT" -lt 40 ] && COLOR=$PEACH
 [ "$PCT" -lt 20 ] && COLOR=$RED
 ICON="$ICON_BATT"
 [ "$PCT" -lt 20 ] && ICON="$ICON_BATT_LOW"
@@ -8144,7 +8158,7 @@ P_BATT
 #!/usr/bin/env bash
 source "$HOME/.config/sketchybar/colors.sh"
 if command -v blueutil >/dev/null 2>&1 && [ "$(blueutil --power)" = "1" ]; then
-    sketchybar --set "$NAME" icon="$ICON_BT_ON" icon.color=$PURPLE
+    sketchybar --set "$NAME" icon="$ICON_BT_ON" icon.color=$LILAC
 else
     sketchybar --set "$NAME" icon="$ICON_BT_OFF" icon.color=$COMMENT
 fi
@@ -8155,7 +8169,7 @@ P_BT
 source "$HOME/.config/sketchybar/colors.sh"
 SSID=$(ipconfig getsummary en0 2>/dev/null | awk -F ' SSID : ' '/ SSID : / {print $2; exit}')
 if [ -n "$SSID" ]; then
-    sketchybar --set "$NAME" icon="$ICON_WIFI" icon.color=$GREEN label.drawing=off
+    sketchybar --set "$NAME" icon="$ICON_WIFI" icon.color=$CYAN label.drawing=off
 else
     sketchybar --set "$NAME" icon="$ICON_WIFI_OFF" icon.color=$COMMENT label.drawing=off
 fi
@@ -8173,7 +8187,7 @@ P_VOL
 #!/usr/bin/env bash
 source "$HOME/.config/sketchybar/colors.sh"
 CPU=$(ps -A -o %cpu | awk '{s+=$1} END {printf "%d", s/'"$(sysctl -n hw.ncpu)"'}')
-sketchybar --set "$NAME" label="${CPU}%" label.color=$ORANGE
+sketchybar --set "$NAME" label="${CPU}%" label.color=$PEACH
 P_CPU
 
     write_managed_script "$SBAR_PLUGINS/mem.sh" <<'P_MEM'
@@ -8181,14 +8195,14 @@ P_CPU
 source "$HOME/.config/sketchybar/colors.sh"
 USED=$(memory_pressure 2>/dev/null | awk -F ': ' '/System-wide memory free percentage/ {print 100-$2}' | tr -d '%')
 [ -z "$USED" ] && USED="?"
-sketchybar --set "$NAME" label="${USED}%" label.color=$YELLOW
+sketchybar --set "$NAME" label="${USED}%" label.color=$LILAC
 P_MEM
 
     write_managed_script "$SBAR_PLUGINS/vpn.sh" <<'P_VPN'
 #!/usr/bin/env bash
 source "$HOME/.config/sketchybar/colors.sh"
 if command -v mullvad >/dev/null 2>&1 && mullvad status 2>/dev/null | grep -qi 'Connected'; then
-    sketchybar --set "$NAME" icon="$ICON_VPN_ON" icon.color=$GREEN label="VPN" label.color=$GREEN
+    sketchybar --set "$NAME" icon="$ICON_VPN_ON" icon.color=$MINT label="VPN" label.color=$MINT
 else
     sketchybar --set "$NAME" icon="$ICON_VPN_OFF" icon.color=$RED label="VPN" label.color=$RED
 fi
@@ -8220,7 +8234,7 @@ P_SHOT
     if [[ "$DRY_RUN" != "true" ]] && installed sketchybar; then
         brew services restart sketchybar >> "$LOG_FILE" 2>&1 || warn "Could not start sketchybar service (grant it Accessibility if needed)"
     fi
-    configured "SketchyBar configured (Dracula, system widgets)"
+    configured "SketchyBar configured (Dracula-Sakura, system widgets)"
 
 # ---- clipse clipboard listener (launchd agent) ----
 # clipse runs a background listener to capture clipboard history. Register a
