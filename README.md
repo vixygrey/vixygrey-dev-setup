@@ -31,6 +31,21 @@ chmod +x scripts/setup-dev-tools-mac.sh
 ./scripts/setup-dev-tools-mac.sh
 ```
 
+## Bootstrap trust model
+
+This repo is a bootstrapper, so a few first-run install paths intentionally trust
+upstream installer scripts rather than shipping vendored payloads here. Today that
+includes:
+
+- **Homebrew** — fetched from Homebrew's official install script
+- **rustup** — fetched from `sh.rustup.rs`
+- **pnpm** — fetched from `get.pnpm.io/install.sh`
+
+Those installer payloads are **not checksum-pinned by this repo today**. That is a
+practical trade for a one-command setup script, not a claim that the risk is zero.
+If you want to inspect first, run `--dry-run`, read `scripts/setup-dev-tools-mac.sh`,
+and prefer tagged release artifacts with the published SHA256 checksum.
+
 ## CLI Options
 
 ```bash
@@ -579,7 +594,7 @@ The script sets up Claude Code with a comprehensive configuration for full-stack
 
 | File | Purpose |
 |------|---------|
-| `~/.claude/settings.json` | Global permissions (121 allow / 7 deny entries), file ignore patterns, env vars |
+| `~/.claude/settings.json` | Global permissions, file ignore patterns, env vars |
 | `~/.claude/CLAUDE.md` | Global memory -- coding standards, available CLI tools reference, React/Next.js/AWS/CDK/Python/IaC conventions, security checks runbook |
 | `~/.claude/rules/workflow.md` | Trunk-based workflow rules (PR-first, issues, README-driven) |
 | `~/.claude/rules/git.md` | Git rules (no force-push, conventional commits, branch naming) |
@@ -619,9 +634,9 @@ The script sets up Claude Code with a comprehensive configuration for full-stack
 
 ### Permissions Pre-approved
 
-The allowlist is deliberately **read-only and scoped** -- Claude runs safe inspection, linting, and formatting commands without asking, but anything that mutates state (installs, deploys, resource/config changes) still prompts:
+The allowlist is deliberately **read-heavy and scoped** -- Claude runs safe local inspection, linting, formatting, and a small set of low-risk helpers without asking, but package installs, remote fetches/model calls, trust-store changes, deploys, and broader state mutation still prompt:
 - **Read-only git**: `git status/diff/log/show/branch`, `git remote -v`, `git stash list` (no writes; `gh` is *not* pre-approved)
-- **npm**: `npm run/install/test` only (pnpm/bun/npx/uv/cargo/pip prompt)
+- **npm**: `npm run/test` only (`npm install`, pnpm/bun/npx/uv/cargo/pip prompt)
 - **Inspect & data**: cat, bat, ls, eza, grep, rg, fd, fzf, tree, head, tail, wc, sort, uniq, cut, jq, yq, fx, mlr, csvlook, jnv, mdfind, scc, dust, diff, difft, delta
 - **Linters/formatters/tests**: shellcheck, shfmt, prettier, eslint, ruff, hadolint, typos, ast-grep, tsc, jest, vitest
 - **IaC (read-only)**: tflint, terraform-docs, checkov, infracost (no `aws`/`cdk`/`sam`/`tofu`)
@@ -629,8 +644,8 @@ The allowlist is deliberately **read-only and scoped** -- Claude runs safe inspe
 - **Read-only TUIs**: k9s, stern, lazygit, lazydocker, dive, btop, procs, lnav (no `docker`/`kubectl`/`docker-compose`)
 - **Docs & media**: pandoc, d2, mmdc, ffmpeg, magick, manly, soffice, office-py, pdftoppm/pdftotext/pdfinfo, oxipng, jpegoptim, mpv
 - **DB clients**: pgcli, mycli, sq, lazysql
-- **Misc CLIs**: atac, hurl, trippy, bandwhich, gping, doggo, mkcert, gum, llm, leaf, qalc, has, doxx, harlequin/hq, git-cliff, git-absorb, act3, commitizen, commitlint, tiki exec, fastfetch, newsboat, zellij
-- **Tool permissions**: `Read`, `Edit`, `WebFetch`
+- **Misc CLIs**: atac, hurl, trippy, bandwhich, gping, doggo, gum, leaf, qalc, has, doxx, harlequin/hq, git-cliff, git-absorb, act3, commitizen, commitlint, tiki exec, fastfetch, newsboat, zellij
+- **Tool permissions**: `Read`, `Edit`
 
 ### Denied Commands
 
