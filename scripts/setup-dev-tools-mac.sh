@@ -4654,29 +4654,30 @@ TIKI_WORKFLOW="$TIKI_CONFIG_DIR/workflow.yaml"
 version: "0.6.1"
 description: |
   Dracula Sakura workflow for small-team software work. Four statuses
-  (Moonpool → Ready → Flow → Bloom) and four task types
-  (Story, Bug, Spike, Project). Tuned for elegant, readable task flow.
+  (Moonpool → Petals → Starlight → Bloom) and four task types
+  (Story, Bug, Research, Arc). Tuned for elegant, readable task flow
+  with a softer anime-feminine accent layer.
 fields:
   - name: status
     type: enum
-    caption: "Status"
+    caption: "Arc"
     values:
       - value: inbox
         label: Moonpool
         visual: "☾"
         default: true
       - value: ready
-        label: Ready
-        visual: "✿"
+        label: Petals
+        visual: "🌸"
       - value: inProgress
-        label: "Flow"
+        label: "Starlight"
         visual: "✦"
       - value: done
         label: Bloom
         visual: "♡"
   - name: type
     type: enum
-    caption: "Type"
+    caption: "Kind"
     values:
       - value: story
         label: Story
@@ -4686,23 +4687,23 @@ fields:
         label: Bug
         visual: "⚡"
       - value: spike
-        label: Spike
+        label: Research
         visual: "☄"
       - value: project
-        label: Project
-        visual: "☾"
+        label: Arc
+        visual: "☽"
   - name: priority
     type: enum
-    caption: "Priority"
+    caption: "Mood"
     values:
-      - {value: high, label: High, visual: "❤"}
-      - {value: medium-high, label: "Medium High", visual: "✦"}
-      - {value: medium, label: Medium, visual: "✿", default: true}
-      - {value: medium-low, label: "Medium Low", visual: "◌"}
-      - {value: low, label: Low, visual: "☾"}
+      - {value: high, label: "Radiant", visual: "❤"}
+      - {value: medium-high, label: "Spark", visual: "✦"}
+      - {value: medium, label: "Petal", visual: "✿", default: true}
+      - {value: medium-low, label: "Hush", visual: "◌"}
+      - {value: low, label: "Moon", visual: "☾"}
   - name: points
     type: enum
-    caption: "Points"
+    caption: "Bloom"
     values:
       - {value: "11", label: "11", visual: "<action>❚❚❚❚❚❚❚❚❚❚❚"}
       - {value: "7",  label: "7",  visual: "<action>❚❚❚❚❚❚❚<muted>❘❘❘❘"}
@@ -4710,53 +4711,53 @@ fields:
       - {value: "1",  label: "1",  visual: "<action>❚<muted>❘❘❘❘❘❘❘❘❘❘"}
   - name: tags
     type: stringList
-    caption: "Tags"
-    default: ["idea"]
+    caption: "Charms"
+    default: ["sakura", "idea"]
   - name: dependsOn
     type: tikiIdList
-    caption: "Deps"
+    caption: "Links"
   - name: due
     type: date
     caption: "Due"
   - name: recurrence
     type: recurrence
-    caption: "Recurrence"
+    caption: "Rhythm"
   - name: assignee
     type: user
-    caption: "Assignee"
+    caption: "Keeper"
 
 actions:
   - key: "y"
     label: "Copy ID"
     action: select id where id = id() | clipboard()
   - key: "Y"
-    label: "Copy content"
+    label: "Copy note"
     action: select title, description where filepath = filepath() | clipboard()
   - key: "o"
     label: "Open in croft"
     action: select filepath where filepath = filepath() | run("croft --open-file \"$1\" .")
     hot: false
   - key: "u"
-    label: "Flag urgent"
+    label: "Make radiant"
     action: update where id = id() set priority="high" tags=tags+["urgent"]
     hot: false
   - key: "A"
-    label: "Assign to..."
+    label: "Assign keeper..."
     action: update where id = id() set assignee=input()
     input: string
     hot: false
   - key: "t"
-    label: "Add tag"
+    label: "Add charm"
     action: update where filepath = filepath() set tags=tags+[input()]
     input: string
     hot: false
   - key: "T"
-    label: "Remove tag"
+    label: "Remove charm"
     action: update where filepath = filepath() set tags=tags-[input()]
     input: string
     hot: false
   - key: Ctrl-Q
-    label: "Quick create"
+    label: "Wish"
     action: create title=input() tags=tags+["sakura"]
     input: string
     hot: false
@@ -4764,7 +4765,7 @@ actions:
 views:
   - name: Moonboard
     kind: board
-    description: "Move tiki through Moonpool → Ready → Flow → Bloom\nShift Left/Right to move"
+    description: "Move tiki through Moonpool → Petals → Starlight → Bloom\nShift Left/Right to move"
     default: true
     key: "F1"
     layout: |
@@ -4775,10 +4776,10 @@ views:
       - name: Moonpool
         filter: select where status = "inbox" and type != "project" and has(priority) order by priority, createdAt
         action: update where id = id() set status="inbox"
-      - name: Ready
+      - name: Petals
         filter: select where status = "ready" and type != "project" and has(priority) order by priority, createdAt
         action: update where id = id() set status="ready"
-      - name: Flow
+      - name: Starlight
         filter: select where status = "inProgress" and type != "project" and has(priority) order by priority, createdAt
         action: update where id = id() set status="inProgress"
       - name: Bloom
@@ -4824,9 +4825,9 @@ views:
         action: delete where id = id()
         require: ["selection:one"]
 
-  - name: Recent
+  - name: Petal Trail
     kind: board
-    description: "Tasks changed in the last 24 hours, most recent first"
+    description: "Tasks changed in the last 24 hours, newest sparkles first"
     key: Ctrl-R
     layout: |
       type.visual + " " + id
@@ -4873,9 +4874,9 @@ views:
         action: delete where id = id()
         require: ["selection:one"]
 
-  - name: Roadmap
+  - name: Constellation
     kind: board
-    description: "Projects organized by Now, Next, and Later horizons"
+    description: "Arcs arranged by Now, Next, and Later horizons"
     key: "F4"
     layout: |
       type.visual + " " + id
@@ -4937,15 +4938,15 @@ views:
         action: delete where id = id()
         require: ["selection:one"]
 
-  - name: Docs
+  - name: Atelier
     kind: wiki
-    description: "Project notes and documentation files"
+    description: "Project notes, lore, and documentation"
     path: "index.md"
     key: "F2"
 
   - name: Detail
     kind: detail
-    description: "View and edit selected task"
+    description: "View and edit the selected card"
     require: ["selection:one"]
     layout: |
       <highlight>title             | --                                        | --                            | --            | --                             | --          | --                       | --
@@ -4972,12 +4973,12 @@ views:
 
   - name: Project
     kind: detail
-    description: "View and edit selected project"
+    description: "View and edit the selected arc"
     require: ["selection:one"]
     layout: |
       <highlight>title             | --                                 | --                    | --        | --                       | --    | --                                                                                                                                                                                                                                                                                    | --
       _                            | _                                  | _                     | _         | _                        | _     | _                                                                                                                                                                                                                                                                                     | _
-      <text.label>status.caption   | (status.label + " " + status.visual):16.. | <text.muted>createdBy.caption  | createdBy | <text.label>tags.caption | tags?:18.. | (<text.muted>"Projects gather related tasks — stories, bugs, and spikes — into a single unit of planning. Press " + <status.warn>"<L>" + <text.muted>" to see every task linked to this project. Move it across Now, Next, and Later as priorities shift; it auto-completes when all its tasks are done."):fr | _
+      <text.label>status.caption   | (status.label + " " + status.visual):16.. | <text.muted>createdBy.caption  | createdBy | <text.label>tags.caption | tags?:18.. | (<text.muted>"Arcs gather related stories, bugs, and research notes into one planning thread. Press " + <status.warn>"<L>" + <text.muted>" to see every linked card. Move it across Now, Next, and Later as priorities shift; it auto-completes when all of its linked work is done."):fr | _
       <text.label>priority.caption | priority                           | <text.muted>createdAt.caption  | createdAt | ^                        | ^     | ^                                                                                                                                                                                                                                                                                     | _
       <text.label>points.caption   | points                             | <text.muted>updatedAt.caption  | updatedAt | ^                        | ^     | ^                                                                                                                                                                                                                                                                                     | _
     actions:
@@ -5032,7 +5033,7 @@ triggers:
         create title=old.title priority=old.priority tags=old.tags
                recurrence=old.recurrence due=next_date(old.recurrence) status="inbox"
 TIKI_WORKFLOW_CONF
-    configured "tiki workflow configured (Dracula Sakura board, roadmap, triggers)"
+    configured "tiki workflow configured (Dracula-Sakura anime board, constellation, triggers)"
 fi  # installed tiki
 
 # ---- k9s Dracula skin ----
