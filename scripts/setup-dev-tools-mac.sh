@@ -336,19 +336,19 @@ ALL_CATEGORIES=(
 # Category descriptions for interactive picker (must match ALL_CATEGORIES order)
 declare -A CATEGORY_DESC=(
     [prerequisites]="Xcode CLI Tools, Homebrew, GNU coreutils"
-    [core]="mise (Node, Python), Go, Rust, OrbStack, bun, uv, pnpm"
+    [core]="mise (Node, Python), Go, Rust, OrbStack, bun, uv, pnpm, PyYAML helper venv"
     [git]="Git, GitHub CLI, glab, delta, lazygit, gk, pre-commit framework (hooks + config: configs)"
     [aws]="AWS CLI, CDK, SAM, Granted, cfn-lint, e1s/e2c/stu/claws (TUIs), s5cmd, steampipe, dynein, iamlive"
     [iac]="OpenTofu (Terraform), tflint, terraform-docs, checkov, infracost"
     [security]="detect-secrets, gitleaks, trivy, semgrep, ClamAV, Objective-See"
     [replacements]="eza, bat, fd, ripgrep, zoxide, btop, sd, dust, just, rovr, fx, etc."
-    [data-processing]="yq, miller, csvkit, pandoc, ffmpeg, ImageMagick"
-    [code-quality]="shellcheck, shfmt, act, act3, hadolint, ruff, prettier, commitizen, ni"
+    [data-processing]="yq, miller, csvkit, jc, pandoc, ffmpeg, ImageMagick"
+    [code-quality]="shellcheck, shfmt, actionlint, act, act3, hadolint, ruff, prettier, commitizen, ni"
     [perf-testing]="hyperfine, oha"
     [dev-servers]="ngrok, miniserve, caddy"
     [terminal-productivity]="leaf, watchexec, gum, nushell, topgrade, fastfetch, nnn, doxx, taproom, qalc, vhs, lazyssh/rsync/npm, lazyenv, keyward, bmm, manly, cheznav, apw, has, jolt, wiper, starlit"
     [k8s-github]="stern, gh-dash"
-    [database]="pgcli, mycli, lazysql, harlequin, usql, sq"
+    [database]="duckdb, pgcli, mycli, lazysql, harlequin, usql, sq"
     [containers]="lazydocker, dive, kubectl, k9s"
     [api]="ATAC, grpcurl"
     [networking]="mtr, bandwhich, nmap"
@@ -2488,6 +2488,32 @@ fi
 
 brew_install "go" "Go (lang)"
 brew_install "uv" "uv (fast Python package manager — 10-100x faster than pip)"
+# PyYAML is a library rather than a user-facing CLI, so keep it out of the main
+# interpreter and expose a tiny dedicated helper Python instead. This mirrors the
+# office-py pattern: local scripts and ad hoc one-liners can `import yaml` without
+# teaching the machine to `pip install` into the global runtime this setup pins via mise.
+if [[ "$DRY_RUN" == "true" ]]; then
+    info "[DRY RUN] Would create PyYAML helper venv (PyYAML) -> yaml-py"
+elif installed uv; then
+    YAML_VENV="$HOME/.local/share/dev-setup/yaml-venv"
+    if [[ -x "$YAML_VENV/bin/python" ]] && "$YAML_VENV/bin/python" -c 'import yaml' 2>/dev/null; then
+        mkdir -p "$HOME/.local/bin"
+        ln -sf "$YAML_VENV/bin/python" "$HOME/.local/bin/yaml-py"
+        warn "yaml-py venv already present"
+    else
+        info "Creating PyYAML helper venv..."
+        if uv venv --python 3.13 "$YAML_VENV" >> "$LOG_FILE" 2>&1 \
+            && uv pip install --python "$YAML_VENV/bin/python" PyYAML >> "$LOG_FILE" 2>&1; then
+            mkdir -p "$HOME/.local/bin"
+            ln -sf "$YAML_VENV/bin/python" "$HOME/.local/bin/yaml-py"
+            success "yaml-py ready (PyYAML helper Python for local YAML scripts)"
+        else
+            warn "Could not create PyYAML helper venv"
+        fi
+    fi
+else
+    warn "Skipping PyYAML helper venv — uv not installed"
+fi
 brew_install "jq" "jq (JSON processor)"
 brew_install "direnv" "direnv (per-project env vars)"
 brew_install "watchman" "Watchman (file watcher)"
@@ -2945,6 +2971,9 @@ brew_install "miller" "miller (awk/sed/jq for CSV, JSON, tabular data)"
 # csvkit: suite of CSV tools
 brew_install "csvkit" "csvkit (CSV tools — csvcut, csvgrep, csvstat)"
 
+# jc: convert classic CLI output into JSON for jq/automation
+brew_install "jc" "jc (convert command output to JSON for jq/automation)"
+
 # pandoc: universal document converter
 brew_install "pandoc" "pandoc (universal document converter — md, pdf, docx, html)"
 
@@ -2975,6 +3004,7 @@ banner "Code Quality"
 
 brew_install "shellcheck" "shellcheck (shell script linter)"
 brew_install "shfmt" "shfmt (shell script formatter)"
+brew_install "actionlint" "actionlint (GitHub Actions workflow linter)"
 brew_install "act" "act (run GitHub Actions locally)"
 trust_tap dhth/tap
 brew_install "dhth/tap/act3" "act3 (glance at last 3 GitHub Actions runs — dhth tap, not homebrew-core)"
@@ -3204,6 +3234,7 @@ fi  # k8s-github
 if should_run "database"; then
 banner "Database & Data"
 
+brew_install "duckdb" "duckdb (local analytics database for CSV/JSON/Parquet)"
 brew_install "pgcli" "pgcli (auto-completing Postgres CLI)"
 brew_install "mycli" "mycli (auto-completing MySQL CLI)"
 brew_install "lazysql" "lazysql (TUI for databases — interactive SQL in terminal)"
@@ -12326,6 +12357,18 @@ yq -o=json '.' deployment.yaml
 
 > Tip: `yq` merges multi-document YAML (`---` separated) by default — use `eval-all` for filters that need to see every document at once.
 
+### `jc` — Command Output to JSON
+A converter that takes the output of many classic Unix commands and turns it into structured JSON, which makes old text-shaped tools much easier to pipe into `jq`, scripts, or AI workflows. Reach for it when the command you need exists already, but its default output is annoying to parse safely.
+
+```bash
+# convert ps output to JSON
+ps aux | jc --ps | jq '.[0]'
+# convert df output to JSON
+df -h | jc --df | jq '.[].filesystem'
+# convert dig output to JSON
+/opt/homebrew/bin/dig example.com | jc --dig
+```
+
 ### `fx` — Interactive JSON Viewer
 An interactive terminal JSON viewer for browsing large or unfamiliar JSON payloads — collapsible tree navigation instead of squinting at jq output. It's the better choice over jq when you don't yet know the shape of the data and want to explore it visually before writing a filter. Great for poking at a big API response for the first time.
 
@@ -12877,6 +12920,18 @@ blueutil --connect AA-BB-CC-DD-EE-FF
 
 
 ## Databases, containers & cloud
+
+### `duckdb` — Local Analytics Database
+An in-process analytical SQL engine for local data work — query CSV, JSON, and Parquet directly with SQL, join files together, and run serious aggregations without provisioning a server. It fills the gap between text-first tools like `jq`/`mlr` and a full external database, and pairs especially well with `harlequin` for a richer interactive surface.
+
+```bash
+# start an interactive SQL session
+duckdb
+# query a CSV file directly
+duckdb -c "select count(*) from read_csv_auto('data.csv');"
+# query JSON directly
+duckdb -c "select * from read_json_auto('events.json') limit 5;"
+```
 
 ### `harlequin` — Harlequin SQL IDE
 A full SQL IDE that runs in your terminal as a TUI, with a results grid, schema browser, and query editor. It connects to DuckDB (its default), Postgres, MySQL, SQLite, and S3-hosted data via adapter plugins, replacing the need to open a heavyweight desktop DB client just to poke around. Reach for it when you want to interactively explore or query a database without leaving the terminal.
@@ -13489,6 +13544,18 @@ act3 -r owner/repo1,owner/repo2
 act3 -f table
 ```
 
+### `actionlint` — GitHub Actions Workflow Linter
+A linter purpose-built for GitHub Actions workflows, catching mistakes plain YAML parsing misses: bad `${{ }}` expressions, invalid `needs` wiring, unsupported keys in the wrong place, and suspicious action references. It complements `act` nicely: actionlint finds structural/workflow bugs fast, while act helps reproduce runtime behavior locally.
+
+```bash
+# lint every workflow in the repo
+actionlint
+# lint a specific workflow file
+actionlint .github/workflows/lint.yml
+# keep shell analysis on embedded run: blocks when shellcheck is installed
+actionlint -shellcheck=shellcheck
+```
+
 ### `ruff` — Ruff
 An extremely fast Python linter and formatter, written in Rust, that replaces flake8 (linting), Black (formatting), and isort (import sorting) with a single tool and config. It runs orders of magnitude faster than the tools it replaces, which matters on large codebases and in pre-commit hooks. Use it as the default Python linter/formatter for both one-off checks and CI.
 
@@ -13571,6 +13638,16 @@ uv venv
 uv pip install -r requirements.txt
 # run a tool in an ephemeral environment, no install needed
 uvx ruff check .
+```
+
+### `yaml-py` — PyYAML Helper Python
+A tiny dedicated Python interpreter with the `PyYAML` library preinstalled in its own isolated `uv` venv, exposed on PATH as `yaml-py`. It exists for the cases where you want one-off YAML parsing or a short local script without polluting the main Python runtime this setup pins via mise.
+
+```bash
+# parse a YAML file and print a field
+yaml-py -c 'import pathlib, yaml; print(yaml.safe_load(pathlib.Path("config.yml").read_text())["name"])'
+# turn stdin YAML into JSON-ish Python output quickly
+printf 'a: 1\nb: 2\n' | yaml-py -c 'import sys, yaml; print(yaml.safe_load(sys.stdin.read()))'
 ```
 
 ### `bun` — Bun

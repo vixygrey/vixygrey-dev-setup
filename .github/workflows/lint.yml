@@ -22,6 +22,16 @@ jobs:
       - name: Run ShellCheck
         run: shellcheck -x -S warning scripts/setup-dev-tools-mac.sh
 
+  actionlint:
+    name: Actionlint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - name: Install ShellCheck
+        run: sudo apt-get update && sudo apt-get install -y shellcheck
+      - name: Run actionlint
+        uses: rhysd/actionlint@v1
+
   unit-tests:
     name: Helper unit tests
     runs-on: ubuntu-latest
