@@ -732,7 +732,7 @@ Spotlight to find things) rather than agonizing over where it "should" go.
 
 | Script | Alias | Description |
 |--------|-------|-------------|
-| `new-project` | `nproj` | Scaffold a new project with a Bigpowers-aligned repo template: AGENTS.md, CONVENTIONS.md, specs/ cockpit, LF-safe .editorconfig and .gitattributes |
+| `new-project` | `nproj` | Scaffold a new project with a Bigpowers-aligned repo template: AGENTS.md, CONVENTIONS.md, specs/ cockpit, LF-safe .editorconfig and .gitattributes. Add `--justfile` for an optional minimal starter Justfile |
 | `clone-work` | `cwork` | Clone a work repo into `~/Code/work/<org>/<repo>` |
 | `clone-personal` | `cpers` | Clone a personal repo into `~/Code/personal/<repo>` |
 | `clean-downloads` | `cleandl` | Delete files in ~/Downloads older than 30 days (interactive) |
