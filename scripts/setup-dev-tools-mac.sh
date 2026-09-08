@@ -4464,13 +4464,13 @@ gui:
       - "#ff9fe3"
       - bold
     inactiveBorderColor:
-      - "#8a88c7"
+      - "#4b4963"
     optionsTextColor:
       - "#9be7ff"
     selectedLineBgColor:
       - "#6a5d86"
     inactiveViewSelectedLineBgColor:
-      - "#3a3d52"
+      - "#323448"
     cherryPickedCommitFgColor:
       - "#8af7cf"
     cherryPickedCommitBgColor:
@@ -4478,7 +4478,7 @@ gui:
     unstagedChangesColor:
       - "#ff7aa8"
     defaultFgColor:
-      - "#f8f8f2"
+      - "#ddd2f7"
     searchingActiveBorderColor:
       - "#ffcf93"
 git:
@@ -4928,83 +4928,83 @@ k9s:
   body:
     fgColor: "#f8f8f2"
     bgColor: "#282a36"
-    logoColor: "#bd93f9"
+    logoColor: "#d4b2ff"
   prompt:
     fgColor: "#f8f8f2"
     bgColor: "#282a36"
-    suggestColor: "#bd93f9"
+    suggestColor: "#d4b2ff"
   info:
-    fgColor: "#8be9fd"
-    sectionColor: "#f8f8f2"
+    fgColor: "#9be7ff"
+    sectionColor: "#ddd2f7"
   dialog:
     fgColor: "#f8f8f2"
-    bgColor: "#44475a"
-    buttonFgColor: "#f8f8f2"
-    buttonBgColor: "#bd93f9"
-    buttonFocusFgColor: "#f8f8f2"
-    buttonFocusBgColor: "#ff79c6"
-    labelFgColor: "#ffb86c"
+    bgColor: "#323448"
+    buttonFgColor: "#282a36"
+    buttonBgColor: "#d4b2ff"
+    buttonFocusFgColor: "#282a36"
+    buttonFocusBgColor: "#ff9fe3"
+    labelFgColor: "#ffcf93"
     fieldFgColor: "#f8f8f2"
   frame:
     border:
-      fgColor: "#44475a"
-      focusColor: "#bd93f9"
+      fgColor: "#4b4963"
+      focusColor: "#d4b2ff"
     menu:
       fgColor: "#f8f8f2"
-      keyColor: "#bd93f9"
-      numKeyColor: "#bd93f9"
+      keyColor: "#d4b2ff"
+      numKeyColor: "#d4b2ff"
     crumbs:
       fgColor: "#282a36"
-      bgColor: "#bd93f9"
-      activeColor: "#ff79c6"
+      bgColor: "#d4b2ff"
+      activeColor: "#ff9fe3"
     status:
-      newColor: "#50fa7b"
-      modifyColor: "#bd93f9"
-      addColor: "#8be9fd"
-      errorColor: "#ff5555"
-      highlightColor: "#ffb86c"
-      killColor: "#6272a4"
-      completedColor: "#6272a4"
+      newColor: "#8af7cf"
+      modifyColor: "#d4b2ff"
+      addColor: "#9be7ff"
+      errorColor: "#ff7aa8"
+      highlightColor: "#ffcf93"
+      killColor: "#8a88c7"
+      completedColor: "#8a88c7"
     title:
       fgColor: "#f8f8f2"
       bgColor: "#282a36"
-      highlightColor: "#bd93f9"
-      counterColor: "#8be9fd"
-      filterColor: "#ff79c6"
+      highlightColor: "#d4b2ff"
+      counterColor: "#9be7ff"
+      filterColor: "#ff9fe3"
   views:
     charts:
       bgColor: default
       defaultDialColors:
-        - "#bd93f9"
-        - "#ff5555"
+        - "#d4b2ff"
+        - "#ff7aa8"
       defaultChartColors:
-        - "#bd93f9"
-        - "#ff5555"
+        - "#d4b2ff"
+        - "#ff7aa8"
     table:
       fgColor: "#f8f8f2"
       bgColor: "#282a36"
       header:
-        fgColor: "#6272a4"
+        fgColor: "#8a88c7"
         bgColor: "#282a36"
-        sorterColor: "#8be9fd"
+        sorterColor: "#9be7ff"
     xray:
       fgColor: "#f8f8f2"
       bgColor: "#282a36"
-      cursorColor: "#44475a"
-      graphicColor: "#bd93f9"
-      showColor: "#50fa7b"
+      cursorColor: "#323448"
+      graphicColor: "#d4b2ff"
+      showColor: "#8af7cf"
     yaml:
-      keyColor: "#8be9fd"
-      colonColor: "#bd93f9"
+      keyColor: "#9be7ff"
+      colonColor: "#d4b2ff"
       valueColor: "#f8f8f2"
     logs:
       fgColor: "#f8f8f2"
       bgColor: "#282a36"
       indicator:
-        fgColor: "#f8f8f2"
-        bgColor: "#bd93f9"
-        toggleOnColor: "#50fa7b"
-        toggleOffColor: "#6272a4"
+        fgColor: "#282a36"
+        bgColor: "#d4b2ff"
+        toggleOnColor: "#8af7cf"
+        toggleOffColor: "#8a88c7"
 K9S_DRACULA
 
     # Set dracula as active skin in k9s config. Existing files are updated with yq
@@ -5687,14 +5687,19 @@ theme:
   colors:
     text:
       primary: "#f8f8f2"
-      secondary: "#6272a4"
+      secondary: "#ddd2f7"
+      inverted: "#282a36"
+      faint: "#8a88c7"
+      warning: "#ffcf93"
+      success: "#8af7cf"
     border:
-      primary: "#bd93f9"
-      secondary: "#44475a"
+      primary: "#d4b2ff"
+      secondary: "#4b4963"
+      faint: "#323448"
     bg:
-      selected: "#44475a"
+      selected: "#6a5d86"
 GHDASH_CONF
-        configured "gh-dash configured (Dracula theme, PR/issue sections)"
+        configured "gh-dash configured (Dracula-Sakura theme, PR/issue sections)"
     fi
 
 # ---- stern config ----
