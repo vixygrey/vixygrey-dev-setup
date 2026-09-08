@@ -1009,7 +1009,11 @@ write_generated() {
     local tmp; tmp="$(mktemp)"
     cat > "$tmp"
     if [[ "$DRY_RUN" == "true" ]]; then
-        [[ -f "$file" ]] && ! cmp -s "$tmp" "$file" && info "[DRY RUN] Would refresh $file"
+        if [[ -f "$file" ]]; then
+            ! cmp -s "$tmp" "$file" && info "[DRY RUN] Would refresh $file"
+        else
+            info "[DRY RUN] Would create $file"
+        fi
         rm -f "$tmp"; return 0
     fi
     mkdir -p "$(dirname "$file")"

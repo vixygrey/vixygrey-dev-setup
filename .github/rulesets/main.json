@@ -35,7 +35,11 @@
       "parameters": {
         "strict_required_status_checks_policy": true,
         "required_status_checks": [
-          { "context": "ShellCheck" }
+          { "context": "ShellCheck" },
+          { "context": "Helper unit tests" },
+          { "context": "Homebrew name canonicality" },
+          { "context": "Generated config parses" },
+          { "context": "Dry run (macOS)" }
         ]
       }
     }
