@@ -279,6 +279,66 @@ EOF
     [ "$(cat "$TEST_TMP/generated.txt")" = "old" ]
 }
 
+@test "run_remote_installer: executes the downloaded installer through the requested runner (#430)" {
+    run run_with_helpers '
+        export LOG_FILE="$HOME/log"
+        export ERROR_LOG="$HOME/error.log"
+        mkdir -p "$HOME/bin"
+        cat > "$HOME/bin/curl" <<"EOF"
+#!/usr/bin/env bash
+out=""
+while (($#)); do
+  if [[ "$1" == "-o" ]]; then out="$2"; shift 2; continue; fi
+  shift
+done
+printf "payload\n" > "$out"
+EOF
+        chmod +x "$HOME/bin/curl"
+        export PATH="$HOME/bin:$PATH"
+        cat > "$HOME/runner.sh" <<"EOF"
+#!/usr/bin/env bash
+cat "$1" > "$HOME/ran.txt"
+EOF
+        chmod +x "$HOME/runner.sh"
+        run_remote_installer demo https://example.test/install.sh "" "$HOME/runner.sh"
+        cat "$HOME/ran.txt"
+    '
+    [ "$status" -eq 0 ]
+    [ "$output" = "payload" ]
+}
+
+@test "run_remote_installer: checksum mismatch refuses execution (#430)" {
+    run run_with_helpers '
+        export LOG_FILE="$HOME/log"
+        export ERROR_LOG="$HOME/error.log"
+        mkdir -p "$HOME/bin"
+        cat > "$HOME/bin/curl" <<"EOF"
+#!/usr/bin/env bash
+out=""
+while (($#)); do
+  if [[ "$1" == "-o" ]]; then out="$2"; shift 2; continue; fi
+  shift
+done
+printf "payload\n" > "$out"
+EOF
+        chmod +x "$HOME/bin/curl"
+        export PATH="$HOME/bin:$PATH"
+        cat > "$HOME/runner.sh" <<"EOF"
+#!/usr/bin/env bash
+printf "ran\n" > "$HOME/ran.txt"
+EOF
+        chmod +x "$HOME/runner.sh"
+        if run_remote_installer demo https://example.test/install.sh deadbeef "$HOME/runner.sh"; then
+          echo UNEXPECTED_OK
+        else
+          printf "%s\n" "$REMOTE_INSTALLER_ERROR"
+        fi
+        test ! -e "$HOME/ran.txt"
+    '
+    [ "$status" -eq 0 ]
+    [ "$output" = "checksum mismatch" ]
+}
+
 @test "SETUP_LIB_ONLY: loading the script writes no files under HOME" {
     run run_with_helpers '
         # Anything the test had to create is fine; anything that snuck out of the
