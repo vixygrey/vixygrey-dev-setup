@@ -9576,6 +9576,16 @@ write_managed "$CLAUDE_MD" "#" <<'CLAUDE_MD_CONF'
 - **README-driven development** — every project and significant module gets a README
 - **Industry best practices** — follow established patterns, OWASP, 12-factor, SOLID, DRY
 
+## Communication & style
+- Be **calm, technically sharp, and proactive**.
+- Be **concise by default**, but expand when the task genuinely benefits from detail.
+- When making changes, explain **what changed, where, and any follow-up action**.
+- Preserve the **existing project style** unless asked to redesign it.
+- For config, UX, and theme work, optimize for **readability, coherence, and aesthetics together**.
+- When stylistic latitude exists, prefer a **Dracula-Sakura** feel: dark plum foundations, rose/lilac accents, cyan/mint for information and healthy states, polished and lightly feminine-leaning without becoming childish.
+- Use soft polish sparingly — warm and elegant is good; **roleplay, emoji clutter, and cutesy excess are not**.
+- When giving recommendations, lead with the **smallest high-leverage next step**.
+
 ## Agent instructions in a repo: public `AGENTS.md`, private `CLAUDE.md`
 Two files, two audiences. Keep them separate in every repository.
 
@@ -9608,7 +9618,7 @@ Rules that follow from this:
 - Shell: zsh with starship prompt, atuin history, fzf fuzzy finder, zsh-autosuggestions, zsh-syntax-highlighting
 - Editor / IDE: **croft** is the primary editor (VS Code-style terminal IDE — `croft` to open a workspace, `croft pair` for the AI navigator). **Visual Studio Code** is installed as the **GUI** editor for when a TUI is the wrong tool (`code .`) — secondary to croft, not a replacement; it carries the same rules via extensions (Dracula, ruff, **basedpyright** — the same Python type server croft uses, never Microsoft's proprietary Pylance, which the setup removes — prettier, ESLint, shellcheck/shfmt, EditorConfig) so it cannot disagree with the CLI. **micro** is the `EDITOR` for git/gh/lazygit commit messages and quick edits — non-modal, Dracula, with an on-screen key menu (`Ctrl+G` for full help). Helix was retired in 7.6.0. Agentic coding via Claude Code (`claude`) — see **AI / agentic** below.
 - **croft does not support EditorConfig** (verified in croft 0.1.700 — no reference anywhere in its source). Its indentation is a language default (2 spaces for YAML, 4 otherwise) plus a per-buffer status-bar override that does not persist. VS Code *does* honour `.editorconfig`, so on a repo with one, the two editors will disagree unless you flip croft's status-bar pill. Croft's extensions are declarative `extension.toml` manifests (languages, LSP servers, themes, debug adapters, test runners, MCP sidecars) under `~/.config/croft/extensions/` — pure data, no code, no marketplace, so an EditorConfig reader cannot be added as one.
-- Terminal: Ghostty (Dracula theme)
+- Terminal: Ghostty (Dracula-Sakura palette)
 - Package managers: pnpm (preferred), npm, bun
 - Python: uv for packages (not pip), ruff for linting (not flake8/black)
 - JS/TS runtimes: Node (via mise), Bun, Deno
@@ -9945,7 +9955,22 @@ DOCKER_RULES
 - Use workspaces or separate state files per environment
 IAC_RULES
 
-configured "Claude Code rules written (workflow, git, security, typescript, python, docker, iac — refreshed each run)"
+    # Style rules
+    write_managed "$CLAUDE_RULES_DIR/style.md" "#" <<'STYLE_RULES'
+# Style Rules
+
+- Sound calm, technically sharp, and warm.
+- Be concise by default; expand when detail improves the result.
+- Explain changes with clear file paths and concrete follow-up when relevant.
+- Preserve the project's existing style unless the user asks for a redesign.
+- For UI, config, or theme work, prioritize readability, contrast, and cohesion.
+- When stylistic latitude exists, prefer a subtle Dracula-Sakura sensibility: dark bases, rose/lilac accents, cyan or mint for informative and healthy states, polished and feminine-leaning without becoming childish.
+- Use flourish sparingly — avoid roleplay, emoji clutter, and overdone exclamation.
+- If the user explicitly wants something cute, cozy, stylish, or anime-inspired, lean that way tastefully while keeping the result refined and useful.
+- Recommend the smallest high-leverage next step first when offering options.
+STYLE_RULES
+
+configured "Claude Code rules written (workflow, git, security, typescript, python, docker, iac, style — refreshed each run)"
 
 # ---- Claude Code hooks ----
 CLAUDE_HOOKS_DIR="$HOME/.claude/hooks"
