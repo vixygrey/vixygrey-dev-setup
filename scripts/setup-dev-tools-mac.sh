@@ -14575,7 +14575,14 @@ CHECKLIST_EOF
 # Keyboard Shortcuts
 
 A compact map of the highest-frequency keys, launchers, and click actions this
-setup wires in.
+setup wires in. This is the **quick card**, deliberately kept to one screen.
+
+> **The full reference is `docs/SHORTCUTS.md` in the dev-setup repo.** It carries
+> 400+ bindings, each traced to a named source: zellij mode by mode, the complete
+> lazygit and k9s tables, lazydocker per panel, plus micro, lnav, broot, mpv and
+> the rest. It also records which tools have **no** fixed keymap because theirs is
+> user-configurable (`trip`, `harlequin`, `clipse`), and which ones document
+> themselves only through an in-app help key. Reach for it when this card runs out.
 
 ## Launcher & search (Ghostty quick terminal)
 | Keys / command | Action |
@@ -14612,7 +14619,8 @@ Every binding is on screen: the **key menu** sits along the bottom, and there ar
 |------|--------|
 | `Ctrl + r` | atuin history search (fuzzy, across machines) |
 | `Ctrl + t` | fzf file finder · `Alt + c` fzf cd |
-| zellij `Ctrl + p` then `n` | New pane (see zellij status bar for modes) |
+| zellij `Ctrl + p` then `n` | New pane. zellij is **modal**: press a mode key, then act |
+| zellij mode keys | `Ctrl + p` pane · `Ctrl + t` tab · `Ctrl + n` resize · `Ctrl + s` scroll · `Ctrl + o` session · `Ctrl + g` lock (toggles) |
 | lazygit / lazydocker / lazysql / lazynpm / lazyssh / lazyrsync | Full-screen TUIs (arrows + on-screen keys) |
 | `y` rovr · `n` nnn | File managers |
 | `cliamp` | Terminal music player (Winamp-style) — playback, EQ, cycle visualizers |
