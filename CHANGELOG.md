@@ -6,6 +6,31 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 > Release notes for 7.0.0–7.1.1 live in [GitHub Releases](https://github.com/vixygrey/vixygrey-dev-setup/releases) (auto-generated). This file resumes hand-written notes at 7.2.0.
 
+## [Unreleased]
+
+### Added
+
+- **A `home` zellij layout, beside the existing `dev` one** (#523). A personal dashboard for a full-screen terminal: a plain shell on the left, and weather, system monitor, and notes stacked down the right.
+
+  ```
+  +---------------------+----------------------+
+  |                     |  starlit  (weather)  |  25%
+  |                     +----------------------+
+  |   plain terminal    |  btop  (system)      |  25%
+  |                     +----------------------+
+  |                     |  tiki  (notes)       |  50%
+  +---------------------+----------------------+
+  ```
+
+  Three command choices are not obvious, and each is recorded in the layout:
+
+  - `starlit --interactive`, not bare `starlit`. The bare form prints one forecast and exits, which leaves a dead pane.
+  - `tiki` with `cwd` pinned to `~/Documents/notes`. It opens the Markdown in whatever directory it starts in, so a dashboard launched from a random path would otherwise show that path's files. `~` in a pane `cwd` is expanded: zellij's `parse_path` runs every path property through `shellexpand::full` (`kdl_layout_parser.rs:418-430`), and pane `cwd` goes through it.
+  - The `tab-bar` and `status-bar` panes are declared explicitly, the #481 lesson. A custom layout replaces the default wholesale, and those bars are ordinary plugin panes rather than implicit chrome.
+
+  `starlit` needs one manual step before the weather pane is useful: `starlit --setup`, then an API key in the config it creates. That is a credential, so the generator does not write it. The post-setup checklist says so.
+
+
 ## [7.22.0] - 2026-09-09
 
 A release that removes more than it adds, and is better for it.
@@ -1301,6 +1326,7 @@ Minor release rolling up two follow-up PRs to v4.0.0: a tool-discoverability aud
 - Document all new tools in `GUIDE-MACOS.md`, `GUIDE-LINUX.md`, `GUIDE-WINDOWS.md` with usage examples (#5)
 - Update `SHORTCUTS-*.md` with new alias rows and a "Terminal Apps" section (#5)
 
+[Unreleased]: https://github.com/vixygrey/vixygrey-dev-setup/compare/v7.22.0...HEAD
 [7.22.0]: https://github.com/vixygrey/vixygrey-dev-setup/compare/v7.21.0...v7.22.0
 [7.21.0]: https://github.com/vixygrey/vixygrey-dev-setup/compare/v7.20.1...v7.21.0
 [7.20.1]: https://github.com/vixygrey/vixygrey-dev-setup/compare/v7.20.0...v7.20.1

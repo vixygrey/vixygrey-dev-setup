@@ -1061,6 +1061,16 @@ Claude is wired into the terminal tools in four tiers:
 | Tier | How | Best for |
 |------|-----|----------|
 | **1. Side-pane** | `zellij --layout dev` — editor + a `claude` pane | Real, multi-file, agentic work (strongest) |
+
+**Zellij layouts.** Two are generated:
+
+| Layout | Command | Panes |
+|--------|---------|-------|
+| `dev` | `zellij --layout dev` | editor + a `claude` pane, side by side |
+| `home` | `zellij --layout home` | plain terminal on the left; weather (`starlit`), system monitor (`btop`), and notes (`tiki`, opened on `~/Documents/notes`) stacked down the right |
+
+`home` needs one manual step before the weather pane is useful: run `starlit --setup`
+and add your API key to the config it creates. The setup script never writes a key.
 | **2. croft pair** | `croft pair` — AI navigator inside the primary IDE | In-editor pairing while you code |
 | **3. `llm` pipe** | `llm` from the shell — pipe a file or selection | Quick one-shot edits |
 | **4. herald** | Built-in AI triage/summaries + MCP server (email/calendar) | Reading + triaging mail/events |

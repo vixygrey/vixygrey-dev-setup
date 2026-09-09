@@ -6593,6 +6593,66 @@ layout {
 }
 ZELLIJ_DEV
 configured "zellij 'dev' layout created (editor + Claude pane: zellij --layout dev)"
+
+# 'home' layout: a personal dashboard for a full-screen terminal (#523).
+# Launch with:  zellij --layout home
+#
+#   +---------------------+----------------------+
+#   |                     |  starlit  (weather)  |  25%
+#   |                     +----------------------+
+#   |   plain terminal    |  btop  (system)      |  25%
+#   |                     +----------------------+
+#   |                     |  tiki  (notes)       |  50%
+#   +---------------------+----------------------+
+#
+# The right column's three sizes must sum to 100: zellij treats a percentage
+# container as exact, not as a hint.
+info "Creating zellij 'home' layout..."
+write_managed "$ZELLIJ_LAYOUTS/home.kdl" "//" <<'ZELLIJ_HOME'
+// Personal dashboard. Run:  zellij --layout home
+//
+// The tab-bar and status-bar panes are declared explicitly for the same reason
+// as the dev layout (#481): a custom layout replaces the default wholesale, and
+// those bars are ordinary plugin panes rather than implicit chrome. Without
+// them this renders with no mode line at all.
+//
+// Command choices that are not obvious:
+//   starlit  — `--interactive` is the persistent mode. Bare `starlit` prints a
+//              forecast once and exits, which leaves a dead pane behind.
+//   tiki     — opens the Markdown in whatever directory it starts in, so the
+//              cwd is pinned to the personal notes repo rather than inherited
+//              from wherever the layout happened to be launched.
+layout {
+    pane size=1 borderless=true {
+        plugin location="tab-bar"
+    }
+    pane split_direction="vertical" {
+        pane {
+            name "terminal"
+        }
+        pane split_direction="horizontal" {
+            pane size="25%" {
+                name "weather"
+                command "starlit"
+                args "--interactive"
+            }
+            pane size="25%" {
+                name "system"
+                command "btop"
+            }
+            pane size="50%" {
+                name "notes"
+                command "tiki"
+                cwd "~/Documents/notes"
+            }
+        }
+    }
+    pane size=1 borderless=true {
+        plugin location="status-bar"
+    }
+}
+ZELLIJ_HOME
+configured "zellij 'home' layout created (terminal + weather/system/notes: zellij --layout home)"
 fi  # installed zellij
 
 # ---- newsboat config ----
@@ -15282,6 +15342,7 @@ unscriptable. Work through it once, then keep it only as long as it's useful.
 - [ ] **Oh My Pi** (second agent, Gemini-routed): `omp` is installed from the `can1357/tap` Homebrew tap with the Dracula-Sakura theme, the shared `AGENTS.md` preferences, and nine model roles pointed at Gemini — Flash for ordinary turns, Pro for `slow`, `plan`, and `advisor`, Flash Lite for cheap subagent fan-out. It reads `~/.agents/skills/` as its own native skills location (the five shared skills), plus five omp-local Tiki companions in `~/.omp/agent/skills/`. Your local **SearXNG** instance is first in its `web_search` chain. **It needs `GEMINI_API_KEY` exported in your environment**; the setup never writes a key. Get one from Google AI Studio, store it in Apple Passwords, and export it from a file your shell reads. Then run `omp` and check the model line, or `omp config get modelRoles` from any shell. Read that key whole: it is a record, so `omp config get modelRoles.default` answers `Unknown setting`.
 - [ ] **croft** (primary IDE): installed from git `main` via cargo — run `croft` in a project to open the workspace; re-run `cargo install --git https://github.com/vitali87/croft.git --locked` to upgrade.
 - [ ] **AI side-pane:** `zellij --layout dev` opens your editor + a Claude Code pane side by side (the strongest AI workflow).
+- [ ] **Home dashboard:** `zellij --layout home` opens a plain terminal on the left, with weather, `btop`, and your `~/Documents/notes` tiki stacked on the right. **`starlit` needs one-time setup before the weather pane shows a forecast**: run `starlit --setup`, then put your API key in the config it creates. Until then that pane shows the setup prompt. The setup never writes a key for you.
 - [ ] **chezmoi:** `chezmoi init <your-dotfiles-repo>` to bring these configs under version control across the MacBook + Mac mini.
 - [ ] **tiki** (notes): your personal notes repo is pre-created and git-initialized at `~/Documents/notes`, with a themed `index.md` landing page, a matching `README.md`, and starter folders (`inbox`, `journal`, `ideas`, `life-admin`, `projects`, `reference`, `archive`). Run `cd ~/Documents/notes && tiki` to start. Claude can manage tikis there — its skill is installed at `~/.claude/skills/tiki/` (CRUD via `tiki exec`, quick-capture via `echo "note" | tiki`).
 - [ ] **cliamp** (music): drop music into `~/Media/music`, then run `cliamp ~/Media/music` (or set the folder in its UI). Streaming (YouTube/SoundCloud/Spotify/radio) + EQ + 20+ visualizers are built in.
