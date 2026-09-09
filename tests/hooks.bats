@@ -98,6 +98,7 @@ EOF
     printf 'pointer\n' > "$REPO/sample.bin"
     git -C "$REPO" add .gitattributes sample.bin
     git -C "$REPO" commit -qm lfs
+    rm -f "$REPO/.git/hooks/pre-push"
 
     run env PATH="$TEST_TMP/bin:$PATH" bash -c '. "$1/dev-setup-chain.sh"; cd "$2"; run_hook_chain pre-push' \
         _ "$HOOKS_DIR" "$REPO"
