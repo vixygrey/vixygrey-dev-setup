@@ -6,7 +6,17 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 > Release notes for 7.0.0–7.1.1 live in [GitHub Releases](https://github.com/vixygrey/vixygrey-dev-setup/releases) (auto-generated). This file resumes hand-written notes at 7.2.0.
 
-## [Unreleased]
+## [7.21.0] - 2026-09-09
+
+A release about adding a third agent without letting the three drift apart.
+
+`omp` joins Claude Code and pi. It is the maximalist fork of pi, and this setup routes it at Google Gemini, so the machine now has a local-first small harness, a Gemini-routed large one, and Claude Code for anything that needs MCP.
+
+The work that mattered was not the install. It was proving that "same theme, same AGENTS.md, same skills" is true rather than approximately true. The preferences body became one emitter with two consumers, because two heredocs drift the first time one is edited alone. The generated pi file is byte-identical to what 7.20.1 produced, which is the evidence that the refactor cost pi nothing.
+
+Three upstream facts changed the implementation, and each was found by reading the tool rather than by assuming the fork inherited pi's shape. Its `config.yml` is written by omp itself, so this setup merges into it instead of owning it. Its `google` and `gemini` provider ids mean different things. And its own shipped theme sets two color tokens that its runtime schema rejects, which a custom theme file cannot get away with.
+
+The theme was then verified by rendering it rather than by parsing it. `omp gallery` emits the Dracula-Sakura palette and none of the built-in control colors, so the file is loading and not falling back.
 
 ### Added
 
@@ -1150,7 +1160,7 @@ Minor release rolling up two follow-up PRs to v4.0.0: a tool-discoverability aud
 - Document all new tools in `GUIDE-MACOS.md`, `GUIDE-LINUX.md`, `GUIDE-WINDOWS.md` with usage examples (#5)
 - Update `SHORTCUTS-*.md` with new alias rows and a "Terminal Apps" section (#5)
 
-[Unreleased]: https://github.com/vixygrey/vixygrey-dev-setup/compare/v7.20.1...HEAD
+[7.21.0]: https://github.com/vixygrey/vixygrey-dev-setup/compare/v7.20.1...v7.21.0
 [7.20.1]: https://github.com/vixygrey/vixygrey-dev-setup/compare/v7.20.0...v7.20.1
 [7.20.0]: https://github.com/vixygrey/vixygrey-dev-setup/compare/v7.19.0...v7.20.0
 [7.19.0]: https://github.com/vixygrey/vixygrey-dev-setup/compare/v7.18.0...v7.19.0
