@@ -192,6 +192,106 @@ OUR
     [ "$status" -eq 0 ]
 }
 
+# ---------------------------------------------------------------------------
+# #530: an opener with no closer (or a stray/reordered closer) used to be
+# treated as "our block" by all three managed writers, which then guessed
+# wrong about which half of the file was real content. write_managed silently
+# dropped everything after the opener, write_managed_script did the same
+# through its awk merge, and remove_superseded_managed deleted a file that
+# still held real trailing content. All three must now refuse instead.
+# ---------------------------------------------------------------------------
+
+@test "_managed_marker_state: absent, unmarked, valid and invalid are distinguished (#530)" {
+    run run_with_helpers '
+        mb="# >>> dev-setup managed block (do not edit between the markers) >>>"
+        me="# <<< dev-setup managed block <<<"
+        echo "absent=$(_managed_marker_state "$HOME/nope" "$mb" "$me")"
+        printf "plain file\n" > "$HOME/unmarked"
+        echo "unmarked=$(_managed_marker_state "$HOME/unmarked" "$mb" "$me")"
+        printf "%s\nbody\n%s\n" "$mb" "$me" > "$HOME/valid"
+        echo "valid=$(_managed_marker_state "$HOME/valid" "$mb" "$me")"
+        printf "%s\nbody, never closed\n" "$mb" > "$HOME/unclosed"
+        echo "unclosed=$(_managed_marker_state "$HOME/unclosed" "$mb" "$me")"
+        printf "%s\n%s\nbody\n%s\n" "$me" "$mb" "$me" > "$HOME/reordered"
+        echo "reordered=$(_managed_marker_state "$HOME/reordered" "$mb" "$me")"
+        printf "%s\nfirst\n%s\n%s\nsecond\n%s\n" "$mb" "$me" "$mb" "$me" > "$HOME/dup"
+        echo "dup=$(_managed_marker_state "$HOME/dup" "$mb" "$me")"
+    '
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"absent=absent"* ]]
+    [[ "$output" == *"unmarked=unmarked"* ]]
+    [[ "$output" == *"valid=valid"* ]]
+    [[ "$output" == *"unclosed=invalid"* ]]
+    [[ "$output" == *"reordered=invalid"* ]]
+    [[ "$output" == *"dup=invalid"* ]]
+}
+
+@test "write_managed: refuses an opener with no closer, keeps the file byte-for-byte, and counts a failure (#530)" {
+    # Heredoc, not a pipe: a piped write_managed runs in a subshell, where the
+    # INSTALL_FAILED increment this test checks would be discarded before the
+    # parent shell could see it (the same subshell hazard documented above
+    # MANAGED_STATE, #259) — unrelated to the bug this test targets.
+    run run_with_helpers '
+        printf "# >>> dev-setup managed block (do not edit between the markers) >>>\nreal trailing content that was never closed\n" > "$HOME/cfg"
+        before="$(cat "$HOME/cfg")"
+        write_managed "$HOME/cfg" "#" <<EOF
+new body
+EOF
+        rc=$?
+        after="$(cat "$HOME/cfg")"
+        echo "rc=$rc"
+        echo "unchanged=$([ "$before" = "$after" ] && echo yes || echo no)"
+        echo "failed=$INSTALL_FAILED"
+    '
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"rc=1"* ]]
+    [[ "$output" == *"unchanged=yes"* ]]
+    [[ "$output" == *"failed=1"* ]]
+}
+
+@test "write_managed_script: refuses an unclosed marker instead of swallowing trailing lines (#530)" {
+    run run_with_helpers '
+        printf "#!/usr/bin/env bash\n# >>> dev-setup managed block (do not edit between the markers) >>>\necho old\necho this line must survive\n" > "$HOME/script"
+        before="$(cat "$HOME/script")"
+        printf "#!/usr/bin/env bash\necho new\n" | write_managed_script "$HOME/script"
+        rc=$?
+        after="$(cat "$HOME/script")"
+        echo "rc=$rc"
+        echo "unchanged=$([ "$before" = "$after" ] && echo yes || echo no)"
+    '
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"rc=1"* ]]
+    [[ "$output" == *"unchanged=yes"* ]]
+}
+
+@test "write_managed_script: backs up an unmarked existing file before replacing it (#530)" {
+    run run_with_helpers '
+        printf "hand-written script\n" > "$HOME/tool"
+        printf "#!/usr/bin/env bash\necho generated\n" | write_managed_script "$HOME/tool"
+        shopt -s nullglob
+        backups=("$HOME"/tool.pre-managed.*)
+        echo "backup_count=${#backups[@]}"
+        [ "${#backups[@]}" -gt 0 ] && cat "${backups[0]}"
+    '
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"backup_count=1"* ]]
+    [[ "$output" == *"hand-written script"* ]]
+}
+
+@test "remove_superseded_managed: refuses an unclosed marker rather than deleting real content (#530)" {
+    run run_with_helpers '
+        cat > "$HOME/orphan" <<OUTER
+# >>> dev-setup managed block (do not edit between the markers) >>>
+old body
+real trailing content that was never closed
+OUTER
+        remove_superseded_managed "$HOME/orphan" "test reason" "#530"
+        test -e "$HOME/orphan" && echo STILL_THERE || echo GONE
+    '
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"STILL_THERE"* ]]
+}
+
 @test "mark_done: no-op under --dry-run so previews cannot poison --resume (#390)" {
     run run_with_helpers '
         export DRY_RUN=true
@@ -277,6 +377,156 @@ EOF
     [ "$status" -eq 0 ]
     [[ "$output" == *"[DRY RUN] Would refresh $TEST_TMP/generated.txt"* ]]
     [ "$(cat "$TEST_TMP/generated.txt")" = "old" ]
+}
+
+# ---------------------------------------------------------------------------
+# #536: create-once seed files (borgmatic, Caddy, ngrok, ClamAV) were each a
+# bespoke `if [[ ! -f ]]` block with no shared contract and no dry-run report.
+# write_seed_once is the explicit, auditable version of that guard.
+# ---------------------------------------------------------------------------
+
+@test "write_seed_once: creates a missing file and returns 0 (#536)" {
+    run run_with_helpers '
+        write_seed_once "$HOME/seed.yaml" "test reason" <<"EOF"
+hello
+EOF
+        rc=$?
+        echo "rc=$rc"
+        cat "$HOME/seed.yaml"
+    '
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"rc=0"* ]]
+    [[ "$output" == *"hello"* ]]
+}
+
+@test "write_seed_once: leaves an existing file untouched and returns 1 (#536)" {
+    run run_with_helpers '
+        printf "hand-edited\n" > "$HOME/seed.yaml"
+        write_seed_once "$HOME/seed.yaml" "test reason" <<"EOF"
+would-be new content
+EOF
+        rc=$?
+        echo "rc=$rc"
+        cat "$HOME/seed.yaml"
+    '
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"rc=1"* ]]
+    [[ "$output" == *"hand-edited"* ]]
+    [[ "$output" != *"would-be new content"* ]]
+    [[ "$output" == *"already exists"* ]]
+    [[ "$output" == *"test reason"* ]]
+}
+
+@test "write_seed_once: dry-run reports without creating the file, and returns 0 (#536)" {
+    run run_with_helpers '
+        export DRY_RUN=true
+        write_seed_once "$HOME/seed.yaml" "test reason" <<"EOF"
+hello
+EOF
+        rc=$?
+        echo "rc=$rc"
+        test -e "$HOME/seed.yaml" && echo EXISTS || echo ABSENT
+    '
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"rc=0"* ]]
+    [[ "$output" == *"ABSENT"* ]]
+    [[ "$output" == *"[DRY RUN] Would seed $TEST_TMP/seed.yaml (test reason)"* ]]
+}
+
+# ---------------------------------------------------------------------------
+# #533: existing JSON files must keep user keys, reject malformed input without
+# mutation, and let a caller reassert the small set of generator-owned keys.
+# ---------------------------------------------------------------------------
+
+@test "merge_json_defaults: preserves user objects and adds top-level defaults (#533)" {
+    run run_with_helpers '
+        printf "%s\n" "{\"editor\":{\"font\":14},\"personal\":true}" > "$HOME/settings.json"
+        merge_json_defaults "$HOME/settings.json" <<"EOF"
+{"editor":{"font":12,"theme":"dracula"},"generated":true}
+EOF
+        jq -cS . "$HOME/settings.json"
+    '
+    [ "$status" -eq 0 ]
+    [ "$output" = '{"editor":{"font":14,"theme":"dracula"},"generated":true,"personal":true}' ]
+}
+
+@test "merge_json_defaults: optional filter reasserts an owned key (#533)" {
+    run run_with_helpers '
+        printf "%s\n" "{\"theme\":\"user-choice\",\"personal\":true}" > "$HOME/settings.json"
+        merge_json_defaults "$HOME/settings.json" ".theme = \"dracula-sakura\"" <<"EOF"
+{"theme":"dracula-sakura","generated":true}
+EOF
+        jq -cS . "$HOME/settings.json"
+    '
+    [ "$status" -eq 0 ]
+    [ "$output" = '{"generated":true,"personal":true,"theme":"dracula-sakura"}' ]
+}
+
+@test "merge_json_defaults: malformed existing JSON remains byte-for-byte unchanged (#533)" {
+    run run_with_helpers '
+        printf "%s\n" "{ // valid JSONC, invalid JSON" > "$HOME/settings.json"
+        before="$(shasum -a 256 "$HOME/settings.json")"
+        merge_json_defaults "$HOME/settings.json" <<"EOF"
+{"generated":true}
+EOF
+        rc=$?
+        after="$(shasum -a 256 "$HOME/settings.json")"
+        printf "rc=%s\nsame=%s\n" "$rc" "$([[ "$before" == "$after" ]] && echo yes || echo no)"
+    '
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"rc=1"* ]]
+    [[ "$output" == *"same=yes"* ]]
+}
+
+@test "merge_json_defaults: dry run reports and writes nothing (#533)" {
+    run run_with_helpers '
+        export DRY_RUN=true
+        merge_json_defaults "$HOME/settings.json" <<"EOF"
+{"generated":true}
+EOF
+        test -e "$HOME/settings.json" && echo WROTE || echo CLEAN
+    '
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"[DRY RUN] Would merge JSON defaults"* ]]
+    [[ "$output" == *"CLEAN"* ]]
+}
+
+# ---------------------------------------------------------------------------
+# #532: the late mise linker is pure filesystem policy and can be exercised
+# without installing a runtime or relying on the current machine PATH.
+# ---------------------------------------------------------------------------
+
+@test "link_mise_shims: links current shims and honors exclusions (#532)" {
+    run run_with_helpers '
+        mkdir -p "$HOME/shims" "$HOME/bin"
+        touch "$HOME/shims/node" "$HOME/shims/python3"
+        count="$(link_mise_shims "$HOME/shims" "$HOME/bin" python3)"
+        printf "count=%s\nnode=%s\npython=%s\n" "$count" \
+            "$(readlink "$HOME/bin/node")" \
+            "$([[ -e "$HOME/bin/python3" ]] && echo linked || echo absent)"
+    '
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"count=1"* ]]
+    [[ "$output" == *"node=$TEST_TMP/shims/node"* ]]
+    [[ "$output" == *"python=absent"* ]]
+}
+
+@test "link_mise_shims: prunes only dangling links into its shim directory (#532)" {
+    run run_with_helpers '
+        mkdir -p "$HOME/shims" "$HOME/bin" "$HOME/elsewhere"
+        touch "$HOME/bin/hand-written" "$HOME/elsewhere/foreign"
+        ln -s "$HOME/shims/removed" "$HOME/bin/removed"
+        ln -s "$HOME/elsewhere/missing" "$HOME/bin/foreign-missing"
+        link_mise_shims "$HOME/shims" "$HOME/bin" >/dev/null
+        printf "ours=%s\nforeign=%s\nfile=%s\n" \
+            "$([[ -L "$HOME/bin/removed" ]] && echo kept || echo pruned)" \
+            "$([[ -L "$HOME/bin/foreign-missing" ]] && echo kept || echo pruned)" \
+            "$([[ -f "$HOME/bin/hand-written" ]] && echo kept || echo pruned)"
+    '
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"ours=pruned"* ]]
+    [[ "$output" == *"foreign=kept"* ]]
+    [[ "$output" == *"file=kept"* ]]
 }
 
 @test "run_remote_installer: executes the downloaded installer through the requested runner (#430)" {
