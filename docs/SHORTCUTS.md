@@ -627,7 +627,7 @@ section survived for years.
 | `pgcli`, `mycli` | in-app | no man page; both use standard readline editing |
 | `w3m`, `bandwhich` | in-app | man pages carry no keybindings section |
 | `rovr`, `bmm`, `aichat` | in-app | no published keymap found |
-| `croft`, `herald`, `tiki` | in-app | first-party tools; consult their own help |
+| `croft`, `herald` | in-app | first-party tools; consult their own help |
 
 `kondo` is deliberately absent from every table: it is a CLI with a confirmation prompt, not
 a TUI, so it has no keymap at all.
@@ -918,7 +918,7 @@ jqp, jnv, mpv, newsboat, wiper, micro, lnav, stu, fzf.
 upstream default that may not apply.
 
 **In-app help is the documentation** — nnn, lazysql, e1s, btop, atuin, fx, gh-dash, atac,
-viddy, mprocs, pgcli, mycli, w3m, bandwhich, rovr, bmm, aichat, croft, herald, tiki. Each
+viddy, mprocs, pgcli, mycli, w3m, bandwhich, rovr, bmm, aichat, croft, herald. Each
 was checked against its man page, its `--help`, and its upstream README or docs site. None
 publishes a keymap table. The table above records what was checked for each, so this is a
 finding rather than a gap.

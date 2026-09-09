@@ -12,6 +12,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 - Added behavior checks for the global Git hook chain (#531).
 - Added generated-output inventory checks for verification and parser coverage (#534).
+- Added an omp protected-path extension for native mutations to credentials, dependency trees, and repository metadata (#540).
 
 ### Changed
 
@@ -19,6 +20,13 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - Extracted the mise shim linker for isolated filesystem checks (#532).
 - Corrected CI, verification, and pre-commit coverage claims (#535).
 - Routed omp by workload and made local Qwen the final fallback (#538).
+- Narrowed omp's shared skills to `api-testing`, `d2-diagrams`, and `office-layout-check` (#540).
+
+### Removed
+
+- Removed Tiki installation, configuration, notebook scaffolding, and six skills. Existing files under `~/Documents/notes` remain untouched (#540).
+- Removed the dbmate skill while retaining the dbmate CLI (#540).
+- Removed `turn-counter.ts`, `permission-gate.ts`, `confirm-destructive.ts`, `git-checkpoint.ts`, `dirty-repo-guard.ts`, and `notify.ts` from omp (#540).
 
 ### Fixed
 

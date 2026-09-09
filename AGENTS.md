@@ -351,7 +351,7 @@ Releases are hand-prepared in a PR, then **a tag push triggers the GitHub releas
 
 ## What the script provisions for Claude (so you can reason about it)
 
-- **Skills** installed to `~/.claude/skills/`: `tiki` (curl'd `SKILL.md`) and a **scoped set of Google Workspace (`gws`) skills** — Drive/Docs/Slides/Sheets/Forms only (sparse-cloned from `googleworkspace/cli`; Gmail/Calendar/Chat/Meet deliberately excluded). Skills are recipes, **not** an access boundary — `gws`'s reach is set by the OAuth scopes granted at `gws auth setup`.
+- **Skills** installed to `~/.claude/skills/`: three first-party skills (`api-testing`, `d2-diagrams`, `office-layout-check`) and scoped Google Workspace skills for Drive, Docs, Slides, Sheets, and Forms. Gmail, Calendar, Chat, and Meet skills stay excluded. Skills are recipes, not an access boundary. Google Workspace access follows the OAuth scopes from `gws auth setup`.
 - **MCP servers** registered via `claude mcp add` (not idempotent — the script guards): `filesystem, github, git, fetch, context7, aws-docs, aws-pricing, aws-iac, aws-knowledge, cloudwatch, iam, herald`.
 
 ## Hard stops

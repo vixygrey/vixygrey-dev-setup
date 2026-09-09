@@ -1,5 +1,4 @@
 # id|path-expression|policy|format|category|parser|runtime-verifier
-home-claude-skills-tiki-skill-md|$HOME/.claude/skills/tiki/SKILL.md|generated|markdown|configs|none|none
 starship-config|$STARSHIP_CONFIG|managed|shell|configs|bash|starship
 gpg-agent-conf|$GPG_AGENT_CONF|managed|text|configs|none|none
 aria2-config|$ARIA2_CONFIG|managed|text|configs|none|none
@@ -7,7 +6,6 @@ atuin-config|$ATUIN_CONFIG|managed|text|configs|none|atuin
 atuin-config-dir-themes-dracula-sakura-toml|$ATUIN_CONFIG_DIR/themes/dracula-sakura.toml|generated|toml|configs|taplo|none
 lazygit-config|$LAZYGIT_CONFIG|managed|text|configs|none|lazygit
 lazygit-superseded|$LAZYGIT_SUPERSEDED|superseded|text|configs|none|none
-tiki-workflow|$TIKI_WORKFLOW|managed|text|configs|none|none
 k9s-skin|$K9S_SKIN|managed|text|configs|none|none
 k9s-main-config|$K9S_MAIN_CONFIG|managed|text|configs|none|k9s
 k9s-superseded-dir-skins-dracula-yaml|$K9S_SUPERSEDED_DIR/skins/dracula.yaml|superseded|yaml|configs|yq|none
@@ -95,8 +93,6 @@ sbar-plugins-shottr-click-sh|$SBAR_PLUGINS/shottr_click.sh|managed-script|shell|
 sbar-plugins-shottr-sh|$SBAR_PLUGINS/shottr.sh|managed-script|shell|configs|bash|none
 herald-theme-file|$HERALD_THEME_FILE|generated|text|configs|none|none
 direnv-config|$DIRENV_CONFIG|managed|text|configs|none|direnv
-tiki-index|$TIKI_INDEX|managed|text|configs|none|none
-tiki-readme|$TIKI_README|managed|text|configs|none|none
 home-scripts-bin-clean-downloads|$HOME/Scripts/bin/clean-downloads|managed-script|text|configs|none|none
 home-scripts-bin-new-project|$HOME/Scripts/bin/new-project|managed-script|text|configs|none|none
 home-scripts-bin-clone-work|$HOME/Scripts/bin/clone-work|managed-script|text|configs|none|none
@@ -147,12 +143,7 @@ claude-commands-dir-probe-assumptions-md|$CLAUDE_COMMANDS_DIR/probe-assumptions.
 claude-commands-dir-probe-evidence-md|$CLAUDE_COMMANDS_DIR/probe-evidence.md|generated|markdown|configs|none|none
 claude-commands-dir-probe-implications-md|$CLAUDE_COMMANDS_DIR/probe-implications.md|generated|markdown|configs|none|none
 omp-theme-file|$OMP_THEME_FILE|generated|text|configs|none|none
-omp-skills-dir-tiki-capture-skill-md|$OMP_SKILLS_DIR/tiki-capture/SKILL.md|generated|markdown|configs|none|none
-omp-skills-dir-tiki-review-skill-md|$OMP_SKILLS_DIR/tiki-review/SKILL.md|generated|markdown|configs|none|none
-omp-skills-dir-tiki-groom-skill-md|$OMP_SKILLS_DIR/tiki-groom/SKILL.md|generated|markdown|configs|none|none
-omp-skills-dir-tiki-arc-skill-md|$OMP_SKILLS_DIR/tiki-arc/SKILL.md|generated|markdown|configs|none|none
-omp-skills-dir-tiki-journal-skill-md|$OMP_SKILLS_DIR/tiki-journal/SKILL.md|generated|markdown|configs|none|none
-omp-extensions-dir-turn-counter-ts|$OMP_EXTENSIONS_DIR/turn-counter.ts|generated|text|configs|none|none
+omp-extensions-dir-protected-paths-ts|$OMP_EXTENSIONS_DIR/protected-paths.ts|generated|text|configs|none|none
 zshrc|$ZSHRC|managed|shell|configs|bash|none
 micro-settings|$MICRO_CONFIG_DIR/settings.json|merged|json|configs|jq|none
 croft-config|$CROFT_CONFIG|merged|json|configs|jq|none
