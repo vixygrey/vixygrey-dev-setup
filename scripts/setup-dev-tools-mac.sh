@@ -384,7 +384,7 @@ declare -A CATEGORY_DESC=(
     [containers]="lazydocker, dive, kubectl, k9s"
     [api]="ATAC, grpcurl"
     [networking]="mtr, bandwhich, nmap"
-    [dx]="fzf, starship, atuin, croft, micro, VS Code (+ extensions), Ghostty, zellij, llm, aichat, pi, omp"
+    [dx]="fzf, starship, atuin, croft, micro, VS Code (+ extensions), Ghostty, zellij, llm, aichat, omp"
     [ux]="Lighthouse"
     [docs]="d2, Mermaid CLI"
     [mac-system]="Pearcleaner, dockutil, terminal-notifier"
@@ -423,7 +423,7 @@ declare -A CONFIG_LIVES_IN_CONFIGS=(
     [database]="pgcli, mycli, harlequin"
     [containers]="lazydocker, k9s (config + Dracula skin)"
     [networking]="trippy"
-    [dx]="atuin, croft config/theme, zellij, Ghostty, VS Code settings, aichat, pi (~/.pi/agent + shared ~/.agents/skills links), omp (~/.omp/agent) — and starship, which is in the \`dracula\` category"
+    [dx]="atuin, croft config/theme, zellij, Ghostty, VS Code settings, aichat, omp (~/.omp/agent + shared ~/.agents/skills links) — and starship, which is in the \`dracula\` category"
     [mac-productivity]="tiki workflow, herald theme asset + theme-name merge"
     [mac-focus]="newsboat"
     [mac-media]="mpv"
@@ -1720,7 +1720,6 @@ if [[ "$UNINSTALL" == "true" ]]; then
     echo ""
     echo "# Remove tools not managed by brew (--cleanup can't reach these):"
     echo "  npm uninstall -g @github/copilot         # GitHub Copilot CLI"
-    echo "  npm uninstall -g --ignore-scripts @earendil-works/pi-coding-agent  # pi"
     echo "  gh extension remove github/gh-copilot   # the RETIRED gh-extension Copilot CLI, if still present"
     echo "  rm -f ~/.local/share/go/bin/helix-assist  # dropped Claude LSP for Helix"
     echo "  cargo uninstall croft                    # the terminal IDE (if you want it gone)"
@@ -1732,8 +1731,7 @@ if [[ "$UNINSTALL" == "true" ]]; then
     echo "# Remove Claude Code config (CAREFUL — contains your custom rules):"
     echo "  rm -rf ~/.claude/settings.json ~/.claude/CLAUDE.md ~/.claude/rules ~/.claude/hooks ~/.claude/commands ~/.claude/agents ~/.claude/statusline.sh"
     echo ""
-    echo "# Remove pi config, bigpowers, and shared-skill links (if you want pi gone too):"
-    echo "  rm -rf ~/.pi/agent"
+    echo "# Remove bigpowers and the shared-skill links omp reads:"
     echo "  npm uninstall -g bigpowers"
     echo "  rm -f ~/.agents/skills/api-testing ~/.agents/skills/d2-diagrams ~/.agents/skills/dbmate-migrations ~/.agents/skills/office-docs ~/.agents/skills/tiki"
     echo ""
@@ -1792,6 +1790,9 @@ if [[ "$CLEANUP" == "true" ]]; then
         "npm:playwright:Playwright:removed"
         "npm:storybook:Storybook CLI:removed"
         "npm:repomix:repomix (npm copy):Claude Code"
+        # Retired in #513: omp is a fork of pi and now does natively everything the
+        # pi block generated. ~/.pi goes with it, through CONFIG_ORPHANS below.
+        "npm:@earendil-works/pi-coding-agent:pi (superseded by omp):omp"
         "cask:qlmarkdown:QLMarkdown (Quick Look):removed"
         "cask:qlstephen:QLStephen (Quick Look):removed"
         "cask:protonvpn:Proton VPN:Mullvad VPN"
@@ -2080,6 +2081,12 @@ if [[ "$CLEANUP" == "true" ]]; then
         "aerospace|$HOME/.aerospace.toml|native Spaces + tiling"
         "nvm|$HOME/.nvm|mise"
         "pyenv|$HOME/.pyenv|mise"
+        # CAUTION: ~/.pi holds content this generator never wrote — hand-placed
+        # extensions, auth.json and session history. Removal is deliberate (#513)
+        # and is guarded the way section 15 requires: this sweep only fires when
+        # `pi` is absent from PATH, and it moves the directory to the Trash rather
+        # than deleting it, so it stays recoverable from Finder until emptied.
+        "pi|$HOME/.pi|omp"
     )
     for entry in "${CONFIG_ORPHANS[@]}"; do
         _tool="${entry%%|*}"
@@ -2246,7 +2253,6 @@ if [[ "$VERIFY" == "true" ]]; then
     }
 
     VERIFY_TARGETS=(
-        "validate|pi|$HOME/.pi/agent/models.json|_verify_output_has '^ollama' pi --list-models"
         # `omp config get` prints the EFFECTIVE value, so a pass proves omp read the file
         # at this path and resolved our merged key — not merely that the YAML parses.
         # Reading theme.dark rather than a model role keeps it honest when no
@@ -3695,17 +3701,12 @@ fi
 
 # AI tools
 brew_install "aichat" "aichat (all-in-one AI CLI chat / shell copilot)"
-# Pi — a second, deliberately minimal coding harness. Install from npm with
-# --ignore-scripts, which current Pi docs recommend and which this helper can pass
-# through directly. Pi itself is the package here; its managed settings/theme/models
-# live in the configs section further down.
-if installed npm; then
-    npm_global_install "@earendil-works/pi-coding-agent" "pi (minimal coding agent — secondary agent alongside Claude Code)" --ignore-scripts
-else
-    progress  # keep progress bar accurate when npm unavailable
-fi
+# pi was retired in #513. omp is a fork of it, so everything the pi block generated
+# is now either a native omp feature (SearXNG web search, local Ollama discovery,
+# approval policies) or moved into the omp block (the Tiki skills, the shared skills
+# bridge). `--cleanup` uninstalls the package and sweeps ~/.pi.
 # Oh My Pi (omp) — the maximalist fork of Pi: 32 tools, LSP, DAP, subagents, and nine
-# model roles. Routed at Gemini here; Pi stays local-first and Claude Code keeps MCP.
+# model roles. Routed at Gemini here; Claude Code keeps MCP and the broad automation.
 #
 # From the TAP, not npm, for two reasons. The npm package declares `engines.bun >=
 # 1.3.14` (it is a Bun program, not a Node one), so `npm_global_install` is the wrong
@@ -3718,7 +3719,7 @@ brew_install "can1357/tap/omp" "omp (Oh My Pi — Gemini-routed agent harness)"
 # Claude Code (installed via npm, not brew). bigpowers is installed globally too so its
 # own Claude-side helper can link skills/hooks from the package tree in the configs pass.
 if installed npm; then
-    npm_global_install "bigpowers@2.88.1" "bigpowers (third-party skill pack for Pi + Claude Code)"
+    npm_global_install "bigpowers@2.88.1" "bigpowers (third-party skill pack for Claude Code)"
     npm_global_install "@anthropic-ai/claude-code" "Claude Code (AI-assisted coding in terminal)"
     # GitHub Copilot CLI (#356). A STANDALONE npm package now — `gh extension install
     # github/gh-copilot` is the retired path, and the uninstall notes still pointed at it.
@@ -3849,7 +3850,7 @@ brew_cask_install "claude" "Claude (AI assistant)"
 # Notion (GUI) replaced by tiki — terminal Markdown workspace (tasks/docs/kanban/wiki, git-backed).
 trust_tap boolean-maybe/tap
 brew_install "boolean-maybe/tap/tiki" "tiki (terminal Markdown workspace — tasks, docs, kanban, wiki; git-backed)"
-# tiki skill — teaches Claude/Pi to manage the user's notes/tasks via `tiki exec`
+# tiki skill — teaches Claude/omp to manage the user's notes/tasks via `tiki exec`
 # (CRUD with auto git-staging). Keep a local generated copy rather than blindly
 # fetching upstream so the machine gets the notebook-specific workflow cautions,
 # JSON-first query guidance, and softer note-taking examples this setup relies on.
@@ -4093,7 +4094,7 @@ tiki exec --format json 'select createdAt, createdBy where id = "X7F4K2"'
 - Exit codes: 0 = ok, 2 = usage error, 3 = startup failure, 4 = query error.
 SKILL_TIKI
 if [[ "$DRY_RUN" != "true" ]]; then
-    success "tiki Claude/Pi skill written (~/.claude/skills/tiki/)"
+    success "tiki Claude/omp skill written (~/.claude/skills/tiki/)"
 fi
 # Terminal email + calendar → herald: one app for email AND calendar (Gmail work +
 # iCloud personal, IMAP/SMTP + CalDAV), with built-in AI triage/summaries and an MCP
@@ -4109,14 +4110,14 @@ brew_install "herald-email/herald/herald" "herald (terminal email + calendar —
 # live, then seed the local model inventory this machine wants available. Two are
 # load-bearing for existing features here — gemma3:4b for herald text tasks + croft pair,
 # and nomic-embed-text-v2-moe for herald semantic search — and the additional chat/coding
-# models are restored so Pi can be wired to the same local model set in #436. Every step is
+# models are restored so omp can reach the same local model set. Every step is
 # idempotent and honors --dry-run.
 brew_install "ollama" "ollama (local LLM runtime — backs herald AI + croft pair --provider ollama)"
 # Default model set, pulled on every run (skipped if already present). Keep the general
 # chat/coding models before the embedding model so docs and first-run guidance can name the
 # human-usable ones first.
 OLLAMA_DEFAULT_MODELS=(
-    "qwen2.5-coder:14b"         # local coding model for Pi / Ollama-heavy loops (~9.0 GB)
+    "qwen2.5-coder:14b"         # local coding model for omp / Ollama-heavy loops (~9.0 GB)
     "llama3.1:8b"              # general local assistant (~4.9 GB)
     "gemma3:4b"                # herald triage/summaries/compose + croft pair (~3.3 GB)
     "llama3.2:latest"          # smaller local general model (~2.0 GB)
@@ -11582,8 +11583,8 @@ write_managed "$CLAUDE_MD" "#" <<'CLAUDE_MD_CONF'
   - Note the asymmetry: an issue body is loose, its PR body is strict. One carve-out overrides
     the tier, and it is safety. A warning about data loss or an irreversible action is
     command-first, risk-second wherever it appears.
-  - pi and omp follow the identical file at the tail of `~/.pi/agent/AGENTS.md` and
-    `~/.omp/agent/AGENTS.md`, from the same source.
+  - omp follows the identical file at the tail of `~/.omp/agent/AGENTS.md`, from the
+    same generator, so the two agents cannot disagree about how to write.
 
 ## Agent instructions in a repo: public `AGENTS.md`, private `CLAUDE.md`
 Two files, two audiences. Keep them separate in every repository.
@@ -11620,7 +11621,7 @@ Rules that follow from this:
 - Treat warnings as real signals. Investigate and resolve them rather than dismissing them.
 
 ## This machine's config is GENERATED. Edit the generator, not the output
-- `~/.zshrc`, `~/.claude/` (this file, `rules/`, `agents/`, `commands/`, `hooks/`, `settings.json`), `~/.config/*`, `~/.pi/agent/AGENTS.md`, and the Desktop docs are all written by **`~/Code/personal/vixygrey-dev-setup-main/scripts/setup-dev-tools-mac.sh`**, and refreshed on every run.
+- `~/.zshrc`, `~/.claude/` (this file, `rules/`, `agents/`, `commands/`, `hooks/`, `settings.json`), `~/.config/*`, `~/.omp/agent/AGENTS.md`, and the Desktop docs are all written by **`~/Code/personal/vixygrey-dev-setup-main/scripts/setup-dev-tools-mac.sh`**, and refreshed on every run.
 - **Never hand edit those files to make a change stick**. Anything between the `>>> dev-setup managed block` markers is overwritten on the next run. Edit the matching heredoc in that script instead, then re run it. A direct edit is fine as a temporary local patch, but say so explicitly, because it will be reverted.
 - Edits *outside* the markers survive, as does `settings.json` (merged with `jq`, not replaced, so your own permission rules are kept).
 - The script is the source of truth for what is installed. Before recommending a tool, check it is actually present (`command -v <tool>`). Also note that the binary name often differs from the package name (`trippy`→`trip`, `nushell`→`nu`, `dynein`→`dy`, `imagemagick`→`magick`, `aws-sam-cli`→`sam`, `csvkit`→`csvlook`/`in2csv`).
@@ -11673,7 +11674,7 @@ Rules that follow from this:
 - **Code quality**: `typos` for spell checking, `ast-grep` for structural search/replace, `shellcheck`/`shfmt` for shell, `scc` to count lines of code by language with complexity + COCOMO cost, `manly` to explain a command's flags from its man page
 - **Security**: `trivy` to scan containers/IaC, `gitleaks` for secrets, `semgrep` for static analysis, `detect-secrets` for pre-commit secret detection, `sops` for secrets encryption
 - **IaC**: `tofu` (Terraform), `tflint` for linting, `terraform-docs` for module READMEs, `checkov` for static analysis, `infracost` for cost estimation, `cfn-lint` for CloudFormation, `sam` for SAM (note: `tfsec` checks live in `trivy config`)
-- **AI / agentic**: `claude` (Claude Code) is the coding agent — do agentic, multi-file edits yourself. `llm` for one-shot prompts and embeddings. `copilot` (GitHub Copilot CLI) is available too. Two secondary harnesses sit alongside: **`pi`** (minimal, local-model-first) and **`omp`** (Oh My Pi — maximalist fork of pi, routed at Gemini, needs `GEMINI_API_KEY`). Both read `~/.agents/skills/` and carry the same house preferences and writing rules as this file. **pi has no MCP support at all**, so herald, gws, GitHub and AWS work can never go there. omp does have MCP and inherits servers already declared under `.claude`, but this setup registers none for it, so treat those integrations as Claude Code's until that changes.
+- **AI / agentic**: `claude` (Claude Code) is the coding agent — do agentic, multi-file edits yourself. `llm` for one-shot prompts and embeddings. `copilot` (GitHub Copilot CLI) is available too. One secondary harness sits alongside: **`omp`** (Oh My Pi — a maximalist fork of pi, routed at Gemini, needs `GEMINI_API_KEY`). It reads `~/.agents/skills/` and carries the same house preferences and writing rules as this file. omp does have MCP and inherits servers already declared under `.claude`, but this setup registers none for it, so treat herald, gws, GitHub and AWS as Claude Code's until that changes. pi was retired in 7.22.0; omp is its fork and does natively what pi needed extensions for.
 - **HTTP**: `xh` for colorized requests, `curlie` for curl with httpie output, `grpcurl` for gRPC
 - **Network**: `trip` (trippy) for traceroute TUI, `sudo mtr` (requires root, lives in sbin), `bandwhich` for bandwidth, `nmap` for scanning, `mkcert` for local TLS certs
 - **Docs**: `d2` for diagrams, `pandoc` for conversion, `leaf` for Markdown preview, `doxx` to read/preview `.docx` files in the terminal
@@ -11843,12 +11844,11 @@ Every project should have a README.md with:
 CLAUDE_MD_CONF
 configured "Claude Code global CLAUDE.md written (refreshed each run; edits outside the markers are kept)"
 
-# ---- Shared agent preferences (pi + omp) ----
-# ONE definition, TWO consumers: ~/.pi/agent/AGENTS.md and ~/.omp/agent/AGENTS.md.
-# The body is harness-agnostic — voice, output preferences, context discipline, coding
-# behavior — so nothing in it was ever pi-specific except the heading, which is why it
-# takes the harness name as an argument instead of being copied (#504). Same reasoning
-# as emit_writing_rules below: two heredocs drift the first time one is edited alone.
+# ---- Agent preferences (omp) ----
+# Written to ~/.omp/agent/AGENTS.md. This had two consumers until pi was retired
+# (#513); it stays a function because the body is 50 lines of prose and the heading
+# is the only part that varies, so a second harness costs one call rather than a
+# second copy that drifts (the #504 reasoning, still worth keeping).
 #
 # Claude Code deliberately does NOT consume this. Its equivalent lives in the managed
 # block of ~/.claude/CLAUDE.md, which carries repo-workflow rules these two do not get.
@@ -11908,11 +11908,10 @@ AGENT_PREFS_BODY
 }
 
 # ---- Shared writing rules (Simplified Technical English) ----
-# ONE definition, THREE consumers: ~/.claude/rules/writing.md for Claude Code, and the
-# tail of ~/.pi/agent/AGENTS.md and ~/.omp/agent/AGENTS.md for pi and omp. All three
-# agents must follow provably identical rules, which separate heredocs could not
-# guarantee — the copies would drift the first time one of them was edited alone.
-# This function is the reason they cannot.
+# ONE definition, TWO consumers: ~/.claude/rules/writing.md for Claude Code, and the
+# tail of ~/.omp/agent/AGENTS.md for omp. Both agents must follow provably identical
+# rules, which separate heredocs could not guarantee — the copies would drift the
+# first time one of them was edited alone. This function is the reason they cannot.
 #
 # The content is the 53 rules of ASD-STE100 Issue 9 as paraphrased by the
 # `simple-english` skill that ships with the pinned bigpowers package. That skill is
@@ -13214,103 +13213,105 @@ SKILL_API
     success "First-party Claude skills written: office-docs, d2-diagrams, dbmate-migrations, api-testing -> ~/.claude/skills/"
 fi
 
-# ---- pi coding agent (~/.pi/agent) ----
-# Pi ignores XDG_CONFIG_HOME completely. Settings, themes, sessions, models, and auth all
-# live under ~/.pi/agent, so that is the one path family to manage — not ~/.config/pi.
-# Credentials stay user-owned: `pi` then `/login` writes ~/.pi/agent/auth.json and this
-# script never reads or writes it.
-PI_DIR="$HOME/.pi/agent"
-PI_THEME_DIR="$PI_DIR/themes"
-PI_EXTENSIONS_DIR="$PI_DIR/extensions"
-PI_THEME_FILE="$PI_THEME_DIR/dracula-sakura.json"
-PI_MODELS_FILE="$PI_DIR/models.json"
-PI_SETTINGS_FILE="$PI_DIR/settings.json"
-PI_SKILLS_DIR="$PI_DIR/skills"
+# ---- Claude Code: bigpowers skills/hooks ----
+# This lived inside the pi block until #513, but has nothing to do with pi: it
+# runs bigpowers' own installGlobal helper against the "claude" target. pi's
+# "packages" pinning was the pi-coupled half, and that went with pi. This did not.
+if [[ "$DRY_RUN" == "true" ]]; then
+    info "[DRY RUN] Would link bigpowers into Claude Code (~/.claude/skills + hooks)"
+elif installed npm && _npm_has "bigpowers@2.88.1"; then
+    _bp_root="$(npm root -g 2>/dev/null)/bigpowers"
+    if [[ -d "$_bp_root" ]]; then
+        if node - <<'NODE' "$_bp_root" >> "$LOG_FILE" 2>&1
+const path = require('path');
+const root = process.argv[2];
+const { installGlobal } = require(path.join(root, 'scripts', 'lib', 'install-helpers.js'));
+installGlobal({ id: 'claude', name: 'Claude Code' }, root);
+NODE
+        then
+            success "bigpowers linked into Claude Code (~/.claude/skills + hooks)"
+        else
+            warn "bigpowers install helper failed for Claude Code — inspect the log"
+        fi
+    else
+        warn "bigpowers npm package not found under npm root — skipping Claude link"
+    fi
+    unset _bp_root
+else
+    warn "bigpowers not installed globally — skipping Claude link"
+fi
+
+# ---- Oh My Pi (omp) coding agent (~/.omp/agent) ----
+# omp is the maximalist fork of pi, and since #513 the only agent here beside Claude
+# Code: 32 tools, LSP, DAP, subagents, nine model roles.
+# It ignores XDG_CONFIG_HOME the same way pi does, so ~/.omp/agent is the one path
+# family to manage — not ~/.config/omp. Credentials stay user-owned: the `google`
+# provider reads GEMINI_API_KEY from the environment and this script never reads,
+# writes, or echoes it (#504).
+#
+# Two vocabulary traps upstream, both worth naming here because the ids share one
+# namespace and the wrong one fails silently:
+#   * `google` is the MODEL provider (the Gemini API). `gemini` is a DISCOVERY
+#     provider — the source that reads GEMINI.md. Disabling or configuring the
+#     wrong one does nothing visible. Roles below are all `google/...`.
+#   * `~/.agents/skills` is omp's CANONICAL native skills location, not a foreign
+#     import. The five skills the pi block links there are picked up with no extra
+#     work, which is why this block generates no skills of its own.
+OMP_DIR="$HOME/.omp/agent"
+OMP_THEME_DIR="$OMP_DIR/themes"
+OMP_THEME_FILE="$OMP_THEME_DIR/dracula-sakura.json"
+# Two skill directories, both verified against omp's source rather than its docs,
+# which describe the layout without pinning the user-level path (#513):
+#   ~/.omp/agent/skills  — the `native` provider, priority 100. Confirmed at
+#                          src/discovery/builtin.ts:294, "User-level scan from
+#                          ~/.omp/agent/skills/".
+#   ~/.agents/skills     — the `agents` provider, priority 70. On by default:
+#                          `omp config list` reports skills.enableAgentsUser=true.
+# Note `omp read skill://<name>` answers "Unknown skill" for both from a bare
+# shell. That subcommand does not load the session skill registry, so it is not
+# evidence of a discovery problem — do not "fix" a working path because of it.
+OMP_SKILLS_DIR="$OMP_DIR/skills"
 AGENTS_SKILLS="$HOME/.agents/skills"
-PI_SHARED_SKILLS=(api-testing d2-diagrams dbmate-migrations office-docs tiki)
-PI_LOCAL_TIKI_SKILLS=(tiki-capture tiki-review tiki-groom tiki-arc tiki-journal)
+# The five shared skills, symlinked from ~/.claude/skills. omp reads this
+# directory natively; the list is unchanged from what pi shared (#513).
+OMP_SHARED_SKILLS=(api-testing d2-diagrams dbmate-migrations office-docs tiki)
+# Tiki companions generated locally. The general `tiki` CRUD skill is shared
+# above; these five are the workflow recipes layered on top of it.
+OMP_LOCAL_TIKI_SKILLS=(tiki-capture tiki-review tiki-groom tiki-arc tiki-journal)
+# config.yml is canonical; an existing config.yaml is loaded and updated in place by
+# omp itself, so target whichever one is already there rather than creating a second
+# file the tool would then ignore.
+OMP_CONFIG_FILE="$OMP_DIR/config.yml"
+[[ -f "$OMP_DIR/config.yaml" && ! -f "$OMP_CONFIG_FILE" ]] && OMP_CONFIG_FILE="$OMP_DIR/config.yaml"
 
 if [[ "$DRY_RUN" == "true" ]]; then
-    info "[DRY RUN] Would write pi config -> $PI_DIR (settings.json, models.json, themes/dracula-sakura.json)"
-    info "[DRY RUN] Would write Pi extension(s) -> $PI_EXTENSIONS_DIR/"
-    info "[DRY RUN] Would write ${#PI_LOCAL_TIKI_SKILLS[@]} Pi-local Tiki skills -> $PI_SKILLS_DIR/"
-    info "[DRY RUN] Would link ${#PI_SHARED_SKILLS[@]} shared skills -> $AGENTS_SKILLS/"
+    info "[DRY RUN] Would write omp config -> $OMP_DIR (AGENTS.md, themes/dracula-sakura.json)"
+    info "[DRY RUN] Would merge omp settings -> $OMP_CONFIG_FILE (theme, Gemini model roles)"
+    info "[DRY RUN] Would write ${#OMP_LOCAL_TIKI_SKILLS[@]} omp-local Tiki skills -> $OMP_SKILLS_DIR/"
+    info "[DRY RUN] Would link ${#OMP_SHARED_SKILLS[@]} shared skills -> $AGENTS_SKILLS/"
 else
-    mkdir -p "$PI_THEME_DIR" "$PI_EXTENSIONS_DIR" "$PI_SKILLS_DIR" "$AGENTS_SKILLS"
-
-    # -- models.json --------------------------------------------------------------
-    # Pi's custom-model support is chat-model oriented. The local embedding model
-    # `nomic-embed-text-v2-moe:latest` is therefore deliberately NOT exposed here even
-    # though setup still pulls it for herald/aichat; listing it as a chat model would make
-    # it selectable in pi while remaining useless for the agent loop.
-    PI_OLLAMA_PROVIDER='{"ollama":{"baseUrl":"http://127.0.0.1:11434/v1","api":"openai-completions","apiKey":"ollama","compat":{"supportsDeveloperRole":false,"supportsReasoningEffort":false},"models":[{"id":"qwen2.5-coder:14b","name":"Qwen2.5 Coder 14B (local)"},{"id":"llama3.1:8b","name":"Llama 3.1 8B (local)"},{"id":"gemma3:4b","name":"Gemma 3 4B (local)"},{"id":"llama3.2:latest","name":"Llama 3.2 (local)"}]}}'
-    if command -v jq &>/dev/null; then
-        PI_TMP=$(mktemp)
-        [[ -f "$PI_MODELS_FILE" ]] || echo '{}' > "$PI_MODELS_FILE"
-        if jq --argjson prov "$PI_OLLAMA_PROVIDER" '.providers = ((.providers // {}) + $prov)' "$PI_MODELS_FILE" > "$PI_TMP" 2>/dev/null; then
-            mv "$PI_TMP" "$PI_MODELS_FILE"
-            success "pi: local Ollama models registered (~/.pi/agent/models.json)"
-        else
-            rm -f "$PI_TMP"
-            warn "pi: could not merge models.json"
-        fi
-    else
-        warn "pi: jq missing — skipping models.json"
-    fi
-
-    # -- settings.json ------------------------------------------------------------
-    if command -v jq &>/dev/null; then
-        PI_TMP=$(mktemp)
-        [[ -f "$PI_SETTINGS_FILE" ]] || echo '{}' > "$PI_SETTINGS_FILE"
-        if jq '
-               def bp: "npm:bigpowers@2.88.1";
-               .theme = "dracula-sakura"
-               | .enableInstallTelemetry = false
-               | .enableAnalytics = false
-               | .externalEditor = (.externalEditor // "micro")
-               | .enableSkillCommands = (.enableSkillCommands // true)
-               | .defaultProvider = (.defaultProvider // "ollama")
-               | .defaultModel = (.defaultModel // "qwen2.5-coder:14b")
-               | .defaultThinkingLevel = (.defaultThinkingLevel // "minimal")
-               | .packages = (
-                   (.packages // [])
-                   | map(
-                       if type == "string" and (. == "npm:bigpowers" or startswith("npm:bigpowers@")) then bp
-                       elif type == "object" and (.source? | type == "string") and ((.source == "npm:bigpowers") or (.source | startswith("npm:bigpowers@"))) then .source = bp
-                       else .
-                       end
-                     )
-                   | if any((type == "string" and . == bp) or (type == "object" and .source? == bp)) then . else . + [bp] end
-                 )' \
-             "$PI_SETTINGS_FILE" > "$PI_TMP" 2>/dev/null; then
-            mv "$PI_TMP" "$PI_SETTINGS_FILE"
-            success "pi: settings written (Dracula-Sakura, local Ollama default, telemetry off)"
-        else
-            rm -f "$PI_TMP"
-            warn "pi: could not merge settings.json"
-        fi
-    else
-        warn "pi: jq missing — skipping settings.json merge"
-    fi
+    mkdir -p "$OMP_THEME_DIR" "$OMP_SKILLS_DIR" "$AGENTS_SKILLS"
 
     # -- AGENTS.md ----------------------------------------------------------------
-    # Two parts, one file. The preferences below are pi's own; the writing rules are
-    # appended from emit_writing_rules, the same function that writes Claude Code's
-    # ~/.claude/rules/writing.md, so the two agents cannot disagree about how to write
-    # (#491). pi has no rules/ directory, so AGENTS.md is the only place this can go.
-    # This costs pi roughly 3.5k tokens of a system prompt that is otherwise under 1k,
-    # which is a deliberate trade: an ungoverned local model produces the slop the
-    # rules exist to prevent.
+    # Same two-part shape as pi's: shared preferences, then the shared writing rules.
+    # Both come from the same emitters, so the two harnesses cannot drift (#504).
+    # omp gives this file the highest precedence of any user-level context source —
+    # its `native` provider outranks claude, codex, and the rest — so it shadows
+    # ~/.claude/CLAUDE.md for omp sessions rather than stacking with it.
     {
-    emit_agent_preferences "Pi"
+    emit_agent_preferences "Oh My Pi"
     emit_writing_rules
-    } | write_generated "$PI_DIR/AGENTS.md"
-    success "pi: AGENTS.md written, with the shared writing rules (~/.pi/agent/AGENTS.md)"
+    } | write_generated "$OMP_DIR/AGENTS.md"
+    success "omp: AGENTS.md written, with the shared writing rules (~/.omp/agent/AGENTS.md)"
 
     # -- Dracula-Sakura theme -----------------------------------------------------
-    write_generated "$PI_THEME_FILE" <<'PI_THEME_CONF'
+    # Same palette as pi's theme, different schema: omp requires every one of its
+    # colour tokens, including thirteen statusLine* entries and a `link` and
+    # `toolText` that pi has no equivalent for. So this is authored against omp's
+    # own schema rather than inherited from pi, whose theme had a different token set.
+    write_generated "$OMP_THEME_FILE" <<'OMP_THEME_CONF'
 {
-  "$schema": "https://raw.githubusercontent.com/earendil-works/pi/main/packages/coding-agent/src/modes/interactive/theme/theme-schema.json",
+  "$schema": "https://raw.githubusercontent.com/can1357/oh-my-pi/main/packages/coding-agent/src/modes/theme/theme-schema.json",
   "name": "dracula-sakura",
   "vars": {
     "bg": "#282a36",
@@ -13344,10 +13345,6 @@ else
     "text": "fg",
     "thinkingText": "comment",
     "selectedBg": "selection",
-    "scrollbarTrack": "current",
-    "scrollbarThumb": "lilac",
-    "searchMatchBg": "yellow",
-    "searchMatchText": "bg",
     "userMessageBg": "panel",
     "userMessageText": "fg",
     "customMessageBg": "panelSoft",
@@ -13387,7 +13384,22 @@ else
     "thinkingHigh": "rose",
     "thinkingXhigh": "blush",
     "thinkingMax": "red",
-    "bashMode": "mint"
+    "bashMode": "mint",
+    "pythonMode": "lilac",
+    "statusLineBg": "panel",
+    "statusLineSep": "current",
+    "statusLineModel": "rose",
+    "statusLinePath": "cyan",
+    "statusLineGitClean": "mint",
+    "statusLineGitDirty": "peach",
+    "statusLineContext": "lilac",
+    "statusLineSpend": "cyan",
+    "statusLineStaged": "mint",
+    "statusLineDirty": "peach",
+    "statusLineUntracked": "blush",
+    "statusLineOutput": "blush",
+    "statusLineCost": "rose",
+    "statusLineSubagents": "lilac"
   },
   "export": {
     "pageBg": "#1f2030",
@@ -13395,448 +13407,13 @@ else
     "infoBg": "#3e3148"
   }
 }
-PI_THEME_CONF
-    success "pi: Dracula-Sakura theme written (~/.pi/agent/themes/dracula-sakura.json)"
+OMP_THEME_CONF
+    success "omp: Dracula-Sakura theme written (~/.omp/agent/themes/dracula-sakura.json)"
 
-    # -- Pi extension: local SearXNG-backed web access ----------------------------
-    write_generated "$PI_EXTENSIONS_DIR/searxng-web.ts" <<'PI_SEARXNG_WEB_EXT'
-/**
- * SearXNG Web Tools for Pi
- *
- * Custom tools:
- * - searxng_search: query a local SearXNG instance and return normalized results
- * - searxng_fetch: fetch and lightly extract readable text from a URL
- *
- * Configuration:
- *   SEARXNG_BASE_URL=http://127.0.0.1:8080
- *
- * Notes:
- * - Only the configured SearXNG host may be local/private.
- * - Other fetched URLs must be public http/https addresses.
- */
-
-import { lookup } from "node:dns/promises";
-import net from "node:net";
-import { Type } from "@earendil-works/pi-ai";
-import { defineTool, type ExtensionAPI } from "@earendil-works/pi-coding-agent";
-
-const DEFAULT_BASE_URL = "http://127.0.0.1:8080";
-const DEFAULT_TIMEOUT_MS = 12_000;
-const DEFAULT_MAX_CHARS = 12_000;
-const MAX_FETCH_CHARS = 50_000;
-const MAX_SEARCH_RESULTS = 10;
-
-function getBaseUrl(): URL {
-	const raw = (process.env.SEARXNG_BASE_URL || DEFAULT_BASE_URL).trim();
-	return new URL(raw.endsWith("/") ? raw : `${raw}/`);
-}
-
-function withTimeout(signal: AbortSignal, timeoutMs: number): AbortSignal {
-	const controller = new AbortController();
-	const timer = setTimeout(() => controller.abort(new Error(`Timed out after ${timeoutMs}ms`)), timeoutMs);
-	const abort = () => controller.abort(signal.reason);
-	if (signal.aborted) abort();
-	else signal.addEventListener("abort", abort, { once: true });
-	controller.signal.addEventListener(
-		"abort",
-		() => {
-			clearTimeout(timer);
-			signal.removeEventListener("abort", abort);
-		},
-		{ once: true },
-	);
-	return controller.signal;
-}
-
-function isPrivateIp(ip: string): boolean {
-	if (net.isIP(ip) === 4) {
-		if (ip.startsWith("10.")) return true;
-		if (ip.startsWith("127.")) return true;
-		if (ip.startsWith("192.168.")) return true;
-		const [a, b] = ip.split(".").map(Number);
-		if (a === 172 && b >= 16 && b <= 31) return true;
-		if (a === 169 && b === 254) return true;
-		if (a === 0) return true;
-		return false;
-	}
-	if (net.isIP(ip) === 6) {
-		const normalized = ip.toLowerCase();
-		return normalized === "::1" || normalized.startsWith("fc") || normalized.startsWith("fd") || normalized.startsWith("fe80:");
-	}
-	return false;
-}
-
-async function assertAllowedUrl(target: URL, searxngBase: URL): Promise<void> {
-	if (!["http:", "https:"].includes(target.protocol)) {
-		throw new Error(`Unsupported protocol: ${target.protocol}`);
-	}
-
-	const hostname = target.hostname.toLowerCase();
-	const searxHost = searxngBase.hostname.toLowerCase();
-	if (hostname === searxHost) return;
-
-	if (hostname === "localhost" || hostname.endsWith(".local")) {
-		throw new Error(`Refusing local/private hostname: ${hostname}`);
-	}
-
-	if (net.isIP(hostname) && isPrivateIp(hostname)) {
-		throw new Error(`Refusing local/private IP: ${hostname}`);
-	}
-
-	try {
-		const answers = await lookup(hostname, { all: true });
-		if (answers.some((entry) => isPrivateIp(entry.address))) {
-			throw new Error(`Refusing hostname that resolves to a private IP: ${hostname}`);
-		}
-	} catch (error) {
-		if (error instanceof Error && error.message.startsWith("Refusing")) throw error;
-	}
-}
-
-function decodeEntities(text: string): string {
-	return text
-		.replace(/&nbsp;/gi, " ")
-		.replace(/&amp;/gi, "&")
-		.replace(/&lt;/gi, "<")
-		.replace(/&gt;/gi, ">")
-		.replace(/&quot;/gi, '"')
-		.replace(/&#39;/gi, "'")
-		.replace(/&#x27;/gi, "'")
-		.replace(/&#x2F;/gi, "/")
-		.replace(/&#([0-9]+);/g, (_m, dec) => String.fromCodePoint(Number(dec)))
-		.replace(/&#x([0-9a-f]+);/gi, (_m, hex) => String.fromCodePoint(parseInt(hex, 16)));
-}
-
-function stripHtml(html: string): string {
-	return decodeEntities(
-		html
-			.replace(/<br\s*\/?>/gi, "\n")
-			.replace(/<\/p>/gi, "\n\n")
-			.replace(/<\/div>/gi, "\n")
-			.replace(/<\/li>/gi, "\n")
-			.replace(/<\/h[1-6]>/gi, "\n\n")
-			.replace(/<[^>]+>/g, " ")
-			.replace(/[ \t]+/g, " ")
-			.replace(/\n{3,}/g, "\n\n")
-			.trim(),
-	);
-}
-
-function extractTag(html: string, pattern: RegExp): string | undefined {
-	const match = html.match(pattern);
-	return match?.[1] ? decodeEntities(stripHtml(match[1])) : undefined;
-}
-
-function extractReadableContent(html: string): string {
-	let work = html;
-	for (const pattern of [
-		/<script\b[^>]*>[\s\S]*?<\/script>/gi,
-		/<style\b[^>]*>[\s\S]*?<\/style>/gi,
-		/<svg\b[^>]*>[\s\S]*?<\/svg>/gi,
-		/<noscript\b[^>]*>[\s\S]*?<\/noscript>/gi,
-		/<nav\b[^>]*>[\s\S]*?<\/nav>/gi,
-		/<footer\b[^>]*>[\s\S]*?<\/footer>/gi,
-		/<header\b[^>]*>[\s\S]*?<\/header>/gi,
-		/<form\b[^>]*>[\s\S]*?<\/form>/gi,
-		/<aside\b[^>]*>[\s\S]*?<\/aside>/gi,
-	]) {
-		work = work.replace(pattern, " ");
-	}
-
-	const candidates = [
-		extractTag(work, /<main\b[^>]*>([\s\S]*?)<\/main>/i),
-		extractTag(work, /<article\b[^>]*>([\s\S]*?)<\/article>/i),
-		extractTag(work, /<section\b[^>]*itemprop=["']articleBody["'][^>]*>([\s\S]*?)<\/section>/i),
-		extractTag(work, /<div\b[^>]*itemprop=["']articleBody["'][^>]*>([\s\S]*?)<\/div>/i),
-		extractTag(work, /<body\b[^>]*>([\s\S]*?)<\/body>/i),
-		stripHtml(work),
-	].filter((value): value is string => Boolean(value && value.trim()));
-
-	return candidates.sort((a, b) => b.length - a.length)[0].replace(/\n{3,}/g, "\n\n").trim();
-}
-
-function truncate(text: string, maxChars: number): { text: string; truncated: boolean } {
-	if (text.length <= maxChars) return { text, truncated: false };
-	return { text: `${text.slice(0, maxChars).trimEnd()}\n\n[truncated to ${maxChars} characters]`, truncated: true };
-}
-
-async function fetchText(url: URL, signal: AbortSignal, timeoutMs = DEFAULT_TIMEOUT_MS): Promise<Response> {
-	return fetch(url, {
-		headers: {
-			"accept": "application/json, text/html, text/plain, application/xhtml+xml;q=0.9, */*;q=0.8",
-			"user-agent": "pi-searxng-web/1.0",
-		},
-		signal: withTimeout(signal, timeoutMs),
-		redirect: "follow",
-	});
-}
-
-const searxngSearch = defineTool({
-	name: "searxng_search",
-	label: "SearXNG Search",
-	description: "Search the web through a local SearXNG instance and return normalized results with titles, URLs, snippets, and engines.",
-	parameters: Type.Object({
-		query: Type.String({ description: "Search query" }),
-		categories: Type.Optional(Type.Array(Type.String(), { description: "Optional SearXNG categories, e.g. general, it, science" })),
-		engines: Type.Optional(Type.Array(Type.String(), { description: "Optional specific engines to use" })),
-		language: Type.Optional(Type.String({ description: "Language code, e.g. en-US" })),
-		limit: Type.Optional(Type.Number({ minimum: 1, maximum: MAX_SEARCH_RESULTS, description: "Maximum number of results to return (default 5)" })),
-		timeRange: Type.Optional(Type.String({ description: "Optional time range such as day, month, or year if your SearXNG instance supports it" })),
-		safeSearch: Type.Optional(Type.Number({ minimum: 0, maximum: 2, description: "SearXNG safesearch level: 0, 1, or 2" })),
-	}),
-	async execute(_toolCallId, params, signal) {
-		const base = getBaseUrl();
-		await assertAllowedUrl(base, base);
-		const limit = Math.min(Math.max(Math.trunc(params.limit ?? 5), 1), MAX_SEARCH_RESULTS);
-		const url = new URL("search", base);
-		url.searchParams.set("q", params.query);
-		url.searchParams.set("format", "json");
-		url.searchParams.set("pageno", "1");
-		if (params.categories?.length) url.searchParams.set("categories", params.categories.join(","));
-		if (params.engines?.length) url.searchParams.set("engines", params.engines.join(","));
-		if (params.language) url.searchParams.set("language", params.language);
-		if (params.timeRange) url.searchParams.set("time_range", params.timeRange);
-		if (params.safeSearch !== undefined) url.searchParams.set("safesearch", String(params.safeSearch));
-
-		const response = await fetchText(url, signal);
-		if (!response.ok) throw new Error(`SearXNG search failed: HTTP ${response.status} ${response.statusText}`);
-		const payload = (await response.json()) as {
-			results?: Array<{ title?: string; url?: string; content?: string; engine?: string; category?: string; score?: number; publishedDate?: string }>;
-			query?: string;
-			answers?: string[];
-		};
-
-		const results = (payload.results ?? [])
-			.filter((r) => r.url && r.title)
-			.slice(0, limit)
-			.map((r, index) => ({
-				rank: index + 1,
-				title: r.title ?? "(untitled)",
-				url: r.url ?? "",
-				snippet: (r.content ?? "").trim(),
-				engine: r.engine ?? undefined,
-				category: r.category ?? undefined,
-				score: r.score ?? undefined,
-				publishedDate: r.publishedDate ?? undefined,
-			}));
-
-		const lines = [`SearXNG results for: ${payload.query || params.query}`, `Base URL: ${base.origin}`, `Returned: ${results.length}`];
-		if (payload.answers?.length) lines.push("", `Direct answers: ${payload.answers.join(" | ")}`);
-		for (const result of results) {
-			lines.push("", `${result.rank}. ${result.title}`, result.url, result.snippet || "(no snippet)", [result.engine, result.category].filter(Boolean).join(" · ") || "");
-		}
-
-		return { content: [{ type: "text", text: lines.filter(Boolean).join("\n") }], details: { baseUrl: base.toString(), query: payload.query || params.query, resultCount: results.length, answers: payload.answers ?? [], results } };
-	},
-});
-
-const searxngFetch = defineTool({
-	name: "searxng_fetch",
-	label: "SearXNG Fetch",
-	description: "Fetch a URL directly, reject private/local targets, and return raw or lightly extracted readable text with the page title.",
-	parameters: Type.Object({
-		url: Type.String({ description: "Public http(s) URL to fetch" }),
-		extract: Type.Optional(Type.String({ description: "Extraction mode: readable (default), raw, or html" })),
-		maxChars: Type.Optional(Type.Number({ minimum: 500, maximum: MAX_FETCH_CHARS, description: "Maximum characters to return (default 12000)" })),
-		timeoutMs: Type.Optional(Type.Number({ minimum: 1000, maximum: 30000, description: "Request timeout in milliseconds" })),
-	}),
-	async execute(_toolCallId, params, signal) {
-		const base = getBaseUrl();
-		const target = new URL(params.url);
-		await assertAllowedUrl(target, base);
-		const extract = (params.extract || "readable").toLowerCase();
-		const maxChars = Math.min(Math.max(Math.trunc(params.maxChars ?? DEFAULT_MAX_CHARS), 500), MAX_FETCH_CHARS);
-		const timeoutMs = Math.max(Math.trunc(params.timeoutMs ?? DEFAULT_TIMEOUT_MS), 1000);
-
-		const response = await fetchText(target, signal, timeoutMs);
-		if (!response.ok) throw new Error(`Fetch failed: HTTP ${response.status} ${response.statusText}`);
-		const finalUrl = response.url || target.toString();
-		const contentType = response.headers.get("content-type") || "";
-		const body = await response.text();
-
-		const title = extractTag(body, /<title\b[^>]*>([\s\S]*?)<\/title>/i) || extractTag(body, /<meta\s+property=["']og:title["']\s+content=["']([\s\S]*?)["'][^>]*>/i);
-		const description = extractTag(body, /<meta\s+name=["']description["']\s+content=["']([\s\S]*?)["'][^>]*>/i) || extractTag(body, /<meta\s+property=["']og:description["']\s+content=["']([\s\S]*?)["'][^>]*>/i);
-
-		let extracted = body;
-		if (extract === "readable") extracted = contentType.includes("html") ? extractReadableContent(body) : body.trim();
-		else if (extract === "raw") extracted = contentType.includes("html") ? stripHtml(body) : body.trim();
-		else if (extract !== "html") throw new Error(`Unknown extract mode: ${extract}`);
-
-		const clipped = truncate(extracted, maxChars);
-		const summary = [
-			`Fetched: ${finalUrl}`,
-			title ? `Title: ${title}` : undefined,
-			description ? `Description: ${description}` : undefined,
-			`Content-Type: ${contentType || "unknown"}`,
-			clipped.truncated ? `Truncated: yes (${maxChars} chars)` : `Truncated: no`,
-			"",
-			clipped.text,
-		].filter(Boolean).join("\n");
-
-		return { content: [{ type: "text", text: summary }], details: { url: finalUrl, requestedUrl: target.toString(), title, description, contentType, extract, truncated: clipped.truncated, maxChars, content: clipped.text } };
-	},
-});
-
-export default function searxngWebExtension(pi: ExtensionAPI) {
-	pi.registerTool(searxngSearch);
-	pi.registerTool(searxngFetch);
-
-	pi.registerCommand("searxng-check", {
-		description: "Check local SearXNG connectivity",
-		handler: async (_args, ctx) => {
-			const base = getBaseUrl();
-			try {
-				const url = new URL("search", base);
-				url.searchParams.set("q", "pi");
-				url.searchParams.set("format", "json");
-				const response = await fetch(url, { signal: AbortSignal.timeout(5000) });
-				if (!response.ok) throw new Error(`HTTP ${response.status} ${response.statusText}`);
-				ctx.ui.notify(`SearXNG reachable at ${base.origin}`, "info");
-			} catch (error) {
-				const message = error instanceof Error ? error.message : String(error);
-				ctx.ui.notify(`SearXNG check failed: ${message}`, "error");
-			}
-		},
-	});
-}
-PI_SEARXNG_WEB_EXT
-    success "pi: SearXNG web extension written (~/.pi/agent/extensions/searxng-web.ts)"
-
-    # -- Claude Code: bigpowers skills/hooks --------------------------------------
-    if [[ "$DRY_RUN" == "true" ]]; then
-        info "[DRY RUN] Would link bigpowers into Claude Code (~/.claude/skills + hooks)"
-    elif installed npm && _npm_has "bigpowers@2.88.1"; then
-        _bp_root="$(npm root -g 2>/dev/null)/bigpowers"
-        if [[ -d "$_bp_root" ]]; then
-            if node - <<'NODE' "$_bp_root" >> "$LOG_FILE" 2>&1
-const path = require('path');
-const root = process.argv[2];
-const { installGlobal } = require(path.join(root, 'scripts', 'lib', 'install-helpers.js'));
-installGlobal({ id: 'claude', name: 'Claude Code' }, root);
-NODE
-            then
-                success "bigpowers linked into Claude Code (~/.claude/skills + hooks)"
-            else
-                warn "bigpowers install helper failed for Claude Code — inspect the log"
-            fi
-        else
-            warn "bigpowers npm package not found under npm root — skipping Claude link"
-        fi
-        unset _bp_root
-    else
-        warn "bigpowers not installed globally — skipping Claude link"
-    fi
-
-    write_generated "$PI_SKILLS_DIR/searxng-web/SKILL.md" <<'PI_SEARXNG_WEB_SKILL'
----
-name: searxng-web
-description: Search and read the web through a local SearXNG instance using Pi tools. Use when the user wants web research, documentation lookup, source comparison, or URL fetching without relying on a remote search API.
----
-
-# SearXNG Web
-
-Use this skill when the user wants web access through the local SearXNG-backed Pi setup.
-
-This skill assumes two custom Pi tools exist:
-- `searxng_search` — search via the local SearXNG instance
-- `searxng_fetch` — fetch a public URL and return readable content
-
-## What this skill is for
-
-- finding official docs
-- comparing multiple sources
-- reading a specific webpage or article
-- gathering citations for an answer
-- verifying current information when local files are not enough
-
-## Preferred workflow
-
-1. Search first with `searxng_search` unless the user already gave a URL.
-2. Prefer primary sources when available:
-   - official docs
-   - vendor pages
-   - project READMEs / source repos
-   - standards/specs
-3. Fetch only the most relevant few pages with `searxng_fetch`.
-4. Summarize findings compactly.
-5. Cite URLs in the final answer when web findings matter.
-
-## Search guidance
-
-Use focused queries, not broad ones.
-
-Good patterns:
-- `pi coding agent extensions docs`
-- `site:github.com boolean-maybe tiki ruki docs`
-- `site:docs.anthropic.com prompt caching`
-- `site:ollama.com gpt-oss model`
-
-When appropriate, narrow by:
-- `categories`
-- `engines`
-- `language`
-- `timeRange`
-
-If the first search is noisy:
-- refine the query
-- prefer official domains
-- reduce result count
-- compare 2-3 strong candidates rather than scanning everything
-
-## Fetch guidance
-
-Use `searxng_fetch` when:
-- the user gives a URL directly
-- a search result looks promising
-- you need the actual page content, not just the snippet
-
-Prefer:
-- `extract: "readable"` for most pages
-- `extract: "raw"` when structure matters but full HTML does not
-- `extract: "html"` only when markup itself matters
-
-Keep `maxChars` modest unless the user asks for a deeper read.
-
-## Answer style
-
-When using web results:
-- distinguish confirmed facts from synthesis
-- cite the URL(s)
-- say when evidence is weak or mixed
-- prefer a short answer first, then key references
-
-## Example flows
-
-### Find docs
-1. `searxng_search` for the topic
-2. choose the official docs result
-3. `searxng_fetch` the docs page
-4. answer with a short summary and link
-
-### Compare sources
-1. `searxng_search` with a targeted query
-2. fetch 2-3 strong results
-3. compare agreements/disagreements
-4. give the user a concise verdict with citations
-
-### Read a URL directly
-1. call `searxng_fetch`
-2. extract the key points
-3. summarize with the source URL
-
-## Safety and quality notes
-
-- Use the local SearXNG route instead of remote search APIs.
-- Do not treat search snippets as the full source when the exact wording matters.
-- Prefer public web pages; the fetch tool intentionally refuses private/local targets other than the configured SearXNG host.
-- If the user wants exhaustive research, say so and work in passes rather than pretending one search is complete.
-PI_SEARXNG_WEB_SKILL
-    success "pi: SearXNG web skill written (~/.pi/agent/skills/searxng-web/)"
-
-    # -- Pi-local Tiki skills -----------------------------------------------------
+    # -- omp-local Tiki skills -----------------------------------------------------
     # Keep the general tiki CRUD skill shared with Claude via ~/.agents/skills/, but add
-    # a small Pi-native companion set for capture/review/groom/arc/journal flows.
-    write_generated "$PI_SKILLS_DIR/tiki-capture/SKILL.md" <<'PI_TIKI_CAPTURE_SKILL'
+    # a small omp-native companion set for capture/review/groom/arc/journal flows.
+    write_generated "$OMP_SKILLS_DIR/tiki-capture/SKILL.md" <<'OMP_TIKI_CAPTURE_SKILL'
 ---
 name: tiki-capture
 description: Fast capture into a Tiki notebook — create inbox notes, journal entries, ideas, life-admin cards, or recurring rituals with sensible titles, tags, and optional due dates. Use when the user wants to quickly save a thought, task, reflection, or plan into Tiki.
@@ -13955,9 +13532,9 @@ Use only when clearly helpful:
 - Prefer minimal captures over over-modeled ones.
 - Never fabricate a tiki id.
 - Never commit without user permission.
-PI_TIKI_CAPTURE_SKILL
+OMP_TIKI_CAPTURE_SKILL
 
-    write_generated "$PI_SKILLS_DIR/tiki-review/SKILL.md" <<'PI_TIKI_REVIEW_SKILL'
+    write_generated "$OMP_SKILLS_DIR/tiki-review/SKILL.md" <<'OMP_TIKI_REVIEW_SKILL'
 ---
 name: tiki-review
 description: Review and summarize a Tiki notebook — inspect inbox, ready, overdue, recurring, stale, or tagged cards and produce a daily or weekly reset. Use when the user wants a Tiki review, triage session, focus list, or notebook summary.
@@ -14068,9 +13645,9 @@ If the user wants the review saved, create a notes-only markdown tiki or a journ
 - Never assume a workflow field exists without checking.
 - When the notebook is mostly freeform notes, summarize rather than force task vocabulary.
 - Never commit without user permission.
-PI_TIKI_REVIEW_SKILL
+OMP_TIKI_REVIEW_SKILL
 
-    write_generated "$PI_SKILLS_DIR/tiki-groom/SKILL.md" <<'PI_TIKI_GROOM_SKILL'
+    write_generated "$OMP_SKILLS_DIR/tiki-groom/SKILL.md" <<'OMP_TIKI_GROOM_SKILL'
 ---
 name: tiki-groom
 description: Tidy and reorganize a Tiki notebook — clean up inbox notes, retag cards, find stale or duplicate-ish entries, normalize titles, and turn loose notes into tracked cards. Use when the user wants to prune, organize, or maintain a Tiki workspace.
@@ -14233,9 +13810,9 @@ Prefer moving to `archive/` over deletion unless the user explicitly wants remov
 - Never delete or merge ambiguous notes without explicit user approval.
 - Preserve `id:` exactly when editing or moving a tiki file.
 - Never commit without user permission.
-PI_TIKI_GROOM_SKILL
+OMP_TIKI_GROOM_SKILL
 
-    write_generated "$PI_SKILLS_DIR/tiki-arc/SKILL.md" <<'PI_TIKI_ARC_SKILL'
+    write_generated "$OMP_SKILLS_DIR/tiki-arc/SKILL.md" <<'OMP_TIKI_ARC_SKILL'
 ---
 name: tiki-arc
 description: Manage larger Tiki arcs — create and organize project-like parent cards, attach linked notes, inspect blockers, and summarize arc state. Use when the user wants to plan, review, or restructure a multi-note effort in Tiki.
@@ -14368,9 +13945,9 @@ Because tiki links by id, physical file location and conceptual grouping can dif
 - Avoid self-links and duplicate dependency links.
 - Do not delete or heavily restructure an arc without user approval.
 - Never commit without user permission.
-PI_TIKI_ARC_SKILL
+OMP_TIKI_ARC_SKILL
 
-    write_generated "$PI_SKILLS_DIR/tiki-journal/SKILL.md" <<'PI_TIKI_JOURNAL_SKILL'
+    write_generated "$OMP_SKILLS_DIR/tiki-journal/SKILL.md" <<'OMP_TIKI_JOURNAL_SKILL'
 ---
 name: tiki-journal
 description: Create and maintain journal-style notes in a Tiki notebook — morning pages, evening reflections, check-ins, and themed review entries with gentle prompts and links to related notes or arcs. Use when the user wants to journal in Tiki.
@@ -14466,20 +14043,22 @@ Use sparingly:
 - Do not infer private emotional conclusions the user did not state.
 - Read `workflow.yaml` before setting workflow fields.
 - Never commit without user permission.
-PI_TIKI_JOURNAL_SKILL
+OMP_TIKI_JOURNAL_SKILL
 
-    success "pi: local Tiki skills written (~/.pi/agent/skills: tiki-capture, tiki-review, tiki-groom, tiki-arc, tiki-journal)"
+    success "omp: local Tiki skills written (~/.omp/agent/skills: tiki-capture, tiki-review, tiki-groom, tiki-arc, tiki-journal)"
 
     # -- Shared skills ------------------------------------------------------------
-    # pi discovers ~/.agents/skills automatically. Share a curated subset rather than the
-    # whole Claude skill tree so pi's startup prompt stays lean.
-    _pi_linked=0 _pi_missing=0
-    for _skill in "${PI_SHARED_SKILLS[@]}"; do
+    # ~/.agents/skills is omp's OWN canonical skills location (the `agents` provider,
+    # with its own enableAgentsUser toggle), not a foreign import. This loop lived in
+    # the pi block until #513 and moved here intact: the five shared skills and the
+    # symlink-scoped prune are unchanged, only the owner is.
+    _omp_linked=0 _omp_missing=0
+    for _skill in "${OMP_SHARED_SKILLS[@]}"; do
         if [[ -d "$HOME/.claude/skills/$_skill" ]]; then
             ln -sfn "$HOME/.claude/skills/$_skill" "$AGENTS_SKILLS/$_skill"
-            _pi_linked=$((_pi_linked + 1))
+            _omp_linked=$((_omp_linked + 1))
         else
-            _pi_missing=$((_pi_missing + 1))
+            _omp_missing=$((_omp_missing + 1))
         fi
     done
     for _stale in "$AGENTS_SKILLS"/*; do
@@ -14490,167 +14069,18 @@ PI_TIKI_JOURNAL_SKILL
         esac
         _name="$(basename "$_stale")"
         _keep=false
-        for _skill in "${PI_SHARED_SKILLS[@]}"; do
+        for _skill in "${OMP_SHARED_SKILLS[@]}"; do
             [[ "$_name" == "$_skill" ]] && _keep=true && break
         done
         [[ "$_keep" == "false" ]] && rm -f "$_stale"
     done
     unset _stale _name _keep _skill
-    if [[ "$_pi_missing" -gt 0 ]]; then
-        warn "pi: $_pi_linked shared skill(s) linked -> ~/.agents/skills/ ($_pi_missing missing from ~/.claude/skills)"
+    if [[ "$_omp_missing" -gt 0 ]]; then
+        warn "omp: $_omp_linked shared skill(s) linked -> ~/.agents/skills/ ($_omp_missing missing from ~/.claude/skills)"
     else
-        success "pi: $_pi_linked shared skills linked -> ~/.agents/skills/ (api-testing, d2-diagrams, dbmate-migrations, office-docs, tiki)"
+        success "omp: $_omp_linked shared skills linked -> ~/.agents/skills/ (api-testing, d2-diagrams, dbmate-migrations, office-docs, tiki)"
     fi
-    unset _pi_linked _pi_missing
-fi
-
-# ---- Oh My Pi (omp) coding agent (~/.omp/agent) ----
-# omp is the maximalist fork of pi: 32 tools, LSP, DAP, subagents, nine model roles.
-# It ignores XDG_CONFIG_HOME the same way pi does, so ~/.omp/agent is the one path
-# family to manage — not ~/.config/omp. Credentials stay user-owned: the `google`
-# provider reads GEMINI_API_KEY from the environment and this script never reads,
-# writes, or echoes it (#504).
-#
-# Two vocabulary traps upstream, both worth naming here because the ids share one
-# namespace and the wrong one fails silently:
-#   * `google` is the MODEL provider (the Gemini API). `gemini` is a DISCOVERY
-#     provider — the source that reads GEMINI.md. Disabling or configuring the
-#     wrong one does nothing visible. Roles below are all `google/...`.
-#   * `~/.agents/skills` is omp's CANONICAL native skills location, not a foreign
-#     import. The five skills the pi block links there are picked up with no extra
-#     work, which is why this block generates no skills of its own.
-OMP_DIR="$HOME/.omp/agent"
-OMP_THEME_DIR="$OMP_DIR/themes"
-OMP_THEME_FILE="$OMP_THEME_DIR/dracula-sakura.json"
-# config.yml is canonical; an existing config.yaml is loaded and updated in place by
-# omp itself, so target whichever one is already there rather than creating a second
-# file the tool would then ignore.
-OMP_CONFIG_FILE="$OMP_DIR/config.yml"
-[[ -f "$OMP_DIR/config.yaml" && ! -f "$OMP_CONFIG_FILE" ]] && OMP_CONFIG_FILE="$OMP_DIR/config.yaml"
-
-if [[ "$DRY_RUN" == "true" ]]; then
-    info "[DRY RUN] Would write omp config -> $OMP_DIR (AGENTS.md, themes/dracula-sakura.json)"
-    info "[DRY RUN] Would merge omp settings -> $OMP_CONFIG_FILE (theme, Gemini model roles)"
-else
-    mkdir -p "$OMP_THEME_DIR"
-
-    # -- AGENTS.md ----------------------------------------------------------------
-    # Same two-part shape as pi's: shared preferences, then the shared writing rules.
-    # Both come from the same emitters, so the two harnesses cannot drift (#504).
-    # omp gives this file the highest precedence of any user-level context source —
-    # its `native` provider outranks claude, codex, and the rest — so it shadows
-    # ~/.claude/CLAUDE.md for omp sessions rather than stacking with it.
-    {
-    emit_agent_preferences "Oh My Pi"
-    emit_writing_rules
-    } | write_generated "$OMP_DIR/AGENTS.md"
-    success "omp: AGENTS.md written, with the shared writing rules (~/.omp/agent/AGENTS.md)"
-
-    # -- Dracula-Sakura theme -----------------------------------------------------
-    # Same palette as pi's theme, different schema: omp requires every one of its
-    # colour tokens, including thirteen statusLine* entries and a `link` and
-    # `toolText` that pi has no equivalent for. So this is authored against omp's
-    # own schema rather than copied from PI_THEME_CONF.
-    write_generated "$OMP_THEME_FILE" <<'OMP_THEME_CONF'
-{
-  "$schema": "https://raw.githubusercontent.com/can1357/oh-my-pi/main/packages/coding-agent/src/modes/theme/theme-schema.json",
-  "name": "dracula-sakura",
-  "vars": {
-    "bg": "#282a36",
-    "panel": "#323448",
-    "panelSoft": "#2f3144",
-    "current": "#4b4963",
-    "selection": "#6a5d86",
-    "fg": "#f8f8f2",
-    "muted": "#ddd2f7",
-    "dim": "#a297cb",
-    "comment": "#8a88c7",
-    "cyan": "#9be7ff",
-    "mint": "#8af7cf",
-    "peach": "#ffcf93",
-    "rose": "#ff9fe3",
-    "blush": "#ffc2ec",
-    "lilac": "#d4b2ff",
-    "red": "#ff7aa8",
-    "yellow": "#fff0a8"
-  },
-  "colors": {
-    "accent": "rose",
-    "border": "lilac",
-    "borderAccent": "cyan",
-    "borderMuted": "current",
-    "success": "mint",
-    "error": "red",
-    "warning": "peach",
-    "muted": "muted",
-    "dim": "dim",
-    "text": "fg",
-    "thinkingText": "comment",
-    "selectedBg": "selection",
-    "userMessageBg": "panel",
-    "userMessageText": "fg",
-    "customMessageBg": "panelSoft",
-    "customMessageText": "fg",
-    "customMessageLabel": "cyan",
-    "toolPendingBg": "#34364b",
-    "toolSuccessBg": "#233b36",
-    "toolErrorBg": "#4a3040",
-    "toolTitle": "rose",
-    "toolOutput": "muted",
-    "mdHeading": "blush",
-    "mdLink": "cyan",
-    "mdLinkUrl": "comment",
-    "mdCode": "mint",
-    "mdCodeBlock": "yellow",
-    "mdCodeBlockBorder": "current",
-    "mdQuote": "muted",
-    "mdQuoteBorder": "lilac",
-    "mdHr": "current",
-    "mdListBullet": "rose",
-    "toolDiffAdded": "mint",
-    "toolDiffRemoved": "red",
-    "toolDiffContext": "comment",
-    "syntaxComment": "comment",
-    "syntaxKeyword": "rose",
-    "syntaxFunction": "mint",
-    "syntaxVariable": "peach",
-    "syntaxString": "yellow",
-    "syntaxNumber": "lilac",
-    "syntaxType": "cyan",
-    "syntaxOperator": "rose",
-    "syntaxPunctuation": "fg",
-    "thinkingOff": "current",
-    "thinkingMinimal": "comment",
-    "thinkingLow": "lilac",
-    "thinkingMedium": "cyan",
-    "thinkingHigh": "rose",
-    "thinkingXhigh": "blush",
-    "thinkingMax": "red",
-    "bashMode": "mint",
-    "pythonMode": "lilac",
-    "statusLineBg": "panel",
-    "statusLineSep": "current",
-    "statusLineModel": "rose",
-    "statusLinePath": "cyan",
-    "statusLineGitClean": "mint",
-    "statusLineGitDirty": "peach",
-    "statusLineContext": "lilac",
-    "statusLineSpend": "cyan",
-    "statusLineStaged": "mint",
-    "statusLineDirty": "peach",
-    "statusLineUntracked": "blush",
-    "statusLineOutput": "blush",
-    "statusLineCost": "rose",
-    "statusLineSubagents": "lilac"
-  },
-  "export": {
-    "pageBg": "#1f2030",
-    "cardBg": "#282a36",
-    "infoBg": "#3e3148"
-  }
-}
-OMP_THEME_CONF
-    success "omp: Dracula-Sakura theme written (~/.omp/agent/themes/dracula-sakura.json)"
+    unset _omp_linked _omp_missing
 
     # -- config.yml ---------------------------------------------------------------
     # MERGE, never write_managed. omp owns this file: `/settings`, `omp config set`
@@ -14699,6 +14129,20 @@ retry:
       - google/gemini-3.8-flash
     default:
       - google/gemini-3.5-flash
+# Local SearXNG, first in the web_search chain. This replaces the ~300-line
+# TypeScript extension the pi block generated (#513): omp carries `searxng` as
+# one of 23 built-in web_search backends, with site-aware extraction, so the
+# whole feature is two keys instead of a tool to maintain.
+#
+# The endpoint is the default for a local instance. Override it here, or with
+# SEARXNG_ENDPOINT, if yours is elsewhere. The remaining backends stay in their
+# built-in order behind this one, so search still works when the instance is
+# down — several of them need no key at all.
+searxng:
+  endpoint: http://127.0.0.1:8080
+providers:
+  webSearchOrder:
+    - searxng
 OMP_CONFIG_CONF
         [[ -f "$OMP_CONFIG_FILE" ]] || echo '{}' > "$OMP_CONFIG_FILE"
         if yq eval-all 'select(fileIndex==0) * select(fileIndex==1)' \
@@ -15222,9 +14666,8 @@ echo "  [~/.jqp.yaml]           jq playground theme overrides"
 echo "  [~/.config/aichat]      Local AI chat config + Dracula-Sakura dark theme"
 echo "  [~/.config/croft]       Croft config + Dracula-Sakura theme extension"
 echo "  [~/.herald/themes]      Herald Dracula-Sakura theme asset + theme-name merge"
-echo "  [~/.pi/agent]           Pi settings, local models, Dracula-Sakura theme"
-echo "  [~/.omp/agent]          Oh My Pi settings, Gemini model roles, Dracula-Sakura theme"
-echo "  [~/.agents/skills]      Curated skills shared with Pi and Oh My Pi"
+echo "  [~/.omp/agent]          Oh My Pi settings, Gemini model roles, theme, local Tiki skills"
+echo "  [~/.agents/skills]      Curated skills Oh My Pi reads natively"
 echo "  [leaf]                  Terminal Markdown previewer (live watch, fuzzy picker, Mermaid)"
 echo "  [~/.config/yt-dlp]      Best quality, aria2c downloader"
 echo "  [~/.config/gh-dash]     GitHub dashboard, Dracula-Sakura theme"
@@ -15327,8 +14770,7 @@ unscriptable. Work through it once, then keep it only as long as it's useful.
 - [ ] **infracost** (IaC cost estimates): run `infracost auth login` for a free API key — `infracost breakdown` errors with "No INFRACOST_API_KEY" until then.
 - [ ] **borgmatic backups:** the setup scaffolds `~/.config/borgmatic/config.yaml`. Set `repositories`, store the passphrase in Keychain (`security add-generic-password -a "$USER" -s borg-passphrase -w`), run `borgmatic init --encryption repokey-blake2`, check with `borgmatic create --dry-run`, then enable a daily run (e.g. a LaunchAgent calling `borgmatic --verbosity -1`). ClamAV's virus DB downloads itself in the background after setup.
 - [ ] **Claude AI in croft:** `croft pair` (the AI navigator in your primary IDE) defaults to `--provider claude`, which hands off to your existing `claude` CLI — so it just works on whatever auth that already has (a Claude Pro/Max subscription **or** an API key), no separate `ANTHROPIC_API_KEY` required. Want a fully local model with no key at all? Ollama is installed and running — use the `gemma3:4b` that setup already pulled (`croft pair --provider ollama --model gemma3:4b`) or the heavier `qwen2.5-coder:14b` that's also pre-pulled for coding-oriented local loops. An Anthropic API key is **optional** here — the only thing that uses one is the `llm` CLI, and `llm` itself is optional: if Claude Code and the Claude desktop app already cover you, you can skip it entirely. If you do want `llm` for one-off prompts (e.g. `> ! llm …` from micro's command bar) or shell scripting, run `llm keys set anthropic` — setup already installs the plugin (via uv) and sets the default model to `anthropic/claude-sonnet-4-5`. (Email/calendar AI is built into **herald** — configured separately above.)
-- [ ] **Pi** (optional second agent): `pi` is installed with the local Ollama provider preconfigured and `qwen2.5-coder:14b` as the default model, plus the shared skills bridge in `~/.agents/skills/`, five Pi-local Tiki companions in `~/.pi/agent/skills/` (`tiki-capture`, `tiki-review`, `tiki-groom`, `tiki-arc`, `tiki-journal`), a local SearXNG web-research layer (`~/.pi/agent/extensions/searxng-web.ts` + `~/.pi/agent/skills/searxng-web/`), and the pinned third-party `bigpowers` package through Pi's `packages` setting. Set `SEARXNG_BASE_URL` if your instance is not on `http://127.0.0.1:8080`, then run `pi` and `/searxng-check`. Claude Code also gets bigpowers' linked skills/hooks under `~/.claude/` from the same setup run. If you want a remote provider instead, run `pi` then `/login`; if you only want the local path, nothing else is required.
-- [ ] **Oh My Pi** (third agent, Gemini-routed): `omp` is installed from the `can1357/tap` Homebrew tap with the Dracula-Sakura theme, the shared `AGENTS.md` preferences, and nine model roles pointed at Gemini — Flash for ordinary turns, Pro for `slow`, `plan`, and `advisor`, Flash Lite for cheap subagent fan-out. It reads the same `~/.agents/skills/` bridge as Pi, so no extra skills are installed. **It needs `GEMINI_API_KEY` exported in your environment**; the setup never writes a key. Get one from Google AI Studio, store it in Apple Passwords, and export it from a file your shell reads. Then run `omp` and check the model line, or `omp config get modelRoles` from any shell. Read that key whole: it is a record, so `omp config get modelRoles.default` answers `Unknown setting`.
+- [ ] **Oh My Pi** (second agent, Gemini-routed): `omp` is installed from the `can1357/tap` Homebrew tap with the Dracula-Sakura theme, the shared `AGENTS.md` preferences, and nine model roles pointed at Gemini — Flash for ordinary turns, Pro for `slow`, `plan`, and `advisor`, Flash Lite for cheap subagent fan-out. It reads `~/.agents/skills/` as its own native skills location (the five shared skills), plus five omp-local Tiki companions in `~/.omp/agent/skills/`. Your local **SearXNG** instance is first in its `web_search` chain. **It needs `GEMINI_API_KEY` exported in your environment**; the setup never writes a key. Get one from Google AI Studio, store it in Apple Passwords, and export it from a file your shell reads. Then run `omp` and check the model line, or `omp config get modelRoles` from any shell. Read that key whole: it is a record, so `omp config get modelRoles.default` answers `Unknown setting`.
 - [ ] **croft** (primary IDE): installed from git `main` via cargo — run `croft` in a project to open the workspace; re-run `cargo install --git https://github.com/vitali87/croft.git --locked` to upgrade.
 - [ ] **AI side-pane:** `zellij --layout dev` opens your editor + a Claude Code pane side by side (the strongest AI workflow).
 - [ ] **chezmoi:** `chezmoi init <your-dotfiles-repo>` to bring these configs under version control across the MacBook + Mac mini.
@@ -15426,7 +14868,6 @@ applying it to you.
 - **croft** — VS Code-style terminal IDE; the **primary editor** (`croft pair` for the AI navigator). **Visual Studio Code** (`code .`) is the GUI editor alongside it, preconfigured with Dracula Official plus a Dracula-Sakura accent layer and the same formatters. **micro** is the `EDITOR` for git/gh/lazygit commit messages and quick edits (non-modal, Dracula, on-screen key menu, trailing whitespace stripped on save).
 - **Claude Code (`claude`)** — agentic coding in the terminal; hosts the MCP servers. Best via `zellij --layout dev` (editor + Claude pane). New sessions are **auto-named `<YYYY-MM-DD>-<repo>`** (from the git remote, so this checkout reads `vixygrey-dev-setup`, not its `-main` folder), which is what the `/resume` picker and the terminal title show. Resuming (`-r`, `-c`, `--from-pr`) keeps the original name, and an explicit `-n/--name` always wins. Rename any session at any time with `/rename`.
 - **Claude in croft** — croft's `croft pair` AI navigator (primary IDE) defaults to `--provider claude`, riding your existing `claude` CLI auth (subscription or key, no separate `ANTHROPIC_API_KEY`); `--provider ollama` runs a local model with no key. The one path that uses an Anthropic key is the **`llm`** CLI (`llm-anthropic`) — and it's optional: reach for it only when you want Claude in a shell pipe or a `> ! llm …` one-off from micro's command bar, then run `llm keys set anthropic`. **herald** integrates with Claude two ways, neither needing a key: Claude Code reads and searches your mail/calendar through herald's **MCP** (it rides your `claude` login), and herald's *own* built-in AI (triage, summaries, compose styler, semantic search) is optional and runs on local **Ollama** models that setup installs, runs as a login service, and seeds with `gemma3:4b` (chat) + `nomic-embed-text-v2-moe` (embeddings).
-- **Pi (`pi`)** — the smaller second agent: local-model-first, themed to match the machine, and pointed at a curated skill bridge (`~/.agents/skills/`) instead of the whole Claude skills tree. Good for tight edit/bash loops on `qwen2.5-coder:14b`; anything MCP-heavy or broader-scope still belongs to Claude Code.
 - **Oh My Pi (`omp`)** — the third agent, and the maximalist fork of Pi: 32 built-in tools, LSP, a real debugger through DAP, subagents, and nine model roles that route by intent. Routed at Gemini here, so it is the one to reach for when the work wants a large context window or a second opinion from a non-Anthropic model. Shares the same theme, the same `AGENTS.md` preferences, and the same five skills as Pi. Needs `GEMINI_API_KEY` in the environment.
 
 ## Status bar & launcher
@@ -15609,24 +15050,26 @@ aichat --execute "find the 20 largest files in Downloads"
 
 > Tip: because it already points at local Ollama here, `aichat` is a good low-friction AI surface when you want a conversational CLI without leaving the terminal or spending Claude-agent budget.
 
-### `pi` — Pi
-A second, deliberately minimal coding agent: four core tools (`read`, `write`, `edit`, `bash`), a custom Dracula-Sakura TUI theme, a local SearXNG-backed web extension, the pinned `bigpowers` Pi package, and a small curated skill set shared from the machine's Claude skills. It is the lightweight counterpoint to Claude Code rather than a replacement for it — useful for tight one-repo edit/bash loops and local-model sessions where you want a smaller harness.
+### `omp` — Oh My Pi
+The second agent beside Claude Code, and the maximalist fork of pi: 32 built-in tools, 13 LSP operations, a real debugger over DAP, subagents, a curated memory, and nine model roles that route by intent. Routed at Google Gemini here, so it is the one to reach for when the work wants a very large context window or a second opinion from a non-Anthropic model.
 
 ```bash
-# list the models this setup wires into Pi
-pi --list-models
-# start Pi on the default local coding model
-pi
-# explicitly use a local model
-pi --provider ollama --model qwen2.5-coder:14b
+# start a session
+omp
+# what the nine roles resolve to (a record — read it whole)
+omp config get modelRoles
+# where the active agent directory is
+omp config path
+# one-shot, no session
+omp -p "summarise the diff on this branch"
 ```
 
-> Tip: Pi's config lives entirely under `~/.pi/agent/`, not `~/.config`. This setup points Pi at four local Ollama chat/coding models, shares exactly five general skills through `~/.agents/skills/` so the startup prompt stays lean, adds five Pi-local Tiki companion skills under `~/.pi/agent/skills/`, and wires in a local SearXNG web extension + matching `searxng-web` skill.
+> Tip: omp's config lives entirely under `~/.omp/agent/`, not `~/.config`. It reads `~/.agents/skills/` as its own native skills location, so the five shared skills arrive with nothing extra to install, and five omp-local Tiki companions sit in `~/.omp/agent/skills/`. Its `~/.omp/agent/AGENTS.md` outranks every other user-level context file, `~/.claude/CLAUDE.md` included, so that file is where its global preferences belong. Settings are merged into `config.yml` rather than written as a managed block, because `omp config set` and `/settings` write that file themselves.
 >
-> Tip: Oh My Pi does the same under `~/.omp/agent/`. It reads `~/.agents/skills/` as its own native skills location, so the five shared skills arrive with nothing extra to install. Its `~/.omp/agent/AGENTS.md` outranks every other user-level context file, `~/.claude/CLAUDE.md` included, so that file is where its global preferences belong. Settings are merged into `config.yml` rather than written as a managed block, because `omp config set` and `/settings` write that file themselves.
+> Tip: `web_search` is built in with 23 backends, and this setup puts your local **SearXNG** instance at the head of the chain (`searxng.endpoint`). The keyless backends stay behind it, so search still works when the instance is down. It needs `GEMINI_API_KEY` in the environment to reach a model.
 
 ### `ollama` — Local LLM Runtime
-Runs open-weight LLMs entirely on your Mac — no API key, no data leaving the machine. Setup installs it, runs it as a login service on `127.0.0.1:11434`, and seeds the local model set this machine wants ready: `qwen2.5-coder:14b`, `llama3.1:8b`, `gemma3:4b`, `llama3.2:latest`, plus `nomic-embed-text-v2-moe` for embeddings. It's the local backend for **herald**'s built-in AI, `croft pair --provider ollama`, `aichat`, and Pi's local-model path.
+Runs open-weight LLMs entirely on your Mac — no API key, no data leaving the machine. Setup installs it, runs it as a login service on `127.0.0.1:11434`, and seeds the local model set this machine wants ready: `qwen2.5-coder:14b`, `llama3.1:8b`, `gemma3:4b`, `llama3.2:latest`, plus `nomic-embed-text-v2-moe` for embeddings. It's the local backend for **herald**'s built-in AI, `croft pair --provider ollama`, `aichat`, and omp's local-model path.
 
 ```bash
 # list installed models
