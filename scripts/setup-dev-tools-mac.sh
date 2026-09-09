@@ -15092,6 +15092,96 @@ lsx -la
 
 ## Finding, files & disk
 
+### `bat` — Syntax-Highlighted `cat`
+A `cat` replacement with syntax highlighting, line numbers, git change markers, and automatic paging. Aliased over `cat` interactively; scripts and AI agents get the real POSIX `cat`, and you want `/bin/cat` inside heredocs where exact bytes matter.
+
+```bash
+# view a file with highlighting and line numbers
+bat src/main.ts
+# plain output, no decorations — safe to pipe
+bat -p config.json
+# force a language when the extension does not give it away
+bat -l yaml deploy.txt
+# show only lines changed against git
+bat --diff src/main.ts
+```
+
+> `--style=plain,numbers,changes` picks exactly which decorations appear. `bat --config-dir` prints where its config lives, which is the reliable way to find it rather than guessing a path.
+
+### `eza` — Modern `ls`
+A colourful `ls` with icons, git status per file, and a built-in tree mode. Aliased over `ls` interactively, with `ll`, `la`, and `lt` for the common shapes.
+
+```bash
+# long listing with git status
+eza -l --git
+# everything, including dotfiles
+eza -la
+# tree view, three levels deep
+eza --tree --level=3
+# directories first, with icons
+eza -l --icons --group-directories-first
+```
+
+### `dust` — Visual Disk Usage
+A `du` replacement that prints a sorted, bar-charted tree of what is actually consuming space, biggest first, with no flag archaeology.
+
+```bash
+# what is using space here
+dust
+# limit how deep the tree goes
+dust -d 2
+# a specific directory
+dust ~/Code
+# smallest first
+dust -r
+```
+
+> `du -sh` in an interactive shell prints **dust's help**, not a size, because the alias does not accept `du`'s flags. Use `/usr/bin/du -sh` when you want the classic behaviour.
+
+### `duf` — Disk Free, Readable
+A `df` replacement that groups devices sensibly and renders usage bars instead of a wall of blocks. Note its flags are **single-dash**, Go style, not GNU style.
+
+```bash
+# all mounted filesystems, grouped
+duf
+# only local disks
+duf -only local
+# hide the noisy special filesystems
+duf -hide special
+# machine-readable
+duf -json
+```
+
+### `zoxide` — Frecency Directory Jumping
+Learns the directories you visit and lets you jump by fragment. It **adds** `z` and `zi`; plain `cd` is left completely untouched, so nothing you already do changes.
+
+```bash
+# jump to the best match for "proj"
+z proj
+# match on two fragments
+z code work
+# interactive picker over the database
+zi
+# inspect what it has learned
+zoxide query -l
+```
+
+### `sd` — Find and Replace
+A find-and-replace tool with sane syntax: no escaping a regex twice, no `-i ''` portability trap. It is **not** a `sed` drop-in — the syntax is its own, and it does not do `sed`'s stream-editing commands.
+
+```bash
+# replace across a file, in place
+sd 'oldName' 'newName' src/app.ts
+# preview the change without writing it
+sd -p 'oldName' 'newName' src/app.ts
+# literal strings, no regex interpretation
+sd -F '1.2.3' '1.3.0' README.md
+# across many files, via fd
+fd -e ts -x sd 'oldName' 'newName'
+```
+
+> `-A/--across` lets a pattern match across line boundaries, which plain `sed` cannot do without contortions.
+
 ### `fzf` — Fuzzy Finder
 A general-purpose interactive fuzzy finder that filters any list of lines from stdin — files, history, process names, git branches, whatever you pipe into it. It replaces manually scrolling or grepping through long lists, letting you type a few loose characters and instantly narrow down to the match you want. In this setup it's wired into the shell: Ctrl+T fuzzy-inserts a file path, Alt+C fuzzy-cd's into a directory, and Ctrl+R fuzzy-searches command history (via atuin). Reach for it any time you'd otherwise pipe something into `grep` and eyeball the result.
 
@@ -16848,6 +16938,56 @@ chezmoi update
 
 
 ## Docs, media, terminal apps & extras
+
+### `btop` — Graphed System Monitor
+A `top` replacement with CPU, memory, network, and disk graphs, a searchable process list, and mouse support. Aliased over `top` interactively. It is a full TUI, so the keymap lives in the app itself rather than in any published table.
+
+```bash
+# launch it
+btop
+# start on a saved preset (0-9)
+btop -p 1
+# open already filtered to a process
+btop -f node
+# slower refresh, less CPU of its own
+btop -u 2000
+# print the default config, e.g. to seed your own
+btop --default-config
+```
+
+> Press `Esc` or `F2` inside btop for its options menu; the key list is in-app only. `-t/--tty` forces 16-colour ANSI mode for terminals that need it.
+
+### `procs` — Modern `ps`
+A `ps` replacement with colourized columns, a tree mode, docker awareness, and search by name rather than by grepping the output of something else.
+
+```bash
+# a readable process list
+procs
+# only processes matching a name
+procs node
+# parent/child tree
+procs --tree
+# live-updating view
+procs --watch
+# sort descending by a column
+procs --sortd cpu
+```
+
+> `ps aux` in an interactive shell **silently ignores** the `aux` argument, because the alias does not accept `ps`'s flags. Use `/bin/ps aux` when you want the classic output.
+
+### `viddy` — Modern `watch`
+A `watch` replacement that highlights what changed between runs, keeps history you can scroll back through, and can page the output. Aliased over `watch` interactively.
+
+```bash
+# re-run every 2 seconds
+viddy -n 2 kubectl get pods
+# highlight the differences between runs
+viddy -d docker ps
+# drop the header for a clean full-screen view
+viddy --no-title tail -n 40 app.log
+```
+
+> The scrollable run history is the real reason to reach for it over `watch`: you can go back and see the state three refreshes ago rather than only the latest frame.
 
 ### `d2` — Text-to-Diagram Language
 A declarative diagramming language: you write plain-text code describing boxes, arrows, and containers, and `d2` compiles it into a clean SVG, PNG, or PDF. It replaces GUI diagramming tools (draw.io, Visio) with something that lives in a repo, diffs cleanly, and renders from the terminal — reach for it when documenting architecture, flows, or system diagrams alongside code.
