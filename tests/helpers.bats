@@ -496,14 +496,23 @@ EOF
 }
 
 @test "_verify_output_has: the old piped form really does fail this way (#505)" {
-    # Pins the diagnosis rather than trusting it. If a future shell stops
-    # producing SIGPIPE here, this test fails and the comment needs revisiting.
+    # Pins the diagnosis rather than trusting the comment. The assertion is
+    # "non-zero", NOT a specific code: the exact value is platform-dependent.
+    # macOS returns 141 (128 + SIGPIPE), where the producer is killed by the
+    # signal. Linux bash reports a write error on the closed pipe instead and
+    # returns 1. Either way `set -o pipefail` fails the row, which is the only
+    # thing the fix depends on. An earlier version of this test asserted 141 and
+    # passed on macOS while failing in CI, which is the AGENTS.md rule about CI
+    # being the gate, in miniature.
     run run_with_helpers '
         set -o pipefail
         producer() { echo "whitelist.prefix [/x]"; for i in $(seq 1 20000); do echo "filler $i"; done; }
-        producer | grep -q "^whitelist" ; echo "piped_exit=$?"'
+        producer | grep -q "^whitelist"
+        rc=$?
+        echo "piped_exit=$rc"
+        [ "$rc" -ne 0 ] && echo PIPED_FORM_FAILS || echo PIPED_FORM_SUCCEEDS'
     [ "$status" -eq 0 ]
-    [[ "$output" == *"piped_exit=141"* ]]
+    [[ "$output" == *"PIPED_FORM_FAILS"* ]]
 }
 
 @test "_verify_output_has: returns non-zero when the pattern is absent (#505)" {
