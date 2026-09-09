@@ -8,6 +8,22 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Fixed
+
+- **`just verify` reported two failures that were checks pointing at nothing** (#505). The `git` and `direnv` rows named addresses this script does not write, so both reported `MISSING` on every machine, forever. The files were correct and the tools were reading them. `--verify` now reports `Failed: 0` and exits 0.
+
+  This is the inverse of the #329 and #332 shape the pass exists to catch. There the config was valid and unread; here the config was valid and read, and the check was wrong. The cost is the same either way, and it is the #327 lesson: two permanent failures are noise, and noise hides the real ones.
+
+  **`direnv` was wrong twice.** It named `direnvrc`, which this script does not write, and its extractor looked for a `DirenvRC:` field that `direnv status` does not emit. It is now a `validate` row against `direnv.toml`, testing that `whitelist.prefix` is non-empty. That is the stronger question: a default direnv prints `whitelist.prefix []`, so a non-empty one proves direnv **loaded our file** rather than merely looked in the right folder.
+
+  **`git` keeps `~/.gitconfig`, and that is a decision rather than a shortcut.** The obvious alternative was to move to `~/.config/git/config` for consistency with every other config here. Git does honor XDG for `--global` writes, but only when `~/.gitconfig` does not exist; with one present it always wins, verified against git 2.55. Every provisioned machine already has one, holding the identity, the `includeIf` routing, and any hand edits. Moving to XDG would mean relocating a file this script did not write and cannot prove is ours, which is the test `write_managed` applies before it removes anything. The row now names the file git actually uses.
+
+- **Four `--verify` rows could fail on a tool that prints too much** (#505). Found while fixing the row above, and the more useful half. Rows written as `<tool> | grep -q <pattern>` are unsafe under `set -o pipefail`, which this script sets globally: `grep -q` exits at the first match, the tool ahead of it takes SIGPIPE while still writing, and the pipeline returns 141. The row then reports that the tool rejected its config, which is the opposite of what happened.
+
+  `direnv` failed this way on every run, because `direnv status` keeps printing after the matched line. `pi`, `omp`, and `zellij` shared the shape and passed only because their output was short enough to finish first. That is luck, not correctness: any of them would start failing the day the tool grew one more line of output.
+
+  All four now go through `_verify_output_has`, which captures the output and matches it with a here-string, the pattern `_verify_asciinema` already used. The helper sits in the tested helper layer rather than inside the verify function, so the bug has a regression test. A test also pins the diagnosis by asserting the old piped form really does return 141, and another rejects any future row written the old way.
+
 ### Removed
 
 - **The `mac-bloat` category** (#509). It removed exactly one app, GarageBand, which modern macOS does not preinstall. On a clean machine the category found nothing and reported `GarageBand — not found`, which is what it reported on the maintainer's machine.

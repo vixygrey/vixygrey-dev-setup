@@ -905,6 +905,30 @@ should_run() {
 # -- Utility functions --------------------------------------------------------
 installed() { command -v "$1" &>/dev/null; }
 
+# _verify_output_has <extended-regex> <cmd> [args...]
+# Test a command's output against a pattern WITHOUT a pipe. Used by --verify.
+#
+# `<tool> | grep -q <pat>` is unsafe anywhere in this script: grep -q exits at
+# the first match, the tool ahead of it gets SIGPIPE while still writing, and
+# `set -o pipefail` turns that 141 into a failure. In a --verify row the result
+# reads exactly like "the tool rejected our config", which is the opposite of
+# what happened.
+#
+# direnv hit this on every run, because `direnv status` keeps printing after the
+# matched line. pi, omp and zellij shared the shape and passed only because their
+# output was short enough to finish first — luck, not correctness, and a row that
+# passes for that reason starts failing when a tool grows one more line (#505).
+#
+# Lives in the helper layer rather than inside the verify function so the bug has
+# a regression test; the tool-specific _verify_* helpers stay where they are used.
+# stderr is folded in because zellij reports on it, and every caller matches a
+# positive marker specific enough that a warning cannot satisfy it by accident.
+_verify_output_has() {
+    local pattern="$1"; shift
+    local out; out="$("$@" 2>&1)"
+    grep -qE "$pattern" <<<"$out"
+}
+
 # git_global <args...>
 # A `git config --global` WRITE, with the --dry-run rule applied in one place instead
 # of at 49 call sites. Every one of those sites was unguarded, so `--dry-run` rewrote
@@ -2222,14 +2246,14 @@ if [[ "$VERIFY" == "true" ]]; then
     }
 
     VERIFY_TARGETS=(
-        "validate|pi|$HOME/.pi/agent/models.json|pi --list-models 2>/dev/null | grep -q '^ollama'"
+        "validate|pi|$HOME/.pi/agent/models.json|_verify_output_has '^ollama' pi --list-models"
         # `omp config get` prints the EFFECTIVE value, so a pass proves omp read the file
         # at this path and resolved our merged key — not merely that the YAML parses.
         # Reading theme.dark rather than a model role keeps it honest when no
         # GEMINI_API_KEY is set: the theme resolves with no provider reachable at all.
-        "validate|omp|$HOME/.omp/agent/config.yml|omp config get theme.dark 2>/dev/null | grep -q dracula-sakura"
+        "validate|omp|$HOME/.omp/agent/config.yml|_verify_output_has 'dracula-sakura' omp config get theme.dark"
         "validate|ghostty|$HOME/.config/ghostty/config|ghostty +validate-config"
-        "validate|zellij|$HOME/.config/zellij/config.kdl|zellij setup --check 2>&1 | grep -q 'Well defined'"
+        "validate|zellij|$HOME/.config/zellij/config.kdl|_verify_output_has 'Well defined' zellij setup --check"
         "validate|ngrok|$HOME/Library/Application Support/ngrok/ngrok.yml|ngrok config check"
         "validate|asciinema|$HOME/.config/asciinema/config.toml|_verify_asciinema"
         "template|borgmatic|$HOME/.config/borgmatic/config.yaml|borgmatic config validate"
@@ -2264,12 +2288,26 @@ if [[ "$VERIFY" == "true" ]]; then
         # comparing, so tools that return absolute paths and tools that return
         # `~/...` are compared against the same string. Cheap high-signal
         # additions from #374.
-        "path|git|$HOME/.config/git/config|_verify_git_config"
+        # $HOME/.gitconfig, NOT the XDG path, and that is deliberate (#505). git
+        # writes --global to $XDG_CONFIG_HOME/git/config only when that file
+        # exists AND ~/.gitconfig does not; with ~/.gitconfig present it always
+        # wins (verified against git 2.55). Every provisioned machine already has
+        # one, holding the identity, the includeIf routing and any hand edits, so
+        # moving to XDG would mean relocating a file we did not write and cannot
+        # prove is ours. This row previously named the XDG path, which nothing
+        # writes, so it reported MISSING on every machine forever.
+        "path|git|$HOME/.gitconfig|_verify_git_config"
         "path|ssh|$HOME/.ssh/config|_verify_ssh_config"
         "path|npm|$HOME/.npmrc|npm config get userconfig 2>/dev/null | tr -d '\n'; echo"
         "path|pip|$HOME/.config/pip/pip.conf|_verify_pip_config"
         "path|gem|$HOME/.gemrc|_verify_gem_config"
-        "path|direnv|$HOME/.config/direnv/direnvrc|direnv status . 2>/dev/null | awk '/^  DirenvRC:/ {print \$2}'"
+        # Was wrong twice and could never pass (#505): it named `direnvrc`, which
+        # this script does not write, and its extractor looked for a `DirenvRC:`
+        # field that `direnv status` does not emit. A `validate` row is also the
+        # stronger question here — `whitelist.prefix` is EMPTY (`[]`) in a default
+        # direnv and non-empty only because our direnv.toml set it, so a pass
+        # proves direnv loaded our file rather than merely looked in its folder.
+        "validate|direnv|$HOME/.config/direnv/direnv.toml|_verify_output_has '^whitelist[.]prefix [[].+[]]' direnv status ."
         "path|gh|$HOME/.config/gh/config.yml|_verify_gh_config"
         # ripgrep only reads its config when RIPGREP_CONFIG_PATH is exported — a self-
         # contained trap. The export lives in the generated ~/.zshrc, so a row that
