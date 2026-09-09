@@ -869,7 +869,7 @@ The script generates config files with sensible defaults:
 | `~/.omp/agent/extensions/turn-counter.ts` | omp | Shows turns used above the prompt, coloured from the active theme. `~/.omp/agent/extensions/` is auto-discovered for `.ts`/`.js` |
 | `~/.omp/agent/AGENTS.md` | omp | Global Oh My Pi instruction layer: the same house preferences and writing rules as pi, from the same generators. Outranks every other user-level context file, `~/.claude/CLAUDE.md` included |
 | `~/.omp/agent/themes/dracula-sakura.json` | omp | Full Dracula-Sakura theme with all 66 required omp color tokens, including the thirteen status-line colors pi has no equivalent for |
-| `~/.omp/agent/config.yml` | omp | Merged, not managed-block written, because `omp config set` and `/settings` write this file themselves. Carries `theme.dark`, nine Gemini model roles with a fallback chain, and the local SearXNG endpoint at the head of `providers.webSearchOrder` |
+| `~/.omp/agent/config.yml` | omp | Merged because omp also writes this file. Codex handles normal work, Gemini handles vision and lightweight roles, and Claude Sonnet handles only `slow` and `plan`. Fallbacks never use Anthropic and end at local Qwen 2.5 Coder |
 | `~/.newsboat/config` | newsboat | Vim keys, Dracula-Sakura colors, auto-reload |
 | `~/.newsboat/urls` | newsboat | Starter RSS feeds (Claude Code, Node, Rust, GitHub) |
 | `~/.config/nushell/env.nu` | nushell | Starship prompt, Homebrew paths |

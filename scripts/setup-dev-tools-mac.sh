@@ -3959,7 +3959,7 @@ brew_install "aichat" "aichat (all-in-one AI CLI chat / shell copilot)"
 # approval policies) or moved into the omp block (the Tiki skills, the shared skills
 # bridge). `--cleanup` uninstalls the package and sweeps ~/.pi.
 # Oh My Pi (omp) — the maximalist fork of Pi: 32 tools, LSP, DAP, subagents, and nine
-# model roles. Routed at Gemini here; Claude Code keeps MCP and the broad automation.
+# workload-routed model roles. Claude Code keeps MCP and the broad automation.
 #
 # From the TAP, not npm, for two reasons. The npm package declares `engines.bun >=
 # 1.3.14` (it is a Bun program, not a Node one), so `npm_global_install` is the wrong
@@ -3968,7 +3968,7 @@ brew_install "aichat" "aichat (all-in-one AI CLI chat / shell copilot)"
 # a mise/npm-managed copy is not (#345). `brew_install` strips the tap prefix for its
 # installed-state snapshot, so the tapped name is safe to pass straight through.
 trust_tap can1357/tap
-brew_install "can1357/tap/omp" "omp (Oh My Pi — Gemini-routed agent harness)"
+brew_install "can1357/tap/omp" "omp (Oh My Pi — workload-routed agent harness)"
 # Claude Code (installed via npm, not brew). bigpowers is installed globally too so its
 # own Claude-side helper can link skills/hooks from the package tree in the configs pass.
 if installed npm; then
@@ -13978,7 +13978,7 @@ OMP_CONFIG_FILE="$OMP_DIR/config.yml"
 
 if [[ "$DRY_RUN" == "true" ]]; then
     info "[DRY RUN] Would write omp config -> $OMP_DIR (AGENTS.md, themes/dracula-sakura.json)"
-    info "[DRY RUN] Would merge omp settings -> $OMP_CONFIG_FILE (theme, Gemini model roles)"
+    info "[DRY RUN] Would merge omp settings -> $OMP_CONFIG_FILE (theme, model roles, fallbacks)"
     info "[DRY RUN] Would write ${#OMP_LOCAL_TIKI_SKILLS[@]} omp-local Tiki skills -> $OMP_SKILLS_DIR/"
     info "[DRY RUN] Would link ${#OMP_SHARED_SKILLS[@]} shared skills -> $AGENTS_SKILLS/"
     info "[DRY RUN] Would write the turn-counter widget -> $OMP_EXTENSIONS_DIR/turn-counter.ts"
@@ -14892,40 +14892,43 @@ lsp:
 # while this is off and is the right assignment if it is ever switched on.
 advisor:
   enabled: false
-# Nine roles, routed at Gemini. Flash carries ordinary turns, Pro carries the three
-# roles where depth pays for itself, Flash Lite carries the cheap fan-out. Every id
-# is verified against omp's shipped catalog; an unknown one is reported as a config
-# warning at startup rather than failing silently.
-#
-# `advisor` is the second model watching every turn. It sits on Pro because it
-# reviews rather than generates, which is the job worth paying for. Watch the spend
-# if you raise how often it fires: this is the one Pro role on a per-turn path.
+# Hosted roles follow workload strengths. Codex handles interactive and task work.
+# Gemini handles vision, the advisor, and cheap fan-out. Claude Sonnet is primary
+# only for the two depth-first roles: slow and plan (#538).
 modelRoles:
-  default: google/gemini-3.8-flash
-  task: google/gemini-3.8-flash
-  vision: google/gemini-3.8-flash
-  slow: google/gemini-3.1-pro-preview
-  plan: google/gemini-3.1-pro-preview
-  advisor: google/gemini-3.1-pro-preview
-  smol: google/gemini-3.1-flash-lite
-  tiny: google/gemini-3.1-flash-lite
-  commit: google/gemini-3.1-flash-lite
-# gemini-3.1-pro-preview is the only Pro on the Gemini API today and it is a preview
-# id, so it can be retired without notice. An exact model key outranks a role chain,
-# which keeps `slow`, `plan`, and `advisor` working on the day that happens.
-# retry.modelFallback defaults to true, so no switch is needed to arm these.
+  default: openai-codex/gpt-5.6-sol
+  task: openai-codex/gpt-5.6-sol
+  vision: google/gemini-3.8-flash:medium
+  slow: anthropic/claude-sonnet-5:high
+  plan: anthropic/claude-sonnet-5:high
+  advisor: google/gemini-3.1-pro-preview:low
+  smol: google/gemini-3.1-flash-lite:minimal
+  tiny: google/gemini-3.1-flash-lite:minimal
+  commit: google/gemini-3.1-flash-lite:minimal
+# Anthropic never appears in a fallback chain. Gemini is the first hosted
+# fallback for ordinary work. The installed local Qwen coder is the final
+# fallback in every chain, so a second provider failure stays on this machine.
 retry:
+  modelFallback: true
   fallbackChains:
+    openai-codex/gpt-5.6-sol:
+      - google/gemini-3.8-flash:medium
+      - ollama/qwen2.5-coder:14b
+    anthropic/claude-sonnet-5:
+      - google/gemini-3.1-pro-preview:high
+      - ollama/qwen2.5-coder:14b
     google/gemini-3.1-pro-preview:
-      - google/gemini-3.8-flash
+      - openai-codex/gpt-5.6-sol:high
+      - ollama/qwen2.5-coder:14b
+    google/gemini-3.1-flash-lite:
+      - openai-codex/gpt-5.3-codex-spark:low
+      - ollama/qwen2.5-coder:14b
+    google/gemini-3.8-flash:
+      - openai-codex/gpt-5.6-sol:medium
+      - ollama/qwen2.5-coder:14b
     default:
-      - google/gemini-3.5-flash
-    # smol is the cheap subagent fan-out role; when flash-lite is rate-limited
-    # the next cheapest model should take the turn rather than the default chain
-    # sending it to a more expensive one.
-    smol:
-      - google/gemini-3.1-flash-lite
-      - google/gemini-3.5-flash
+      - google/gemini-3.8-flash:medium
+      - ollama/qwen2.5-coder:14b
 # Local SearXNG, first in the web_search chain. This replaces the ~300-line
 # TypeScript extension the pi block generated (#513): omp carries `searxng` as
 # one of 23 built-in web_search backends, with site-aware extraction, so the
@@ -14945,7 +14948,7 @@ OMP_CONFIG_CONF
         if yq eval-all 'select(fileIndex==0) * select(fileIndex==1)' \
             "$OMP_CONFIG_FILE" "$OMP_OURS" > "$OMP_TMP" 2>/dev/null && [[ -s "$OMP_TMP" ]]; then
             mv "$OMP_TMP" "$OMP_CONFIG_FILE"
-            configured "omp: theme + Gemini model roles merged ($OMP_CONFIG_FILE)"
+            configured "omp: theme + model routing merged ($OMP_CONFIG_FILE)"
         else
             rm -f "$OMP_TMP"
             warn "omp: could not merge $OMP_CONFIG_FILE"
@@ -15463,7 +15466,7 @@ echo "  [~/.jqp.yaml]           jq playground theme overrides"
 echo "  [~/.config/aichat]      Local AI chat config + Dracula-Sakura dark theme"
 echo "  [~/.config/croft]       Croft config + Dracula-Sakura theme extension"
 echo "  [~/.herald/themes]      Herald Dracula-Sakura theme asset + theme-name merge"
-echo "  [~/.omp/agent]          Oh My Pi settings, Gemini model roles, theme, local Tiki skills"
+echo "  [~/.omp/agent]          Oh My Pi settings, model routing, theme, local Tiki skills"
 echo "  [~/.agents/skills]      Curated skills Oh My Pi reads natively"
 echo "  [leaf]                  Terminal Markdown previewer (live watch, fuzzy picker, Mermaid)"
 echo "  [~/.config/yt-dlp]      Best quality, aria2c downloader"
@@ -15567,7 +15570,7 @@ unscriptable. Work through it once, then keep it only as long as it's useful.
 - [ ] **infracost** (IaC cost estimates): run `infracost auth login` for a free API key — `infracost breakdown` errors with "No INFRACOST_API_KEY" until then.
 - [ ] **borgmatic backups:** the setup scaffolds `~/.config/borgmatic/config.yaml`. Set `repositories`, store the passphrase in Keychain (`security add-generic-password -a "$USER" -s borg-passphrase -w`), run `borgmatic init --encryption repokey-blake2`, check with `borgmatic create --dry-run`, then enable a daily run (e.g. a LaunchAgent calling `borgmatic --verbosity -1`). ClamAV's virus DB downloads itself in the background after setup.
 - [ ] **Claude AI in croft:** `croft pair` (the AI navigator in your primary IDE) defaults to `--provider claude`, which hands off to your existing `claude` CLI — so it just works on whatever auth that already has (a Claude Pro/Max subscription **or** an API key), no separate `ANTHROPIC_API_KEY` required. Want a fully local model with no key at all? Ollama is installed and running — use the `gemma3:4b` that setup already pulled (`croft pair --provider ollama --model gemma3:4b`) or the heavier `qwen2.5-coder:14b` that's also pre-pulled for coding-oriented local loops. An Anthropic API key is **optional** here — the only thing that uses one is the `llm` CLI, and `llm` itself is optional: if Claude Code and the Claude desktop app already cover you, you can skip it entirely. If you do want `llm` for one-off prompts (e.g. `> ! llm …` from micro's command bar) or shell scripting, run `llm keys set anthropic` — setup already installs the plugin (via uv) and sets the default model to `anthropic/claude-sonnet-4-5`. (Email/calendar AI is built into **herald** — configured separately above.)
-- [ ] **Oh My Pi** (second agent, Gemini-routed): `omp` is installed from the `can1357/tap` Homebrew tap with the Dracula-Sakura theme, the shared `AGENTS.md` preferences, and nine model roles pointed at Gemini — Flash for ordinary turns, Pro for `slow`, `plan`, and `advisor`, Flash Lite for cheap subagent fan-out. It reads `~/.agents/skills/` as its own native skills location (the five shared skills), plus five omp-local Tiki companions in `~/.omp/agent/skills/`. Your local **SearXNG** instance is first in its `web_search` chain. **It needs `GEMINI_API_KEY` exported in your environment**; the setup never writes a key. Get one from Google AI Studio, store it in Apple Passwords, and export it from a file your shell reads. Then run `omp` and check the model line, or `omp config get modelRoles` from any shell. Read that key whole: it is a record, so `omp config get modelRoles.default` answers `Unknown setting`.
+- [ ] **Oh My Pi** (workload-routed): `omp` is installed from the `can1357/tap` Homebrew tap with the Dracula-Sakura theme and shared `AGENTS.md` preferences. Codex handles default and task work. Gemini handles vision, advisor, and lightweight roles. Claude Sonnet 5 is primary only for `slow` and `plan`. Fallback chains never select Anthropic: they use hosted models first and end at local `ollama/qwen2.5-coder:14b`. It reads `~/.agents/skills/` plus five omp-local Tiki companions in `~/.omp/agent/skills/`. Local SearXNG is first in the web-search chain.
 - [ ] **croft** (primary IDE): installed from git `main` via cargo — run `croft` in a project to open the workspace; re-run `cargo install --git https://github.com/vitali87/croft.git --locked` to upgrade.
 - [ ] **AI side-pane:** `zellij --layout dev` opens your editor + a Claude Code pane side by side (the strongest AI workflow).
 - [ ] **Home dashboard:** `zellij --layout home` opens a plain terminal on the left, with weather, `btop`, and your `~/Documents/notes` tiki stacked on the right. **`starlit` needs one-time setup before the weather pane shows a forecast**: run `starlit --setup`, then put your API key in the config it creates. Until then that pane shows the setup prompt. The setup never writes a key for you.
@@ -15666,7 +15669,7 @@ applying it to you.
 - **croft** — VS Code-style terminal IDE; the **primary editor** (`croft pair` for the AI navigator). **Visual Studio Code** (`code .`) is the GUI editor alongside it, preconfigured with Dracula Official plus a Dracula-Sakura accent layer and the same formatters. **micro** is the `EDITOR` for git/gh/lazygit commit messages and quick edits (non-modal, Dracula, on-screen key menu, trailing whitespace stripped on save).
 - **Claude Code (`claude`)** — agentic coding in the terminal; hosts the MCP servers. Best via `zellij --layout dev` (editor + Claude pane). New sessions are **auto-named `<YYYY-MM-DD>-<repo>`** (from the git remote, so this checkout reads `vixygrey-dev-setup`, not its `-main` folder), which is what the `/resume` picker and the terminal title show. Resuming (`-r`, `-c`, `--from-pr`) keeps the original name, and an explicit `-n/--name` always wins. Rename any session at any time with `/rename`.
 - **Claude in croft** — croft's `croft pair` AI navigator (primary IDE) defaults to `--provider claude`, riding your existing `claude` CLI auth (subscription or key, no separate `ANTHROPIC_API_KEY`); `--provider ollama` runs a local model with no key. The one path that uses an Anthropic key is the **`llm`** CLI (`llm-anthropic`) — and it's optional: reach for it only when you want Claude in a shell pipe or a `> ! llm …` one-off from micro's command bar, then run `llm keys set anthropic`. **herald** integrates with Claude two ways, neither needing a key: Claude Code reads and searches your mail/calendar through herald's **MCP** (it rides your `claude` login), and herald's *own* built-in AI (triage, summaries, compose styler, semantic search) is optional and runs on local **Ollama** models that setup installs, runs as a login service, and seeds with `gemma3:4b` (chat) + `nomic-embed-text-v2-moe` (embeddings).
-- **Oh My Pi (`omp`)** — the third agent, and the maximalist fork of Pi: 32 built-in tools, LSP, a real debugger through DAP, subagents, and nine model roles that route by intent. Routed at Gemini here, so it is the one to reach for when the work wants a large context window or a second opinion from a non-Anthropic model. Shares the same theme, the same `AGENTS.md` preferences, and the same five skills as Pi. Needs `GEMINI_API_KEY` in the environment.
+- **Oh My Pi (`omp`)** — the third agent and maximalist Pi fork: 32 tools, LSP, DAP, subagents, and workload-routed models. Codex handles normal work. Gemini handles vision and lightweight roles. Claude Sonnet 5 is primary only for `slow` and `plan`, never a fallback. Every fallback chain ends at local `ollama/qwen2.5-coder:14b`.
 
 ## Status bar & launcher
 - **SketchyBar** — Dracula-Sakura status bar: app, clock, battery, wifi, volume, cpu, mem, bluetooth, VPN.

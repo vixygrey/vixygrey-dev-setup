@@ -18,12 +18,14 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - Added explicit policies for managed, generated, merged, and seed files (#530, #533, #536).
 - Extracted the mise shim linker for isolated filesystem checks (#532).
 - Corrected CI, verification, and pre-commit coverage claims (#535).
+- Routed omp by workload and made local Qwen the final fallback (#538).
 
 ### Fixed
 
 - Managed writers now preserve files with malformed markers (#530).
 - ClamAV seed files now use the installed `clamscan` binary check (#536).
 - Existing JSON merges now preserve malformed files without mutation (#533).
+- Removed Anthropic models from every omp fallback chain (#538).
 
 ## [7.23.0] - 2026-09-09
 
