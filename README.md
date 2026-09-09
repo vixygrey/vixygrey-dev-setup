@@ -448,6 +448,7 @@ Faster, prettier, smarter replacements for standard Unix utilities.
 | **llm** | Simon Willison's CLI -- one-shot prompts, plugin ecosystem, SQLite logging, embeddings. Installed via `uv tool` with the Anthropic plugin; default model `anthropic/claude-sonnet-4-5` |
 | **aichat** | All-in-one AI CLI chat / shell copilot -- lighter than a full coding agent, with local Ollama support and a configurable REPL |
 | **pi** | A second, deliberately minimal coding agent -- four core tools, custom Dracula-Sakura theme, curated shared skills, and local Ollama models wired through `~/.pi/agent/` |
+| **omp** | Oh My Pi -- the maximalist fork of pi, installed from the `can1357/tap` Homebrew tap. 32 tools, LSP, a DAP debugger, subagents, and nine model roles routed at Google Gemini through `~/.omp/agent/`. Shares pi's theme, preferences, and skill bridge. Needs `GEMINI_API_KEY` |
 | **chezmoi** | Dotfile manager -- backup and restore configs across machines |
 | **mitmproxy** | Free HTTP debugging proxy -- inspect and modify API calls from any app |
 | **Ghostty** | Fast GPU-accelerated terminal -- daily driver, native macOS feel |
@@ -618,6 +619,7 @@ Applied consistently across the machine, with built-in Dracula variants kept whe
 | **aichat** | Dracula-Sakura dark TextMate theme plus rose/lilac prompt colors in config |
 | **herald** | Local Dracula-Sakura YAML theme in `~/.herald/themes/` with `theme.name` merged safely into `conf.yaml` |
 | **pi** | Full Dracula-Sakura custom theme in `~/.pi/agent/themes/dracula-sakura.json` |
+| **omp** | Full Dracula-Sakura custom theme in `~/.omp/agent/themes/dracula-sakura.json`, selected through `theme.dark` in `config.yml` |
 | **claws** | Built-in `dracula` theme via `claws --theme dracula` alias |
 | **miniserve** | `--color-scheme-dark dracula` in the `serve` alias |
 | **vivid** | Dracula-themed LS_COLORS for file type coloring |
@@ -644,7 +646,7 @@ The script sets up Claude Code with a comprehensive configuration for full-stack
 | `~/.claude/rules/docker.md` | Docker rules (multi-stage builds, non-root, hadolint, dive) |
 | `~/.claude/rules/iac.md` | IaC rules (remote state, tflint, infracost, trivy config scan) |
 | `~/.claude/rules/style.md` | Voice rules (calm and concise, Dracula-Sakura when there is stylistic latitude) |
-| `~/.claude/rules/writing.md` | Writing rules -- the 53 rules of ASD-STE100 Simplified Technical English. Strict on commits, PRs, specs, and technical docs; mechanical subset only on issues, wikis, and chat. pi gets the identical text at the tail of `~/.pi/agent/AGENTS.md` |
+| `~/.claude/rules/writing.md` | Writing rules -- the 53 rules of ASD-STE100 Simplified Technical English. Strict on commits, PRs, specs, and technical docs; mechanical subset only on issues, wikis, and chat. pi and omp get the identical text at the tail of `~/.pi/agent/AGENTS.md` and `~/.omp/agent/AGENTS.md` |
 | `~/.claude/hooks/format-on-edit.sh` | Auto-format with Prettier after Claude edits JS/TS/CSS/JSON/MD files |
 | `~/.claude/hooks/lint-python.sh` | Auto-lint and fix Python files with ruff after Claude edits them |
 | `~/.claude/hooks/lint-dockerfile.sh` | Lint Dockerfiles with hadolint after Claude edits them |
@@ -867,7 +869,10 @@ The script generates config files with sensible defaults:
 | `~/.pi/agent/extensions/searxng-web.ts` | pi | Local SearXNG-backed web tools: `searxng_search`, `searxng_fetch`, plus `/searxng-check` |
 | `~/.pi/agent/skills/*` | pi | Pi-local skills: Tiki companions (`tiki-capture`, `tiki-review`, `tiki-groom`, `tiki-arc`, `tiki-journal`) plus `searxng-web` for local web research |
 | `~/.pi/agent/settings.json` (`packages`) | pi | Pins the third-party `bigpowers` Pi package so its extension / skills / prompts load reproducibly |
-| `~/.agents/skills/*` | pi | Symlinks to the curated shared skills (`api-testing`, `d2-diagrams`, `dbmate-migrations`, `office-docs`, `tiki`) |
+| `~/.agents/skills/*` | pi, omp | Symlinks to the curated shared skills (`api-testing`, `d2-diagrams`, `dbmate-migrations`, `office-docs`, `tiki`). omp treats this directory as its own native skills location, so it needs no separate wiring |
+| `~/.omp/agent/AGENTS.md` | omp | Global Oh My Pi instruction layer: the same house preferences and writing rules as pi, from the same generators. Outranks every other user-level context file, `~/.claude/CLAUDE.md` included |
+| `~/.omp/agent/themes/dracula-sakura.json` | omp | Full Dracula-Sakura theme with all 66 required omp color tokens, including the thirteen status-line colors pi has no equivalent for |
+| `~/.omp/agent/config.yml` | omp | Merged, not managed-block written, because `omp config set` and `/settings` write this file themselves. Carries `theme.dark` and nine Gemini model roles with a fallback chain |
 | `~/.newsboat/config` | newsboat | Vim keys, Dracula-Sakura colors, auto-reload |
 | `~/.newsboat/urls` | newsboat | Starter RSS feeds (Claude Code, Node, Rust, GitHub) |
 | `~/.config/nushell/env.nu` | nushell | Starship prompt, Homebrew paths |
@@ -1090,6 +1095,45 @@ run `pi` and then `/login`.
 What Pi is **not** in this setup: not the MCP-capable agent, not the mail/calendar/AWS/GitHub
 surface, and not the place for the broadest automation. That remains **Claude Code**.
 Pi is the smaller loop for local model work and tight edit/bash sessions.
+
+### Third agent — Oh My Pi
+
+**Oh My Pi** (`omp`) is the maximalist fork of Pi by can1357, installed from the
+`can1357/tap` Homebrew tap rather than npm: the package is a Bun program
+(`engines.bun >= 1.3.14`), and the tap ships a prebuilt native binary into
+`$HOMEBREW_PREFIX/bin`, where `sh`, git hooks, and launchd can all see it.
+
+Where Pi keeps four tools and delegates the rest, omp brings 32 built-in tools, 13 LSP
+operations, a real debugger over DAP, subagents, a curated memory, and nine model roles
+that route by intent. This setup points all nine at **Google Gemini**:
+
+| Roles | Model | Why |
+| --- | --- | --- |
+| `default`, `task`, `vision` | `gemini-3.8-flash` | Ordinary turns, 1M context |
+| `slow`, `plan`, `advisor` | `gemini-3.1-pro-preview` | The three roles where depth pays for itself. `advisor` is the second model watching every turn, so it reviews rather than generates |
+| `smol`, `tiny`, `commit` | `gemini-3.1-flash-lite` | Cheap subagent fan-out |
+
+`gemini-3.1-pro-preview` is the only Gemini Pro on the API today and preview ids can be
+retired without notice, so `retry.fallbackChains` pins an exact-model fallback to Flash.
+An unknown model id surfaces as a config warning at startup rather than failing quietly.
+
+It shares everything visual and behavioral with Pi: the same Dracula-Sakura theme, the
+same `AGENTS.md` preferences and writing rules (both generated by one emitter, so they
+cannot drift), and the same five shared skills. Nothing extra is generated for skills,
+because `~/.agents/skills/` is omp's own canonical location rather than a foreign import.
+
+Two things worth knowing. Its `~/.omp/agent/AGENTS.md` has the highest precedence of any
+user-level context file, so it **shadows** `~/.claude/CLAUDE.md` in omp sessions instead
+of stacking with it. And `~/.omp/agent/config.yml` is written by omp itself, so this
+setup **merges** into it with `yq` rather than owning it with a managed block.
+
+**Authentication is yours.** omp's `google` provider reads `GEMINI_API_KEY` from the
+environment; the setup never writes, reads, or echoes a key. Export it from wherever you
+keep secrets, then confirm with `omp config get modelRoles`.
+
+> `modelRoles` is a **record**, so it reads as a whole and not by sub-key.
+> `omp config get modelRoles.default` answers `Unknown setting`, which reports a
+> schema shape rather than a missing value.
 
 ### Claude Code MCP Servers
 

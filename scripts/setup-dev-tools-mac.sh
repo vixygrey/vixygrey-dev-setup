@@ -359,7 +359,7 @@ declare -A CATEGORY_DESC=(
     [containers]="lazydocker, dive, kubectl, k9s"
     [api]="ATAC, grpcurl"
     [networking]="mtr, bandwhich, nmap"
-    [dx]="fzf, starship, atuin, croft, micro, VS Code (+ extensions), Ghostty, zellij, llm, aichat, pi"
+    [dx]="fzf, starship, atuin, croft, micro, VS Code (+ extensions), Ghostty, zellij, llm, aichat, pi, omp"
     [ux]="Lighthouse"
     [docs]="d2, Mermaid CLI"
     [mac-system]="Pearcleaner, dockutil, terminal-notifier"
@@ -399,7 +399,7 @@ declare -A CONFIG_LIVES_IN_CONFIGS=(
     [database]="pgcli, mycli, harlequin"
     [containers]="lazydocker, k9s (config + Dracula skin)"
     [networking]="trippy"
-    [dx]="atuin, croft config/theme, zellij, Ghostty, VS Code settings, aichat, pi (~/.pi/agent + shared ~/.agents/skills links) — and starship, which is in the \`dracula\` category"
+    [dx]="atuin, croft config/theme, zellij, Ghostty, VS Code settings, aichat, pi (~/.pi/agent + shared ~/.agents/skills links), omp (~/.omp/agent) — and starship, which is in the \`dracula\` category"
     [mac-productivity]="tiki workflow, herald theme asset + theme-name merge"
     [mac-focus]="newsboat"
     [mac-media]="mpv"
@@ -1600,6 +1600,10 @@ if [[ "$UNINSTALL" == "true" ]]; then
     echo "  npm uninstall -g bigpowers"
     echo "  rm -f ~/.agents/skills/api-testing ~/.agents/skills/d2-diagrams ~/.agents/skills/dbmate-migrations ~/.agents/skills/office-docs ~/.agents/skills/tiki"
     echo ""
+    echo "# Remove omp config and sessions (the formula goes with the brew bundle cleanup above):"
+    echo "  rm -rf ~/.omp"
+    echo "  brew untap can1357/tap"
+    echo ""
     echo "# Remove Helix config:"
     echo "  rm -rf ~/.config/helix"
     echo ""
@@ -2106,6 +2110,11 @@ if [[ "$VERIFY" == "true" ]]; then
 
     VERIFY_TARGETS=(
         "validate|pi|$HOME/.pi/agent/models.json|pi --list-models 2>/dev/null | grep -q '^ollama'"
+        # `omp config get` prints the EFFECTIVE value, so a pass proves omp read the file
+        # at this path and resolved our merged key — not merely that the YAML parses.
+        # Reading theme.dark rather than a model role keeps it honest when no
+        # GEMINI_API_KEY is set: the theme resolves with no provider reachable at all.
+        "validate|omp|$HOME/.omp/agent/config.yml|omp config get theme.dark 2>/dev/null | grep -q dracula-sakura"
         "validate|ghostty|$HOME/.config/ghostty/config|ghostty +validate-config"
         "validate|zellij|$HOME/.config/zellij/config.kdl|zellij setup --check 2>&1 | grep -q 'Well defined'"
         "validate|ngrok|$HOME/Library/Application Support/ngrok/ngrok.yml|ngrok config check"
@@ -3544,6 +3553,17 @@ if installed npm; then
 else
     progress  # keep progress bar accurate when npm unavailable
 fi
+# Oh My Pi (omp) — the maximalist fork of Pi: 32 tools, LSP, DAP, subagents, and nine
+# model roles. Routed at Gemini here; Pi stays local-first and Claude Code keeps MCP.
+#
+# From the TAP, not npm, for two reasons. The npm package declares `engines.bun >=
+# 1.3.14` (it is a Bun program, not a Node one), so `npm_global_install` is the wrong
+# helper and there is no bun equivalent. And the tap ships a prebuilt native binary
+# into $HOMEBREW_PREFIX/bin, which is on the PATH of `sh`, git hooks and launchd —
+# a mise/npm-managed copy is not (#345). `brew_install` strips the tap prefix for its
+# installed-state snapshot, so the tapped name is safe to pass straight through.
+trust_tap can1357/tap
+brew_install "can1357/tap/omp" "omp (Oh My Pi — Gemini-routed agent harness)"
 # Claude Code (installed via npm, not brew). bigpowers is installed globally too so its
 # own Claude-side helper can link skills/hooks from the package tree in the configs pass.
 if installed npm; then
@@ -11446,7 +11466,8 @@ write_managed "$CLAUDE_MD" "#" <<'CLAUDE_MD_CONF'
   - Note the asymmetry: an issue body is loose, its PR body is strict. One carve-out overrides
     the tier, and it is safety. A warning about data loss or an irreversible action is
     command-first, risk-second wherever it appears.
-  - pi follows the identical file at the tail of `~/.pi/agent/AGENTS.md`, from the same source.
+  - pi and omp follow the identical file at the tail of `~/.pi/agent/AGENTS.md` and
+    `~/.omp/agent/AGENTS.md`, from the same source.
 
 ## Agent instructions in a repo: public `AGENTS.md`, private `CLAUDE.md`
 Two files, two audiences. Keep them separate in every repository.
@@ -11536,7 +11557,7 @@ Rules that follow from this:
 - **Code quality**: `typos` for spell checking, `ast-grep` for structural search/replace, `shellcheck`/`shfmt` for shell, `scc` to count lines of code by language with complexity + COCOMO cost, `manly` to explain a command's flags from its man page
 - **Security**: `trivy` to scan containers/IaC, `gitleaks` for secrets, `semgrep` for static analysis, `detect-secrets` for pre-commit secret detection, `sops` for secrets encryption
 - **IaC**: `tofu` (Terraform), `tflint` for linting, `terraform-docs` for module READMEs, `checkov` for static analysis, `infracost` for cost estimation, `cfn-lint` for CloudFormation, `sam` for SAM (note: `tfsec` checks live in `trivy config`)
-- **AI / agentic**: `claude` (Claude Code) is the coding agent — do agentic, multi-file edits yourself. `llm` for one-shot prompts and embeddings. `copilot` (GitHub Copilot CLI) is available too.
+- **AI / agentic**: `claude` (Claude Code) is the coding agent — do agentic, multi-file edits yourself. `llm` for one-shot prompts and embeddings. `copilot` (GitHub Copilot CLI) is available too. Two secondary harnesses sit alongside: **`pi`** (minimal, local-model-first) and **`omp`** (Oh My Pi — maximalist fork of pi, routed at Gemini, needs `GEMINI_API_KEY`). Both read `~/.agents/skills/` and carry the same house preferences and writing rules as this file. **pi has no MCP support at all**, so herald, gws, GitHub and AWS work can never go there. omp does have MCP and inherits servers already declared under `.claude`, but this setup registers none for it, so treat those integrations as Claude Code's until that changes.
 - **HTTP**: `xh` for colorized requests, `curlie` for curl with httpie output, `grpcurl` for gRPC
 - **Network**: `trip` (trippy) for traceroute TUI, `sudo mtr` (requires root, lives in sbin), `bandwhich` for bandwidth, `nmap` for scanning, `mkcert` for local TLS certs
 - **Docs**: `d2` for diagrams, `pandoc` for conversion, `leaf` for Markdown preview, `doxx` to read/preview `.docx` files in the terminal
@@ -11706,11 +11727,76 @@ Every project should have a README.md with:
 CLAUDE_MD_CONF
 configured "Claude Code global CLAUDE.md written (refreshed each run; edits outside the markers are kept)"
 
+# ---- Shared agent preferences (pi + omp) ----
+# ONE definition, TWO consumers: ~/.pi/agent/AGENTS.md and ~/.omp/agent/AGENTS.md.
+# The body is harness-agnostic — voice, output preferences, context discipline, coding
+# behavior — so nothing in it was ever pi-specific except the heading, which is why it
+# takes the harness name as an argument instead of being copied (#504). Same reasoning
+# as emit_writing_rules below: two heredocs drift the first time one is edited alone.
+#
+# Claude Code deliberately does NOT consume this. Its equivalent lives in the managed
+# block of ~/.claude/CLAUDE.md, which carries repo-workflow rules these two do not get.
+emit_agent_preferences() {
+    local harness="$1"
+    printf '# Global %s Preferences\n' "$harness"
+    /bin/cat <<'AGENT_PREFS_BODY'
+
+## Core working style
+
+- Be calm, technically sharp, and warm.
+- Prefer clarity over flourish.
+- Keep answers concise by default, but expand when the task benefits from detail.
+- When making changes, explain what changed, where, and any follow up action.
+- When useful, present results as short bullets with clear file paths.
+
+## Dracula Sakura house voice
+
+- Keep the voice polished, composed, and lightly elegant.
+- Favor a Dracula Sakura aesthetic when asked for visual styling: dark plum foundations, rose and lilac accents, cyan and mint for information and healthy states.
+- Prefer refined, feminine leaning presentation without becoming childish or overly cute.
+- Use tasteful softness sparingly. No roleplay, emoji clutter, or chirpy filler.
+- Recommend the smallest high leverage next step first.
+
+## Output preferences and anti trope writing
+
+- Do not use em dashes in user facing prose.
+- Limit hyphen heavy phrasing. Prefer cleaner sentences and simpler punctuation.
+- Avoid AI writing tropes such as filler praise, sales language, inflated certainty, and canned encouragement.
+- Do not say things like "great question", "absolutely", "certainly", "game changer", "seamless", or "hope this helps" unless the wording is genuinely necessary.
+- Do not narrate intent at length. Act, then summarize results.
+- Keep confidence proportional to evidence. State uncertainty plainly when it exists.
+
+## Durable context rules
+
+- Prefer durable preferences over session only ones when the user clearly wants persistence.
+- Keep stable instructions in agent context files. Keep volatile project state in project local status, planning, or changelog files instead.
+- Before compaction, or when context grows large, persist important project state to the repo's existing status, planning, or memory files when that workflow exists.
+- Never write secrets into agent instruction files, memory files, or committed project docs.
+
+## Token discipline and recovery
+
+- Use targeted file reads and concise summaries to protect context.
+- Prefer staged exploration over broad repeated reads.
+- If an approach fails twice, stop, summarize what was tried and what remains unknown, then ask for the smallest missing input.
+- Treat warnings as real signals. Investigate and resolve them rather than dismissing them.
+
+## Coding behavior
+
+- Be practical and implementation first.
+- Preserve existing project style unless asked to redesign it.
+- Avoid unnecessary rewrites.
+- Call out risks, edge cases, or irreversible actions before taking them.
+- For config or theme work, optimize for readability, coherence, and aesthetics together.
+
+AGENT_PREFS_BODY
+}
+
 # ---- Shared writing rules (Simplified Technical English) ----
-# ONE definition, TWO consumers: ~/.claude/rules/writing.md for Claude Code and the
-# tail of ~/.pi/agent/AGENTS.md for pi. Both agents must follow provably identical
-# rules, which a second heredoc could not guarantee — the two copies would drift the
-# first time one of them was edited alone. This function is the reason they cannot.
+# ONE definition, THREE consumers: ~/.claude/rules/writing.md for Claude Code, and the
+# tail of ~/.pi/agent/AGENTS.md and ~/.omp/agent/AGENTS.md for pi and omp. All three
+# agents must follow provably identical rules, which separate heredocs could not
+# guarantee — the copies would drift the first time one of them was edited alone.
+# This function is the reason they cannot.
 #
 # The content is the 53 rules of ASD-STE100 Issue 9 as paraphrased by the
 # `simple-english` skill that ships with the pinned bigpowers package. That skill is
@@ -13100,57 +13186,7 @@ else
     # which is a deliberate trade: an ungoverned local model produces the slop the
     # rules exist to prevent.
     {
-    /bin/cat <<'PI_AGENTS_CONF'
-# Global Pi Preferences
-
-## Core working style
-
-- Be calm, technically sharp, and warm.
-- Prefer clarity over flourish.
-- Keep answers concise by default, but expand when the task benefits from detail.
-- When making changes, explain what changed, where, and any follow up action.
-- When useful, present results as short bullets with clear file paths.
-
-## Dracula Sakura house voice
-
-- Keep the voice polished, composed, and lightly elegant.
-- Favor a Dracula Sakura aesthetic when asked for visual styling: dark plum foundations, rose and lilac accents, cyan and mint for information and healthy states.
-- Prefer refined, feminine leaning presentation without becoming childish or overly cute.
-- Use tasteful softness sparingly. No roleplay, emoji clutter, or chirpy filler.
-- Recommend the smallest high leverage next step first.
-
-## Output preferences and anti trope writing
-
-- Do not use em dashes in user facing prose.
-- Limit hyphen heavy phrasing. Prefer cleaner sentences and simpler punctuation.
-- Avoid AI writing tropes such as filler praise, sales language, inflated certainty, and canned encouragement.
-- Do not say things like "great question", "absolutely", "certainly", "game changer", "seamless", or "hope this helps" unless the wording is genuinely necessary.
-- Do not narrate intent at length. Act, then summarize results.
-- Keep confidence proportional to evidence. State uncertainty plainly when it exists.
-
-## Durable context rules
-
-- Prefer durable preferences over session only ones when the user clearly wants persistence.
-- Keep stable instructions in agent context files. Keep volatile project state in project local status, planning, or changelog files instead.
-- Before compaction, or when context grows large, persist important project state to the repo's existing status, planning, or memory files when that workflow exists.
-- Never write secrets into agent instruction files, memory files, or committed project docs.
-
-## Token discipline and recovery
-
-- Use targeted file reads and concise summaries to protect context.
-- Prefer staged exploration over broad repeated reads.
-- If an approach fails twice, stop, summarize what was tried and what remains unknown, then ask for the smallest missing input.
-- Treat warnings as real signals. Investigate and resolve them rather than dismissing them.
-
-## Coding behavior
-
-- Be practical and implementation first.
-- Preserve existing project style unless asked to redesign it.
-- Avoid unnecessary rewrites.
-- Call out risks, edge cases, or irreversible actions before taking them.
-- For config or theme work, optimize for readability, coherence, and aesthetics together.
-
-PI_AGENTS_CONF
+    emit_agent_preferences "Pi"
     emit_writing_rules
     } | write_generated "$PI_DIR/AGENTS.md"
     success "pi: AGENTS.md written, with the shared writing rules (~/.pi/agent/AGENTS.md)"
@@ -14352,6 +14388,225 @@ PI_TIKI_JOURNAL_SKILL
     unset _pi_linked _pi_missing
 fi
 
+# ---- Oh My Pi (omp) coding agent (~/.omp/agent) ----
+# omp is the maximalist fork of pi: 32 tools, LSP, DAP, subagents, nine model roles.
+# It ignores XDG_CONFIG_HOME the same way pi does, so ~/.omp/agent is the one path
+# family to manage — not ~/.config/omp. Credentials stay user-owned: the `google`
+# provider reads GEMINI_API_KEY from the environment and this script never reads,
+# writes, or echoes it (#504).
+#
+# Two vocabulary traps upstream, both worth naming here because the ids share one
+# namespace and the wrong one fails silently:
+#   * `google` is the MODEL provider (the Gemini API). `gemini` is a DISCOVERY
+#     provider — the source that reads GEMINI.md. Disabling or configuring the
+#     wrong one does nothing visible. Roles below are all `google/...`.
+#   * `~/.agents/skills` is omp's CANONICAL native skills location, not a foreign
+#     import. The five skills the pi block links there are picked up with no extra
+#     work, which is why this block generates no skills of its own.
+OMP_DIR="$HOME/.omp/agent"
+OMP_THEME_DIR="$OMP_DIR/themes"
+OMP_THEME_FILE="$OMP_THEME_DIR/dracula-sakura.json"
+# config.yml is canonical; an existing config.yaml is loaded and updated in place by
+# omp itself, so target whichever one is already there rather than creating a second
+# file the tool would then ignore.
+OMP_CONFIG_FILE="$OMP_DIR/config.yml"
+[[ -f "$OMP_DIR/config.yaml" && ! -f "$OMP_CONFIG_FILE" ]] && OMP_CONFIG_FILE="$OMP_DIR/config.yaml"
+
+if [[ "$DRY_RUN" == "true" ]]; then
+    info "[DRY RUN] Would write omp config -> $OMP_DIR (AGENTS.md, themes/dracula-sakura.json)"
+    info "[DRY RUN] Would merge omp settings -> $OMP_CONFIG_FILE (theme, Gemini model roles)"
+else
+    mkdir -p "$OMP_THEME_DIR"
+
+    # -- AGENTS.md ----------------------------------------------------------------
+    # Same two-part shape as pi's: shared preferences, then the shared writing rules.
+    # Both come from the same emitters, so the two harnesses cannot drift (#504).
+    # omp gives this file the highest precedence of any user-level context source —
+    # its `native` provider outranks claude, codex, and the rest — so it shadows
+    # ~/.claude/CLAUDE.md for omp sessions rather than stacking with it.
+    {
+    emit_agent_preferences "Oh My Pi"
+    emit_writing_rules
+    } | write_generated "$OMP_DIR/AGENTS.md"
+    success "omp: AGENTS.md written, with the shared writing rules (~/.omp/agent/AGENTS.md)"
+
+    # -- Dracula-Sakura theme -----------------------------------------------------
+    # Same palette as pi's theme, different schema: omp requires every one of its
+    # colour tokens, including thirteen statusLine* entries and a `link` and
+    # `toolText` that pi has no equivalent for. So this is authored against omp's
+    # own schema rather than copied from PI_THEME_CONF.
+    write_generated "$OMP_THEME_FILE" <<'OMP_THEME_CONF'
+{
+  "$schema": "https://raw.githubusercontent.com/can1357/oh-my-pi/main/packages/coding-agent/src/modes/theme/theme-schema.json",
+  "name": "dracula-sakura",
+  "vars": {
+    "bg": "#282a36",
+    "panel": "#323448",
+    "panelSoft": "#2f3144",
+    "current": "#4b4963",
+    "selection": "#6a5d86",
+    "fg": "#f8f8f2",
+    "muted": "#ddd2f7",
+    "dim": "#a297cb",
+    "comment": "#8a88c7",
+    "cyan": "#9be7ff",
+    "mint": "#8af7cf",
+    "peach": "#ffcf93",
+    "rose": "#ff9fe3",
+    "blush": "#ffc2ec",
+    "lilac": "#d4b2ff",
+    "red": "#ff7aa8",
+    "yellow": "#fff0a8"
+  },
+  "colors": {
+    "accent": "rose",
+    "border": "lilac",
+    "borderAccent": "cyan",
+    "borderMuted": "current",
+    "success": "mint",
+    "error": "red",
+    "warning": "peach",
+    "muted": "muted",
+    "dim": "dim",
+    "text": "fg",
+    "thinkingText": "comment",
+    "selectedBg": "selection",
+    "userMessageBg": "panel",
+    "userMessageText": "fg",
+    "customMessageBg": "panelSoft",
+    "customMessageText": "fg",
+    "customMessageLabel": "cyan",
+    "toolPendingBg": "#34364b",
+    "toolSuccessBg": "#233b36",
+    "toolErrorBg": "#4a3040",
+    "toolTitle": "rose",
+    "toolOutput": "muted",
+    "mdHeading": "blush",
+    "mdLink": "cyan",
+    "mdLinkUrl": "comment",
+    "mdCode": "mint",
+    "mdCodeBlock": "yellow",
+    "mdCodeBlockBorder": "current",
+    "mdQuote": "muted",
+    "mdQuoteBorder": "lilac",
+    "mdHr": "current",
+    "mdListBullet": "rose",
+    "toolDiffAdded": "mint",
+    "toolDiffRemoved": "red",
+    "toolDiffContext": "comment",
+    "syntaxComment": "comment",
+    "syntaxKeyword": "rose",
+    "syntaxFunction": "mint",
+    "syntaxVariable": "peach",
+    "syntaxString": "yellow",
+    "syntaxNumber": "lilac",
+    "syntaxType": "cyan",
+    "syntaxOperator": "rose",
+    "syntaxPunctuation": "fg",
+    "thinkingOff": "current",
+    "thinkingMinimal": "comment",
+    "thinkingLow": "lilac",
+    "thinkingMedium": "cyan",
+    "thinkingHigh": "rose",
+    "thinkingXhigh": "blush",
+    "thinkingMax": "red",
+    "bashMode": "mint",
+    "pythonMode": "lilac",
+    "statusLineBg": "panel",
+    "statusLineSep": "current",
+    "statusLineModel": "rose",
+    "statusLinePath": "cyan",
+    "statusLineGitClean": "mint",
+    "statusLineGitDirty": "peach",
+    "statusLineContext": "lilac",
+    "statusLineSpend": "cyan",
+    "statusLineStaged": "mint",
+    "statusLineDirty": "peach",
+    "statusLineUntracked": "blush",
+    "statusLineOutput": "blush",
+    "statusLineCost": "rose",
+    "statusLineSubagents": "lilac"
+  },
+  "export": {
+    "pageBg": "#1f2030",
+    "cardBg": "#282a36",
+    "infoBg": "#3e3148"
+  }
+}
+OMP_THEME_CONF
+    success "omp: Dracula-Sakura theme written (~/.omp/agent/themes/dracula-sakura.json)"
+
+    # -- config.yml ---------------------------------------------------------------
+    # MERGE, never write_managed. omp owns this file: `/settings`, `omp config set`
+    # and `omp config reset` all write it back through their own YAML serializer,
+    # which would not preserve managed-block comments. So this is the same shape as
+    # the pi models.json merge — our keys, everything else untouched — except with
+    # yq, because the file is YAML. omp re-reads it under a lock on save, so an edit
+    # made here while a session is open is preserved rather than clobbered.
+    #
+    # These keys are RE-ASSERTED every run, so a role reassigned in-session with
+    # `/model` reverts on the next setup. That is the generator doctrine working as
+    # intended, but it is a surprise for a model choice specifically. To pin a
+    # different model for one repo, write `<repo>/.omp/config.yml`: project settings
+    # outrank global and this block never touches them.
+    if command -v yq &>/dev/null; then
+        OMP_TMP=$(mktemp)
+        OMP_OURS=$(mktemp)
+        /bin/cat > "$OMP_OURS" <<'OMP_CONFIG_CONF'
+theme:
+  dark: dracula-sakura
+# Nine roles, routed at Gemini. Flash carries ordinary turns, Pro carries the three
+# roles where depth pays for itself, Flash Lite carries the cheap fan-out. Every id
+# is verified against omp's shipped catalog; an unknown one is reported as a config
+# warning at startup rather than failing silently.
+#
+# `advisor` is the second model watching every turn. It sits on Pro because it
+# reviews rather than generates, which is the job worth paying for. Watch the spend
+# if you raise how often it fires: this is the one Pro role on a per-turn path.
+modelRoles:
+  default: google/gemini-3.8-flash
+  task: google/gemini-3.8-flash
+  vision: google/gemini-3.8-flash
+  slow: google/gemini-3.1-pro-preview
+  plan: google/gemini-3.1-pro-preview
+  advisor: google/gemini-3.1-pro-preview
+  smol: google/gemini-3.1-flash-lite
+  tiny: google/gemini-3.1-flash-lite
+  commit: google/gemini-3.1-flash-lite
+# gemini-3.1-pro-preview is the only Pro on the Gemini API today and it is a preview
+# id, so it can be retired without notice. An exact model key outranks a role chain,
+# which keeps `slow`, `plan`, and `advisor` working on the day that happens.
+# retry.modelFallback defaults to true, so no switch is needed to arm these.
+retry:
+  fallbackChains:
+    google/gemini-3.1-pro-preview:
+      - google/gemini-3.8-flash
+    default:
+      - google/gemini-3.5-flash
+OMP_CONFIG_CONF
+        [[ -f "$OMP_CONFIG_FILE" ]] || echo '{}' > "$OMP_CONFIG_FILE"
+        if yq eval-all 'select(fileIndex==0) * select(fileIndex==1)' \
+            "$OMP_CONFIG_FILE" "$OMP_OURS" > "$OMP_TMP" 2>/dev/null && [[ -s "$OMP_TMP" ]]; then
+            mv "$OMP_TMP" "$OMP_CONFIG_FILE"
+            configured "omp: theme + Gemini model roles merged ($OMP_CONFIG_FILE)"
+        else
+            rm -f "$OMP_TMP"
+            warn "omp: could not merge $OMP_CONFIG_FILE"
+        fi
+        rm -f "$OMP_OURS"
+        unset OMP_TMP OMP_OURS
+    else
+        warn "omp: yq missing — skipping config.yml merge"
+    fi
+
+    # Auth is the user's. `google` reads GEMINI_API_KEY from the environment; nothing
+    # here writes a key, and there is no file to seed. Say so once rather than leaving
+    # a run that looks complete but cannot reach a model.
+    if [[ -z "${GEMINI_API_KEY:-}" ]]; then
+        info "omp: set GEMINI_API_KEY in your environment to reach the Gemini models above"
+    fi
+fi
+
 
 fi  # configs (Claude Code)
 
@@ -14852,7 +15107,8 @@ echo "  [~/.config/aichat]      Local AI chat config + Dracula-Sakura dark theme
 echo "  [~/.config/croft]       Croft config + Dracula-Sakura theme extension"
 echo "  [~/.herald/themes]      Herald Dracula-Sakura theme asset + theme-name merge"
 echo "  [~/.pi/agent]           Pi settings, local models, Dracula-Sakura theme"
-echo "  [~/.agents/skills]      Curated skills shared with Pi"
+echo "  [~/.omp/agent]          Oh My Pi settings, Gemini model roles, Dracula-Sakura theme"
+echo "  [~/.agents/skills]      Curated skills shared with Pi and Oh My Pi"
 echo "  [leaf]                  Terminal Markdown previewer (live watch, fuzzy picker, Mermaid)"
 echo "  [~/.config/yt-dlp]      Best quality, aria2c downloader"
 echo "  [~/.config/gh-dash]     GitHub dashboard, Dracula-Sakura theme"
@@ -14956,6 +15212,7 @@ unscriptable. Work through it once, then keep it only as long as it's useful.
 - [ ] **borgmatic backups:** the setup scaffolds `~/.config/borgmatic/config.yaml`. Set `repositories`, store the passphrase in Keychain (`security add-generic-password -a "$USER" -s borg-passphrase -w`), run `borgmatic init --encryption repokey-blake2`, check with `borgmatic create --dry-run`, then enable a daily run (e.g. a LaunchAgent calling `borgmatic --verbosity -1`). ClamAV's virus DB downloads itself in the background after setup.
 - [ ] **Claude AI in croft:** `croft pair` (the AI navigator in your primary IDE) defaults to `--provider claude`, which hands off to your existing `claude` CLI — so it just works on whatever auth that already has (a Claude Pro/Max subscription **or** an API key), no separate `ANTHROPIC_API_KEY` required. Want a fully local model with no key at all? Ollama is installed and running — use the `gemma3:4b` that setup already pulled (`croft pair --provider ollama --model gemma3:4b`) or the heavier `qwen2.5-coder:14b` that's also pre-pulled for coding-oriented local loops. An Anthropic API key is **optional** here — the only thing that uses one is the `llm` CLI, and `llm` itself is optional: if Claude Code and the Claude desktop app already cover you, you can skip it entirely. If you do want `llm` for one-off prompts (e.g. `> ! llm …` from micro's command bar) or shell scripting, run `llm keys set anthropic` — setup already installs the plugin (via uv) and sets the default model to `anthropic/claude-sonnet-4-5`. (Email/calendar AI is built into **herald** — configured separately above.)
 - [ ] **Pi** (optional second agent): `pi` is installed with the local Ollama provider preconfigured and `qwen2.5-coder:14b` as the default model, plus the shared skills bridge in `~/.agents/skills/`, five Pi-local Tiki companions in `~/.pi/agent/skills/` (`tiki-capture`, `tiki-review`, `tiki-groom`, `tiki-arc`, `tiki-journal`), a local SearXNG web-research layer (`~/.pi/agent/extensions/searxng-web.ts` + `~/.pi/agent/skills/searxng-web/`), and the pinned third-party `bigpowers` package through Pi's `packages` setting. Set `SEARXNG_BASE_URL` if your instance is not on `http://127.0.0.1:8080`, then run `pi` and `/searxng-check`. Claude Code also gets bigpowers' linked skills/hooks under `~/.claude/` from the same setup run. If you want a remote provider instead, run `pi` then `/login`; if you only want the local path, nothing else is required.
+- [ ] **Oh My Pi** (third agent, Gemini-routed): `omp` is installed from the `can1357/tap` Homebrew tap with the Dracula-Sakura theme, the shared `AGENTS.md` preferences, and nine model roles pointed at Gemini — Flash for ordinary turns, Pro for `slow`, `plan`, and `advisor`, Flash Lite for cheap subagent fan-out. It reads the same `~/.agents/skills/` bridge as Pi, so no extra skills are installed. **It needs `GEMINI_API_KEY` exported in your environment**; the setup never writes a key. Get one from Google AI Studio, store it in Apple Passwords, and export it from a file your shell reads. Then run `omp` and check the model line, or `omp config get modelRoles` from any shell. Read that key whole: it is a record, so `omp config get modelRoles.default` answers `Unknown setting`.
 - [ ] **croft** (primary IDE): installed from git `main` via cargo — run `croft` in a project to open the workspace; re-run `cargo install --git https://github.com/vitali87/croft.git --locked` to upgrade.
 - [ ] **AI side-pane:** `zellij --layout dev` opens your editor + a Claude Code pane side by side (the strongest AI workflow).
 - [ ] **chezmoi:** `chezmoi init <your-dotfiles-repo>` to bring these configs under version control across the MacBook + Mac mini.
@@ -15054,6 +15311,7 @@ applying it to you.
 - **Claude Code (`claude`)** — agentic coding in the terminal; hosts the MCP servers. Best via `zellij --layout dev` (editor + Claude pane). New sessions are **auto-named `<YYYY-MM-DD>-<repo>`** (from the git remote, so this checkout reads `vixygrey-dev-setup`, not its `-main` folder), which is what the `/resume` picker and the terminal title show. Resuming (`-r`, `-c`, `--from-pr`) keeps the original name, and an explicit `-n/--name` always wins. Rename any session at any time with `/rename`.
 - **Claude in croft** — croft's `croft pair` AI navigator (primary IDE) defaults to `--provider claude`, riding your existing `claude` CLI auth (subscription or key, no separate `ANTHROPIC_API_KEY`); `--provider ollama` runs a local model with no key. The one path that uses an Anthropic key is the **`llm`** CLI (`llm-anthropic`) — and it's optional: reach for it only when you want Claude in a shell pipe or a `> ! llm …` one-off from micro's command bar, then run `llm keys set anthropic`. **herald** integrates with Claude two ways, neither needing a key: Claude Code reads and searches your mail/calendar through herald's **MCP** (it rides your `claude` login), and herald's *own* built-in AI (triage, summaries, compose styler, semantic search) is optional and runs on local **Ollama** models that setup installs, runs as a login service, and seeds with `gemma3:4b` (chat) + `nomic-embed-text-v2-moe` (embeddings).
 - **Pi (`pi`)** — the smaller second agent: local-model-first, themed to match the machine, and pointed at a curated skill bridge (`~/.agents/skills/`) instead of the whole Claude skills tree. Good for tight edit/bash loops on `qwen2.5-coder:14b`; anything MCP-heavy or broader-scope still belongs to Claude Code.
+- **Oh My Pi (`omp`)** — the third agent, and the maximalist fork of Pi: 32 built-in tools, LSP, a real debugger through DAP, subagents, and nine model roles that route by intent. Routed at Gemini here, so it is the one to reach for when the work wants a large context window or a second opinion from a non-Anthropic model. Shares the same theme, the same `AGENTS.md` preferences, and the same five skills as Pi. Needs `GEMINI_API_KEY` in the environment.
 
 ## Status bar & launcher
 - **SketchyBar** — Dracula-Sakura status bar: app, clock, battery, wifi, volume, cpu, mem, bluetooth, VPN.
@@ -15248,6 +15506,8 @@ pi --provider ollama --model qwen2.5-coder:14b
 ```
 
 > Tip: Pi's config lives entirely under `~/.pi/agent/`, not `~/.config`. This setup points Pi at four local Ollama chat/coding models, shares exactly five general skills through `~/.agents/skills/` so the startup prompt stays lean, adds five Pi-local Tiki companion skills under `~/.pi/agent/skills/`, and wires in a local SearXNG web extension + matching `searxng-web` skill.
+>
+> Tip: Oh My Pi does the same under `~/.omp/agent/`. It reads `~/.agents/skills/` as its own native skills location, so the five shared skills arrive with nothing extra to install. Its `~/.omp/agent/AGENTS.md` outranks every other user-level context file, `~/.claude/CLAUDE.md` included, so that file is where its global preferences belong. Settings are merged into `config.yml` rather than written as a managed block, because `omp config set` and `/settings` write that file themselves.
 
 ### `ollama` — Local LLM Runtime
 Runs open-weight LLMs entirely on your Mac — no API key, no data leaving the machine. Setup installs it, runs it as a login service on `127.0.0.1:11434`, and seeds the local model set this machine wants ready: `qwen2.5-coder:14b`, `llama3.1:8b`, `gemma3:4b`, `llama3.2:latest`, plus `nomic-embed-text-v2-moe` for embeddings. It's the local backend for **herald**'s built-in AI, `croft pair --provider ollama`, `aichat`, and Pi's local-model path.
