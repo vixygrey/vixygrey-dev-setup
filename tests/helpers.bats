@@ -477,3 +477,63 @@ EOF
     [ "$status" -eq 0 ]
     [[ "$output" == *"[]"* ]]
 }
+
+# ---------------------------------------------------------------------------
+# #505: --verify rows must not pipe into `grep -q`. Under `set -o pipefail` the
+# producer takes SIGPIPE when grep exits early, and the row reports the tool as
+# rejecting its config when the tool was fine.
+# ---------------------------------------------------------------------------
+
+@test "_verify_output_has: matches without SIGPIPE-ing a still-writing producer (#505)" {
+    # The producer keeps printing long after the matched line. The old
+    # `cmd | grep -q` form returns 141 here under pipefail; this must return 0.
+    run run_with_helpers '
+        set -o pipefail
+        producer() { echo "whitelist.prefix [/x]"; for i in $(seq 1 20000); do echo "filler $i"; done; }
+        _verify_output_has "^whitelist[.]prefix [[].+[]]" producer && echo MATCHED || echo "MISSED($?)"'
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"MATCHED"* ]]
+}
+
+@test "_verify_output_has: the old piped form really does fail this way (#505)" {
+    # Pins the diagnosis rather than trusting the comment. The assertion is
+    # "non-zero", NOT a specific code: the exact value is platform-dependent.
+    # macOS returns 141 (128 + SIGPIPE), where the producer is killed by the
+    # signal. Linux bash reports a write error on the closed pipe instead and
+    # returns 1. Either way `set -o pipefail` fails the row, which is the only
+    # thing the fix depends on. An earlier version of this test asserted 141 and
+    # passed on macOS while failing in CI, which is the AGENTS.md rule about CI
+    # being the gate, in miniature.
+    run run_with_helpers '
+        set -o pipefail
+        producer() { echo "whitelist.prefix [/x]"; for i in $(seq 1 20000); do echo "filler $i"; done; }
+        producer | grep -q "^whitelist"
+        rc=$?
+        echo "piped_exit=$rc"
+        [ "$rc" -ne 0 ] && echo PIPED_FORM_FAILS || echo PIPED_FORM_SUCCEEDS'
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"PIPED_FORM_FAILS"* ]]
+}
+
+@test "_verify_output_has: returns non-zero when the pattern is absent (#505)" {
+    run run_with_helpers '
+        producer() { echo "nothing of interest"; }
+        _verify_output_has "^whitelist" producer && echo MATCHED || echo NOMATCH'
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"NOMATCH"* ]]
+}
+
+@test "_verify_output_has: sees stderr, which zellij reports on (#505)" {
+    run run_with_helpers '
+        producer() { echo "Well defined" >&2; }
+        _verify_output_has "Well defined" producer && echo MATCHED || echo NOMATCH'
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"MATCHED"* ]]
+}
+
+@test "no --verify row pipes into grep -q (#505)" {
+    # The class, not the four instances. A new row written the old way is a
+    # latent failure that only shows up when some tool's output grows.
+    run grep -nE '"(validate|path|template)\|.*\| *grep -q' "$BATS_TEST_DIRNAME/../scripts/setup-dev-tools-mac.sh"
+    [ "$status" -ne 0 ]
+}
