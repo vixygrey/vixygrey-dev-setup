@@ -474,10 +474,34 @@ own periodic review (see "drift" below).
 - The release workflow (tag-push → GitHub Actions → release publish) lives
   in `.github/workflows/release.yml` and is procedurally described in
   `AGENTS.md`.
-- The bigpowers skills catalogue is not used in this repo. The script
-  *generates* a user's Claude environment; it does not consume one.
-  Anything in `specs/` at this repo's root would be a single-source
-  duplicate of this file.
+- **Evolving state.** That belongs in [`specs/`](specs/), which this repo
+  adopted in #493 along with the rest of the machine's `new-project`
+  template. The two do not overlap, and the boundary is worth stating
+  because it used to be drawn in the opposite place:
+
+  | This file | `specs/` |
+  | --- | --- |
+  | Standing rules. True until a decision changes them. | State. Changes as work progresses. |
+  | *How* code here must look and behave. | *What* is being built, and where it stands. |
+  | Read in full by anyone working here. | Read by whichever skill owns the file. |
+
+  An earlier version of this section rejected `specs/` outright, on the
+  grounds that it would be "a single-source duplicate of this file". That
+  was right while nothing consumed it. It stopped being right once
+  bigpowers was adopted for work in this repo: a skill that needs to know
+  the active epic cannot get it from a normative rules document.
+
+  Two boundaries follow, and both are load-bearing:
+
+  - **`specs/adr/` records decisions; this file states the rules they
+    produced.** ADRs 0001–0007 were extracted from sections 2, 6, 7, 12,
+    14, and 16. The prose here stays. An ADR answers "why is this the
+    rule", which is the question a reader has a year later; this file
+    answers "what is the rule", which is the question they have today.
+    When a decision changes, supersede the ADR **and** update the rule.
+  - **GitHub issues remain the system of record.** `specs/bugs/registry.yaml`
+    holds working notes for an investigation in progress. It does not
+    replace the issue, and nothing here is tracked only in `specs/`.
 - The CHANGELOG. Hand-written from 7.2.0 onward; entries are added under
   `## [Unreleased]` in `### Added` / `### Changed` / `### Fixed` /
   `### Security`, cite the **issue** number rather than the PR, and are
@@ -487,6 +511,12 @@ own periodic review (see "drift" below).
 ---
 
 ## 19. Verification
+
+**`just preflight` is the entry point.** It runs steps 1–3 below plus the
+pre-commit hooks, and mirrors `.github/workflows/lint.yml`. The list is
+kept because each step proves something the others cannot; the
+[`Justfile`](Justfile) is where the commands live, so they are defined
+once rather than in three documents.
 
 Per `AGENTS.md`, every change goes through:
 
@@ -508,3 +538,33 @@ For changes to this file specifically: this file is markdown, not Bash.
 Steps 1, 2, and 3 still apply to the unchanged generator. Step 5 is a
 good sanity check that no heredoc references a helper or category this
 file has renamed or removed.
+
+---
+
+## 20. Line endings and text files
+
+Added with the rest of the machine's `new-project` template in #493. It
+sits after the meta-sections because the list grows at the end; read it
+with sections 1–16, which are the other rules about the code itself.
+
+- All text files use **LF** line endings, **UTF-8**, and a final newline.
+- [`.editorconfig`](.editorconfig) and [`.gitattributes`](.gitattributes)
+  are the source of truth for that policy. Do not override them per-file.
+- Indentation is **4 spaces for shell and bats**, 2 elsewhere, tabs for
+  Go and Makefiles. The setup script is ~18k lines at 4 spaces and the
+  tests follow it, so the template's bare 2-space default would fight
+  every file that matters here.
+- **`scripts/*.sh` is exempt from trailing-whitespace trimming.** The
+  script embeds heredocs whose content may depend on exact bytes, so an
+  editor must not strip inside them. This mirrors the exclusion
+  [`.pre-commit-config.yaml`](.pre-commit-config.yaml) already applies:
+  its `trailing-whitespace` and `end-of-file-fixer` hooks run only on
+  `md`, `yaml`, `yml`, `json`, and `toml`. Keep the two in agreement — a
+  formatter and a hook that disagree produce a commit loop.
+- **croft does not read EditorConfig** and defaults shell to 4 spaces;
+  VS Code does read it. The shell rule above is what makes the two
+  editors agree rather than reformat each other's work.
+- `.gitattributes` normalizes on `text=auto eol=lf`. Adding it caused no
+  renormalization: every tracked text file was already LF. Verify with
+  `git ls-files --eol`, which should report `i/lf w/lf` for everything
+  except the one binary asset.

@@ -1,0 +1,35 @@
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+indent_style = space
+indent_size = 2
+
+[*.md]
+trim_trailing_whitespace = false
+
+[Makefile]
+indent_style = tab
+
+[*.go]
+indent_style = tab
+
+[*.py]
+indent_size = 4
+
+# Shell and bats are 4-space here, not the 2-space default above. The setup
+# script is ~18k lines at 4 spaces and tests/*.bats follows it. croft does not
+# read EditorConfig and defaults shell to 4, so this rule is what makes croft
+# and VS Code agree rather than reformat each other's work.
+[*.{sh,bash,bats}]
+indent_size = 4
+
+# The setup script embeds heredocs whose content may depend on exact bytes, so
+# an editor must not strip trailing whitespace inside them. This mirrors the
+# exclusion .pre-commit-config.yaml already applies: its trailing-whitespace and
+# end-of-file-fixer hooks run only on md/yaml/yml/json/toml.
+[scripts/*.sh]
+trim_trailing_whitespace = false

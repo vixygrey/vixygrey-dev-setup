@@ -17,6 +17,10 @@ Icon?
 .env.*
 !.env.example
 
+# Secrets — belt and braces alongside the gitleaks pre-commit hook
+*.pem
+*.key
+
 # Logs
 *.log
 

@@ -1,0 +1,24 @@
+# Session state. Read this first; `survey-context` does it for you.
+#
+# workflow_mode is the canonical integrate-mode signal that `release-branch`
+# reads. It is `team-pr`, not the scaffold default of `solo-git`, because this
+# repo never commits to main: every change goes issue, branch, PR, squash merge.
+# See AGENTS.md, "Commits, PRs, CHANGELOG".
+workflow_mode: team-pr
+
+active_phase: discover
+
+project:
+  name: vixygrey-dev-setup
+  description: >-
+    A single idempotent Bash script that provisions a macOS developer machine and
+    generates the user's Claude Code and pi environments.
+
+status:
+  summary: >-
+    specs/ adopted from the machine's new-project template (#493). Planning
+    artifacts are stubs awaiting their owning skills; tech-stack.md and adr/ are
+    populated.
+
+handoff:
+  next_skill: survey-context
