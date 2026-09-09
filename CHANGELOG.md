@@ -8,7 +8,21 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Removed
+
+
+
+- **The `mac-bloat` category** (#509). It removed exactly one app, GarageBand, which modern macOS does not preinstall. On a clean machine the category found nothing and reported `GarageBand — not found`, which is what it reported on the maintainer's machine.
+
+  For that it cost an entry in `ALL_CATEGORIES`, a line in the interactive picker, about 45 lines of work block, and one of only **two** entries in `SUDO_CATEGORY_REASON`, which made it one of two reasons a run ever asked for a password. It also aimed at a shrinking target: everything Apple still bundles lives under `/System/Applications`, which needs SIP disabled and is out of scope here by decision (`specs/adr/0007-macos-only.md`).
+
+  `--only mac-bloat` and `--skip mac-bloat` now exit non-zero with `Unknown category`. That is the intended outcome rather than a regression: the category validator already rejects unknown names loudly, and a name that is silently accepted while doing nothing is worse. Removing the app by hand, on the rare machine that has it, is `sudo rm -rf /Applications/GarageBand.app`.
+
+  The useful consequence is that **`macos-defaults` is now the only category that needs a password at all.** Together with #502, a machine whose system settings are converged never invokes `sudo`, so a full unattended run is possible for the first time.
+
 ### Fixed
+
+
 
 - **`just verify` reported two failures that were checks pointing at nothing** (#505). The `git` and `direnv` rows named addresses this script does not write, so both reported `MISSING` on every machine, forever. The files were correct and the tools were reading them. `--verify` now reports `Failed: 0` and exits 0.
 
@@ -24,17 +38,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
   All four now go through `_verify_output_has`, which captures the output and matches it with a here-string, the pattern `_verify_asciinema` already used. The helper sits in the tested helper layer rather than inside the verify function, so the bug has a regression test. A test also pins the diagnosis by asserting the old piped form really does return 141, and another rejects any future row written the old way.
 
-### Removed
 
-- **The `mac-bloat` category** (#509). It removed exactly one app, GarageBand, which modern macOS does not preinstall. On a clean machine the category found nothing and reported `GarageBand — not found`, which is what it reported on the maintainer's machine.
-
-  For that it cost an entry in `ALL_CATEGORIES`, a line in the interactive picker, about 45 lines of work block, and one of only **two** entries in `SUDO_CATEGORY_REASON`, which made it one of two reasons a run ever asked for a password. It also aimed at a shrinking target: everything Apple still bundles lives under `/System/Applications`, which needs SIP disabled and is out of scope here by decision (`specs/adr/0007-macos-only.md`).
-
-  `--only mac-bloat` and `--skip mac-bloat` now exit non-zero with `Unknown category`. That is the intended outcome rather than a regression: the category validator already rejects unknown names loudly, and a name that is silently accepted while doing nothing is worse. Removing the app by hand, on the rare machine that has it, is `sudo rm -rf /Applications/GarageBand.app`.
-
-  The useful consequence is that **`macos-defaults` is now the only category that needs a password at all.** Together with #502, a machine whose system settings are converged never invokes `sudo`, so a full unattended run is possible for the first time.
-
-### Fixed
 
 - **A password is asked for only when there is privileged work to do** (#502). `sudo_reasons()` asked whether a category was *selected*, not whether it had *work to do*, so preflight ran `sudo -v` before anything had checked. A run of `--only macos-defaults,mac-bloat` on a converged machine typed a password and then reported that Touch ID, DNS, and Siri were all already configured and that GarageBand was not installed.
 
