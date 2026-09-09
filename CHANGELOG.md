@@ -6,7 +6,17 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 > Release notes for 7.0.0–7.1.1 live in [GitHub Releases](https://github.com/vixygrey/vixygrey-dev-setup/releases) (auto-generated). This file resumes hand-written notes at 7.2.0.
 
-## [Unreleased]
+## [7.23.0] - 2026-09-09
+
+A small release, and one where the interesting work was in the checks rather than the features.
+
+`zellij --layout home` is a personal dashboard: a plain shell on the left, with weather, `btop`, and a tiki over the personal notes stacked down the right. omp gains a turn counter above the prompt, adopts six settings that had been set by hand on the machine, and turns the always-on advisor off.
+
+The turn counter was not built the way it was asked for, and that is the point. `ctx.ui.setStatus()` is the API the request implies, and it cannot carry colour: the footer strips ANSI from status text and renders the joined statuses with no theme applied. `setWidget` with `placement: "aboveEditor"` renders in the same place and does carry colour, so the widget takes its palette from the live theme rather than from hardcoded hex.
+
+Two checks in this release exist because the obvious version of them would have proved nothing. The new CI row that parses the omp extension copies the extraction to a `.ts` name first, because `bun build` on the extensionless file the harness writes accepts deliberately broken TypeScript. And `turnIndex` is displayed one-based because a probe extension was run for one real turn to find out it is zero-based, rather than guessing.
+
+Three documents still described pi as a live second agent, four releases after it was retired. `specs/adr/0001` names the same path and is deliberately untouched: it records what was true when a decision was taken, and that decision has not changed.
 
 ### Added
 
@@ -1351,7 +1361,7 @@ Minor release rolling up two follow-up PRs to v4.0.0: a tool-discoverability aud
 - Document all new tools in `GUIDE-MACOS.md`, `GUIDE-LINUX.md`, `GUIDE-WINDOWS.md` with usage examples (#5)
 - Update `SHORTCUTS-*.md` with new alias rows and a "Terminal Apps" section (#5)
 
-[Unreleased]: https://github.com/vixygrey/vixygrey-dev-setup/compare/v7.22.0...HEAD
+[7.23.0]: https://github.com/vixygrey/vixygrey-dev-setup/compare/v7.22.0...v7.23.0
 [7.22.0]: https://github.com/vixygrey/vixygrey-dev-setup/compare/v7.21.0...v7.22.0
 [7.21.0]: https://github.com/vixygrey/vixygrey-dev-setup/compare/v7.20.1...v7.21.0
 [7.20.1]: https://github.com/vixygrey/vixygrey-dev-setup/compare/v7.20.0...v7.20.1
