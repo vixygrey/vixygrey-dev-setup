@@ -6,6 +6,22 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 > Release notes for 7.0.0–7.1.1 live in [GitHub Releases](https://github.com/vixygrey/vixygrey-dev-setup/releases) (auto-generated). This file resumes hand-written notes at 7.2.0.
 
+## [Unreleased]
+
+### Added
+
+- **Simplified Technical English is now a global writing rule for both agents, from one generator** (#491). The `simple-english` skill has shipped with the pinned `bigpowers` package for a while, symlinked into `~/.claude/skills/` for Claude Code and reachable by pi through its `packages` setting. In both agents it was **opt-in**: a skill fires only when the prompt matches its description, so it caught "de-slop this README" and missed every document written without those words. The 53 rules of ASD-STE100 Issue 9 now load on every session instead, as a new `~/.claude/rules/writing.md` alongside the existing eight rule files, and at the tail of `~/.pi/agent/AGENTS.md`, which is pi's only global instruction file. The skill stays installed and is still the right tool for a formal audit of an existing document, because it carries a deterministic lint script this does not.
+
+  The two copies come from **one** `emit_writing_rules` function rather than two heredocs. That is the whole design: the point of the change is that both agents follow provably identical rules, and a second heredoc would break that the first time one of them was edited alone. The generated block is verified byte-identical in both files.
+
+  The rule has **two tiers**, because a single tier could not have been honest. Written artifacts get the standard strictly: docs, READMEs, runbooks, commit messages, PR bodies, changelogs, error strings, UI copy, and instructions for AI agents. Chat replies get only the mechanical subset, meaning no slop words, no filler adverbs, no Latin abbreviations, no hedging, one term per concept. The sentence limits and Rule 4.2 (no contractions) stop at the artifact boundary, because 20-word imperative sentences are a maintenance-manual register and would have contradicted the "calm, technically sharp, and warm" voice that `rules/style.md` and the pi preferences both already ask for. Naming the boundary is what stops the two files from quietly fighting each other.
+
+  The cost is roughly 3.5k tokens per session for each agent. For pi that is the larger trade, since its system prompt is otherwise under 1k by design, and it is accepted deliberately: an ungoverned local model produces exactly the slop the rules exist to remove.
+
+### Fixed
+
+- **The rules inventory in `README.md` and `docs/GUIDE.md` was missing `style.md`** (#491). Both documents list the files written into `~/.claude/rules/`, and both stopped at `iac.md`, so the style rules had been generated and undocumented since they were added. Found while adding the `writing.md` row, and fixed in the same pass rather than shipping a table that was accurate about the new file and wrong about the old one. This is the drift `CONVENTIONS.md` warns about, in the exact place it warns about it.
+
 ## [7.19.0] - 2026-09-08
 
 A documentation correctness pass, which started as a question about zellij. The multiplexer was hiding its own keybindings, because the generated config chose a layout that omits the plugin drawing them, leaving a modal tool running with no mode line. Pulling that thread found the same shape everywhere: documents asserting things nobody had checked. `SHORTCUTS.md` carried sections for two editors the setup does not install, and a macOS app table in which all four apps were deprecated, while the roughly thirty terminal apps that *are* installed shared a single entry between them. It is now 919 lines and 403 bindings, each traced to a named source. The generated Desktop `TOOL_REFERENCE.md` promised, twice, that every modern replacement was documented in full below; for nine of them, the tools aliased over `ls`, `cat`, `du`, `df`, `ps`, `top` and `watch`, no section existed at all. The Desktop keyboard card never admitted the full reference existed. All four are fixed, and every binding and flag was verified against the installed tool or its official documentation rather than written from memory, which caught several plausible-looking errors before they shipped.
