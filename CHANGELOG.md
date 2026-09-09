@@ -36,6 +36,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
   Adding `.gitattributes` caused no renormalization. `git ls-files --eol` reported every tracked text file as `i/lf w/lf` beforehand.
 
+- **The `new-project` scaffold now documents `specs/adr/`** (#495). It created the directory and then never mentioned it again: the generated `CONVENTIONS.md` listed the specs convention without naming `adr/`, and the generated `AGENTS.md` listed `product/`, `tech-architecture/`, and the four status files, but not `adr/` either. Eleven bigpowers skills read that directory. A directory nothing documents stays empty, and the decisions that belong in it end up as prose scattered through `CONVENTIONS.md`, which is exactly what #493 had to unpick in this repo.
+
+  The generated `CONVENTIONS.md` gains a `## Decisions` section stating the boundary that #493 arrived at: an ADR answers why a rule exists, and `CONVENTIONS.md` answers what the rule is, so both are kept and a change to one is a change to the other. `AGENTS.md` gains a line pointing at the directory, and `specs/README.md` is no longer a single sentence — it now carries the table of what each path holds and which skill writes it.
+
 ### Changed
 
 - **`CONTRIBUTING.md` was rewritten to point at `AGENTS.md` and `CONVENTIONS.md` rather than restate them** (#493). It had drifted furthest of any file here. It carried its own copies of the branching rules, the conventional-commit rule, the helper-function rule, and the category rule, all of which are stated normatively elsewhere and none of which were in sync. It also omitted the two steps this repo treats as mandatory: open an issue before writing code, and update the changelog as part of the change. Both are now step 1 and step 4.
@@ -45,6 +49,16 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 ### Fixed
 
 - **The rules inventory in `README.md` and `docs/GUIDE.md` was missing `style.md`** (#491). Both documents list the files written into `~/.claude/rules/`, and both stopped at `iac.md`, so the style rules had been generated and undocumented since they were added. Found while adding the `writing.md` row, and fixed in the same pass rather than shipping a table that was accurate about the new file and wrong about the old one. This is the drift `CONVENTIONS.md` warns about, in the exact place it warns about it.
+
+- **Five of the seven `specs/` directories the scaffold creates never reached the first commit** (#496). `new-project` ran one `mkdir -p` for all seven, seeded files into `tech-architecture/` and `bugs/` only, then finished with `git add -A && git commit`. Git does not track an empty directory, so `product/snapshots/`, `epics/archive/`, `adr/`, `verifications/`, and `metrics/` existed for whoever ran the command and vanished on clone. Measured against the previous version: four directories reached the first commit, and now nine do.
+
+  This is the quietest possible failure. The author sees the full tree locally and has no reason to look again, while everyone else gets a partial one and no error. It also compounded #495: `adr/` was both undocumented and absent, so nothing pointed at it and it was not there to find.
+
+  Each of the five now carries a `README.md` naming what belongs in it and which skill fills it, rather than a `.gitkeep`. That follows the reasoning already written above `_spec_stub`: an empty tracked file tells a reader nothing, and a tool that guards on a path existing reads "present" as "done".
+
+- **The scaffold's `.editorconfig` had no rule for shell** (#494). It set a 2-space default and carved out Makefile, Go, and Python, leaving shell on the default. That is the wrong way round on a machine whose own flagship project is 18k lines of 4-space bash, and every shell project scaffolded so far started out fighting the house style.
+
+  It reached past taste, because the two editors this setup installs disagree about the file. croft does not read EditorConfig at all and defaults shell to 4 spaces. VS Code does read it. Without the rule the two reformat each other's work on every save; with it they agree.
 
 ## [7.19.0] - 2026-09-08
 
