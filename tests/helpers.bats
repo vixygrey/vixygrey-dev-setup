@@ -404,23 +404,6 @@ EOF
     [[ "$output" == *"UNMARKED"* ]]
 }
 
-@test "mac_bloat_needs_sudo: true when a target app is present (#502)" {
-    run run_with_helpers '
-        BLOAT_APPS=("'"$TEST_TMP"'/Present.app|Present")
-        mkdir -p "'"$TEST_TMP"'/Present.app"
-        mac_bloat_needs_sudo && echo NEEDS || echo CLEAN'
-    [ "$status" -eq 0 ]
-    [[ "$output" == *"NEEDS"* ]]
-}
-
-@test "mac_bloat_needs_sudo: false when every target app is absent (#502)" {
-    run run_with_helpers '
-        BLOAT_APPS=("'"$TEST_TMP"'/Absent.app|Absent")
-        mac_bloat_needs_sudo && echo NEEDS || echo CLEAN'
-    [ "$status" -eq 0 ]
-    [[ "$output" == *"CLEAN"* ]]
-}
-
 @test "_pmset_value: reads the requested power source, not the first match (#502)" {
     # displaysleep appears under BOTH headings with different values. A bare grep
     # would answer for whichever came first, which is the bug this parser avoids.
@@ -462,4 +445,35 @@ EOF
         echo ALL_PRESENT'
     [ "$status" -eq 0 ]
     [[ "$output" == *"ALL_PRESENT"* ]]
+}
+
+@test "sudo_reasons: names the PENDING items, not the category blurb (#502)" {
+    # The prompt must describe the work it will actually do. Printing the whole
+    # category description listed settings that were already applied, which is
+    # the "you can only trust it" problem #269 fixed from the other direction.
+    run run_with_helpers '
+        unset SUDO_CATEGORY_REASON SUDO_CATEGORY_PREDICATE
+        declare -A SUDO_CATEGORY_REASON=([macos-defaults]="BLURB_THAT_MUST_NOT_APPEAR")
+        declare -A SUDO_CATEGORY_PREDICATE=([macos-defaults]=fake_pred)
+        fake_pred() { printf "%s\n" "network time" "startup chime"; return 0; }
+        DRY_RUN=false; ONLY_CATEGORIES=(); SKIP_CATEGORIES=()
+        sudo_reasons'
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"network time (macos-defaults)"* ]]
+    [[ "$output" == *"startup chime (macos-defaults)"* ]]
+    [[ "$output" != *"BLURB_THAT_MUST_NOT_APPEAR"* ]]
+}
+
+@test "sudo_reasons: silent when the predicate reports nothing pending (#502)" {
+    # A converged machine must produce no reasons at all, because an empty result
+    # is what makes preflight skip `sudo -v` and lets an unattended run finish.
+    run run_with_helpers '
+        unset SUDO_CATEGORY_REASON SUDO_CATEGORY_PREDICATE
+        declare -A SUDO_CATEGORY_REASON=([macos-defaults]="blurb")
+        declare -A SUDO_CATEGORY_PREDICATE=([macos-defaults]=fake_pred)
+        fake_pred() { return 1; }
+        DRY_RUN=false; ONLY_CATEGORIES=(); SKIP_CATEGORIES=()
+        echo "[$(sudo_reasons)]"'
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"[]"* ]]
 }

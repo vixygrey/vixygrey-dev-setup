@@ -358,7 +358,6 @@ ALL_CATEGORIES=(
     mac-media
     mac-cloud
     mac-focus
-    mac-bloat
     dracula
     configs
     filesystem
@@ -394,7 +393,6 @@ declare -A CATEGORY_DESC=(
     [mac-media]="mpv, oxipng, jpegoptim, 7zip, cliamp"
     [mac-cloud]="rclone, borg"
     [mac-focus]="newsboat"
-    [mac-bloat]="Remove pre-installed Apple apps (GarageBand)"
     [dracula]="Dracula-Sakura theme pass for terminal, editor, and TUI surfaces"
     [configs]="EVERY tool's generated config + git hooks + Claude setup (not in the tool's own category)"
     [filesystem]="Directory structure, helper scripts, git identity"
@@ -453,14 +451,6 @@ unset _cat _known _known_cat
 # script never executes it. Every other category is unprivileged too (#269).
 declare -A SUDO_CATEGORY_REASON=(
     [macos-defaults]="system settings (display sleep, DNS servers, startup chime, network time) and Touch ID for sudo"
-    [mac-bloat]="removing pre-installed Apple apps from /Applications"
-)
-
-# Apps `mac-bloat` removes. Declared here rather than in the work block because
-# mac_bloat_needs_sudo reads it during preflight (#502). Only /Applications is
-# reachable; /System/Applications needs SIP disabled and is deliberately not listed.
-BLOAT_APPS=(
-    "/Applications/GarageBand.app|GarageBand"
 )
 
 # Predicate per sudo-needing category: does it have privileged work PENDING?
@@ -468,7 +458,6 @@ BLOAT_APPS=(
 # question and the one that made every run ask for a password (#502).
 declare -A SUDO_CATEGORY_PREDICATE=(
     [macos-defaults]=macos_defaults_needs_sudo
-    [mac-bloat]=mac_bloat_needs_sudo
 )
 
 # Same loud-default discipline as the table above. A category listed as needing
@@ -518,62 +507,65 @@ _pmset_value() {   # <Battery|AC> <key>
 # actually pending silently skips a system setting, which is worse than one
 # unnecessary password prompt (#502).
 macos_defaults_needs_sudo() {
+    local pending=()
+
     # Touch ID for sudo — /etc/pam.d/sudo_local is world readable.
-    [[ -f /etc/pam.d/sudo_local ]] && grep -q pam_tid /etc/pam.d/sudo_local 2>/dev/null || return 0
+    [[ -f /etc/pam.d/sudo_local ]] && grep -q pam_tid /etc/pam.d/sudo_local 2>/dev/null \
+        || pending+=("Touch ID for sudo")
 
     # DNS — only the services the work block actually touches.
     local service current
     while IFS= read -r service; do
         [[ "$service" == "Wi-Fi" || "$service" == "Ethernet" ]] || continue
         current=$(networksetup -getdnsservers "$service" 2>/dev/null)
-        grep -q '1\.1\.1\.1' <<<"$current" || return 0
+        grep -q '1\.1\.1\.1' <<<"$current" || pending+=("DNS servers for $service")
     done < <(networksetup -listallnetworkservices 2>/dev/null | tail -n +2)
 
     # Display sleep and half-dim. `halfdim` reads back as `lessbright`, and only
     # under Battery Power — pmset does not report it for AC.
-    [[ "$(_pmset_value AC displaysleep)" == "120" ]] || return 0
-    [[ "$(_pmset_value Battery displaysleep)" == "75" ]] || return 0
-    [[ "$(_pmset_value Battery lessbright)" == "1" ]] || return 0
+    [[ "$(_pmset_value AC displaysleep)" == "120" && "$(_pmset_value Battery displaysleep)" == "75" ]] \
+        || pending+=("display sleep timers")
+    [[ "$(_pmset_value Battery lessbright)" == "1" ]] || pending+=("half-brightness step")
 
     # Startup chime.
-    [[ "$(nvram StartupMute 2>/dev/null | awk '{print $2}')" == "%01" ]] || return 0
+    [[ "$(nvram StartupMute 2>/dev/null | awk '{print $2}')" == "%01" ]] \
+        || pending+=("startup chime")
 
     # /Volumes visibility. MUST be /bin/ls: the coreutils install shadows BSD ls,
     # and GNU ls rejects -O with "invalid option", which reads like a permission
     # problem and is not one. This is the AGENTS.md environment gotcha in the wild.
-    /bin/ls -ldO /Volumes 2>/dev/null | awk '{print $5}' | grep -q hidden && return 0
+    /bin/ls -ldO /Volumes 2>/dev/null | awk '{print $5}' | grep -q hidden \
+        && pending+=("/Volumes visibility")
 
     # Network time. `systemsetup -getusingnetworktime` needs admin to READ, so the
     # state cannot be detected without the password we are trying to avoid asking
     # for. It is set-once, so an applied-once marker answers instead. The work
     # block still runs the command whenever it executes, so any run that obtains
     # sudo for another reason re-applies it for free.
-    priv_done "systemsetup:networktime" || return 0
+    priv_done "systemsetup:networktime" || pending+=("network time")
 
-    return 1
-}
-
-# Does `mac-bloat` have privileged work left to do? It is already written the
-# right way — each app is skipped when absent — so this is just that test, hoisted.
-mac_bloat_needs_sudo() {
-    local entry
-    for entry in "${BLOAT_APPS[@]}"; do
-        [[ -d "${entry%%|*}" ]] && return 0
-    done
-    return 1
+    [[ ${#pending[@]} -gt 0 ]] || return 1
+    printf '%s\n' "${pending[@]}"
+    return 0
 }
 
 sudo_reasons() {
     [[ "$DRY_RUN" == "true" ]] && return 0
-    local c predicate
+    local c predicate item
     for c in "${!SUDO_CATEGORY_REASON[@]}"; do
         should_run "$c" || continue
         # Selected is not the same as pending. Ask the category whether it has
         # privileged work left; a converged machine needs no password at all,
         # which is what makes an unattended full run possible (#502).
+        #
+        # The predicate names the specific PENDING items, and those are what the
+        # prompt shows. Printing the category's whole blurb would list settings
+        # that are already applied, and a request naming work it will not do is
+        # the same "you can only trust it" problem #269 fixed from the other side.
         predicate="${SUDO_CATEGORY_PREDICATE[$c]}"
-        "$predicate" || continue
-        printf '%s (%s)\n' "${SUDO_CATEGORY_REASON[$c]}" "$c"
+        while IFS= read -r item; do
+            [[ -n "$item" ]] && printf '%s (%s)\n' "$item" "$c"
+        done < <("$predicate")
     done
 }
 
@@ -4373,53 +4365,6 @@ fi  # mac-focus
 
 # mac-disk: Disk analysis handled by dust and duf (installed in "replacements" section)
 # No additional tools needed — section removed to avoid empty banner
-
-# =============================================================================
-if should_run "mac-bloat"; then
-banner "Remove Pre-installed Apple Apps"
-
-# Only removes apps in /Applications (not SIP-protected).
-# System apps in /System/Applications require SIP disabled and are skipped.
-
-# BLOAT_APPS is declared up with the category tables, because mac_bloat_needs_sudo
-# reads it during preflight — long before this block runs. One array, two readers:
-# a second copy here would let the predicate and the work disagree about what is
-# about to be removed, which is the failure this whole change exists to prevent.
-
-BLOAT_REMOVED=0
-BLOAT_SKIPPED=0
-
-for entry in "${BLOAT_APPS[@]}"; do
-    app_path="${entry%%|*}"
-    app_name="${entry##*|}"
-
-    if [[ ! -d "$app_path" ]]; then
-        warn "$app_name — not found (already removed or not installed)"
-        ((BLOAT_SKIPPED++))
-        continue
-    fi
-
-    if [[ "$DRY_RUN" == "true" ]]; then
-        info "[DRY RUN] Would remove: $app_name ($app_path)"
-        continue
-    fi
-
-    info "Removing $app_name..."
-    if sudo rm -rf "$app_path" 2>> "$LOG_FILE"; then
-        success "$app_name removed"
-        ((BLOAT_REMOVED++))
-    else
-        warn "$app_name could not be removed"
-        ((BLOAT_SKIPPED++))
-    fi
-done
-
-echo ""
-if [[ "$DRY_RUN" != "true" ]]; then
-    info "Bloat removal: $BLOAT_REMOVED removed, $BLOAT_SKIPPED skipped"
-fi
-
-fi  # mac-bloat
 
 # =============================================================================
 if should_run "dracula"; then

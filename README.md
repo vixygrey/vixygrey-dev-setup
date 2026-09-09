@@ -86,7 +86,7 @@ and prefer tagged release artifacts with the published SHA256 checksum.
 ./scripts/setup-dev-tools-mac.sh --version           # Show script version
 ```
 
-> macOS-only categories use the `mac-*` prefix (e.g., `--skip mac-bloat`).
+> macOS-only categories use the `mac-*` prefix (e.g., `--skip mac-media`).
 
 > **A category installs its tools; it does not configure them.** Every generated
 > config file is written in the `configs` category (plus starship in `dracula`,
@@ -104,13 +104,12 @@ and prefer tagged release artifacts with the published SHA256 checksum.
 5. Sets macOS system defaults (Dock, keyboard, Finder, screenshots, screensaver, etc.)
 6. Configures Finder sidebar with custom favorites via **LSSharedFileList** API
 7. Sets the Dock to auto-hide and installs `dockutil` so you can curate pins yourself (no automatic pin list — see GUIDE.md for examples)
-8. Optionally **removes pre-installed Apple bloat** (GarageBand, News, Stocks, etc.)
-9. Auto-writes `~/.zshrc` with a managed block (preserves your customizations)
-10. Exports a `Brewfile` snapshot (with descriptions) for reproducibility
-11. **Post-install verification** -- verifies critical tools work
-12. Runs `brew cleanup` and `brew doctor`
-13. **Logs everything** to `~/.local/share/dev-setup/` for debugging
-14. Reports final summary with install/skip/fail counts and duration
+8. Auto-writes `~/.zshrc` with a managed block (preserves your customizations)
+9. Exports a `Brewfile` snapshot (with descriptions) for reproducibility
+10. **Post-install verification** -- verifies critical tools work
+11. Runs `brew cleanup` and `brew doctor`
+12. **Logs everything** to `~/.local/share/dev-setup/` for debugging
+13. Reports final summary with install/skip/fail counts and duration
 
 ## Features
 
@@ -566,26 +565,6 @@ Preview files in Finder by pressing spacebar.
 | **newsboat** | Terminal RSS/Atom reader -- vim-like keybindings, highly configurable |
 
 ---
-
----
-
-## Remove Pre-installed Apple Bloat
-
-The `mac-bloat` category removes unused Apple apps from `/Applications` (requires sudo):
-
-| App | Location |
-|-----|----------|
-| **GarageBand** | `/Applications/GarageBand.app` |
-
-Apps under `/System/Applications` (News, Journal, Chess, Stocks, Tips, Voice Memos, etc.) are **intentionally skipped** — removing them requires disabling SIP, which this setup never does.
-
-```bash
-# Remove bloat only
-./scripts/setup-dev-tools-mac.sh --only mac-bloat
-
-# Skip bloat removal in a full run
-./scripts/setup-dev-tools-mac.sh --skip mac-bloat
-```
 
 ---
 
