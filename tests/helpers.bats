@@ -537,3 +537,67 @@ EOF
     run grep -nE '"(validate|path|template)\|.*\| *grep -q' "$BATS_TEST_DIRNAME/../scripts/setup-dev-tools-mac.sh"
     [ "$status" -ne 0 ]
 }
+
+# ---------------------------------------------------------------------------
+# #515: Homebrew's removed node left its global npm tree behind. The sweep
+# selects bin stubs by TARGET, never by name — a name list would go stale, and
+# picking the wrong link would delete a formula's binary.
+# ---------------------------------------------------------------------------
+
+@test "orphaned_brew_node_links: selects links pointing into lib/node_modules (#515)" {
+    run run_with_helpers '
+        p="'"$TEST_TMP"'/prefix"
+        mkdir -p "$p/bin" "$p/lib/node_modules/typescript/bin"
+        touch "$p/lib/node_modules/typescript/bin/tsc"
+        ln -s ../lib/node_modules/typescript/bin/tsc "$p/bin/tsc"
+        orphaned_brew_node_links "$p"'
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"/bin/tsc"* ]]
+}
+
+@test "orphaned_brew_node_links: leaves a formula's own link alone (#515)" {
+    # The decisive case. Everything else in that directory belongs to Homebrew,
+    # and removing one would break an installed formula.
+    run run_with_helpers '
+        p="'"$TEST_TMP"'/prefix"
+        mkdir -p "$p/bin" "$p/Cellar/ripgrep/14.0/bin" "$p/lib/node_modules"
+        touch "$p/Cellar/ripgrep/14.0/bin/rg"
+        ln -s ../Cellar/ripgrep/14.0/bin/rg "$p/bin/rg"
+        echo "[$(orphaned_brew_node_links "$p")]"'
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"[]"* ]]
+}
+
+@test "orphaned_brew_node_links: ignores real files, only links qualify (#515)" {
+    run run_with_helpers '
+        p="'"$TEST_TMP"'/prefix"
+        mkdir -p "$p/bin" "$p/lib/node_modules"
+        printf "#!/bin/sh\n" > "$p/bin/realbin"; chmod +x "$p/bin/realbin"
+        echo "[$(orphaned_brew_node_links "$p")]"'
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"[]"* ]]
+}
+
+@test "orphaned_brew_node_links: no bin directory is a silent no-op (#515)" {
+    run run_with_helpers '
+        p="'"$TEST_TMP"'/empty-prefix"
+        mkdir -p "$p"
+        orphaned_brew_node_links "$p"
+        echo "rc=$?"'
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"rc=0"* ]]
+}
+
+@test "orphaned_brew_node_links: picks the node link out of a mixed bin dir (#515)" {
+    run run_with_helpers '
+        p="'"$TEST_TMP"'/prefix"
+        mkdir -p "$p/bin" "$p/lib/node_modules/turbo/bin" "$p/Cellar/jq/1.7/bin"
+        touch "$p/lib/node_modules/turbo/bin/turbo" "$p/Cellar/jq/1.7/bin/jq"
+        ln -s ../lib/node_modules/turbo/bin/turbo "$p/bin/turbo"
+        ln -s ../Cellar/jq/1.7/bin/jq "$p/bin/jq"
+        orphaned_brew_node_links "$p" | wc -l | tr -d " "
+        orphaned_brew_node_links "$p"'
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"turbo"* ]]
+    [[ "$output" != *"/bin/jq"* ]]
+}

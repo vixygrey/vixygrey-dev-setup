@@ -929,6 +929,29 @@ _verify_output_has() {
     grep -qE "$pattern" <<<"$out"
 }
 
+# orphaned_brew_node_links <brew-prefix>
+# Print every symlink in <prefix>/bin whose target points into <prefix>/lib/node_modules.
+#
+# Those are the bin stubs `npm install -g` creates under a Homebrew node. When that
+# node is removed the stubs stay, still resolving, still executing the old tree's
+# code through whatever `node` PATH now finds (#515). Selecting them by TARGET
+# rather than by name matters: everything else in that directory belongs to a
+# formula, and a name-based list would go stale the moment a package is added.
+#
+# The caller is responsible for the guard that this prefix has no node at all.
+# While a node formula is installed the tree is its live global root, not an orphan.
+orphaned_brew_node_links() {
+    local prefix="$1" f target
+    [[ -d "$prefix/bin" ]] || return 0
+    for f in "$prefix/bin"/*; do
+        [[ -L "$f" ]] || continue
+        target="$(readlink "$f")"
+        case "$target" in
+            */lib/node_modules/*) printf '%s\n' "$f" ;;
+        esac
+    done
+}
+
 # git_global <args...>
 # A `git config --global` WRITE, with the --dry-run rule applied in one place instead
 # of at 49 call sites. Every one of those sites was unguarded, so `--dry-run` rewrote
@@ -2121,6 +2144,60 @@ if [[ "$CLEANUP" == "true" ]]; then
         fi
     done
     unset _tool _rest _dir _repl _pretty
+
+    # -- Orphaned Homebrew node_modules ---------------------------------------
+    # #344 removed Homebrew's node and left its global npm tree behind: 19
+    # packages and 1.6 GB on the maintainer's machine, plus 31 live symlinks in
+    # $HOMEBREW_PREFIX/bin still pointing into it. They resolve, and their
+    # shebangs find node through PATH, so they execute the OLD tree's code
+    # against mise's node. Versions matched at the time this was found, which is
+    # timing rather than safety: npm_global_install only ever writes to mise's
+    # tree, so the two diverge at the first upgrade and PATH order decides which
+    # one runs. That is #343, and the shape #513 found with pi under two managers.
+    #
+    # Not a CONFIG_ORPHANS row: that list is per-tool config directories keyed on
+    # a binary name, and this is one prefix-wide sweep with a different guard.
+    #
+    # The guard is that the prefix has NO node. lib/node_modules is npm's global
+    # root for that prefix's node, so while the formula is installed the tree is
+    # live and must not be touched.
+    _brew_prefix="${HOMEBREW_PREFIX:-$(brew --prefix 2>/dev/null)}"
+    _node_modules="$_brew_prefix/lib/node_modules"
+    if [[ -n "$_brew_prefix" && -d "$_node_modules" ]]; then
+        if [[ -x "$_brew_prefix/bin/node" ]] || brew list --formula 2>/dev/null | grep -qxE 'node|node@[0-9.]+'; then
+            info "Keeping $_node_modules — Homebrew's node is installed, so it is that node's live global root"
+        else
+            _nm_count=$(find "$_node_modules" -mindepth 1 -maxdepth 1 | wc -l | tr -d ' ')
+            _nm_size=$(/usr/bin/du -sh "$_node_modules" 2>/dev/null | cut -f1)
+            mapfile -t _nm_links < <(orphaned_brew_node_links "$_brew_prefix")
+            if [[ "$DRY_RUN" == "true" ]]; then
+                info "[DRY RUN] Would remove orphaned Homebrew node tree: $_node_modules (${_nm_count} packages, ${_nm_size:-unknown})"
+                info "[DRY RUN] Would remove ${#_nm_links[@]} bin symlink(s) pointing into it (Homebrew's node is gone)"
+            else
+                info "Removing orphaned Homebrew node tree (${_nm_count} packages, ${_nm_size:-unknown}) — Homebrew's node is gone..."
+                # Links first: a link into a directory that no longer exists is a
+                # worse state than either end of this operation on its own.
+                for _l in "${_nm_links[@]}"; do
+                    [[ -n "$_l" ]] || continue
+                    rm -f "$_l" 2>/dev/null || warn "Could not remove $_l"
+                done
+                [[ ${#_nm_links[@]} -gt 0 ]] && info "Removed ${#_nm_links[@]} orphaned bin symlink(s)"
+                if installed trash; then
+                    if trash "$_node_modules" >> "$LOG_FILE" 2>&1; then
+                        ((CLEANUP_COUNT++)); success "Homebrew node tree moved to Trash (${_nm_size:-unknown} — empty the Trash to reclaim the space)"
+                    else
+                        error "Failed to remove $_node_modules"
+                    fi
+                elif rm -rf "$_node_modules"; then
+                    ((CLEANUP_COUNT++)); success "Homebrew node tree removed (${_nm_size:-unknown} reclaimed)"
+                else
+                    error "Failed to remove $_node_modules"
+                fi
+            fi
+            unset _nm_count _nm_size _nm_links _l
+        fi
+    fi
+    unset _brew_prefix _node_modules
 
     # -- Orphaned taps --------------------------------------------------------
     # Uninstalling a formula leaves its tap cloned and trusted forever. Only taps
