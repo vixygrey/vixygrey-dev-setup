@@ -6,7 +6,19 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 > Release notes for 7.0.0–7.1.1 live in [GitHub Releases](https://github.com/vixygrey/vixygrey-dev-setup/releases) (auto-generated). This file resumes hand-written notes at 7.2.0.
 
-## [Unreleased]
+## [7.22.0] - 2026-09-09
+
+A release that removes more than it adds, and is better for it.
+
+pi is retired. omp is its own fork, so almost everything the pi block generated turned out to be a native omp feature rather than something to port: a 300-line SearXNG extension became two config keys, local Ollama discovery became nothing at all, and the safety extensions became approval-mode settings. The five Tiki skills and the shared skills bridge moved across intact. The `mac-bloat` category went too, having existed to remove one app macOS no longer preinstalls.
+
+The result is that `macos-defaults` is now the only category that needs a password, and it only asks when it has privileged work pending. A converged machine can complete a full unattended run for the first time.
+
+Two defects were found by running the thing rather than reading it. `pmset dim` is a deprecated alias for `displaysleep`, so one block had been silently overwriting another's display-sleep policy while both reported success. And Homebrew's removed node had left 19 packages and 1.6 GB behind, with 31 live symlinks still pointing into them.
+
+Seven more tools carry the Dracula-Sakura palette, and fifteen are now recorded as unable to, with the reason for each. That second list is the more useful one: it stops the same tools being re-investigated every few releases.
+
+A theme running through the whole release is that no error is not evidence. atuin accepted an invalid colour in silence. nushell accepts unknown colour keys without complaint, which left two of them dead. `nu -c` does not load `config.nu` at all, so reading a value back that way returns the default and looks like a config the tool is ignoring. Every check here now has a control: a deliberately invalid value has to be rejected before acceptance means anything.
 
 ### Added
 
@@ -1289,7 +1301,7 @@ Minor release rolling up two follow-up PRs to v4.0.0: a tool-discoverability aud
 - Document all new tools in `GUIDE-MACOS.md`, `GUIDE-LINUX.md`, `GUIDE-WINDOWS.md` with usage examples (#5)
 - Update `SHORTCUTS-*.md` with new alias rows and a "Terminal Apps" section (#5)
 
-[Unreleased]: https://github.com/vixygrey/vixygrey-dev-setup/compare/v7.21.0...HEAD
+[7.22.0]: https://github.com/vixygrey/vixygrey-dev-setup/compare/v7.21.0...v7.22.0
 [7.21.0]: https://github.com/vixygrey/vixygrey-dev-setup/compare/v7.20.1...v7.21.0
 [7.20.1]: https://github.com/vixygrey/vixygrey-dev-setup/compare/v7.20.0...v7.20.1
 [7.20.0]: https://github.com/vixygrey/vixygrey-dev-setup/compare/v7.19.0...v7.20.0
