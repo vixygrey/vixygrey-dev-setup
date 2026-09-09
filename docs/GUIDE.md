@@ -1091,8 +1091,8 @@ Language-specific rules are in `~/.claude/rules/`:
 - `writing.md` — The 53 rules of ASD-STE100 Simplified Technical English
 
 `writing.md` is the one rule file that is shared with the other agent. The same
-generator function writes it and the tail of `~/.pi/agent/AGENTS.md`, so Claude Code
-and pi cannot disagree about how to write.
+generator function writes it and the tail of `~/.omp/agent/AGENTS.md`, so Claude Code
+and omp cannot disagree about how to write.
 
 It has two tiers, and membership is by document type rather than by whether the text
 lands in a file:

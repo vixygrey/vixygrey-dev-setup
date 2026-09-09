@@ -117,7 +117,10 @@ jobs:
           sudo curl -fsSL -o /usr/local/bin/yq \
             https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
           sudo chmod +x /usr/local/bin/yq
-          just --version && zsh --version && jq --version && yq --version
+          curl -fsSL https://bun.sh/install | bash
+          echo "$HOME/.bun/bin" >> "$GITHUB_PATH"
+          export PATH="$HOME/.bun/bin:$PATH"
+          just --version && zsh --version && jq --version && yq --version && bun --version
           python3 -c 'import tomllib, sys; print("tomllib ok on", sys.version.split()[0])'
 
       - name: Parse every generated config
@@ -131,6 +134,14 @@ jobs:
           }
 
           # tag|validator — add a row when a new generated file has a real parser.
+          #
+          # OMP_TURNS_EXT copies to a .ts name FIRST, and that is load-bearing.
+          # The harness extracts to /tmp/generated with no extension, and
+          # `bun build /tmp/generated` ACCEPTS deliberately broken TypeScript:
+          # bun treats an unknown extension as an asset to copy rather than
+          # source to parse. Written the obvious way the row could never fail,
+          # which is the vacuous pass the empty-extraction guard above exists to
+          # prevent. Verified both ways before this was added (#527).
           fail=0
           while IFS='|' read -r tag validator; do
             [ -z "$tag" ] && continue
@@ -188,6 +199,7 @@ jobs:
           GHOSTTY_PLIST_EOF|python3 -c 'import plistlib, sys; plistlib.load(open("/tmp/generated","rb"))'
           AICHAT_THEME|python3 -c 'import plistlib, sys; plistlib.load(open("/tmp/generated","rb"))'
           OMP_THEME_CONF|jq empty /tmp/generated
+          OMP_TURNS_EXT|cp /tmp/generated /tmp/generated.ts && bun build /tmp/generated.ts --no-bundle --outdir /tmp/bunout
           LNAV_THEME_CONF|jq empty /tmp/generated
           CLAUDE_SETTINGS_CONF|jq empty /tmp/generated
           PRETTIER_CONF|jq empty /tmp/generated
