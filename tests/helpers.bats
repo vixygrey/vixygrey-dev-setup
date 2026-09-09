@@ -348,3 +348,118 @@ EOF
     [ "$status" -eq 0 ]
     [ -z "$output" ]
 }
+
+# ---------------------------------------------------------------------------
+# #502: sudo is asked for only when a category has privileged work PENDING.
+# The predicates and their applied-once marker are pure enough to test on Linux;
+# the macOS-only reads they wrap (pmset, nvram, networksetup) are not, so
+# _pmset_value is exercised against a stubbed `pmset`.
+# ---------------------------------------------------------------------------
+
+@test "priv_done: false before anything is marked (#502)" {
+    run run_with_helpers 'priv_done "systemsetup:networktime" && echo YES || echo NO'
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"NO"* ]]
+}
+
+@test "priv_mark: marks, and priv_done then sees it (#502)" {
+    run run_with_helpers '
+        priv_mark "systemsetup:networktime"
+        priv_done "systemsetup:networktime" && echo YES || echo NO'
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"YES"* ]]
+}
+
+@test "priv_mark: survives a non-resume run, unlike mark_done (#502)" {
+    # The whole reason this pair exists: STATE_FILE is truncated on every
+    # non-resume run and is_done answers false without --resume, so neither can
+    # carry "some previous run already applied this".
+    run run_with_helpers '
+        priv_mark "systemsetup:networktime"
+        : > "$STATE_FILE"          # what a fresh non-resume run does
+        RESUME=false
+        priv_done "systemsetup:networktime" && echo STILL_MARKED || echo LOST
+        is_done "systemsetup:networktime" && echo IS_DONE_TRUE || echo IS_DONE_FALSE'
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"STILL_MARKED"* ]]
+    [[ "$output" == *"IS_DONE_FALSE"* ]]
+}
+
+@test "priv_mark: is idempotent — one line, not one per run (#502)" {
+    run run_with_helpers '
+        priv_mark "systemsetup:networktime"
+        priv_mark "systemsetup:networktime"
+        priv_mark "systemsetup:networktime"
+        grep -c "^systemsetup:networktime$" "$PRIV_STATE_FILE"'
+    [ "$status" -eq 0 ]
+    [[ "${lines[-1]}" == "1" ]]
+}
+
+@test "priv_mark: dry-run records nothing (#502)" {
+    run run_with_helpers '
+        DRY_RUN=true
+        priv_mark "systemsetup:networktime"
+        priv_done "systemsetup:networktime" && echo MARKED || echo UNMARKED'
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"UNMARKED"* ]]
+}
+
+@test "mac_bloat_needs_sudo: true when a target app is present (#502)" {
+    run run_with_helpers '
+        BLOAT_APPS=("'"$TEST_TMP"'/Present.app|Present")
+        mkdir -p "'"$TEST_TMP"'/Present.app"
+        mac_bloat_needs_sudo && echo NEEDS || echo CLEAN'
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"NEEDS"* ]]
+}
+
+@test "mac_bloat_needs_sudo: false when every target app is absent (#502)" {
+    run run_with_helpers '
+        BLOAT_APPS=("'"$TEST_TMP"'/Absent.app|Absent")
+        mac_bloat_needs_sudo && echo NEEDS || echo CLEAN'
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"CLEAN"* ]]
+}
+
+@test "_pmset_value: reads the requested power source, not the first match (#502)" {
+    # displaysleep appears under BOTH headings with different values. A bare grep
+    # would answer for whichever came first, which is the bug this parser avoids.
+    run run_with_helpers '
+        pmset() {
+            printf "%s\n" "Battery Power:" " displaysleep         75" " lessbright           1" \
+                          "AC Power:"      " displaysleep         120"
+        }
+        echo "AC=$(_pmset_value AC displaysleep)"
+        echo "BATT=$(_pmset_value Battery displaysleep)"
+        echo "LESS=$(_pmset_value Battery lessbright)"'
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"AC=120"* ]]
+    [[ "$output" == *"BATT=75"* ]]
+    [[ "$output" == *"LESS=1"* ]]
+}
+
+@test "_pmset_value: empty for a key absent from that section (#502)" {
+    # lessbright is reported under Battery only. Asking AC must not fall through
+    # to the battery value, or halfdim would read as already-applied.
+    run run_with_helpers '
+        pmset() {
+            printf "%s\n" "Battery Power:" " lessbright           1" \
+                          "AC Power:"      " displaysleep         120"
+        }
+        echo "[$(_pmset_value AC lessbright)]"'
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"[]"* ]]
+}
+
+@test "every SUDO_CATEGORY_REASON entry has a predicate (#502)" {
+    # The loud default. A category that needs sudo but has no predicate must fail
+    # at startup, not resolve to "no sudo needed" and die mid-work at a prompt.
+    run run_with_helpers '
+        for c in "${!SUDO_CATEGORY_REASON[@]}"; do
+            [[ -n "${SUDO_CATEGORY_PREDICATE[$c]:-}" ]] || { echo "MISSING:$c"; exit 1; }
+            declare -F "${SUDO_CATEGORY_PREDICATE[$c]}" >/dev/null || { echo "NOTAFUNC:$c"; exit 1; }
+        done
+        echo ALL_PRESENT'
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"ALL_PRESENT"* ]]
+}
