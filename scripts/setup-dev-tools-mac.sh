@@ -255,6 +255,32 @@ is_done() {
     [[ "$RESUME" == "true" ]] && grep -qxF "$1" "$STATE_FILE" 2>/dev/null
 }
 
+# -- Applied-once state for privileged settings that cannot be read back ------
+# Deliberately NOT mark_done/is_done. That pair is the --resume mechanism: the
+# state file is truncated on every non-resume run, and is_done answers false
+# unless --resume was passed. Both are correct for resume and wrong here, where
+# the question is "did any previous run ever apply this" (#502).
+#
+# Only for settings whose state root owns and does not expose. `systemsetup
+# -getusingnetworktime` needs administrator access to READ, so detecting it costs
+# the password we are trying to avoid asking for.
+#
+# The trade: turn one of these off by hand and the run will not notice, because
+# the marker still says applied. Delete the line from this file to force a
+# re-apply. The alternative is a password prompt on every run forever, which is
+# the defect this replaces.
+PRIV_STATE_FILE="$STATE_DIR/privileged-applied.txt"
+
+priv_mark() {
+    [[ "$DRY_RUN" == "true" ]] && return 0
+    mkdir -p "$STATE_DIR"
+    priv_done "$1" || echo "$1" >> "$PRIV_STATE_FILE"
+}
+
+priv_done() {
+    grep -qxF "$1" "$PRIV_STATE_FILE" 2>/dev/null
+}
+
 # -- Lockfile (prevent concurrent runs) ---------------------------------------
 LOCKFILE="$STATE_DIR/setup.lock"
 
@@ -332,7 +358,6 @@ ALL_CATEGORIES=(
     mac-media
     mac-cloud
     mac-focus
-    mac-bloat
     dracula
     configs
     filesystem
@@ -368,7 +393,6 @@ declare -A CATEGORY_DESC=(
     [mac-media]="mpv, oxipng, jpegoptim, 7zip, cliamp"
     [mac-cloud]="rclone, borg"
     [mac-focus]="newsboat"
-    [mac-bloat]="Remove pre-installed Apple apps (GarageBand)"
     [dracula]="Dracula-Sakura theme pass for terminal, editor, and TUI surfaces"
     [configs]="EVERY tool's generated config + git hooks + Claude setup (not in the tool's own category)"
     [filesystem]="Directory structure, helper scripts, git identity"
@@ -427,8 +451,26 @@ unset _cat _known _known_cat
 # script never executes it. Every other category is unprivileged too (#269).
 declare -A SUDO_CATEGORY_REASON=(
     [macos-defaults]="system settings (display sleep, DNS servers, startup chime, network time) and Touch ID for sudo"
-    [mac-bloat]="removing pre-installed Apple apps from /Applications"
 )
+
+# Predicate per sudo-needing category: does it have privileged work PENDING?
+# `should_run` answers whether a category was selected, which is a different
+# question and the one that made every run ask for a password (#502).
+declare -A SUDO_CATEGORY_PREDICATE=(
+    [macos-defaults]=macos_defaults_needs_sudo
+)
+
+# Same loud-default discipline as the table above. A category listed as needing
+# sudo but missing a predicate must fail here, not quietly resolve to "no sudo
+# needed" and then die at a password prompt in the middle of the work — which is
+# the exact failure the up-front prompt exists to prevent.
+for _cat in "${!SUDO_CATEGORY_REASON[@]}"; do
+    if [[ -z "${SUDO_CATEGORY_PREDICATE[$_cat]:-}" ]]; then
+        echo "INTERNAL ERROR: SUDO_CATEGORY_REASON['$_cat'] has no predicate in SUDO_CATEGORY_PREDICATE" >&2
+        exit 1
+    fi
+done
+unset _cat
 
 # Same loud-default discipline as CONFIG_LIVES_IN_CONFIGS: a typo'd key here would
 # silently drop a category's sudo requirement, and the run would fail later with a
@@ -448,11 +490,82 @@ unset _cat _known _known_cat
 # Reasons this run needs sudo, one per line; empty when it does not need it at all.
 # --cleanup is not considered here: it exits before preflight and prompts at the
 # point of use. --dry-run never needs it, because it changes nothing.
+# Read one key out of one power source's section of `pmset -g custom`. The output
+# is two blocks headed "Battery Power:" and "AC Power:", and the same key name
+# appears in both, so a bare grep would answer for whichever came first.
+_pmset_value() {   # <Battery|AC> <key>
+    pmset -g custom 2>/dev/null | awk -v sec="$1 Power:" -v key="$2" '
+        $0 == sec { inblock = 1; next }
+        /Power:$/ { inblock = 0 }
+        inblock && $1 == key { print $2; exit }'
+}
+
+# Does `macos-defaults` have privileged work left to do?
+#
+# Every check below is the READ half of a guard the work block already applies.
+# They must not drift: a predicate that says "already done" about work that is
+# actually pending silently skips a system setting, which is worse than one
+# unnecessary password prompt (#502).
+macos_defaults_needs_sudo() {
+    local pending=()
+
+    # Touch ID for sudo — /etc/pam.d/sudo_local is world readable.
+    [[ -f /etc/pam.d/sudo_local ]] && grep -q pam_tid /etc/pam.d/sudo_local 2>/dev/null \
+        || pending+=("Touch ID for sudo")
+
+    # DNS — only the services the work block actually touches.
+    local service current
+    while IFS= read -r service; do
+        [[ "$service" == "Wi-Fi" || "$service" == "Ethernet" ]] || continue
+        current=$(networksetup -getdnsservers "$service" 2>/dev/null)
+        grep -q '1\.1\.1\.1' <<<"$current" || pending+=("DNS servers for $service")
+    done < <(networksetup -listallnetworkservices 2>/dev/null | tail -n +2)
+
+    # Display sleep and half-dim. `halfdim` reads back as `lessbright`, and only
+    # under Battery Power — pmset does not report it for AC.
+    [[ "$(_pmset_value AC displaysleep)" == "120" && "$(_pmset_value Battery displaysleep)" == "75" ]] \
+        || pending+=("display sleep timers")
+    [[ "$(_pmset_value Battery lessbright)" == "1" ]] || pending+=("half-brightness step")
+
+    # Startup chime.
+    [[ "$(nvram StartupMute 2>/dev/null | awk '{print $2}')" == "%01" ]] \
+        || pending+=("startup chime")
+
+    # /Volumes visibility. MUST be /bin/ls: the coreutils install shadows BSD ls,
+    # and GNU ls rejects -O with "invalid option", which reads like a permission
+    # problem and is not one. This is the AGENTS.md environment gotcha in the wild.
+    /bin/ls -ldO /Volumes 2>/dev/null | awk '{print $5}' | grep -q hidden \
+        && pending+=("/Volumes visibility")
+
+    # Network time. `systemsetup -getusingnetworktime` needs admin to READ, so the
+    # state cannot be detected without the password we are trying to avoid asking
+    # for. It is set-once, so an applied-once marker answers instead. The work
+    # block still runs the command whenever it executes, so any run that obtains
+    # sudo for another reason re-applies it for free.
+    priv_done "systemsetup:networktime" || pending+=("network time")
+
+    [[ ${#pending[@]} -gt 0 ]] || return 1
+    printf '%s\n' "${pending[@]}"
+    return 0
+}
+
 sudo_reasons() {
     [[ "$DRY_RUN" == "true" ]] && return 0
-    local c
+    local c predicate item
     for c in "${!SUDO_CATEGORY_REASON[@]}"; do
-        should_run "$c" && printf '%s (%s)\n' "${SUDO_CATEGORY_REASON[$c]}" "$c"
+        should_run "$c" || continue
+        # Selected is not the same as pending. Ask the category whether it has
+        # privileged work left; a converged machine needs no password at all,
+        # which is what makes an unattended full run possible (#502).
+        #
+        # The predicate names the specific PENDING items, and those are what the
+        # prompt shows. Printing the category's whole blurb would list settings
+        # that are already applied, and a request naming work it will not do is
+        # the same "you can only trust it" problem #269 fixed from the other side.
+        predicate="${SUDO_CATEGORY_PREDICATE[$c]}"
+        while IFS= read -r item; do
+            [[ -n "$item" ]] && printf '%s (%s)\n' "$item" "$c"
+        done < <("$predicate")
     done
 }
 
@@ -4252,52 +4365,6 @@ fi  # mac-focus
 
 # mac-disk: Disk analysis handled by dust and duf (installed in "replacements" section)
 # No additional tools needed — section removed to avoid empty banner
-
-# =============================================================================
-if should_run "mac-bloat"; then
-banner "Remove Pre-installed Apple Apps"
-
-# Only removes apps in /Applications (not SIP-protected).
-# System apps in /System/Applications require SIP disabled and are skipped.
-
-BLOAT_APPS=(
-    "/Applications/GarageBand.app|GarageBand"
-)
-
-BLOAT_REMOVED=0
-BLOAT_SKIPPED=0
-
-for entry in "${BLOAT_APPS[@]}"; do
-    app_path="${entry%%|*}"
-    app_name="${entry##*|}"
-
-    if [[ ! -d "$app_path" ]]; then
-        warn "$app_name — not found (already removed or not installed)"
-        ((BLOAT_SKIPPED++))
-        continue
-    fi
-
-    if [[ "$DRY_RUN" == "true" ]]; then
-        info "[DRY RUN] Would remove: $app_name ($app_path)"
-        continue
-    fi
-
-    info "Removing $app_name..."
-    if sudo rm -rf "$app_path" 2>> "$LOG_FILE"; then
-        success "$app_name removed"
-        ((BLOAT_REMOVED++))
-    else
-        warn "$app_name could not be removed"
-        ((BLOAT_SKIPPED++))
-    fi
-done
-
-echo ""
-if [[ "$DRY_RUN" != "true" ]]; then
-    info "Bloat removal: $BLOAT_REMOVED removed, $BLOAT_SKIPPED skipped"
-fi
-
-fi  # mac-bloat
 
 # =============================================================================
 if should_run "dracula"; then
@@ -11105,11 +11172,15 @@ defaults write com.apple.AppleMultitouchTrackpad SecondClickThreshold -int 1 2>/
 defaults write com.apple.AppleMultitouchTrackpad ActuateDetents -bool true 2>/dev/null || true
 configured "Trackpad preferences captured (tap-to-click off, two-finger secondary click, gestures)"
 
-# ---- Screen dim when idle: 30 minutes ----
+# ---- Half-brightness step before the display sleeps ----
+# `halfdim` only. The `dim` argument is a DEPRECATED ALIAS for `displaysleep`
+# (man pmset), so `pmset -c dim 30` here silently overwrote the 120/75 minute
+# display sleep set earlier in this same category, and both blocks reported
+# success. The machine ended at 30 on both power sources while the run claimed
+# 2 hours (#508). Display sleep is owned by the earlier block; this one owns
+# halfdim, which is a genuinely separate setting.
 sudo pmset -a halfdim 1 2>/dev/null || true
-sudo pmset -c dim 30 2>/dev/null || true
-sudo pmset -b dim 30 2>/dev/null || true
-configured "Screen dim set to 30 min"
+configured "Half-brightness step before display sleep enabled"
 
 # ---- Disable startup sound ----
 sudo nvram StartupMute=%01 2>/dev/null || true
@@ -11124,10 +11195,17 @@ defaults write com.apple.controlcenter "NSStatusItem Visible Bluetooth" -bool tr
 configured "Bluetooth shown in menu bar"
 
 # ---- Auto-set timezone ----
-sudo systemsetup -setusingnetworktime on 2>/dev/null || true
+# Marked applied-once, because the matching -get needs admin to read and would
+# therefore cost the password the sudo predicate exists to avoid (#502). Mark
+# only on success, so a run that never obtained sudo does not claim it.
+if sudo systemsetup -setusingnetworktime on 2>/dev/null; then
+    priv_mark "systemsetup:networktime"
+    configured "Network time enabled (timezone auto-detected)"
+else
+    warn "Network time not set (no administrator access this run)"
+fi
 # Use current timezone (don't override user's existing setting)
 # sudo systemsetup -settimezone "America/Chicago" 2>/dev/null || true
-configured "Network time enabled (timezone auto-detected)"
 
 # ---- Software Update: auto-check but don't auto-install ----
 defaults write com.apple.SoftwareUpdate AutomaticCheckEnabled -bool true 2>/dev/null || true

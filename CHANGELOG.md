@@ -6,6 +6,42 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 > Release notes for 7.0.0–7.1.1 live in [GitHub Releases](https://github.com/vixygrey/vixygrey-dev-setup/releases) (auto-generated). This file resumes hand-written notes at 7.2.0.
 
+## [Unreleased]
+
+### Removed
+
+- **The `mac-bloat` category** (#509). It removed exactly one app, GarageBand, which modern macOS does not preinstall. On a clean machine the category found nothing and reported `GarageBand — not found`, which is what it reported on the maintainer's machine.
+
+  For that it cost an entry in `ALL_CATEGORIES`, a line in the interactive picker, about 45 lines of work block, and one of only **two** entries in `SUDO_CATEGORY_REASON`, which made it one of two reasons a run ever asked for a password. It also aimed at a shrinking target: everything Apple still bundles lives under `/System/Applications`, which needs SIP disabled and is out of scope here by decision (`specs/adr/0007-macos-only.md`).
+
+  `--only mac-bloat` and `--skip mac-bloat` now exit non-zero with `Unknown category`. That is the intended outcome rather than a regression: the category validator already rejects unknown names loudly, and a name that is silently accepted while doing nothing is worse. Removing the app by hand, on the rare machine that has it, is `sudo rm -rf /Applications/GarageBand.app`.
+
+  The useful consequence is that **`macos-defaults` is now the only category that needs a password at all.** Together with #502, a machine whose system settings are converged never invokes `sudo`, so a full unattended run is possible for the first time.
+
+### Fixed
+
+- **A password is asked for only when there is privileged work to do** (#502). `sudo_reasons()` asked whether a category was *selected*, not whether it had *work to do*, so preflight ran `sudo -v` before anything had checked. A run of `--only macos-defaults,mac-bloat` on a converged machine typed a password and then reported that Touch ID, DNS, and Siri were all already configured and that GarageBand was not installed.
+
+  The larger cost was not the wasted keystroke. `macos-defaults` and `mac-bloat` are the only categories that need root, so an unattended run could not do a full setup at all. An agent, a launchd job, or a `topgrade` step had to skip them and hope somebody ran them by hand later.
+
+  Each sudo-needing category now has a predicate, and `sudo_reasons()` dispatches on that instead of on `should_run`. Every check is the **read half of a guard the work block already applies**, which is the property that matters: if detection and application could disagree, a wrong "already done" would silently skip a system setting, and that is worse than one unnecessary prompt. A category listed in `SUDO_CATEGORY_REASON` with no predicate now fails at startup rather than resolving to "no sudo needed" and dying mid-work at a password prompt, which is the same loud-default discipline `CONFIG_LIVES_IN_CONFIGS` already carries.
+
+  `BLOAT_APPS` moves up to the category tables, because the predicate reads it during preflight and the work block runs much later. One array with two readers, rather than a copy that could drift from the list actually being removed.
+
+  **Two settings needed something other than a plain read.** `systemsetup -getusingnetworktime` needs administrator access to *read*, so detecting it would cost the very password this change avoids. `mark_done` and `is_done` could not serve, despite existing for adjacent reasons: the state file is truncated on every non-resume run, and `is_done` answers false unless `--resume` was passed. Both are correct for resume and wrong for "did any previous run ever apply this". So `priv_mark` and `priv_done` were added, deliberately separate. The trade is stated in the comment: turn one of these off by hand and the run will not notice, and deleting the line from `~/.local/share/dev-setup/privileged-applied.txt` forces a re-apply. The work block still runs the command whenever it executes, so any run that obtains sudo for another reason re-applies it for free.
+
+  `/Volumes` visibility is detected with `/bin/ls -ldO`, not `ls -ldO`. The coreutils install shadows BSD `ls`, and GNU `ls` rejects `-O` with `invalid option`, which reads like a permission problem and is not one.
+
+  **The prompt now names the pending work, not the category.** The first version of this fix still printed the whole `SUDO_CATEGORY_REASON` blurb, so a run that needed only the display sleep timers announced "display sleep, DNS servers, startup chime, network time and Touch ID for sudo" and asked for a password. Four of those five were already applied. A request that names work it will not do cannot be judged any better than one that names nothing, which is the problem #269 fixed from the other side. Each predicate now returns the specific items it found pending, and those are what the prompt lists.
+
+- **`pmset dim` overwrote the display sleep the same category had just set** (#508). `dim` is not a separate setting. The man page records it as a deprecated alias for `displaysleep`, kept working since 10.4. The first `macos-defaults` block set 120 minutes on the charger and 75 on battery; the second block then ran `pmset -c dim 30` and `pmset -b dim 30` about 4000 lines later and reset both to 30. Both blocks reported success, so every run claimed a two-hour display sleep and applied thirty minutes. A provisioned machine at 7.21.0 read `displaysleep 30` under both power sources.
+
+  Display sleep now belongs to the earlier block alone. The second keeps `halfdim`, which is a genuinely separate setting, and its message describes that instead of a "screen dim" that was never what the line did.
+
+  This is the #241/#242 shape again: two names for one thing, treated as two things. It was found while writing the #502 predicates, and the two had to be fixed together, because a predicate cannot be written against two lines that contradict each other. There is no single target value to compare against.
+
+  Detection note for anyone touching this later: `halfdim` reads back as `lessbright`, and `pmset -g custom` reports it only in the `Battery Power` section.
+
 ## [7.21.0] - 2026-09-09
 
 A release about adding a third agent without letting the three drift apart.
