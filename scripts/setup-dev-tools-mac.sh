@@ -13840,6 +13840,7 @@ OMP_THEME_FILE="$OMP_THEME_DIR/dracula-sakura.json"
 # shell. That subcommand does not load the session skill registry, so it is not
 # evidence of a discovery problem — do not "fix" a working path because of it.
 OMP_SKILLS_DIR="$OMP_DIR/skills"
+OMP_EXTENSIONS_DIR="$OMP_DIR/extensions"   # auto-discovered for .ts/.js (#525)
 AGENTS_SKILLS="$HOME/.agents/skills"
 # The five shared skills, symlinked from ~/.claude/skills. omp reads this
 # directory natively; the list is unchanged from what pi shared (#513).
@@ -13858,8 +13859,9 @@ if [[ "$DRY_RUN" == "true" ]]; then
     info "[DRY RUN] Would merge omp settings -> $OMP_CONFIG_FILE (theme, Gemini model roles)"
     info "[DRY RUN] Would write ${#OMP_LOCAL_TIKI_SKILLS[@]} omp-local Tiki skills -> $OMP_SKILLS_DIR/"
     info "[DRY RUN] Would link ${#OMP_SHARED_SKILLS[@]} shared skills -> $AGENTS_SKILLS/"
+    info "[DRY RUN] Would write the turn-counter widget -> $OMP_EXTENSIONS_DIR/turn-counter.ts"
 else
-    mkdir -p "$OMP_THEME_DIR" "$OMP_SKILLS_DIR" "$AGENTS_SKILLS"
+    mkdir -p "$OMP_THEME_DIR" "$OMP_SKILLS_DIR" "$OMP_EXTENSIONS_DIR" "$AGENTS_SKILLS"
 
     # -- AGENTS.md ----------------------------------------------------------------
     # Same two-part shape as pi's: shared preferences, then the shared writing rules.
@@ -14616,6 +14618,76 @@ OMP_TIKI_JOURNAL_SKILL
 
     success "omp: local Tiki skills written (~/.omp/agent/skills: tiki-capture, tiki-review, tiki-groom, tiki-arc, tiki-journal)"
 
+    # -- Turn-counter widget ------------------------------------------------------
+    # Shows how many turns the session has used, above the prompt, in the theme's
+    # own colours (#525).
+    #
+    # Three things here were settled by reading omp's shipped type definitions and
+    # by observation, not by assumption:
+    #
+    #   * `ctx.ui.setStatus()` is the obvious-looking API and is the WRONG one. The
+    #     footer documents that it strips ANSI and control characters, and
+    #     footer.ts pushes the joined extension statuses as a plain line with no
+    #     theme colour applied at all. Nothing set through it can be styled.
+    #     `setWidget` with placement "aboveEditor" is the surface that renders
+    #     where this is wanted AND can carry colour.
+    #
+    #   * `turnIndex` is ZERO-BASED. Verified by running one turn with a probe
+    #     extension: both `turn_start` and `turn_end` reported `turnIndex=0`. The
+    #     display adds one so the first turn reads as 1 rather than 0.
+    #
+    #   * Colours come from `ctx.ui.theme.fg(token, text)` rather than hardcoded
+    #     hex, so this follows the active theme. It is Dracula-Sakura here because
+    #     that is what config.yml selects, and it stays correct if that changes.
+    ensure_dir "$OMP_EXTENSIONS_DIR"
+    write_generated "$OMP_EXTENSIONS_DIR/turn-counter.ts" <<'OMP_TURNS_EXT'
+/**
+ * Turn counter — shows the number of turns used, above the prompt.
+ *
+ * Styled from the active theme rather than hardcoded hex, so it matches
+ * whatever theme is selected (Dracula-Sakura, as configured by this setup).
+ */
+import type { ExtensionAPI } from "@oh-my-pi/pi-coding-agent";
+
+const WIDGET_KEY = "turn-counter";
+
+export default function turnCounter(pi: ExtensionAPI) {
+    // turnIndex is zero-based: the first turn reports 0. Render it one-based,
+    // because "turn 0" is not what a human means by turns used.
+    const render = (ctx: any, turnIndex: number, inFlight: boolean): void => {
+        const theme = ctx?.ui?.theme;
+        if (!theme || typeof ctx.ui.setWidget !== "function") return;
+
+        const count = turnIndex + 1;
+        // `muted` and `statusLineContext` are core theme tokens, so this works
+        // against any theme rather than only against ours.
+        const label = theme.fg("muted", inFlight ? "turn" : "turns");
+        const value = theme.fg("statusLineContext", String(count));
+        const suffix = inFlight ? theme.fg("muted", " in flight") : "";
+
+        ctx.ui.setWidget(WIDGET_KEY, [`${label} ${value}${suffix}`], {
+            placement: "aboveEditor",
+        });
+    };
+
+    pi.on("turn_start", (event: any, ctx: any) => {
+        render(ctx, event.turnIndex, true);
+    });
+
+    pi.on("turn_end", (event: any, ctx: any) => {
+        render(ctx, event.turnIndex, false);
+    });
+
+    // Clear on shutdown so a stale count cannot outlive the session it counted.
+    pi.on("session_shutdown", (_event: any, ctx: any) => {
+        if (typeof ctx?.ui?.setWidget === "function") {
+            ctx.ui.setWidget(WIDGET_KEY, undefined);
+        }
+    });
+}
+OMP_TURNS_EXT
+    configured "omp turn-counter widget written (~/.omp/agent/extensions/turn-counter.ts)"
+
     # -- Shared skills ------------------------------------------------------------
     # ~/.agents/skills is omp's OWN canonical skills location (the `agents` provider,
     # with its own enableAgentsUser toggle), not a foreign import. This loop lived in
@@ -14670,6 +14742,28 @@ OMP_TIKI_JOURNAL_SKILL
         /bin/cat > "$OMP_OURS" <<'OMP_CONFIG_CONF'
 theme:
   dark: dracula-sakura
+  # Both slots, so a light terminal background does not fall back to omp's
+  # stock `light` theme and lose the palette entirely (#525).
+  light: dracula-sakura
+
+# Nerd-font glyphs. This machine installs the nerd fonts and Ghostty is
+# configured with one, so the default `unicode` preset understates what the
+# terminal can draw.
+symbolPreset: nerd
+
+composer:
+  shape: box
+
+github:
+  enabled: true
+
+# The advisor is a SECOND model watching every turn. Off deliberately (#525).
+# Written as an explicit `false` rather than omitted: the schema default is
+# already false, but stating it records the decision and survives an upstream
+# default change. `modelRoles.advisor` below stays on Pro, which costs nothing
+# while this is off and is the right assignment if it is ever switched on.
+advisor:
+  enabled: false
 # Nine roles, routed at Gemini. Flash carries ordinary turns, Pro carries the three
 # roles where depth pays for itself, Flash Lite carries the cheap fan-out. Every id
 # is verified against omp's shipped catalog; an unknown one is reported as a config
@@ -14697,6 +14791,12 @@ retry:
     google/gemini-3.1-pro-preview:
       - google/gemini-3.8-flash
     default:
+      - google/gemini-3.5-flash
+    # smol is the cheap subagent fan-out role; when flash-lite is rate-limited
+    # the next cheapest model should take the turn rather than the default chain
+    # sending it to a more expensive one.
+    smol:
+      - google/gemini-3.1-flash-lite
       - google/gemini-3.5-flash
 # Local SearXNG, first in the web_search chain. This replaces the ~300-line
 # TypeScript extension the pi block generated (#513): omp carries `searxng` as
