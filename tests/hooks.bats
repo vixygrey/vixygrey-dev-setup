@@ -84,6 +84,16 @@ make_hook() {
     mkdir -p "$TEST_TMP/bin"
     printf '#!/usr/bin/env bash\nexit 0\n' > "$TEST_TMP/bin/git-lfs"
     chmod +x "$TEST_TMP/bin/git-lfs"
+    export REAL_GIT="$(command -v git)"
+    cat > "$TEST_TMP/bin/git" <<'EOF'
+#!/usr/bin/env bash
+if [[ "$1" == "ls-files" && "$2" == ":(attr:filter=lfs)" ]]; then
+    printf 'sample.bin\n'
+    exit 0
+fi
+exec "$REAL_GIT" "$@"
+EOF
+    chmod +x "$TEST_TMP/bin/git"
     printf '*.bin filter=lfs diff=lfs merge=lfs -text\n' > "$REPO/.gitattributes"
     printf 'pointer\n' > "$REPO/sample.bin"
     git -C "$REPO" add .gitattributes sample.bin
