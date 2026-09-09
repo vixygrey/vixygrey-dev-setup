@@ -10,6 +10,20 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ### Added
 
+- **omp: hand-made config keys adopted, the always-on advisor turned off, and a turn-counter widget** (#525).
+
+  Six keys had been set by hand on the machine and are now written by the generator: `composer.shape`, `github.enabled`, `symbolPreset` (`nerd`, since this machine installs the nerd fonts), `theme.light` (the generator had only ever set `theme.dark`, so a light terminal background fell back to omp's stock theme), and a `retry.fallbackChains.smol` chain so the cheap fan-out role degrades to the next cheapest model rather than the default chain's more expensive one.
+
+  **`advisor.enabled` is written as `false`.** The advisor is a second model watching every turn, and it is off deliberately. Writing the value rather than omitting it is the point: the schema default is already `false`, but an explicit value records the decision and survives an upstream default change. `modelRoles.advisor` stays on Pro, which costs nothing while this is off and is the right assignment if it is switched on.
+
+  **`setupVersion` is deliberately not adopted.** It is omp's own bookkeeping, written by `omp setup` to record that onboarding ran. It is state omp owns rather than a preference, and the generator asserting it would claim something about a machine it did not set up. The `yq` merge leaves it untouched.
+
+  **The turn counter is a widget, not a status.** `ctx.ui.setStatus()` is the obvious-looking API and is the wrong one: the footer documents that it strips ANSI and control characters, and `footer.ts` pushes the joined extension statuses as a plain line with no theme colour applied at all. Nothing set through it can be styled. `ctx.ui.setWidget(key, content, { placement: "aboveEditor" })` renders where the counter is wanted and can carry colour, so that is what it uses.
+
+  Colours come from `ctx.ui.theme.fg(token, text)` against the core `muted` and `statusLineContext` tokens, not hardcoded hex. It is Dracula-Sakura because that is what `config.yml` selects, and it follows the theme if that changes.
+
+  **`turnIndex` is zero-based**, established by observation rather than assumption: a probe extension recorded `turnIndex=0` from both `turn_start` and `turn_end` on the first turn of a real session. The widget adds one, because "turn 0" is not what a human means by turns used. That probe also proved the loading path — `~/.omp/agent/extensions/` is auto-discovered for `.ts` and `.js`, so the file needs no registration.
+
 - **A `home` zellij layout, beside the existing `dev` one** (#523). A personal dashboard for a full-screen terminal: a plain shell on the left, and weather, system monitor, and notes stacked down the right.
 
   ```

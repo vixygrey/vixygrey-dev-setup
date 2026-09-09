@@ -866,6 +866,7 @@ The script generates config files with sensible defaults:
 | `~/.config/aichat/config.yaml` + `dark.tmTheme` | aichat | Local Ollama defaults, prompt behavior, document loaders, Dracula-Sakura dark theme |
 | `~/.agents/skills/*` | omp | Symlinks to the curated shared skills (`api-testing`, `d2-diagrams`, `dbmate-migrations`, `office-docs`, `tiki`). omp treats this directory as its own native skills location |
 | `~/.omp/agent/skills/*` | omp | Five omp-local Tiki companions: `tiki-capture`, `tiki-review`, `tiki-groom`, `tiki-arc`, `tiki-journal` |
+| `~/.omp/agent/extensions/turn-counter.ts` | omp | Shows turns used above the prompt, coloured from the active theme. `~/.omp/agent/extensions/` is auto-discovered for `.ts`/`.js` |
 | `~/.omp/agent/AGENTS.md` | omp | Global Oh My Pi instruction layer: the same house preferences and writing rules as pi, from the same generators. Outranks every other user-level context file, `~/.claude/CLAUDE.md` included |
 | `~/.omp/agent/themes/dracula-sakura.json` | omp | Full Dracula-Sakura theme with all 66 required omp color tokens, including the thirteen status-line colors pi has no equivalent for |
 | `~/.omp/agent/config.yml` | omp | Merged, not managed-block written, because `omp config set` and `/settings` write this file themselves. Carries `theme.dark`, nine Gemini model roles with a fallback chain, and the local SearXNG endpoint at the head of `providers.webSearchOrder` |
