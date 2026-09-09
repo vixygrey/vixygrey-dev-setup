@@ -80,7 +80,7 @@ fix reaches new machines and never reaches provisioned ones.
 
 ## Testing
 
-Five CI jobs, each answering a question the others cannot.
+Six CI jobs, each answering a question the others cannot.
 
 | Job | Runner | Proves |
 |---|---|---|
@@ -97,11 +97,11 @@ runs on a machine rather than in CI.
 
 ## Signals and active considerations
 
-- **`--verify` coverage is partial.** 14 path rows against a larger set of generated files.
-  The summary prints `Files not verified: N (of M)` so the gap is visible rather than lost.
+- **`--verify` coverage is partial.** It has 15 path rows against a larger generated-file inventory.
+  The summary reports the actual missing-file set.
 - **`DEPRECATED_TOOLS` has ~98 rows and no CI check** diffing it against what is installed.
-  Retired-but-not-removed packages accumulate silently.
-- **The pre-commit hook covers JS/TS and Python only.** No Ruby, and it misses
+  Retired packages can remain installed without a report.
+- **The pre-commit hook covers JS/TS, Python, and Ruby.** It misses
   `console.debug`, `console.warn`, and `console.info`.
 - **`CONFIG_LIVES_IN_CONFIGS` values are unchecked prose.** The keys are validated against
   `ALL_CATEGORIES` at startup, so a typo fails loudly, but nothing proves a category actually
