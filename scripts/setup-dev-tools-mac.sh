@@ -1005,6 +1005,33 @@ _trim_blank_edges() {
 # _has_content <file>   -> 0 when the file holds anything other than whitespace
 _has_content() { grep -q '[^[:space:]]' "$1" 2>/dev/null; }
 
+# _managed_marker_state <file> <mb> <me>   -> "absent" | "unmarked" | "valid" | "invalid"
+# Single point of truth for whether a file's dev-setup markers are well-formed:
+# exactly one opening marker, exactly one closing marker, opening before closing.
+# write_managed, write_managed_script and remove_superseded_managed all treat
+# anything else as INVALID rather than guessing which half of the file is real —
+# an unclosed opener made write_managed silently drop everything after it, and
+# made remove_superseded_managed delete a file that still held real content (#530).
+_managed_marker_state() {
+    local file="$1" mb="$2" me="$3"
+    [[ -f "$file" ]] || { echo absent; return 0; }
+    local mb_n me_n
+    mb_n="$(grep -cF -- "$mb" "$file" 2>/dev/null || true)"; mb_n="${mb_n:-0}"
+    me_n="$(grep -cF -- "$me" "$file" 2>/dev/null || true)"; me_n="${me_n:-0}"
+    if [[ "$mb_n" -eq 0 ]]; then
+        echo unmarked; return 0
+    fi
+    if [[ "$mb_n" -eq 1 && "$me_n" -eq 1 ]]; then
+        local mb_line me_line
+        mb_line="$(grep -nF -- "$mb" "$file" | head -1 | cut -d: -f1)"
+        me_line="$(grep -nF -- "$me" "$file" | head -1 | cut -d: -f1)"
+        if [[ "$me_line" -gt "$mb_line" ]]; then
+            echo valid; return 0
+        fi
+    fi
+    echo invalid
+}
+
 # remove_superseded_managed <file> <explanation> [issue-ref]
 # Delete a config file THIS SCRIPT wrote that has since moved to a new path. Only
 # when it is provably ours: our markers present AND nothing outside them — the same
@@ -1021,8 +1048,13 @@ remove_superseded_managed() {
     [[ -f "$file" ]] || return 0
     local mb="# >>> dev-setup managed block (do not edit between the markers) >>>"
     local me="# <<< dev-setup managed block <<<"
-    if ! grep -qF "$mb" "$file" 2>/dev/null; then
+    local _state; _state="$(_managed_marker_state "$file" "$mb" "$me")"
+    if [[ "$_state" == "unmarked" ]]; then
         warn "Left $file alone — this script did not write it. $what"
+        return 0
+    fi
+    if [[ "$_state" == "invalid" ]]; then
+        warn "Left $file alone — its dev-setup markers are malformed (unbalanced or reordered), so ownership cannot be proven. $what"
         return 0
     fi
     local outside; outside="$(mktemp)"
@@ -1058,15 +1090,24 @@ write_managed() {
     local tmp; tmp="$(mktemp)"
     { printf '%s\n' "$mb"; cat "$body"; printf '%s\n' "$me"; } > "$tmp"
     if [[ "$DRY_RUN" != "true" ]]; then mkdir -p "$(dirname "$file")"; fi
+    local _mstate; _mstate="$(_managed_marker_state "$file" "$mb" "$me")"
     if [[ ! -f "$file" ]]; then
         # A dry run used to say nothing at all here, so the preview was least
         # informative exactly where it matters most: on a fresh machine, where every
-        # one of these 96 files is absent and every one of them would be created.
+        # one of these managed files is absent and every one of them would be created.
         # Announcing it is also what lets `configured` go silent without the run
         # losing the information (#381).
         [[ "$DRY_RUN" == "true" ]] && info "[DRY RUN] Would create $file"
         [[ "$DRY_RUN" == "true" ]] || cp "$tmp" "$file"
-    elif grep -qF "$mb" "$file" 2>/dev/null; then
+    elif [[ "$_mstate" == "invalid" ]]; then
+        # An opener with no closer (or a stray/reordered closer) means half the file
+        # is not real content and half is not a real block — merging blindly used to
+        # silently drop everything after the opener (#530). Refuse and count it as a
+        # failure instead of guessing.
+        rm -f "$tmp" "$body"
+        error "Left $file alone — its dev-setup markers are malformed (unbalanced or reordered). Fix or remove the file, then re-run."
+        return 1
+    elif [[ "$_mstate" == "valid" ]]; then
         # Split the file around our markers so the regions OUTSIDE them can be
         # inspected rather than blindly preserved. A pre-#130 write_managed APPENDED
         # its block to marker-less files, so upgraded machines can carry a stray copy
@@ -1138,17 +1179,34 @@ write_managed_script() {
     fi
     local mb="# >>> dev-setup managed block (do not edit between the markers) >>>"
     local me="# <<< dev-setup managed block <<<"
+    local _mstate; _mstate="$(_managed_marker_state "$file" "$mb" "$me")"
+    if [[ "$_mstate" == "invalid" ]]; then
+        # Same integrity gap as write_managed (#530): an opener with no matching
+        # closer used to make the awk merge below swallow every line after it,
+        # since `inb` was set and never cleared. Refuse rather than guess.
+        error "Left $file alone — its dev-setup markers are malformed (unbalanced or reordered). Fix or remove the file, then re-run."
+        return 1
+    fi
     if [[ "$DRY_RUN" == "true" ]]; then
         # Say what would happen, for the same reason write_managed does (#381) — these
         # are the ~/Scripts/bin helpers and the git hook delegators, and a preview that
         # named none of them was the least useful part of the output.
-        [[ -f "$file" ]] && info "[DRY RUN] Would refresh $file" \
-                         || info "[DRY RUN] Would create $file"
+        case "$_mstate" in
+            absent)   info "[DRY RUN] Would create $file" ;;
+            unmarked) info "[DRY RUN] Would back up and replace the unmarked $file" ;;
+            *)        info "[DRY RUN] Would refresh $file" ;;
+        esac
         return 0
     fi
     mkdir -p "$(dirname "$file")"
     local bt; bt="$(mktemp)"; printf '%s\n' "$body" > "$bt"
-    if [[ ! -f "$file" ]] || ! grep -qF "$mb" "$file" 2>/dev/null; then
+    if [[ "$_mstate" == "unmarked" ]]; then
+        # File exists with none of our markers — back it up before replacing, same
+        # rule write_managed applies, so an overwritten hand-placed script is
+        # recoverable rather than silently gone (#530).
+        cp "$file" "${file}.pre-managed.$(date +%Y%m%d%H%M%S)" 2>/dev/null || true
+    fi
+    if [[ "$_mstate" == "absent" || "$_mstate" == "unmarked" ]]; then
         { printf '%s\n' "$shebang"; printf '%s\n' "$mb"; cat "$bt"; printf '%s\n' "$me"; } > "$file"
     else
         local out; out="$(mktemp)"
@@ -1190,6 +1248,97 @@ write_generated() {
         managed_note refreshed "$file"
     fi
     mv "$tmp" "$file"
+}
+
+# write_seed_once <file> <why>   (content on stdin)
+# For files that are seeded ONCE and then left alone forever: a starter template the
+# user is expected to edit (borgmatic, Caddy), or a file a tool later writes a
+# credential into (ngrok's authtoken, ClamAV's mirror list). Unlike write_managed
+# there is no block to refresh on re-run — an existing file is ALWAYS left exactly as
+# it is, which is the deliberate, auditable version of a bare `if [[ ! -f ]]` guard
+# rather than an accident (#536). Honors DRY_RUN. Returns 0 when the file was written
+# (or would be, under DRY_RUN) and 1 when an existing file was left alone, so a caller
+# gates its own `success`/`configured` message on whether anything actually changed.
+write_seed_once() {
+    local file="$1" why="$2"
+    local tmp; tmp="$(mktemp)"
+    cat > "$tmp"
+    if [[ -f "$file" ]]; then
+        rm -f "$tmp"
+        info "$file already exists — leaving it alone ($why)"
+        return 1
+    fi
+    if [[ "$DRY_RUN" == "true" ]]; then
+        rm -f "$tmp"
+        info "[DRY RUN] Would seed $file ($why)"
+        return 0
+    fi
+    mkdir -p "$(dirname "$file")"
+    mv "$tmp" "$file"
+    return 0
+}
+
+# merge_json_defaults <file> [jq-filter]   (defaults on stdin)
+# Merges script defaults below an existing JSON object. The on-disk object wins unless
+# the optional filter reasserts an owned key. Invalid JSON and missing jq leave the file
+# byte-for-byte unchanged (#533).
+merge_json_defaults() {
+    local file="$1" filter="${2:-.}"
+    local defaults current tmp
+    defaults="$(mktemp)"
+    current="$(mktemp)"
+    tmp="$(mktemp)"
+    cat > "$defaults"
+    if [[ "$DRY_RUN" == "true" ]]; then
+        rm -f "$defaults" "$current" "$tmp"
+        info "[DRY RUN] Would merge JSON defaults into $file"
+        return 0
+    fi
+    if ! command -v jq &>/dev/null; then
+        rm -f "$defaults" "$current" "$tmp"
+        return 2
+    fi
+    if [[ -f "$file" ]]; then
+        cat "$file" > "$current"
+    else
+        printf '{}\n' > "$current"
+    fi
+    if jq -s ".[0] * .[1] | $filter" "$defaults" "$current" > "$tmp" 2>/dev/null; then
+        mkdir -p "$(dirname "$file")"
+        mv "$tmp" "$file"
+        rm -f "$defaults" "$current"
+        return 0
+    fi
+    rm -f "$defaults" "$current" "$tmp"
+    return 1
+}
+
+# link_mise_shims <shims-dir> <bin-dir> [excluded-name ...]
+# Links every current shim except explicit exclusions, then removes only dangling links
+# that point into the same shim directory. Returns the number of current links (#532).
+link_mise_shims() {
+    local shims="$1" bin_dir="$2"
+    shift 2
+    local shim name excluded ex link count=0
+    mkdir -p "$bin_dir"
+    for shim in "$shims"/*; do
+        [[ -e "$shim" ]] || continue
+        name="$(basename "$shim")"
+        excluded=false
+        for ex in "$@"; do
+            [[ "$name" == "$ex" ]] && excluded=true && break
+        done
+        [[ "$excluded" == "true" ]] && continue
+        ln -sfn "$shim" "$bin_dir/$name"
+        count=$((count + 1))
+    done
+    for link in "$bin_dir"/*; do
+        [[ -L "$link" ]] || continue
+        case "$(readlink "$link")" in
+            "$shims/"*) [[ -e "$link" ]] || rm -f "$link" ;;
+        esac
+    done
+    printf '%s\n' "$count"
 }
 
 # Append one exact line when it is missing. Used for tool-owned config files whose
@@ -2559,21 +2708,18 @@ if [[ "$VERIFY" == "true" ]]; then
         esac
     done
 
-    # #374: the `Unverified` line above counts only rows whose mode is `unchecked`.
-    # That is the right unit for the *table* but understates the real gap, which
-    # is "files we wrote that --verify never visits". Compute that as a separate
-    # `Files not verified` number so the summary stops implying the table covers
-    # the whole surface.
-    #
-    # Source of truth: every `write_managed[_script] "PATH"` in the script, with
-    # PATH shell-expanded. Then subtract every path the rows above already touch.
-    # `$WRITTEN_PATHS` is a here-string of paths; `$COVERED_PATHS` is the same.
-    # grep -F -x -v keeps the set difference fast on awk-free bash.
-    _vw_total="$(grep -oE 'write_managed(_script)? "[^"]+"' scripts/setup-dev-tools-mac.sh \
-        | awk '{gsub(/"/, "", $2); print $2}' | sort -u | wc -l | tr -d ' ')"
-    _vw_covered="$(awk -F'|' 'NR>0 && $1 != "" {print $3}' <(printf '%s\n' "${VERIFY_TARGETS[@]}") \
-        | sort -u | wc -l | tr -d ' ')"
-    _vw_gap=$(( _vw_total - _vw_covered ))
+    # The inventory is the source of truth for every generated-output policy.
+    # A runtime verifier belongs to an inventory row, so this count is the actual
+    # set difference rather than a subtraction between unrelated path sets (#534).
+    _inventory="$SETUP_SCRIPT_DIR/../config/generated-outputs.tsv"
+    if [[ -f "$_inventory" ]]; then
+        _vw_total="$(awk -F'|' 'NR > 1 && $3 != "superseded" {n++} END {print n+0}' "$_inventory")"
+        _vw_gap="$(awk -F'|' 'NR > 1 && $3 != "superseded" && $7 == "none" {n++} END {print n+0}' "$_inventory")"
+    else
+        _vw_total=0
+        _vw_gap=0
+        warn "Generated-output inventory is missing: $_inventory"
+    fi
 
     echo ""
     echo -e "  ${GREEN}${BOLD}Verified:${NC}    $VERIFY_OK"
@@ -3041,21 +3187,27 @@ brew_install "clamav" "ClamAV (open-source antivirus)"
 # "No supported database files" until freshclam.conf exists and `freshclam` has run.
 # Seed a minimal freshclam.conf and register a LaunchAgent that fetches the DB on load
 # (in the background, so setup isn't blocked on a ~250 MB download) and refreshes daily.
-# On-demand scanner — no resident clamd daemon.
-if [[ "$DRY_RUN" != "true" ]] && installed clamav; then
+# On-demand scanner — no resident clamd daemon. Both are pure create-once seeds — an
+# existing file may hold a hand-edited mirror or schedule — routed through
+# write_seed_once so a dry run reports them instead of silently skipping (#536).
+# `installed clamav` never matched: the formula ships clamscan/clamdscan/freshclam/
+# clamd, never a binary literally named `clamav` (CONVENTIONS.md "name the binary,
+# not the package"). This whole seed block has silently never run on a real machine
+# since it was written — found while migrating it to write_seed_once (#536).
+if installed clamscan; then
     CLAMAV_ETC="$(brew --prefix)/etc/clamav"
-    mkdir -p "$CLAMAV_ETC"
-    if [[ ! -f "$CLAMAV_ETC/freshclam.conf" ]]; then
-        if [[ -f "$CLAMAV_ETC/freshclam.conf.sample" ]]; then
-            grep -v '^Example' "$CLAMAV_ETC/freshclam.conf.sample" > "$CLAMAV_ETC/freshclam.conf"
-        else
-            printf 'DatabaseMirror database.clamav.net\n' > "$CLAMAV_ETC/freshclam.conf"
-        fi
+    ensure_dir "$CLAMAV_ETC"
+    if [[ -f "$CLAMAV_ETC/freshclam.conf.sample" ]]; then
+        _freshclam_seed="$(grep -v '^Example' "$CLAMAV_ETC/freshclam.conf.sample")"
+    else
+        _freshclam_seed='DatabaseMirror database.clamav.net'
     fi
+    printf '%s\n' "$_freshclam_seed" | write_seed_once "$CLAMAV_ETC/freshclam.conf" \
+        "clamscan needs a virus database before it will run"
+    unset _freshclam_seed
+
     FRESHCLAM_PLIST="$HOME/Library/LaunchAgents/com.freshclam.update.plist"
-    if [[ ! -f "$FRESHCLAM_PLIST" ]]; then
-        mkdir -p "$HOME/Library/LaunchAgents"
-        cat > "$FRESHCLAM_PLIST" <<FRESHCLAM_PLIST_EOF
+    if write_seed_once "$FRESHCLAM_PLIST" "daily ClamAV database updater" <<FRESHCLAM_PLIST_EOF
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
@@ -3070,8 +3222,11 @@ if [[ "$DRY_RUN" != "true" ]] && installed clamav; then
 </dict>
 </plist>
 FRESHCLAM_PLIST_EOF
-        launchctl load "$FRESHCLAM_PLIST" >> "$LOG_FILE" 2>&1 || true
-        success "ClamAV freshclam.conf seeded + daily DB updater registered (first fetch runs in background)"
+    then
+        if [[ "$DRY_RUN" != "true" ]]; then
+            launchctl load "$FRESHCLAM_PLIST" >> "$LOG_FILE" 2>&1 || true
+        fi
+        configured "ClamAV freshclam.conf seeded + daily DB updater registered (first fetch runs in background)"
     fi
 fi
 
@@ -4450,11 +4605,9 @@ brew_install "borgmatic" "borgmatic (automated borg backup scheduling and config
 # churny/regenerable data (node_modules/caches/Downloads — same intent as the old Time
 # Machine exclusions). Repo path + passphrase are user/secret-specific — fill them in,
 # init the repo, then enable the daily schedule (see the post-setup checklist).
-if [[ "$DRY_RUN" != "true" ]] && installed borgmatic; then
+if installed borgmatic; then
     BORGMATIC_CONFIG="$HOME/.config/borgmatic/config.yaml"
-    if [[ ! -f "$BORGMATIC_CONFIG" ]]; then
-        mkdir -p "$(dirname "$BORGMATIC_CONFIG")"
-        cat > "$BORGMATIC_CONFIG" <<'BORGMATIC_CONF'
+    if write_seed_once "$BORGMATIC_CONFIG" "fill in repositories, then borgmatic init --encryption repokey-blake2" <<'BORGMATIC_CONF'
 # borgmatic configuration — https://torsion.org/borgmatic/
 # TODO: set `repositories`, then run: borgmatic init --encryption repokey-blake2
 source_directories:
@@ -4484,9 +4637,8 @@ keep_daily: 7
 keep_weekly: 4
 keep_monthly: 6
 BORGMATIC_CONF
-        success "borgmatic starter config scaffolded (~/.config/borgmatic/config.yaml — fill in repositories)"
-    else
-        warn "borgmatic config already exists — leaving it untouched"
+    then
+        configured "borgmatic starter config scaffolded (~/.config/borgmatic/config.yaml — fill in repositories)"
     fi
 fi
 
@@ -5768,23 +5920,17 @@ MICRO_DEFAULTS=$(cat <<'MICRO_CONF'
 }
 MICRO_CONF
 )
-if [[ "$DRY_RUN" == "true" ]]; then
-    info "[DRY RUN] Would write micro settings (Dracula, key menu, house indent rules)"
-elif [[ ! -f "$MICRO_CONFIG_DIR/settings.json" ]]; then
-    printf '%s\n' "$MICRO_DEFAULTS" > "$MICRO_CONFIG_DIR/settings.json"
-    success "micro configured (Dracula, key menu, 2-space default / 4 for Python / tabs for Go)"
-elif command -v jq &>/dev/null; then
-    _micro_tmp=$(mktemp)
-    if jq -s '.[0] * .[1]' <(printf '%s\n' "$MICRO_DEFAULTS") "$MICRO_CONFIG_DIR/settings.json" > "$_micro_tmp" 2>/dev/null; then
-        mv "$_micro_tmp" "$MICRO_CONFIG_DIR/settings.json"
-        success "micro settings merged (your in-editor changes kept; new defaults added)"
-    else
-        rm -f "$_micro_tmp"
-        warn "Could not merge micro settings — check $MICRO_CONFIG_DIR/settings.json"
-    fi
-    unset _micro_tmp
+if merge_json_defaults "$MICRO_CONFIG_DIR/settings.json" <<< "$MICRO_DEFAULTS"; then
+    [[ "$DRY_RUN" == "true" ]] \
+        || success "micro settings merged (your changes kept; new defaults added)"
 else
-    warn "micro settings exist but jq is missing — not merging new defaults"
+    _micro_merge_status=$?
+    if [[ "$_micro_merge_status" -eq 2 ]]; then
+        warn "micro settings exist but jq is missing — not merging new defaults"
+    else
+        warn "Could not merge micro settings — left as-is: $MICRO_CONFIG_DIR/settings.json"
+    fi
+    unset _micro_merge_status
 fi
 unset MICRO_DEFAULTS
 
@@ -5823,24 +5969,17 @@ CROFT_DEFAULTS=$(cat <<'CROFT_CONF'
 }
 CROFT_CONF
 )
-if [[ "$DRY_RUN" == "true" ]]; then
-    info "[DRY RUN] Would write croft config/theme (Dracula-Sakura)"
-elif [[ ! -f "$CROFT_CONFIG" ]]; then
-    mkdir -p "$CROFT_CONFIG_DIR"
-    printf '%s\n' "$CROFT_DEFAULTS" > "$CROFT_CONFIG"
-    success "croft configured (Dracula-Sakura theme, terminal-first layout)"
-elif command -v jq &>/dev/null; then
-    _croft_tmp=$(mktemp)
-    if jq -s '.[0] * .[1] | .theme = "dracula-sakura"' <(printf '%s\n' "$CROFT_DEFAULTS") "$CROFT_CONFIG" > "$_croft_tmp" 2>/dev/null; then
-        mv "$_croft_tmp" "$CROFT_CONFIG"
-        success "croft settings merged (your changes kept; Dracula-Sakura stays active)"
+if merge_json_defaults "$CROFT_CONFIG" '.theme = "dracula-sakura"' <<< "$CROFT_DEFAULTS"; then
+    [[ "$DRY_RUN" == "true" ]] \
+        || success "croft settings merged (your changes kept; Dracula-Sakura stays active)"
+else
+    _croft_merge_status=$?
+    if [[ "$_croft_merge_status" -eq 2 ]]; then
+        warn "croft config exists but jq is missing — not merging new defaults"
     else
-        rm -f "$_croft_tmp"
         warn "Could not merge croft config — left as-is: $CROFT_CONFIG"
     fi
-    unset _croft_tmp
-else
-    warn "croft config exists but jq is missing — not merging new defaults"
+    unset _croft_merge_status
 fi
 unset CROFT_DEFAULTS
 
@@ -6023,26 +6162,19 @@ VSCODE_DEFAULTS=$(cat <<'VSCODE_CONF'
 }
 VSCODE_CONF
 )
-if [[ "$DRY_RUN" == "true" ]]; then
-    info "[DRY RUN] Would write VS Code settings (Dracula, format-on-save, ruff/prettier/shfmt)"
-elif [[ ! -f "$VSCODE_SETTINGS" ]]; then
-    mkdir -p "$VSCODE_USER_DIR"
-    printf '%s\n' "$VSCODE_DEFAULTS" > "$VSCODE_SETTINGS"
-    success "VS Code configured (Dracula, format-on-save, ruff for Python, prettier for web)"
-elif command -v jq &>/dev/null; then
-    _vscode_tmp=$(mktemp)
-    if jq -s '.[0] * .[1]' <(printf '%s\n' "$VSCODE_DEFAULTS") "$VSCODE_SETTINGS" > "$_vscode_tmp" 2>/dev/null; then
-        mv "$_vscode_tmp" "$VSCODE_SETTINGS"
-        success "VS Code settings merged (your changes kept; new defaults added)"
+if merge_json_defaults "$VSCODE_SETTINGS" <<< "$VSCODE_DEFAULTS"; then
+    [[ "$DRY_RUN" == "true" ]] \
+        || success "VS Code settings merged (your changes kept; new defaults added)"
+else
+    _vscode_merge_status=$?
+    if [[ "$_vscode_merge_status" -eq 2 ]]; then
+        warn "VS Code settings exist but jq is missing — not merging new defaults"
     else
-        rm -f "$_vscode_tmp"
-        # Almost always JSONC: comments or a trailing comma, which VS Code accepts and jq
-        # does not. Leave the file untouched and say so.
+        # Almost always JSONC: comments or a trailing comma, which VS Code accepts and
+        # jq does not. The helper leaves the file byte-for-byte unchanged.
         warn "Could not merge VS Code settings (comments or trailing commas?) — left as-is: $VSCODE_SETTINGS"
     fi
-    unset _vscode_tmp
-else
-    warn "VS Code settings exist but jq is missing — not merging new defaults"
+    unset _vscode_merge_status
 fi
 unset VSCODE_DEFAULTS
 
@@ -6195,20 +6327,16 @@ NGROK_CONF
 # `ngrok config add-authtoken <TOKEN>` — which POST_SETUP_CHECKLIST tells you to run —
 # writes the token into this file, so refreshing it on every run would clobber the
 # user's credential. Changes to the template only reach fresh machines, and that is
-# the correct trade here. Keyed on the FILE, not the directory: add-authtoken creates
-# both, so on a machine that ran it first the directory is already there.
-if [[ -f "$NGROK_CONFIG" ]]; then
-    info "ngrok config already exists — leaving it alone (it may hold your authtoken)"
-elif [[ "$DRY_RUN" == "true" ]]; then
-    info "[DRY RUN] Would create the ngrok seed config at $NGROK_CONFIG"
-else
-    info "Creating ngrok config..."
-    mkdir -p "$NGROK_CONFIG_DIR"
-    cp "$_ngrok_seed" "$NGROK_CONFIG"
-    # Lock down: ngrok.yml will hold your authtoken.
-    chmod 700 "$NGROK_CONFIG_DIR" 2>/dev/null || true
-    chmod 600 "$NGROK_CONFIG" 2>/dev/null || true
-    success "ngrok config created (add authtoken: ngrok config add-authtoken <TOKEN>)"
+# the correct trade here. Routed through write_seed_once, keyed on the FILE not the
+# directory: add-authtoken creates both, so on a machine that ran it first the
+# directory is already there (#536).
+if write_seed_once "$NGROK_CONFIG" "ngrok add-authtoken writes your token here" < "$_ngrok_seed"; then
+    if [[ "$DRY_RUN" != "true" ]]; then
+        # Lock down: ngrok.yml will hold your authtoken.
+        chmod 700 "$NGROK_CONFIG_DIR" 2>/dev/null || true
+        chmod 600 "$NGROK_CONFIG" 2>/dev/null || true
+    fi
+    configured "ngrok config created (add authtoken: ngrok config add-authtoken <TOKEN>)"
 fi
 
 # Clear the copy stranded at ~/.config/ngrok by earlier versions — but ONLY when it is
@@ -6270,18 +6398,11 @@ CADDY_CONFIG_DIR="$HOME/.config/caddy"
 if ! is_done "config:caddy"; then
 # Deliberately create-once (#277): a commented-out starting point ("uncomment and
 # adjust as needed") that the user is expected to edit into their own site config.
-# Refreshing it on every run would discard their edits.
-# Unlike ngrok, this path is correct: the template is used with an explicit
-# `caddy run --config ~/.config/caddy/Caddyfile`, which is what its own first
-# line documents. Only the missing DRY_RUN guard was wrong here (#332).
-if [[ -d "$CADDY_CONFIG_DIR" ]]; then
-    warn "Caddy config directory already exists"
-elif [[ "$DRY_RUN" == "true" ]]; then
-    info "[DRY RUN] Would create the Caddy config template at $CADDY_CONFIG_DIR/Caddyfile"
-else
-    info "Creating Caddy config template..."
-    mkdir -p "$CADDY_CONFIG_DIR"
-    cat > "$CADDY_CONFIG_DIR/Caddyfile" <<'CADDY_CONF'
+# Refreshing it on every run would discard their edits. The template is used with an
+# explicit `caddy run --config ~/.config/caddy/Caddyfile`, which is what its own first
+# line documents. Routed through write_seed_once so a dry run reports it honestly and
+# the check is by FILE rather than by directory (#332, #536).
+if write_seed_once "$CADDY_CONFIG_DIR/Caddyfile" "uncomment and adjust into your own site config" <<'CADDY_CONF'
 # Caddy development server template
 # Usage: caddy run --config ~/.config/caddy/Caddyfile
 #
@@ -6297,7 +6418,8 @@ else
 #     file_server browse
 # }
 CADDY_CONF
-    success "Caddy config template created at $CADDY_CONFIG_DIR/Caddyfile"
+then
+    configured "Caddy config template created at $CADDY_CONFIG_DIR/Caddyfile"
 fi
 mark_done "config:caddy"
 fi
@@ -18575,31 +18697,9 @@ if installed mise; then
         mise reshim >> "$LOG_FILE" 2>&1 || true
         _mise_shims="$HOME/.local/share/mise/shims"
         if [[ -d "$_mise_shims" ]]; then
-            mkdir -p "$HOME/.local/bin"
-            _shim_n=0
-            for _shim in "$_mise_shims"/*; do
-                [[ -e "$_shim" ]] || continue
-                _bin="$(basename "$_shim")"
-                _skip=false
-                for _ex in "${SHIM_EXCLUDE[@]}"; do
-                    [[ "$_bin" == "$_ex" ]] && _skip=true && break
-                done
-                [[ "$_skip" == "true" ]] && continue
-                ln -sfn "$_shim" "$HOME/.local/bin/$_bin"
-                _shim_n=$((_shim_n + 1))
-            done
-            # Prune links whose shim has gone — a tool removed from mise otherwise leaves a
-            # dangling link that resolves to nothing and reports "command not found" only at
-            # the point of use. Only ever removes a SYMLINK pointing into the shims dir, so a
-            # real file placed in ~/.local/bin by hand (soffice, office-py, …) is untouched.
-            for _link in "$HOME/.local/bin"/*; do
-                [[ -L "$_link" ]] || continue
-                case "$(readlink "$_link")" in
-                    "$_mise_shims/"*) [[ -e "$_link" ]] || rm -f "$_link" ;;
-                esac
-            done
+            _shim_n="$(link_mise_shims "$_mise_shims" "$HOME/.local/bin" "${SHIM_EXCLUDE[@]}")"
             success "$_shim_n mise shims linked to ~/.local/bin — git hooks, editors and non-zsh shells can find them"
-            unset _shim _bin _skip _ex _shim_n _link
+            unset _shim_n
         else
             warn "mise shims directory not found ($_mise_shims) — non-zsh callers will not see mise tools"
         fi

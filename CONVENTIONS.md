@@ -424,22 +424,18 @@ own periodic review (see "drift" below).
 - **`--verify` coverage gap, honestly reported.** The CI `generated-config`
   job proves each heredoc *parses* — JSON via `jq`, shell via `zsh -n`,
   etc. It does not prove the file is at an address the tool reads; that's
-  what `--verify` is for. Coverage is partial (14 path rows at time of
-  writing; the summary prints `Files not verified: N (of M)` so the gap
-  is never silently lost). Adding more rows is bounded by whether the
-  tool itself surfaces where it reads from — when it doesn't, a
-  file-existence probe is the honest answer (see `gh`, `ngrok`, VS Code).
+  what `--verify` is for. Coverage is partial (15 path rows at time of
+  writing). The generated-output inventory computes the missing-file set,
+  so the summary does not hide the gap.
 - **Cleanup audit.** `DEPRECATED_TOOLS` (defined inside the `--cleanup`
   branch) has 98 rows at time of writing and no CI job diffs them against
   `brew list --formula` / `brew list --cask`. A static check would catch
   retired-but-not-removed packages before they accumulate.
 - **Pre-commit hook language coverage.** The hook covers JS/TS
-  (`console.log`, `debugger`) and Python (`import pdb`, `pdb.set_trace`,
-  `breakpoint()`). It does **not** cover Ruby at all (no `binding.pry`,
-  no `byebug`), nor does it catch other JS console methods
-  (`console.debug`, `console.warn`, `console.info`). Adding more languages
-  is straightforward; adding them safely requires bats test cases
-  mirroring the existing language-scoped checks.
+  (`console.log`, `debugger`), Python (`import pdb`, `pdb.set_trace`,
+  `breakpoint()`), and Ruby (`binding.pry`, `binding.irb`). It does not
+  catch other JS console methods (`console.debug`, `console.warn`,
+  `console.info`). Add behavior coverage before you add more patterns.
 - **`--verify` shell-startup coverage as a documented convention.** The
   pattern — pin `XDG_CONFIG_HOME` to the value the generated `~/.zshrc`
   exports before querying a tool, and gate a path row on the relevant

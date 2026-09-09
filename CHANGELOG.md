@@ -6,6 +6,25 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 > Release notes for 7.0.0–7.1.1 live in [GitHub Releases](https://github.com/vixygrey/vixygrey-dev-setup/releases) (auto-generated). This file resumes hand-written notes at 7.2.0.
 
+## [Unreleased]
+
+### Added
+
+- Added behavior checks for the global Git hook chain (#531).
+- Added generated-output inventory checks for verification and parser coverage (#534).
+
+### Changed
+
+- Added explicit policies for managed, generated, merged, and seed files (#530, #533, #536).
+- Extracted the mise shim linker for isolated filesystem checks (#532).
+- Corrected CI, verification, and pre-commit coverage claims (#535).
+
+### Fixed
+
+- Managed writers now preserve files with malformed markers (#530).
+- ClamAV seed files now use the installed `clamscan` binary check (#536).
+- Existing JSON merges now preserve malformed files without mutation (#533).
+
 ## [7.23.0] - 2026-09-09
 
 A small release, and one where the interesting work was in the checks rather than the features.
@@ -1361,6 +1380,7 @@ Minor release rolling up two follow-up PRs to v4.0.0: a tool-discoverability aud
 - Document all new tools in `GUIDE-MACOS.md`, `GUIDE-LINUX.md`, `GUIDE-WINDOWS.md` with usage examples (#5)
 - Update `SHORTCUTS-*.md` with new alias rows and a "Terminal Apps" section (#5)
 
+[Unreleased]: https://github.com/vixygrey/vixygrey-dev-setup/compare/v7.23.0...HEAD
 [7.23.0]: https://github.com/vixygrey/vixygrey-dev-setup/compare/v7.22.0...v7.23.0
 [7.22.0]: https://github.com/vixygrey/vixygrey-dev-setup/compare/v7.21.0...v7.22.0
 [7.21.0]: https://github.com/vixygrey/vixygrey-dev-setup/compare/v7.20.1...v7.21.0

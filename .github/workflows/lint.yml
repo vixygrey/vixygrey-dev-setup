@@ -44,6 +44,8 @@ jobs:
       - uses: actions/checkout@v6
       - name: Install bats
         run: sudo apt-get update && sudo apt-get install -y bats
+      - name: Check generated-output inventory
+        run: tests/ci/check-generated-output-inventory.sh
       - name: Run tests
         run: bats tests/
 
@@ -244,8 +246,8 @@ jobs:
     # real user before — the error logs on the maintainer's machine carry
     # "Unknown option: --only core" three separate times (#376).
     #
-    # One --dry-run exercises argument parsing, preflight, category dispatch, every
-    # should_run gate, all 96 write_managed calls in dry-run mode, and the summary.
+    # One --dry-run exercises argument parsing, preflight, category dispatch,
+    # every active write_managed call in dry-run mode, and the summary.
     #
     # This job is only meaningful because #370 taught the script to exit non-zero on a
     # counted failure. Before that it returned 0 unconditionally and would have passed
