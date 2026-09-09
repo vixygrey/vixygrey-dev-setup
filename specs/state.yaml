@@ -12,7 +12,7 @@ project:
   name: vixygrey-dev-setup
   description: >-
     A single idempotent Bash script that provisions a macOS developer machine and
-    generates the user's Claude Code and omp environments.
+    generates the user's OMP environment.
 
 status:
   summary: >-

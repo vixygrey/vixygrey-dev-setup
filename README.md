@@ -103,7 +103,7 @@ and prefer tagged release artifacts with the published SHA256 checksum.
 4. Applies a cohesive **Dracula-Sakura** theme across the terminal, editor, and TUI surfaces
 5. Sets macOS system defaults (Dock, keyboard, Finder, screenshots, screensaver, etc.)
 6. Configures Finder sidebar with custom favorites via **LSSharedFileList** API
-7. Sets the Dock to auto-hide and installs `dockutil` so you can curate pins yourself (no automatic pin list — see GUIDE.md for examples)
+7. Sets the Dock to auto-hide and keeps its pins unchanged
 8. Auto-writes `~/.zshrc` with a managed block (preserves your customizations)
 9. Exports a `Brewfile` snapshot (with descriptions) for reproducibility
 10. **Post-install verification** -- verifies critical tools work
@@ -159,18 +159,14 @@ and prefer tagged release artifacts with the published SHA256 checksum.
 | **uv** | Fast Python package manager -- 10-100x faster than pip |
 | **PyYAML** (`yaml-py`) | Isolated helper Python with the `yaml` module preinstalled for local YAML scripts and one-liners |
 | **Rust** | Rust toolchain via rustup (rustc, cargo, etc.) |
-| **bun** | Fast JS runtime, bundler, and test runner |
 | **pnpm** | Fast, disk-efficient npm alternative |
 | **jq** | Lightweight command-line JSON processor |
 | **direnv** | Per-directory environment variables (auto-loads `.envrc`) |
 | **lazyenv** | TUI for `.env` files across projects -- diff/sync, secret masking, `.gitignore` checks (complements direnv) |
 | **keyward** | TUI SSH-key manager + A–F security audit + encrypted backups (offline, single binary) |
-| **bmm** | CLI/TUI bookmark manager -- local, fzf-friendly, imports HTML/JSON/TXT |
-| **manly** | Explains the flags in a command from its man page (`manly tar -xzf`) |
 | **watchman** | File watching service (used by React Native, Jest, etc.) |
 | **cmake** | Cross-platform build system generator |
 | **pkg-config** | Helper tool for compiling libraries |
-| **OrbStack** | Fast container runtime -- 2-5x less memory than Docker Desktop, native macOS feel |
 
 ---
 
@@ -180,15 +176,12 @@ and prefer tagged release artifacts with the published SHA256 checksum.
 |------|-------------|
 | **git** | Distributed version control |
 | **gh** | GitHub CLI -- PRs, issues, Actions from the terminal |
-| **glab** | GitLab CLI -- mirrors the gh conveniences (SSH, micro, same alias names → merge requests; `rc` becomes `rcl`, since glab already has an `rc` command) for client repos on GitLab. GitHub stays primary |
 | **delta** | Beautiful git diffs with syntax highlighting and side-by-side view |
-| **git-lfs** | Git Large File Storage for binary assets |
 | **gpg** | GNU Privacy Guard for commit signing and encryption |
 | **pinentry-mac** | macOS keychain integration for GPG passphrases |
 | **lazygit** | Terminal UI for git -- visualize branches, stage hunks interactively |
 | **git-absorb** | Auto-fixup commits -- automatically amends the right commit |
 | **git-cliff** | Generate changelogs from conventional commits |
-| **gk** | GitKraken CLI -- installed to serve the [GitKraken MCP server](#claude-code-mcp-servers) to Claude Code, not for interactive use. Replaced the copy the GitLens VS Code extension used to hide in its own storage |
 | **pre-commit** | Git hook framework -- run linters/formatters before each commit |
 
 ---
@@ -278,7 +271,7 @@ Faster, prettier, smarter replacements for standard Unix utilities.
 | `rsync` | **rsync** (latest) | Updated rsync with better progress and Apple metadata |
 | `tree` | **tree** | Directory listing in tree format |
 | `make` | **just** | Modern task runner -- simpler syntax, no tab weirdness |
-| file manager | **rovr** | Mouse-first, VS Code-Explorer-style TUI file manager (Textual); `nnn` kept as a fast fallback |
+| file manager | **rovr** | Mouse-first, tree-style TUI file manager. `nnn` remains a fast fallback |
 | `jq` (interactive) | **fx** | Interactive JSON viewer/processor for exploring large JSON |
 | `jq` (interactive) | **jnv** | Interactive JSON navigator with jq filtering |
 | `LS_COLORS` | **vivid** | LS_COLORS generator -- colorize file listings by type (Dracula themed) |
@@ -312,7 +305,6 @@ Faster, prettier, smarter replacements for standard Unix utilities.
 | **shfmt** | Shell script formatter -- consistent style for bash/zsh scripts |
 | **actionlint** | GitHub Actions workflow linter -- catches workflow/expression/job wiring mistakes plain YAML parsing misses |
 | **act** | Run GitHub Actions locally before pushing (`.actrc` forces `linux/amd64` on Apple Silicon) |
-| **act3** | Glance at the last 3 GitHub Actions runs (`gha3` alias) |
 | **hadolint** | Dockerfile linter -- catches bad practices and security issues |
 | **typos** | Source code spell checker -- fast, low false positives |
 | **ast-grep** | Structural code search/replace using AST -- like semgrep but interactive |
@@ -320,7 +312,6 @@ Faster, prettier, smarter replacements for standard Unix utilities.
 | **npkill** | Find and delete node_modules folders to reclaim disk space |
 | **commitizen** | Interactive conventional commit message generator |
 | **commitlint** | Enforce conventional commit message format |
-| **ni** | Universal package runner -- auto-detects npm/yarn/pnpm/bun |
 
 ---
 
@@ -350,11 +341,9 @@ Faster, prettier, smarter replacements for standard Unix utilities.
 |------|-------------|
 | **leaf** | Terminal Markdown previewer -- live watch, fuzzy picker, Mermaid/LaTeX, inline mode |
 | **mprocs** | TUI for running multiple dev processes side by side -- frontend/backend/worker/watchers in one terminal surface |
-| **broot** | Keyboard-driven directory tree and file navigation TUI with shell handoff |
 | **watchexec** | Run commands on file changes -- supports globs, debouncing, process groups |
 | **pv** | Pipe viewer -- add progress bars to any piped command |
 | **parallel** | GNU parallel -- run commands in parallel across multiple cores |
-| **asciinema** | Record and share terminal sessions as text (not video) |
 | **gum** | Shell script UI toolkit -- pretty prompts, spinners, confirmations |
 | **nushell** | Structured data shell -- pipelines output tables, not strings |
 | **topgrade** | Update everything at once -- brew, npm, pip, macOS, all in one command |
@@ -362,10 +351,6 @@ Faster, prettier, smarter replacements for standard Unix utilities.
 | **nano** (latest) | Upgraded nano with syntax highlighting |
 | **lnav** | Advanced log file viewer -- auto-format, SQL queries on logs |
 | **qalc** | Powerful terminal calculator (units, currencies, variables) |
-| **doxx** | Read/preview `.docx` files in the terminal |
-| **vhs** | Script terminal recordings to GIF/MP4 (for demos/docs) |
-| **wiper** | Interactive disk-usage cleanup (ncdu-like, Trash-safe) |
-| **jolt** | Battery/power status at a glance |
 | **has** | Check for the presence/version of CLIs on PATH |
 | **lazyssh** | TUI SSH connection manager |
 | **starlit** | Terminal weather (run `starlit --setup` for an API key) |
@@ -439,32 +424,19 @@ Faster, prettier, smarter replacements for standard Unix utilities.
 | **zsh-syntax-highlighting** | Command coloring in the terminal -- red for errors |
 | **atuin** | Replaces shell history with SQLite-backed, fuzzy-searchable database |
 | **mise** | Universal version manager -- Node, Python, Go, Ruby all in one (replaces nvm + pyenv + rbenv) |
-| **croft** | Primary editor -- VS Code-style terminal IDE (Rust; `cargo install --git`). Three-pane workspace, LSP/DAP, integrated terminal; `croft pair` runs an AI navigator (Anthropic/local). Installed from git `main`, with a managed Dracula-Sakura theme extension and config |
-| **Visual Studio Code** | The GUI editor, secondary to croft -- for long multi-tab refactors, graphical diffs, and `.editorconfig` repos (croft has no EditorConfig support). Ships 26 extensions and a merged `settings.json` that mirrors the terminal's rules -- including basedpyright as the Python type server, matching croft |
 | **micro** | The `$EDITOR` -- git/gh/lazygit commit messages, leaf's Ctrl+E, quick edits. Non-modal, on-screen key menu (`Ctrl+G` for help), Dracula theme |
-| **Claude Code (`claude`)** | Agentic coding in the terminal; hosts the migrated MCP servers |
-| **GitHub Copilot CLI** | `copilot` -- installed from `@github/copilot` (a standalone npm package now, not a `gh` extension). The VS Code side needs no install: current VS Code ships Copilot **built in**, and installing the marketplace extension fails against the newer bundled `copilot-chat`. Proprietary -- a deliberate exception to the open-source preference |
 | **llm** | Simon Willison's CLI -- one-shot prompts, plugin ecosystem, SQLite logging, embeddings. Installed via `uv tool` with the Anthropic plugin; default model `anthropic/claude-sonnet-4-5` |
-| **aichat** | All-in-one AI CLI chat / shell copilot -- lighter than a full coding agent, with local Ollama support and a configurable REPL |
-| **omp** | Oh My Pi -- the maximalist fork of pi, installed from the `can1357/tap` Homebrew tap. 32 tools, LSP, a DAP debugger, subagents, and nine model roles routed at Google Gemini through `~/.omp/agent/`. Shares pi's theme, preferences, and skill bridge. Needs `GEMINI_API_KEY` |
+| **omp** | Oh My Pi coding agent with LSP, DAP, subagents, and role-based routing across Codex, Gemini, Claude Sonnet, and local llama.cpp |
 | **chezmoi** | Dotfile manager -- backup and restore configs across machines |
 | **mitmproxy** | Free HTTP debugging proxy -- inspect and modify API calls from any app |
 | **Ghostty** | Fast GPU-accelerated terminal -- daily driver, native macOS feel |
 | **zellij** | Modern terminal multiplexer -- discoverable UI, layouts, Rust-based |
-| **Ghostty quick terminal + `a`/`ff`/`rgf`/`s`** | Terminal launcher & search (global cmd+space dropdown) replacing Raycast/Spotlight; **clipse** for clipboard history; **SketchyBar** status bar |
+| **Ghostty quick terminal + `a`/`ff`/`rgf`/`s`** | Terminal launcher and search with a global Command+Space dropdown. Clipse provides clipboard history |
 | **TypeScript** | Typed JavaScript -- installed globally for scripts and tooling |
 | **tsx** | Run TypeScript files directly without a build step |
-| **Turborepo** | High-performance monorepo build system |
 
 ---
 
-## UX & Design
-
-| Tool | Description |
-|------|-------------|
-| **Lighthouse** | Web performance, accessibility, and SEO auditing CLI |
-
----
 
 ## Documentation & Diagrams
 
@@ -490,25 +462,12 @@ Faster, prettier, smarter replacements for standard Unix utilities.
 
 ---
 
-## Quick Look Plugins
-
-Preview files in Finder by pressing spacebar.
-
-| Plugin | Description |
-|--------|-------------|
-
-
----
 
 ## Mac Apps -- System & Utilities
 
 | App | Description |
 |-----|-------------|
-| **Pearcleaner** | Open-source deep app uninstaller -- finds leftover files and preferences |
 | **LuLu** | Free open-source outbound firewall -- see what phones home |
-| **Mullvad VPN** | Privacy-focused VPN -- no account required, anonymous payment accepted |
-| **dockutil** | Manage Dock pins programmatically (used by the setup script to curate the Dock) |
-| **terminal-notifier** | Send macOS notifications from shell scripts (used by the setup script for run-complete/failure alerts) |
 
 ---
 
@@ -516,13 +475,7 @@ Preview files in Finder by pressing spacebar.
 
 | App | Description |
 |-----|-------------|
-| **herald** | Terminal email **+** calendar in one app -- Gmail (work) + iCloud (personal), unified CalDAV, built-in AI triage/summaries + an MCP server for Claude; replaced aerc + khal + vdirsyncer + Notion Calendar. Theme-integrated with a local Dracula-Sakura theme asset and a narrow config merge |
-| **gws** (google-workspace-cli) | One CLI for Drive/Gmail/Docs/Sheets/Calendar/Chat with structured JSON output -- Claude's read/query surface for Workspace (`gws auth login` first; instructed to confirm before any mutation). A **scoped set of gws Claude skills -- Drive/Docs/Slides/Sheets/Forms only** -- is installed to `~/.claude/skills/` (Gmail/Calendar/Chat/Meet excluded); the real access boundary is the OAuth scopes granted at `gws auth`, not the skills |
-| **Shottr** | Fast native screenshots -- scrolling capture, OCR, annotations (local-only, no account) |
-| **Claude** | AI assistant |
-| **Skim** | Lightweight PDF reader with annotations -- faster than Preview |
-| **LibreOffice** | Headless office suite -- `soffice --headless --convert-to` lets Claude validate/convert .pptx/.xlsx/.docx (authoring stays in Google Workspace) |
-| **office-py** | uv venv (python-docx/openpyxl/python-pptx) exposed on PATH so Claude can assert on office-file *content*, not just render it |
+| **LibreOffice** | Headless office suite for validation and conversion of `.pptx`, `.xlsx`, and `.docx` files |
 | **rclone** | SFTP/S3/cloud file transfer from the terminal (replaced the Cyberduck GUI) |
 
 ---
@@ -542,7 +495,6 @@ Preview files in Finder by pressing spacebar.
 | **mpv** | Terminal video player -- keyboard-driven, scriptable |
 | **oxipng** | Lossless PNG compression -- CLI, scriptable, CI-friendly |
 | **jpegoptim** | Lossless JPEG compression -- strip metadata, optimize |
-| **p7zip** | Archive tool -- zip, 7z, rar, tar from the command line |
 
 ---
 
@@ -556,15 +508,6 @@ Preview files in Finder by pressing spacebar.
 
 ---
 
-## Mac Apps -- Focus & Learning
-
-| App | Description |
-|-----|-------------|
-| **newsboat** | Terminal RSS/Atom reader -- vim-like keybindings, highly configurable |
-
----
-
----
 
 ## Dracula-Sakura Theme
 
@@ -573,11 +516,9 @@ Applied consistently across the machine, with built-in Dracula variants kept whe
 | Tool | How |
 |------|-----|
 | **micro** | Dracula (`dracula-tc`) set in `settings.json` |
-| **VS Code** | Dracula Official as the base theme, with a Dracula-Sakura workbench/token/terminal overlay in merged `settings.json` |
 | **bat** | Dracula syntax theme in config |
 | **delta** | Dracula syntax theme for git diffs |
 | **Ghostty** | Full 16-color Dracula-Sakura palette in config |
-| **croft** | Custom Dracula-Sakura theme extension in `~/.config/croft/extensions/` |
 | **jqp** | Dracula base theme with Dracula-Sakura override colors in `~/.jqp.yaml` |
 | **fzf** | Dracula colors in `FZF_DEFAULT_OPTS` |
 | **Starship** | Dracula-Sakura palette in `starship.toml` |
@@ -585,16 +526,11 @@ Applied consistently across the machine, with built-in Dracula variants kept whe
 | **k9s** | Dracula skin recolored to the Dracula-Sakura house palette |
 | **leaf** | Terminal Markdown previewer (runs on defaults) |
 | **gh-dash** | Dracula-Sakura border, text, and selection colors |
-| **SketchyBar** | Dracula-Sakura status bar (palette in `colors.sh`) |
 | **btop** | Full Dracula-Sakura theme with custom color palette |
 | **lazydocker** | Dracula-Sakura borders and options colors |
-| **broot** | Custom Dracula-Sakura skin in `~/.config/broot/skins/` |
 | **harlequin** | Built-in Dracula theme set in `~/.harlequin.toml` |
 | **trippy** | Dracula-Sakura `theme-colors` in `~/.config/trippy/trippy.toml` |
 | **zellij** | Dracula-Sakura theme in the config |
-| **newsboat** | Dracula-Sakura colors in the config |
-| **aichat** | Dracula-Sakura dark TextMate theme plus rose/lilac prompt colors in config |
-| **herald** | Local Dracula-Sakura YAML theme in `~/.herald/themes/` with `theme.name` merged safely into `conf.yaml` |
 | **omp** | Full Dracula-Sakura custom theme in `~/.omp/agent/themes/dracula-sakura.json`, selected through `theme.dark` in `config.yml` |
 | **lnav** | Full Dracula-Sakura `theme-def` (151 values) as a config fragment in `~/.config/lnav/configs/dev-setup/`, selected with lnav's own `:config` |
 | **nushell** | 59 `color_config` keys in `config.nu` — types, shapes, and the reedline chrome |
@@ -622,85 +558,12 @@ acceptance of a valid one meant anything.
 | `duf`, `taproom` | preset flags only (`dark\|light\|ansi`, `auto\|light\|dark`) — no palette, and no Dracula among them |
 | `fx` | numbered built-in themes via `FX_THEME="0"`; no custom theme definition |
 | `procs`, `nnn` | indexed colour only (`Color256`, `NNN_COLORS`), so the palette could only be approximated to nearest indices |
-| `atac`, `lazysql`, `viddy`, `wiper`, `kondo`, `bmm`, `cheznav`, `lazynpm`, `lazyrsync`, `lazyssh` | no theming found — nothing in `--help`, and no colour keys documented in their config schemas |
+| `atac`, `lazysql`, `viddy`, `kondo`, `cheznav`, `lazynpm`, `lazyrsync`, `lazyssh` | no theming found in their help or configuration schemas |
 
 `stu` and `e1s` are themed but carry **no `--verify` row**. Both are TUIs with no
 validate mode, and without a TTY they panic inside crossterm before config parsing
 is reached — a correct config and a deliberately broken one produce the identical
 panic, so a row built on that would prove nothing.
-
-## Claude Code Configuration
-
-The script sets up Claude Code with a comprehensive configuration for full-stack development.
-
-### Files Created
-
-| File | Purpose |
-|------|---------|
-| `~/.claude/settings.json` | Global permissions, file ignore patterns, env vars |
-| `~/.claude/CLAUDE.md` | Global memory -- coding standards, available CLI tools reference, React/Next.js/AWS/CDK/Python/IaC conventions, security checks runbook |
-| `~/.claude/rules/workflow.md` | Trunk-based workflow rules (PR-first, issues, README-driven) |
-| `~/.claude/rules/git.md` | Git rules (no force-push, conventional commits, branch naming) |
-| `~/.claude/rules/security.md` | Security rules (no hardcoded secrets, parameterized SQL) |
-| `~/.claude/rules/typescript.md` | TypeScript rules (strict mode, no any, zod schemas) |
-| `~/.claude/rules/python.md` | Python rules (uv for packages, ruff for linting, type hints, pydantic) |
-| `~/.claude/rules/docker.md` | Docker rules (multi-stage builds, non-root, hadolint, dive) |
-| `~/.claude/rules/iac.md` | IaC rules (remote state, tflint, infracost, trivy config scan) |
-| `~/.claude/rules/style.md` | Voice rules (calm and concise, Dracula-Sakura when there is stylistic latitude) |
-| `~/.claude/rules/writing.md` | Writing rules -- the 53 rules of ASD-STE100 Simplified Technical English. Strict on commits, PRs, specs, and technical docs; mechanical subset only on issues, wikis, and chat. omp gets the identical text at the tail of `~/.omp/agent/AGENTS.md` |
-| `~/.claude/hooks/format-on-edit.sh` | Auto-format with Prettier after Claude edits JS/TS/CSS/JSON/MD files |
-| `~/.claude/hooks/lint-python.sh` | Auto-lint and fix Python files with ruff after Claude edits them |
-| `~/.claude/hooks/lint-dockerfile.sh` | Lint Dockerfiles with hadolint after Claude edits them |
-
-### Custom Slash Commands
-
-| Command | Purpose |
-|---------|---------|
-| `/pr-review` | Review current branch changes vs main -- flags security, bugs, edge cases |
-| `/test-plan` | Generate a test plan with unit/integration/e2e cases for recent changes |
-| `/dep-audit` | Audit dependencies for vulnerabilities, outdated packages, bundle size |
-| `/quick-doc` | Generate JSDoc/docstring documentation for a file or function |
-| `/cleanup` | Find dead code, unused imports, debug statements, empty catches |
-| `/security-scan` | Run all security tools (gitleaks, npm audit, semgrep, trivy) and report findings |
-| `/perf-check` | Benchmark with hyperfine, load test with oha, check for performance anti-patterns |
-| `/docker-lint` | Lint Dockerfiles with hadolint, analyze layers with dive, check docker-compose best practices |
-| `/iac-review` | Run tflint, trivy config scan, infracost estimate, check for IaC best practices |
-| `/convert` | Convert between formats using pandoc, d2, mermaid, ffmpeg, or imagemagick |
-| `/new-feature` | Full trunk-based workflow: create issue, branch, implement with tests, PR |
-| `/fix-bug` | Full trunk-based workflow: create issue, branch, test-first fix, PR |
-| `/create-readme` | Analyze codebase and generate comprehensive README.md |
-| `/init-project` | Scaffold new project with git, README, AGENTS.md, linting, CI, Docker, templates |
-| `/refactor` | Refactor code with tests preserved, SOLID principles, verify tests pass |
-| `/add-endpoint` | Add full API endpoint: types, handler, validation, tests, docs |
-| `/add-component` | Add React component: TSX, tests, props interface, accessibility |
-| `/ci-fix` | Diagnose CI failures with `gh run view`, fix, verify locally with `act` |
-| `/changelog` | Generate changelog from conventional commits grouped by type |
-| `/commit-msg` | Analyze staged changes and generate conventional commit message |
-| `/probe-assumptions` | Pressure test a document or plan by surfacing hidden assumptions |
-| `/probe-evidence` | Audit whether a document's claims are well supported |
-| `/probe-implications` | Trace first and second order consequences of a proposal |
-
-### Permissions Pre-approved
-
-The allowlist is deliberately **read-heavy and scoped** -- Claude runs safe local inspection, linting, formatting, and a small set of low-risk helpers without asking, but package installs, remote fetches/model calls, trust-store changes, deploys, and broader state mutation still prompt:
-- **Read-only git**: `git status/diff/log/show/branch`, `git remote -v`, `git stash list` (no writes; `gh` is *not* pre-approved)
-- **npm**: `npm run/test` only (`npm install`, pnpm/bun/npx/uv/cargo/pip prompt)
-- **Inspect & data**: cat, bat, ls, eza, grep, rg, fd, fzf, tree, head, tail, wc, sort, uniq, cut, jq, yq, fx, mlr, csvlook, jnv, mdfind, scc, dust, diff, difft, delta
-- **Linters/formatters/tests**: shellcheck, shfmt, prettier, eslint, ruff, hadolint, typos, ast-grep, tsc, jest, vitest
-- **IaC (read-only)**: tflint, terraform-docs, checkov, infracost (no `aws`/`cdk`/`sam`/`tofu`)
-- **Security scanners**: trivy, semgrep, gitleaks, cosign
-- **Read-only TUIs**: k9s, stern, lazygit, lazydocker, dive, btop, procs, lnav (no `docker`/`kubectl`/`docker-compose`)
-- **Docs & media**: pandoc, d2, mmdc, ffmpeg, magick, manly, soffice, office-py, pdftoppm/pdftotext/pdfinfo, oxipng, jpegoptim, mpv
-- **DB clients**: pgcli, mycli, sq, lazysql
-- **Misc CLIs**: atac, hurl, trippy, bandwhich, gping, doggo, gum, leaf, qalc, has, doxx, harlequin/hq, git-cliff, git-absorb, act3, commitizen, commitlint, fastfetch, newsboat, zellij
-- **Tool permissions**: `Read`, `Edit`
-
-### Denied Commands
-
-Destructive commands are always blocked:
-- `rm -rf /`, `rm -rf /*`, `rm -rf ~`, `sudo rm *`, `chmod 777 *`, `> /dev/sda*`, `mkfs *`
-
----
 
 ## Filesystem Structure
 
@@ -763,7 +626,6 @@ Spotlight to find things) rather than agonizing over where it "should" go.
 | `health-check` | `hc` | Quick system health overview (disk, memory, battery, brew, Docker, node_modules) |
 | `setup-ssh` | `sshsetup` | Generate an Ed25519 SSH key and optionally add it to GitHub via gh CLI |
 | `export-brewfile` | `brewsnap` | Export a Brewfile snapshot with descriptions for reproducibility |
-| `git-lfs-enable-repo` | `lfsinit` | Enable Git LFS hooks for one repo (LFS is per-repo here, not global) |
 
 ### Global Justfile (~/.justfile)
 
@@ -843,33 +705,25 @@ The script generates config files with sensible defaults:
 | `~/.aria2/aria2.conf` | aria2 | 16 connections, auto-resume, BitTorrent, 64MB cache |
 | `~/.config/atuin/config.toml` | atuin | Fuzzy search, local-only, compact style, enter=paste (not execute), history filter (ls/cd/clear/exit), secrets filter |
 | `~/.config/mprocs/mprocs.yaml` | mprocs | 5k scrollback, wider proc list, per-process logs under the config dir |
-| `~/.config/croft/config.json` + theme extension | croft | Dracula-Sakura theme, terminal-first layout defaults, explorer/status bar preferences |
 | `~/.config/starship.toml` | Starship | Rich two-line prompt with a Dracula-Sakura palette, OS icon, git status with counts, Node/Python/Rust/Go/Docker/AWS/Terraform versions, battery warning, time, Nerd Font icons |
 | `~/.config/yt-dlp/config` | yt-dlp | Best quality mp4, aria2c downloader, metadata, subtitles |
 | `~/.config/gh-dash/config.yml` | gh-dash | PR/issue sections, Dracula-Sakura theme |
 | `~/.config/stern/config.yaml` | stern | 50 tail lines, 5m lookback, timestamps |
 | `~/Library/Application Support/ngrok/ngrok.yml` | ngrok | Base config (add authtoken). ngrok's real macOS path — **not** `~/.config/ngrok`, which it never reads; a stranded copy there is removed on the next run |
 | `~/.config/caddy/Caddyfile` | Caddy | Development server template |
-| `~/.config/asciinema/config.toml` | asciinema | 2s idle limit, no keystroke recording. TOML, for asciinema 3.x — a 2.x `config` left beside it is removed on the next run |
 | `~/.config/micro/settings.json` | micro | Dracula (`dracula-tc`), the $EDITOR for git/gh/lazygit and leaf's Ctrl+Ents, auto-format on save (ruff for Python, taplo/marksman/TS/CSS/bash/yaml servers, rust-analyzer, gopls) |
-| `~/Library/.../Code/User/settings.json` | VS Code | Dracula Official + Dracula-Sakura accent layer, format-on-save, ruff + basedpyright (Python; Pylance disabled), prettier (web), shfmt (shell), tabs for Go, LF, telemetry off. **Merged, not overwritten** — your keys and Settings Sync win |
-| `~/.config/sketchybar/` | SketchyBar | Dracula-Sakura bar: app, clock, battery, wifi, volume, cpu, mem, bluetooth, VPN |
 | `~/Media/photos/dracula-sakura.jpg` | Wallpaper | Bundled Dracula-Sakura wallpaper asset copied onto every provisioned machine |
 | _(cliamp)_ | cliamp | Music player — self-configured on first run (point at `~/Media/music`) |
-| `~/.herald/themes/dracula-sakura.yaml` + `~/.herald/conf.yaml` | herald | Local Dracula-Sakura theme asset plus a narrow merge of `theme.name`; accounts/credentials remain user-owned |
 | `~/.config/zellij/config.kdl` | zellij | Dracula-Sakura theme, compact layout, mouse, Ctrl-a prefix |
 | `~/.config/mpv/mpv.conf` | mpv | Hardware accel, save position, screenshots to ~/Screenshots |
 | `~/.config/git-cliff/cliff.toml` | git-cliff | Conventional commits changelog template |
-| `~/.config/broot/conf.hjson` + skin | broot | Git-aware defaults plus a custom Dracula-Sakura skin |
 | `~/.jqp.yaml` | jqp | Dracula base theme with Dracula-Sakura color overrides |
-| `~/.config/aichat/config.yaml` + `dark.tmTheme` | aichat | Local Ollama defaults, prompt behavior, document loaders, Dracula-Sakura dark theme |
 | `~/.agents/skills/*` | omp | Symlinks to three scoped shared skills: `api-testing`, `d2-diagrams`, and `office-layout-check` |
 | `~/.omp/agent/extensions/protected-paths.ts` | omp | Blocks native file mutations to credentials, dependency trees, and repository metadata. Bash and Eval remain under native approval policies |
-| `~/.omp/agent/AGENTS.md` | omp | Global Oh My Pi instruction layer: the same house preferences and writing rules as pi, from the same generators. Outranks every other user-level context file, `~/.claude/CLAUDE.md` included |
+| `~/.omp/agent/AGENTS.md` | omp | Global Oh My Pi instruction layer with house preferences and writing rules |
 | `~/.omp/agent/themes/dracula-sakura.json` | omp | Full Dracula-Sakura theme with all 66 required omp color tokens, including the thirteen status-line colors pi has no equivalent for |
 | `~/.omp/agent/config.yml` | omp | Merged because omp also writes this file. Codex handles normal work, Gemini handles vision and lightweight roles, and Claude Sonnet handles only `slow` and `plan`. Fallbacks never use Anthropic and end at local Qwen 2.5 Coder |
-| `~/.newsboat/config` | newsboat | Vim keys, Dracula-Sakura colors, auto-reload |
-| `~/.newsboat/urls` | newsboat | Starter RSS feeds (Claude Code, Node, Rust, GitHub) |
+| `~/Library/LaunchAgents/dev.vixygrey.llama-cpp.plist` | llama.cpp | Runs Qwen2.5 Coder 14B on port 8081 with the Vulkan backend |
 | `~/.config/nushell/env.nu` | nushell | Starship prompt, Homebrew paths |
 | `~/.config/ghostty/config` | Ghostty | JetBrainsMono Nerd Font, Dracula-Sakura palette, transparent titlebar |
 | `~/.config/fastfetch/config.jsonc` | fastfetch | Nerd Font icons, package counts, Node/Python/Go/Rust/Docker versions, battery, disk, colored output |
@@ -882,7 +736,6 @@ The script generates config files with sensible defaults:
 | `~/.config/pgcli/config` | pgcli | Multi-line, auto-expand, destructive warnings, bat pager |
 | `~/.harlequin.toml` | harlequin | Built-in Dracula theme, vscode keymap, file tree on |
 | `~/.config/gh/config.yml` | GitHub CLI | SSH protocol, micro editor, delta pager, aliases (co, pv, pc, pl, il, pm, rel) |
-| `~/.config/glab-cli/config.yml` | GitLab CLI | SSH, micro; same alias names as gh mapped to GitLab merge requests + CI |
 | `~/.aws/config` | AWS CLI | Default region, json output, bat pager, auto-prompt, SSO template |
 | `~/.config/git/hooks/` | git | Global pre-commit hooks (debug statements, large files >5MB, conflict markers) |
 | `~/.config/brewfile/Brewfile` | Homebrew | Snapshot of all installed packages with descriptions |
@@ -907,10 +760,9 @@ The script generates config files with sensible defaults:
 | `~/.nanorc` | nano | Line numbers, auto-indent, mouse, syntax highlighting |
 | `~/.myclirc` | mycli | Multi-line, auto-expand, destructive warnings |
 | `~/.gemrc` | Ruby | No docs on gem install |
-| `~/.claude.json` (mcpServers) | Claude Code MCP | User-scope MCP servers (migrated from Kiro via `claude mcp add`) — filesystem, github, git, fetch, context7, aws-docs, aws-pricing, aws-iac, aws-knowledge, cloudwatch, iam, herald, GitKraken. Opt-in per project: playwright, postgres, several AWS servers. (Notion server dropped.) |
 | `~/.config/lazygit/config.yml` | lazygit | Dracula-Sakura theme, delta pager, nerd fonts, auto-fetch, micro editor (`hx`), rounded borders |
 | `~/.config/k9s/skins/dracula.yaml` | k9s | Full Dracula-Sakura-colored skin |
-| `~/.local/bin/*` (36 links) | mise | Symlinks to every mise shim except the Python family and `corepack`, so `claude`, `prettier`, `tsc`, `copilot` and the language servers are reachable from git hooks, launchd and GUI-launched editors — not only from zsh, where `mise activate` runs |
+| `~/.local/bin/*` | mise | Links non-Python mise shims for git hooks, launchd jobs, editors, and non-zsh shells |
 
 ---
 
@@ -918,7 +770,7 @@ The script generates config files with sensible defaults:
 
 | Category | Changes |
 |----------|---------|
-| **Dock** | Auto-hide, small icons (40px), no recents, scale minimize, no delay, spacers, all default pins cleared |
+| **Dock** | Auto-hide, small icons, no recent applications, scale minimization, no delay, and unchanged pins |
 | **Screensaver** | 45min idle, display sleep at 2hr (charger) / 1h15m (battery) |
 | **Screenshots** | PNG format, saved to `~/Screenshots`, no shadow, no thumbnail |
 | **Keyboard** | Fast key repeat (2/15), no press-and-hold, no auto-correct/capitalize/smart quotes/dashes/periods |
@@ -981,7 +833,6 @@ All aliases are auto-written to `~/.zshrc`:
 | `ghd` | `gh dash` | GitHub dashboard |
 | `gdft` | `git dft` | Syntax-aware git diff |
 | `gha` | `act` | Run GitHub Actions locally |
-| `gha3` | `act3` | Glance at the last 3 Actions runs |
 | `hq` | `harlequin` | SQL IDE TUI |
 | `claws` | `claws --theme dracula` | All-AWS TUI (Dracula) |
 | `prog` | `progress -m` | Monitor progress of running coreutils |
@@ -1010,7 +861,6 @@ All aliases are auto-written to `~/.zshrc`:
 | `hc` | `health-check` | System health overview |
 | `sshsetup` | `setup-ssh` | Generate SSH key + add to GitHub |
 | `brewsnap` | `export-brewfile` | Export Brewfile snapshot |
-| `lfsinit` | `git-lfs-enable-repo` | Enable Git LFS hooks for this repo |
 
 ### Shell Extras
 
@@ -1028,9 +878,8 @@ All aliases are auto-written to `~/.zshrc`:
 
 ## Language Servers
 
-The script installs language servers on `PATH` for **croft**, the primary editor, so it has
-completion, diagnostics, go-to-definition and format-on-save out of the box. They are plain
-LSP binaries, so any editor that speaks LSP picks them up:
+The script installs language servers on `PATH` for OMP and other compatible editors.
+They provide completion, diagnostics, definitions, and formatting:
 
 | Language | Server | Install |
 |----------|--------|---------|
@@ -1044,76 +893,42 @@ LSP binaries, so any editor that speaks LSP picks them up:
 | Rust | rust-analyzer | rustup component |
 | Go | gopls | go install |
 
-Python runs three servers at once, which is croft's own built-in arrangement — `ty` (Astral's type
-server) at priority 0, `basedpyright` as the fallback for what `ty` does not yet advertise, and
-`ruff` for lint. Previously only `ruff` was installed, so Python had lint and formatting but no
-type checking or go-to-definition.
+Python uses `ty` and `basedpyright` for type analysis. Ruff provides linting and formatting.
 
-### AI agent — Claude Code (+ croft integration)
+### AI agents
 
-Agentic coding is handled by **Claude Code** (`claude`) in the terminal, which reuses
-the MCP servers below. (Kiro's agent/specs/steering/hooks are gone with Kiro; Claude
-Code plus your `~/.claude/CLAUDE.md` rules cover the same ground.)
+**Oh My Pi** (`omp`) is the primary coding agent. The `llm` command provides short, one-shot prompts.
 
-Claude is wired into the terminal tools in four tiers:
+The setup also builds llama.cpp from source with Vulkan enabled and Metal disabled.
+The login service exposes Qwen2.5 Coder 14B at `http://127.0.0.1:8081`.
 
-| Tier | How | Best for |
-|------|-----|----------|
-| **1. Side-pane** | `zellij --layout dev` — editor + a `claude` pane | Real, multi-file, agentic work (strongest) |
+```bash
+omp
+omp config get modelRoles
+curl -s http://127.0.0.1:8081/v1/models | jq
+llm "Summarize this repository"
+```
 
-**Zellij layouts.** Two are generated:
+OMP installs from the `can1357/tap` Homebrew tap as a prebuilt binary.
+The binary remains available to shells, git hooks, and launchd jobs without a separate runtime.
 
-| Layout | Command | Panes |
-|--------|---------|-------|
-| `dev` | `zellij --layout dev` | editor + a `claude` pane, side by side |
-| `home` | `zellij --layout home` | plain terminal on the left; weather (`starlit`) and system monitor (`btop`) stacked down the right |
+OMP includes native tools, LSP operations, a DAP debugger, subagents, memory, and nine model roles.
+The roles use Codex, Gemini, Claude Sonnet, and local Qwen 2.5 Coder.
 
-`home` needs one manual step before the weather pane is useful: run `starlit --setup`
-and add your API key to the config it creates. The setup script never writes a key.
-| **2. croft pair** | `croft pair` — AI navigator inside the primary IDE | In-editor pairing while you code |
-| **3. `llm` pipe** | `llm` from the shell — pipe a file or selection | Quick one-shot edits |
-| **4. herald** | Built-in AI triage/summaries + MCP server (email/calendar) | Reading + triaging mail/events |
+The local model is the final fallback for each hosted role.
+The `LLAMA_CPP_BASE_URL` variable points OMP to the Vulkan service on port 8081.
 
-Set `ANTHROPIC_API_KEY` (for `croft pair`) and run `llm keys set anthropic` (for the
-`llm` pipe bind). The script installs `llm` via `uv tool` with the `llm-anthropic`
-plugin and sets the default model to `anthropic/claude-sonnet-4-5`, so only the key is
-left to add.
-
-### Second agent — Oh My Pi
-
-**Oh My Pi** (`omp`) is the maximalist fork of Pi by can1357, installed from the
-`can1357/tap` Homebrew tap rather than npm: the package is a Bun program
-(`engines.bun >= 1.3.14`), and the tap ships a prebuilt native binary into
-`$HOMEBREW_PREFIX/bin`, where `sh`, git hooks, and launchd can all see it.
-
-Where Pi keeps four tools and delegates the rest, omp brings 32 built-in tools, 13 LSP
-operations, a real debugger over DAP, subagents, a curated memory, and nine model roles
-that route by intent. This setup points all nine at **Google Gemini**:
-
-| Roles | Model | Why |
-| --- | --- | --- |
-| `default`, `task`, `vision` | `gemini-3.8-flash` | Ordinary turns, 1M context |
-| `slow`, `plan`, `advisor` | `gemini-3.1-pro-preview` | The three roles where depth pays for itself. `advisor` is the second model watching every turn, so it reviews rather than generates |
-| `smol`, `tiny`, `commit` | `gemini-3.1-flash-lite` | Cheap subagent fan-out |
-
-`gemini-3.1-pro-preview` is the only Gemini Pro on the API today and preview ids can be
-retired without notice, so `retry.fallbackChains` pins an exact-model fallback to Flash.
-An unknown model id surfaces as a config warning at startup rather than failing quietly.
-
-It carries the Dracula-Sakura theme, the house `AGENTS.md` preferences, and the writing
-rules from the same generators Claude Code uses. The two agents therefore use the same
-house rules. `~/.agents/skills/` is omp's canonical shared skills location. It contains
-three scoped skills: `api-testing`, `d2-diagrams`, and `office-layout-check`.
+OMP also carries the Dracula-Sakura theme and the generated `AGENTS.md`.
+The shared skill directory is `~/.agents/skills/`.
+It contains `api-testing`, `d2-diagrams`, and `office-layout-check`.
 
 **Web search is built in.** `web_search` carries 23 backends, and this setup puts your
 local **SearXNG** instance at the head of the chain via `searxng.endpoint`. That replaced
 a ~300-line TypeScript extension when pi was retired: the same capability, two config
 keys, nothing to maintain.
 
-Two things worth knowing. Its `~/.omp/agent/AGENTS.md` has the highest precedence of any
-user-level context file, so it **shadows** `~/.claude/CLAUDE.md` in omp sessions instead
-of stacking with it. And `~/.omp/agent/config.yml` is written by omp itself, so this
-setup **merges** into it with `yq` rather than owning it with a managed block.
+The `~/.omp/agent/AGENTS.md` file has the highest precedence among user context files.
+OMP owns `~/.omp/agent/config.yml`, so this setup merges managed values into that file.
 
 The `protected-paths.ts` extension blocks native file mutations to credential stores,
 dependency trees, and repository metadata. It checks resolved paths to catch symlink
@@ -1128,43 +943,6 @@ keep secrets, then confirm with `omp config get modelRoles`.
 > `omp config get modelRoles.default` answers `Unknown setting`, which reports a
 > schema shape rather than a missing value.
 
-### Claude Code MCP Servers
-
-The script registers user-scope MCP servers with `claude mcp add --scope user` (stored
-in `~/.claude.json` — never hand-edited). Enabled everywhere:
-
-| Server | Purpose | Notes |
-|--------|---------|-------|
-| **filesystem** | Read/list/search files in `~/Code` | `@modelcontextprotocol/server-filesystem` (npx) |
-| **github** | Search repos, read files, list issues/PRs | needs `GITHUB_TOKEN` env var |
-| **git** | `git status/diff/log/show` | `mcp-server-git` (uvx) |
-| **fetch** | HTTP fetch with HTML->Markdown | `mcp-server-fetch` (uvx) |
-| **context7** | Up-to-date library docs by package name | `@upstash/context7-mcp` (npx) |
-| **herald** | Email + calendar (Gmail/iCloud) read/search tools | `herald mcp`; mutations require `herald serve` running |
-| **aws-docs / aws-pricing / aws-iac** | AWS docs, cost estimation, IaC patterns | `awslabs.*` (uvx) |
-| **aws-knowledge** | AWS knowledge base | **Remote HTTP** — `https://knowledge-mcp.global.api.aws`. No auth, no AWS account, rate-limited. The only non-stdio server here |
-| **cloudwatch / iam** | CloudWatch logs + metrics; read IAM | `awslabs.*` (uvx); need AWS creds |
-| **GitKraken** | 31 tools — `git_*` porcelain, PR/issue read + create, Launchpad | `gk mcp` (gitkraken-cli cask), `--no-telemetry` |
-
-Opt-in per project with `claude mcp add --scope project <name> ...`: playwright,
-postgres, aws-ccapi, aws-serverless, aws-lambda-tool, aws-eks, aws-ecs, aws-dynamodb.
-(The Notion MCP server was dropped along with Notion.)
-
-**AWS setup:** the AWS servers use the standard AWS credential chain — anything that works for `aws sts get-caller-identity` works here. Three common setups:
-
-```bash
-# 1) Long-lived access keys (least preferred)
-aws configure                       # writes ~/.aws/credentials
-
-# 2) AWS SSO via `granted` (installed under the `aws` module)
-assume <profile>                    # exports AWS_PROFILE for the shell
-
-# 3) Per-shell env vars (CI-style)
-export AWS_REGION=us-east-1
-export AWS_PROFILE=my-dev-account
-```
-
-Claude Code reads `${AWS_REGION}` and `${AWS_PROFILE}` from your shell environment. The AWS MCP servers are read-leaning, and Claude Code prompts before any tool call that mutates state (e.g. IAM `create_role`, `attach_role_policy`).
 
 ---
 
@@ -1174,7 +952,6 @@ Claude Code reads `${AWS_REGION}` and `${AWS_PROFILE}` from your shell environme
 |-----------|---------|
 | **axe DevTools** | Accessibility testing |
 | **React Developer Tools** | React component inspection |
-| **Lighthouse** | Performance and accessibility audits |
 | **JSON Formatter** | Pretty-print JSON in the browser |
 
 ---

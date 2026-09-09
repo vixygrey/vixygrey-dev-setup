@@ -51,7 +51,6 @@ Quick reference for all **209+ shortcuts** configured by the setup scripts.
 | `ghd` | `gh dash` | GitHub dashboard (PRs, issues) |
 | `gdft` | `git dft` | Syntax-aware git diff |
 | `gha` | `act` | Run GitHub Actions locally |
-| `gha3` | `act3` | Glance at last 3 GitHub Actions runs |
 
 ### Containers & Kubernetes
 
@@ -127,7 +126,6 @@ Quick reference for all **209+ shortcuts** configured by the setup scripts.
 | `hc` | `health-check` | System health overview |
 | `sshsetup` | `setup-ssh` | Generate SSH key + add to GitHub |
 | `brewsnap` | `export-brewfile` | Export Brewfile snapshot |
-| `lfsinit` | `git-lfs-enable-repo` | Enable Git LFS hooks for this repo |
 
 ### System
 
@@ -350,31 +348,6 @@ omits the plugin that draws them.
 
 ---
 
-### broot
-
-*Source: [dystroy.org/broot](https://dystroy.org/broot/).*
-
-| Key | Action |
-|-----|--------|
-| *type letters* | Fuzzy search files and directories |
-| `Enter` | Focus directory, or open file in default app |
-| `Enter` on root line | Go to parent |
-| `Alt+Enter` | Leave broot and `cd` to selection |
-| `Esc` | Clear search / previous state |
-| `Tab` | Cycle matches |
-| `↑` / `↓` | Move selection |
-| `Ctrl+→` / `Ctrl+←` | Open preview panel / move between panels |
-| `Alt+h` | Toggle hidden files |
-| `Alt+i` | Toggle ignored files |
-| `:q` or `Ctrl+q` | Quit |
-| `:e` | Open in `$EDITOR` |
-| `:gf` / `:gs` | Git file statuses / only git-changed files |
-| `:fs` | Filesystem usage |
-
-Launch it with the shell function `br`, not `broot`, so `Alt+Enter` can change your shell's directory.
-
----
-
 ### jqp
 
 *Source: upstream [README keybindings table](https://github.com/noahgorstein/jqp).*
@@ -423,39 +396,6 @@ Launch it with the shell function `br`, not `broot`, so `Alt+Enter` can change y
 | `_` | Cycle video tracks |
 | `#` | Cycle audio tracks |
 | `E` | Cycle editions |
-
----
-
-### newsboat
-
-*Source: this repo's generated `~/.config/newsboat/config` — these are **house** bindings, not upstream defaults.*
-
-| Key | Action |
-|-----|--------|
-| `j` / `k` | Down / up **(house)** |
-| `J` / `K` | Next / previous feed **(house)** |
-| `g` / `G` | Home / end **(house)** |
-| `l` | Open **(house)** |
-| `h` | Quit **(house)** |
-
-Upstream newsboat uses arrow keys and `q`; the generated config adds this vim layer on top.
-
----
-
-### wiper
-
-*Source: upstream [README keybindings](https://github.com/ikebastuz/wiper).*
-
-| Key | Action |
-|-----|--------|
-| `j` / `k` or `↓` / `↑` | Navigate |
-| `l` / `→` / `Enter` | Into folder |
-| `h` / `←` / `Backspace` | To parent |
-| `d` | Delete — first press selects, second confirms |
-| `s` | Toggle sort (title / size) |
-| `c` | Toggle size-gradient colouring |
-| `t` | Toggle Trash (removed content goes to Trash) |
-| `q` | Quit |
 
 ---
 
@@ -593,9 +533,8 @@ comes from the online reference.
 
 ### Tools whose keymap you configure, not memorise
 
-These three have **no fixed default table to document**, because their bindings are
-user-settable. Verified from each tool's own interface rather than assumed:
-
+These tools have no fixed default table because users can change their bindings.
+Use each tool's own interface to inspect its current keymap:
 | Tool | How bindings are set | Verified via |
 |------|----------------------|--------------|
 | `trip` (trippy) | `--tui-key-bindings command=key,…` | `trip --help` |
@@ -626,8 +565,7 @@ section survived for years.
 | `viddy`, `mprocs` | in-app | no man page; upstream repo renamed, docs not reachable |
 | `pgcli`, `mycli` | in-app | no man page; both use standard readline editing |
 | `w3m`, `bandwhich` | in-app | man pages carry no keybindings section |
-| `rovr`, `bmm`, `aichat` | in-app | no published keymap found |
-| `croft`, `herald` | in-app | first-party tools; consult their own help |
+| `rovr` | in-app | no published keymap found |
 
 `kondo` is deliberately absent from every table: it is a CLI with a confirmation prompt, not
 a TUI, so it has no keymap at all.
@@ -822,42 +760,12 @@ Run from anywhere with `gj <recipe>` (or `just --justfile ~/.justfile <recipe>`)
 
 ---
 
-## Claude Code Custom Commands
-
-| Command | What it does |
-|---------|-------------|
-| `/pr-review` | Review current branch changes vs main |
-| `/test-plan` | Generate test plan for recent changes |
-| `/dep-audit` | Audit dependencies for vulnerabilities and bloat |
-| `/quick-doc` | Generate docs for a file or function |
-| `/cleanup` | Find dead code, unused imports, debug statements |
-| `/security-scan` | Run gitleaks, semgrep, trivy, and dependency audits |
-| `/perf-check` | Benchmark with hyperfine, load test with oha, find anti-patterns |
-| `/docker-lint` | Lint Dockerfiles with hadolint, analyze layers with dive |
-| `/iac-review` | Review Terraform/CDK with tflint, trivy, and infracost |
-| `/convert` | Convert between formats using pandoc, ffmpeg, magick, d2, mermaid |
-| `/new-feature` | Full trunk-based workflow: issue, branch, implement, tests, PR |
-| `/fix-bug` | Full trunk-based workflow: issue, branch, test-first fix, PR |
-| `/create-readme` | Analyze codebase and generate comprehensive README |
-| `/init-project` | Scaffold project with git, README, AGENTS.md, CI, Docker, templates |
-| `/refactor` | Refactor with tests preserved, SOLID principles |
-| `/add-endpoint` | Add API endpoint: types, handler, validation, tests, docs |
-| `/add-component` | Add React component: TSX, tests, accessibility |
-| `/ci-fix` | Diagnose and fix CI failures via `gh run view` + `act` |
-| `/changelog` | Generate changelog from conventional commits |
-| `/commit-msg` | Generate conventional commit message from staged changes |
-| `/probe-assumptions` | Pressure-test the assumptions behind a document or plan |
-| `/probe-evidence` | Pressure-test the evidence behind a document or plan |
-| `/probe-implications` | Pressure-test the implications of a document or plan |
-
----
-
 ## Hot Corners
 
 | Corner | Action |
 |--------|--------|
-| **Top-left** | Mission Control |
-| **Top-right** | Show Desktop |
+| **Top-left** | Disabled |
+| **Top-right** | Disabled |
 | **Bottom-left** | Disabled |
 | **Bottom-right** | Disabled |
 
@@ -877,51 +785,3 @@ from any application:
 
 `Cmd+Space` is deliberately taken from Spotlight, which the setup disables for that
 combination. Spotlight-style search moves to the shell functions `a`, `ff`, `rgf`, and `s`.
-
-**Visual Studio Code** uses stock shortcuts. The setup generates its `settings.json` but no
-`keybindings.json`, so there is nothing house-specific to document; use VS Code's own
-`Cmd+K Cmd+S` keyboard-shortcuts editor.
-
-> Earlier revisions of this file listed shortcuts for **Slack**, **TablePlus**, **Snagit**,
-> and **Raycast**. None of the four are installed — all sit in `DEPRECATED_TOOLS` and are
-> actively uninstalled by `--cleanup`. Their replacements are Google Chat, the TUI database
-> tools (`lazysql`, `harlequin`, `pgcli`), Shottr, and the Ghostty quick terminal.
-
----
-
-## Summary
-
-Counts are taken from this file's own tables, so they stay honest as it grows.
-
-| Category | Count |
-|----------|-------|
-| Shell aliases | 70 |
-| Terminal app keybindings | 232 |
-| fzf keybindings | 7 |
-| Git aliases | 29 |
-| GitHub CLI aliases | 15 |
-| Global justfile recipes | 25 |
-| Claude Code commands | 23 |
-| Ghostty global hotkeys | 2 |
-| **Total** | **403** |
-
-### Coverage
-
-Every installed tool with an interactive keymap now appears somewhere in this file. They
-fall into three honest categories rather than one flattering one.
-
-**Documented in depth, each from a named source** — zellij, lazygit, k9s, lazydocker, broot,
-jqp, jnv, mpv, newsboat, wiper, micro, lnav, stu, fzf.
-
-**Keymap is user-configurable, so there is no fixed default to memorise** — `trip`,
-`harlequin`, `clipse`. Set them in this repo's generated config rather than learning an
-upstream default that may not apply.
-
-**In-app help is the documentation** — nnn, lazysql, e1s, btop, atuin, fx, gh-dash, atac,
-viddy, mprocs, pgcli, mycli, w3m, bandwhich, rovr, bmm, aichat, croft, herald. Each
-was checked against its man page, its `--help`, and its upstream README or docs site. None
-publishes a keymap table. The table above records what was checked for each, so this is a
-finding rather than a gap.
-
-`kondo` is deliberately absent from every table: it is a CLI with a confirmation prompt, not
-a TUI, so it has no keymap at all.

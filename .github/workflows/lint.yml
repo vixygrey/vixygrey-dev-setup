@@ -168,45 +168,21 @@ jobs:
           HOOK_CHAIN_LIB|bash -n /tmp/generated
           HOOK_DELEGATOR|bash -n /tmp/generated
           HOOK_PRECOMMIT|bash -n /tmp/generated
-          HOOK_FORMAT|bash -n /tmp/generated
-          HOOK_RUFF|bash -n /tmp/generated
-          HOOK_HADOLINT|bash -n /tmp/generated
-          STATUSLINE|bash -n /tmp/generated
           SCRIPT|bash -n /tmp/generated
-          SBAR_RC|bash -n /tmp/generated
-          SBAR_COLORS|bash -n /tmp/generated
-          SBAR_ICONS|bash -n /tmp/generated
-          P_FRONT|bash -n /tmp/generated
-          P_CLOCK|bash -n /tmp/generated
-          P_BATT|bash -n /tmp/generated
-          P_BT|bash -n /tmp/generated
-          P_WIFI|bash -n /tmp/generated
-          P_VOL|bash -n /tmp/generated
-          P_CPU|bash -n /tmp/generated
-          P_MEM|bash -n /tmp/generated
-          P_VPN|bash -n /tmp/generated
-          P_VPNT|bash -n /tmp/generated
-          P_SHOTC|bash -n /tmp/generated
-          P_SHOT|bash -n /tmp/generated
           DOCKER_CONF|jq empty /tmp/generated
           FASTFETCH_CONF|jq empty /tmp/generated
           MPROCS_CONF|yq eval '.' /tmp/generated
           JQP_CONF|yq eval '.' /tmp/generated
-          AICHAT_CONF|yq eval '.' /tmp/generated
           K9S_CFG|yq eval '.' /tmp/generated
           GEM_CONF|yq eval '.' /tmp/generated
           GHOSTTY_PLIST_EOF|python3 -c 'import plistlib, sys; plistlib.load(open("/tmp/generated","rb"))'
-          AICHAT_THEME|python3 -c 'import plistlib, sys; plistlib.load(open("/tmp/generated","rb"))'
           OMP_THEME_CONF|jq empty /tmp/generated
           OMP_PROTECTED_PATHS_EXT|cp /tmp/generated /tmp/generated.ts && bun build /tmp/generated.ts --no-bundle --outdir /tmp/bunout
           LNAV_THEME_CONF|jq empty /tmp/generated
-          CLAUDE_SETTINGS_CONF|jq empty /tmp/generated
           PRETTIER_CONF|jq empty /tmp/generated
-          VSCODE_CONF|jq empty /tmp/generated
           MICRO_CONF|jq empty /tmp/generated
           PGCLI_CONF|python3 -c 'import configparser; configparser.ConfigParser().read("/tmp/generated")'
           MYCLI_CONF|python3 -c 'import configparser; configparser.ConfigParser().read("/tmp/generated")'
-          CROFT_CONF|jq empty /tmp/generated
           LAZYGIT_CONF|yq eval '.' /tmp/generated
           K9S_DRACULA|yq eval '.' /tmp/generated
           GHDASH_CONF|yq eval '.' /tmp/generated
@@ -215,7 +191,6 @@ jobs:
           GH_CONF|yq eval '.' /tmp/generated
           NGROK_CONF|yq eval '.' /tmp/generated
           BORGMATIC_CONF|yq eval '.' /tmp/generated
-          HERALD_THEME_CONF|yq eval '.' /tmp/generated
           OMP_CONFIG_CONF|yq eval '.' /tmp/generated
           STARSHIP_CONF|python3 -c 'import tomllib; tomllib.load(open("/tmp/generated","rb"))'
           ATUIN_CONF|python3 -c 'import tomllib; tomllib.load(open("/tmp/generated","rb"))'
@@ -225,9 +200,18 @@ jobs:
           TRIPPY_CONF|python3 -c 'import tomllib; tomllib.load(open("/tmp/generated","rb"))'
           GIT_CLIFF_CONF|python3 -c 'import tomllib; tomllib.load(open("/tmp/generated","rb"))'
           HARLEQUIN_CONF|python3 -c 'import tomllib; tomllib.load(open("/tmp/generated","rb"))'
-          ASCIINEMA_CONF|python3 -c 'import tomllib; tomllib.load(open("/tmp/generated","rb"))'
-          CROFT_THEME_CONF|python3 -c 'import tomllib; tomllib.load(open("/tmp/generated","rb"))'
           CHECKS
+
+          awk -v tag="LLAMA_PLIST_EOF" \
+            '$0 ~ "<<" tag {f=1; next} f && $0 == tag {exit} f' \
+            scripts/setup-dev-tools-mac.sh > /tmp/llama.plist
+          if [ -s /tmp/llama.plist ] &&
+             python3 -c 'import plistlib; plistlib.load(open("/tmp/llama.plist","rb"))'; then
+            echo "  ok    LLAMA_PLIST_EOF"
+          else
+            echo "::error::LLAMA_PLIST_EOF does not parse"
+            fail=1
+          fi
 
           extract OMP_PROTECTED_PATHS_EXT > /tmp/omp-protected-paths.ts
           if [ -s /tmp/omp-protected-paths.ts ] &&
