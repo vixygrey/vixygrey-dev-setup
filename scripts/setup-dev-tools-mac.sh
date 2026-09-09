@@ -33,7 +33,7 @@ fi
 #           --interactive/-i, --resume, --cleanup, --uninstall, --version, --help
 # =============================================================================
 
-SCRIPT_VERSION="7.18.0"
+SCRIPT_VERSION="7.19.0"
 SCRIPT_START=$(date +%s)
 PYTHON_VERSION="3.12"
 # Absolute directory of this script. Used to resolve bundled assets both from the

@@ -6,7 +6,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 > Release notes for 7.0.0–7.1.1 live in [GitHub Releases](https://github.com/vixygrey/vixygrey-dev-setup/releases) (auto-generated). This file resumes hand-written notes at 7.2.0.
 
-## [Unreleased]
+## [7.19.0] - 2026-09-08
+
+A documentation correctness pass, which started as a question about zellij. The multiplexer was hiding its own keybindings, because the generated config chose a layout that omits the plugin drawing them, leaving a modal tool running with no mode line. Pulling that thread found the same shape everywhere: documents asserting things nobody had checked. `SHORTCUTS.md` carried sections for two editors the setup does not install, and a macOS app table in which all four apps were deprecated, while the roughly thirty terminal apps that *are* installed shared a single entry between them. It is now 919 lines and 403 bindings, each traced to a named source. The generated Desktop `TOOL_REFERENCE.md` promised, twice, that every modern replacement was documented in full below; for nine of them, the tools aliased over `ls`, `cat`, `du`, `df`, `ps`, `top` and `watch`, no section existed at all. The Desktop keyboard card never admitted the full reference existed. All four are fixed, and every binding and flag was verified against the installed tool or its official documentation rather than written from memory, which caught several plausible-looking errors before they shipped.
 
 ### Changed
 
@@ -1038,7 +1040,7 @@ Minor release rolling up two follow-up PRs to v4.0.0: a tool-discoverability aud
 - Document all new tools in `GUIDE-MACOS.md`, `GUIDE-LINUX.md`, `GUIDE-WINDOWS.md` with usage examples (#5)
 - Update `SHORTCUTS-*.md` with new alias rows and a "Terminal Apps" section (#5)
 
-[Unreleased]: https://github.com/vixygrey/vixygrey-dev-setup/compare/v7.18.0...HEAD
+[7.19.0]: https://github.com/vixygrey/vixygrey-dev-setup/compare/v7.18.0...v7.19.0
 [7.18.0]: https://github.com/vixygrey/vixygrey-dev-setup/compare/v7.17.0...v7.18.0
 [7.17.0]: https://github.com/vixygrey/vixygrey-dev-setup/compare/v7.16.0...v7.17.0
 [7.16.0]: https://github.com/vixygrey/vixygrey-dev-setup/compare/v7.15.0...v7.16.0
