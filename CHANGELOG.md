@@ -6,7 +6,15 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 > Release notes for 7.0.0–7.1.1 live in [GitHub Releases](https://github.com/vixygrey/vixygrey-dev-setup/releases) (auto-generated). This file resumes hand-written notes at 7.2.0.
 
-## [Unreleased]
+## [7.20.0] - 2026-09-08
+
+A release about this repo holding itself to the template it ships.
+
+The `new-project` scaffold is generated from this script. This repo predates it, so nobody measured the two against each other until now. Doing that added `.editorconfig`, `.gitattributes`, a `Justfile`, and the `specs/` tree. It also retired the rule in `CONVENTIONS.md` that rejected `specs/` by name. That rule was correct while nothing consumed the directory. It stopped being correct once bigpowers was adopted for work here.
+
+The migration then found three defects in the scaffold itself, and all three are fixed here. The sharpest is that five of the seven `specs/` directories never reached a new project's first commit, because git does not track an empty directory. They existed for whoever ran the command and vanished on clone. That one affects every project scaffolded so far, not only future ones.
+
+The release also makes Simplified Technical English a global rule for both agents. One generator writes it into `~/.claude/rules/writing.md` and into the tail of `~/.pi/agent/AGENTS.md`, so Claude Code and pi follow provably identical rules. It replaces an opt-in skill that fired only when a prompt happened to match its description.
 
 ### Added
 
@@ -1094,6 +1102,7 @@ Minor release rolling up two follow-up PRs to v4.0.0: a tool-discoverability aud
 - Document all new tools in `GUIDE-MACOS.md`, `GUIDE-LINUX.md`, `GUIDE-WINDOWS.md` with usage examples (#5)
 - Update `SHORTCUTS-*.md` with new alias rows and a "Terminal Apps" section (#5)
 
+[7.20.0]: https://github.com/vixygrey/vixygrey-dev-setup/compare/v7.19.0...v7.20.0
 [7.19.0]: https://github.com/vixygrey/vixygrey-dev-setup/compare/v7.18.0...v7.19.0
 [7.18.0]: https://github.com/vixygrey/vixygrey-dev-setup/compare/v7.17.0...v7.18.0
 [7.17.0]: https://github.com/vixygrey/vixygrey-dev-setup/compare/v7.16.0...v7.17.0
