@@ -1087,6 +1087,35 @@ Language-specific rules are in `~/.claude/rules/`:
 - `python.md` — uv for packages, ruff for linting, type hints
 - `docker.md` — Multi-stage builds, non-root, hadolint
 - `iac.md` — OpenTofu, tflint, infracost, resource tagging
+- `style.md` — Voice: calm and concise, Dracula-Sakura when there is stylistic latitude
+- `writing.md` — The 53 rules of ASD-STE100 Simplified Technical English
+
+`writing.md` is the one rule file that is shared with the other agent. The same
+generator function writes it and the tail of `~/.pi/agent/AGENTS.md`, so Claude Code
+and pi cannot disagree about how to write.
+
+It has two tiers, and membership is by document type rather than by whether the text
+lands in a file:
+
+| Tier | Applies to |
+|------|------------|
+| **Strict** (every rule, both sentence limits, no contractions) | Commit messages, PR titles and bodies, specs, technical documentation (READMEs, runbooks, procedures, API guides), changelogs, release notes, incident reports, error messages and CLI output, UI copy, instructions for AI agents |
+| **Loose** (mechanical subset only) | Issues and their comments, wikis, chat replies |
+
+The mechanical subset is: no slop words, no filler adverbs, no Latin abbreviations, no
+hedging, one term per concept. The 20-word and 25-word limits and the no-contractions
+rule do not reach the loose tier. An issue is a first draft of a thought and often a
+dialogue, a wiki is collaborative prose that many hands edit, and chat in a
+maintenance-manual register would contradict `style.md`. In all three the rules cost
+more than the slop they remove.
+
+Note the asymmetry inside one workflow: **an issue body is loose, its PR body is
+strict**. The issue argues for a change while its shape is still open; the PR records
+what the change is, for someone reading later who was not there.
+
+One carve-out overrides the tier, and it is safety. A warning about data loss, an
+irreversible action, or a destructive flag is command-first and risk-second wherever
+it appears, including inside a loose document.
 
 ---
 

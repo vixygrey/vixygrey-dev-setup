@@ -6,6 +6,28 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 > Release notes for 7.0.0–7.1.1 live in [GitHub Releases](https://github.com/vixygrey/vixygrey-dev-setup/releases) (auto-generated). This file resumes hand-written notes at 7.2.0.
 
+## [Unreleased]
+
+### Added
+
+- **Simplified Technical English is now a global writing rule for both agents, from one generator** (#491). The `simple-english` skill has shipped with the pinned `bigpowers` package for a while, symlinked into `~/.claude/skills/` for Claude Code and reachable by pi through its `packages` setting. In both agents it was **opt-in**: a skill fires only when the prompt matches its description, so it caught "de-slop this README" and missed every document written without those words. The 53 rules of ASD-STE100 Issue 9 now load on every session instead, as a new `~/.claude/rules/writing.md` alongside the existing eight rule files, and at the tail of `~/.pi/agent/AGENTS.md`, which is pi's only global instruction file. The skill stays installed and is still the right tool for a formal audit of an existing document, because it carries a deterministic lint script this does not.
+
+  The two copies come from **one** `emit_writing_rules` function rather than two heredocs. That is the whole design: the point of the change is that both agents follow provably identical rules, and a second heredoc would break that the first time one of them was edited alone. The generated block is verified byte-identical in both files.
+
+  The rule has **two tiers**, because a single tier could not have been honest, and membership is by **document type rather than by whether the text lands in a file**. That distinction is the whole point: "written down" turned out to be the wrong axis. **Strict** covers commit messages, PR titles and bodies, specs, technical documentation, changelogs, release notes, incident reports, error messages and CLI output, UI copy, and instructions for AI agents. **Loose** covers issues and their comments, wikis, and chat, and means the mechanical subset only: no slop words, no filler adverbs, no Latin abbreviations, no hedging, one term per concept. The 20-word and 25-word limits and Rule 4.2 (no contractions) do not reach the loose tier.
+
+  Issues and wikis are artifacts by any ordinary reading, and an earlier draft of this rule swept them into the strict tier for exactly that reason. They belong in the loose one. An issue is the first draft of a thought and usually a dialogue, so an imperative 20-word register makes people write less than the problem needs, and a bug report nobody bothered to file costs more than the slop in the one they did. A wiki is collaborative prose that many hands edit, and a rule every editor must relearn will not survive contact with them. Chat in a maintenance-manual register would contradict the "calm, technically sharp, and warm" voice that `rules/style.md` and the pi preferences both already ask for. Naming the boundary is what stops the two files from quietly fighting each other.
+
+  This leaves a deliberate asymmetry inside a single workflow: **an issue body is loose and its PR body is strict**. The issue argues for a change while the shape of it is still open. The PR records what the change turned out to be, and that record is read later by someone who was not there.
+
+  **One carve-out overrides the tier, and it is safety.** A warning about data loss, an irreversible action, or a destructive flag follows Section 7 wherever it appears, including inside a loose document: command or condition first, risk second. A tier controls register. Letting it control whether a reader is warned before they lose data would be the wrong trade at any register.
+
+  The cost is roughly 3.5k tokens per session for each agent. For pi that is the larger trade, since its system prompt is otherwise under 1k by design, and it is accepted deliberately: an ungoverned local model produces exactly the slop the rules exist to remove.
+
+### Fixed
+
+- **The rules inventory in `README.md` and `docs/GUIDE.md` was missing `style.md`** (#491). Both documents list the files written into `~/.claude/rules/`, and both stopped at `iac.md`, so the style rules had been generated and undocumented since they were added. Found while adding the `writing.md` row, and fixed in the same pass rather than shipping a table that was accurate about the new file and wrong about the old one. This is the drift `CONVENTIONS.md` warns about, in the exact place it warns about it.
+
 ## [7.19.0] - 2026-09-08
 
 A documentation correctness pass, which started as a question about zellij. The multiplexer was hiding its own keybindings, because the generated config chose a layout that omits the plugin drawing them, leaving a modal tool running with no mode line. Pulling that thread found the same shape everywhere: documents asserting things nobody had checked. `SHORTCUTS.md` carried sections for two editors the setup does not install, and a macOS app table in which all four apps were deprecated, while the roughly thirty terminal apps that *are* installed shared a single entry between them. It is now 919 lines and 403 bindings, each traced to a named source. The generated Desktop `TOOL_REFERENCE.md` promised, twice, that every modern replacement was documented in full below; for nine of them, the tools aliased over `ls`, `cat`, `du`, `df`, `ps`, `top` and `watch`, no section existed at all. The Desktop keyboard card never admitted the full reference existed. All four are fixed, and every binding and flag was verified against the installed tool or its official documentation rather than written from memory, which caught several plausible-looking errors before they shipped.
