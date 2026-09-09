@@ -188,6 +188,7 @@ jobs:
           GHOSTTY_PLIST_EOF|python3 -c 'import plistlib, sys; plistlib.load(open("/tmp/generated","rb"))'
           AICHAT_THEME|python3 -c 'import plistlib, sys; plistlib.load(open("/tmp/generated","rb"))'
           PI_THEME_CONF|jq empty /tmp/generated
+          OMP_THEME_CONF|jq empty /tmp/generated
           CLAUDE_SETTINGS_CONF|jq empty /tmp/generated
           PRETTIER_CONF|jq empty /tmp/generated
           VSCODE_CONF|jq empty /tmp/generated
@@ -202,6 +203,7 @@ jobs:
           NGROK_CONF|yq eval '.' /tmp/generated
           BORGMATIC_CONF|yq eval '.' /tmp/generated
           HERALD_THEME_CONF|yq eval '.' /tmp/generated
+          OMP_CONFIG_CONF|yq eval '.' /tmp/generated
           STARSHIP_CONF|python3 -c 'import tomllib; tomllib.load(open("/tmp/generated","rb"))'
           ATUIN_CONF|python3 -c 'import tomllib; tomllib.load(open("/tmp/generated","rb"))'
           MISE_CONF|python3 -c 'import tomllib; tomllib.load(open("/tmp/generated","rb"))'

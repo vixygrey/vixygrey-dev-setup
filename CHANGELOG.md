@@ -6,6 +6,34 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 > Release notes for 7.0.0–7.1.1 live in [GitHub Releases](https://github.com/vixygrey/vixygrey-dev-setup/releases) (auto-generated). This file resumes hand-written notes at 7.2.0.
 
+## [Unreleased]
+
+### Added
+
+- **Oh My Pi (`omp`) as a third agent harness, routed at Google Gemini** (#504). `omp` is the maximalist fork of pi by can1357: 32 built-in tools, 13 LSP operations, a real debugger over DAP, subagents, and nine model roles that route by intent. It joins Claude Code and pi rather than replacing either.
+
+  The configuration is a near one-to-one parallel of the pi block, so it reuses the doctrine already in the script. `~/.omp/agent` is the one path family, the same way `~/.pi/agent` is for pi. The theme is the same Dracula-Sakura palette. The `AGENTS.md` preferences and the Simplified Technical English writing rules are the same text, from the same generators.
+
+  **The preferences body is now one emitter with two consumers.** `emit_agent_preferences` takes the harness name and writes everything that was previously inside pi's `PI_AGENTS_CONF` heredoc. Nothing in that body was ever pi-specific except the heading. A second copy would drift the first time one was edited alone, which is the reasoning that already made `emit_writing_rules` a function in #491. The generated `~/.pi/agent/AGENTS.md` is byte-identical to the version 7.20.1 produced.
+
+  **Installed from the `can1357/tap` Homebrew tap, not npm.** The npm package declares `engines.bun >= 1.3.14`, so it is a Bun program and `npm_global_install` cannot serve it. The tap also puts a prebuilt native binary in `$HOMEBREW_PREFIX/bin`, which is on the `PATH` of `sh`, git hooks, and launchd. A mise-managed or npm-managed copy is not, which is the #345 lesson applied before it could cost anything.
+
+  Nine roles carry three models. `default`, `task`, `advisor`, and `vision` use `gemini-3.8-flash`. `slow` and `plan` use `gemini-3.1-pro-preview`. `smol`, `tiny`, and `commit` use `gemini-3.1-flash-lite`. Every id is verified against the catalog omp ships. `gemini-3.1-pro-preview` is the only Gemini Pro on the API today, and a preview id can be retired without notice, so `retry.fallbackChains` pins an exact-model fallback to Flash for the two roles that use it.
+
+  **Authentication stays user-owned.** The `google` provider reads `GEMINI_API_KEY` from the environment. This script never reads, writes, or echoes a key, which matches how the pi block treats `auth.json`. A run with no key set says so once instead of finishing quietly with no reachable model.
+
+  Three findings shaped the implementation, and each is recorded as a comment where it applies:
+
+  - **`config.yml` is merged, never written as a managed block.** `omp config set`, `omp config reset`, and `/settings` all write that file through omp's own YAML serializer, which would not preserve managed-block markers. The merge uses `yq` and touches only our keys, the same shape as the pi `models.json` merge with `jq`. omp re-reads the file under a lock when it saves, so an external edit survives an open session.
+  - **`google` is the model provider and `gemini` is a discovery provider.** The two ids share one namespace. `gemini` is the source that reads `GEMINI.md`, so configuring it in place of `google` does nothing visible. This is the section 14 "one vocabulary" smell, named in the comment so the next reader does not have to rediscover it.
+  - **The theme omits `link` and `toolText`.** omp's shipped `dark-dracula` theme sets both, but neither appears in the runtime schema, and both the schema mirror and its `colors` object declare `additionalProperties: false`. Built-in themes are compiled in; a custom theme file is validated. An unknown key would sink the whole file to a silent fallback, which is the exact "valid config that nobody reads" class from section 6. The generated theme is an exact match to the runtime schema: all 66 required tokens, plus the optional `thinkingMax`, and nothing else.
+
+  `~/.agents/skills/` needs no new work. omp treats it as its own canonical native skills location with its own `enableAgentsUser` toggle, so the five skills the pi block already links there arrive with nothing extra installed.
+
+  One behavior to know: `~/.omp/agent/AGENTS.md` has the highest precedence of any user-level context file in omp, so it shadows `~/.claude/CLAUDE.md` in omp sessions rather than stacking with it. That is why the house preferences belong in it.
+
+  `--verify` gains a row. `omp config get theme.dark` prints the effective value, so a pass proves omp read the file at that path and resolved the merged key. It reads the theme rather than a model role on purpose, because the theme resolves with no API key set and no provider reachable.
+
 ## [7.20.1] - 2026-09-08
 
 A one-line correction to a number, found by running 7.20.0 rather than by reading it.
@@ -1120,6 +1148,7 @@ Minor release rolling up two follow-up PRs to v4.0.0: a tool-discoverability aud
 - Document all new tools in `GUIDE-MACOS.md`, `GUIDE-LINUX.md`, `GUIDE-WINDOWS.md` with usage examples (#5)
 - Update `SHORTCUTS-*.md` with new alias rows and a "Terminal Apps" section (#5)
 
+[Unreleased]: https://github.com/vixygrey/vixygrey-dev-setup/compare/v7.20.1...HEAD
 [7.20.1]: https://github.com/vixygrey/vixygrey-dev-setup/compare/v7.20.0...v7.20.1
 [7.20.0]: https://github.com/vixygrey/vixygrey-dev-setup/compare/v7.19.0...v7.20.0
 [7.19.0]: https://github.com/vixygrey/vixygrey-dev-setup/compare/v7.18.0...v7.19.0
