@@ -472,6 +472,168 @@ Both ship an in-app keymap that is the authoritative reference, and both are bes
 
 ---
 
+### micro
+
+*Source: upstream [`runtime/help/defaultkeys.md`](https://github.com/zyedidia/micro/blob/master/runtime/help/defaultkeys.md).*
+
+`micro` is the `EDITOR` for git, `gh`, and lazygit commit messages. It is non-modal, so these
+work immediately with no mode to enter first.
+
+| Key | Action |
+|-----|--------|
+| `Ctrl-s` | Save |
+| `Ctrl-q` | Close file (quits micro if it is the last one) |
+| `Ctrl-g` | Open help |
+| `Ctrl-e` | Command prompt (`> help commands` lists them) |
+| `Ctrl-o` | Open a file |
+| `Ctrl-f` | Find |
+| `Ctrl-n` / `Ctrl-p` | Next / previous search result |
+| `Ctrl-z` / `Ctrl-y` | Undo / redo |
+| `Ctrl-c` / `Ctrl-x` / `Ctrl-v` | Copy / cut / paste |
+| `Ctrl-k` | Cut current line |
+| `Ctrl-d` | Duplicate current line |
+| `Ctrl-a` | Select all |
+| `Ctrl-l` | Jump to line |
+| `Ctrl-t` | New tab |
+| `Ctrl-w` | Cycle splits (`> vsplit`, `> hsplit` create them) |
+| `Ctrl-r` | Toggle line-number ruler |
+| `Ctrl-u` | Toggle macro recording |
+| `Ctrl-j` | Run last recorded macro |
+| `Ctrl-b` | Run a shell command |
+
+On macOS, word-wise movement is `Alt`+arrows and line-start/end is `Ctrl`+arrows — the
+opposite of Linux, which the upstream doc calls out explicitly.
+
+---
+
+### lnav
+
+*Source: [docs.lnav.org hotkeys reference](https://docs.lnav.org/en/latest/hotkeys.html).*
+
+The richest keymap of any tool here. `man lnav` lists only `?` and `q`; everything below
+comes from the online reference.
+
+**Navigation**
+
+| Key | Action |
+|-----|--------|
+| `j` / `k` or arrows | Down / up a line |
+| `Space` / `PgDn`, `b` / `PgUp` | Down / up a page |
+| `Ctrl-d` / `Ctrl-u` | Down / up half a page |
+| `h` / `l` | Left / right half a page |
+| `g` / `G` or `Home` / `End` | Top / bottom |
+| `e` / `Shift-e` | Next / previous **error** |
+| `w` / `Shift-w` | Next / previous **warning** |
+| `n` / `Shift-n` | Next / previous search result |
+| `f` / `Shift-f` | Next / previous file |
+| `u` / `Shift-u` | Next / previous bookmark |
+| `{` / `}` | Previous / next section |
+
+**Time travel**
+
+| Key | Action |
+|-----|--------|
+| `d` / `Shift-d` | Forward / back 24 hours |
+| `1`–`6` | Next ten-minute interval (`Shift` for previous) |
+| `7` / `8` | Previous / next minute |
+| `0` / `Shift-0` | Next / previous day |
+| `r` / `Shift-r` | Forward / back by the last relative time used |
+
+**Bookmarks**
+
+| Key | Action |
+|-----|--------|
+| `m` | Mark / unmark line |
+| `Shift-m` | Mark range back to the last mark |
+| `c` | Copy marked lines to clipboard |
+| `Shift-c` | Clear marks |
+
+**Display and views**
+
+| Key | Action |
+|-----|--------|
+| `?` or `F1` | Help |
+| `q` | Back a view, or quit |
+| `t` | Text view |
+| `i` / `Shift-i` | Histogram view |
+| `v` / `Shift-v` | SQL results view |
+| `z` / `Shift-z` | Zoom in / out on time |
+| `Shift-p` | Toggle pretty-print |
+| `Ctrl-w` | Toggle word wrap |
+| `Ctrl-f` | Toggle all filters |
+| `x` | Toggle field hiding |
+| `=` | Pause / resume file loading |
+
+**Prompts**
+
+| Key | Opens |
+|-----|-------|
+| `/` | Regex search |
+| `;` | SQLite query prompt |
+| `:` | Internal command |
+| `\|` | Run an lnav script |
+| `Ctrl-]` | Abort the prompt |
+
+---
+
+### stu
+
+*Source: [lusingander.github.io/stu keybindings](https://lusingander.github.io/stu/keybindings/).*
+
+| Key | Action |
+|-----|--------|
+| `j` / `k` | Select / scroll |
+| `Enter` | Open selected item |
+| `Backspace` | Back |
+| `?` | Help (per-view detail) |
+| `Esc` | Hide help |
+| `Ctrl-c` | Quit |
+
+---
+
+### Tools whose keymap you configure, not memorise
+
+These three have **no fixed default table to document**, because their bindings are
+user-settable. Verified from each tool's own interface rather than assumed:
+
+| Tool | How bindings are set | Verified via |
+|------|----------------------|--------------|
+| `trip` (trippy) | `--tui-key-bindings command=key,…` | `trip --help` |
+| `harlequin` | `--keymap-name <name>`, and keymaps are composable | `harlequin --help` |
+| `clipse` | a `keyBindings` map in its config file | upstream README |
+
+If you want a stable muscle-memory keymap for any of them, set it in this repo's generated
+config rather than learning the upstream default.
+
+---
+
+### Tools where the in-app help is the documentation
+
+For these, the help key genuinely **is** the reference. Each was checked against its man
+page, its `--help`, and its upstream README or docs site; none publishes a keymap table.
+Listing a plausible one here would be a guess, which is exactly how the retired Kiro
+section survived for years.
+
+| Tool | Help key | What was checked |
+|------|----------|------------------|
+| `nnn` | `?` | `man nnn` says only "Press '?' in nnn to see the list of keybinds" |
+| `lazysql` | `?` | upstream README: "For a list of keyboard shortcuts press `?`" |
+| `e1s` | `?` | upstream README key-bindings section |
+| `btop` | in-app | 1,593-line README, no keymap; `--help` has none |
+| `atuin` | in-app | docs keybinds page 404s; `--help` "key" hits are about encryption keys |
+| `fx` | in-app | README defers to fx.wtf, which publishes no keybindings page |
+| `gh-dash`, `atac` | in-app | READMEs and `man atac` carry no keymap |
+| `viddy`, `mprocs` | in-app | no man page; upstream repo renamed, docs not reachable |
+| `pgcli`, `mycli` | in-app | no man page; both use standard readline editing |
+| `w3m`, `bandwhich` | in-app | man pages carry no keybindings section |
+| `rovr`, `bmm`, `aichat` | in-app | no published keymap found |
+| `croft`, `herald`, `tiki` | in-app | first-party tools; consult their own help |
+
+`kondo` is deliberately absent from every table: it is a CLI with a confirmation prompt, not
+a TUI, so it has no keymap at all.
+
+---
+
 ## fzf Keybindings
 
 ### Shell Integration
@@ -734,24 +896,32 @@ Counts are taken from this file's own tables, so they stay honest as it grows.
 | Category | Count |
 |----------|-------|
 | Shell aliases | 70 |
-| Terminal app keybindings | 156 |
+| Terminal app keybindings | 232 |
 | fzf keybindings | 7 |
 | Git aliases | 29 |
 | GitHub CLI aliases | 15 |
 | Global justfile recipes | 25 |
 | Claude Code commands | 23 |
 | Ghostty global hotkeys | 2 |
-| **Total** | **327** |
+| **Total** | **403** |
 
 ### Coverage
 
-Documented in depth, each from a named source: **zellij, lazygit, k9s, lazydocker, broot,
-jqp, jnv, mpv, newsboat, wiper, fzf**, plus the in-app help key for **e1s** and **lazysql**.
+Every installed tool with an interactive keymap now appears somewhere in this file. They
+fall into three honest categories rather than one flattering one.
 
-Not yet covered: `micro`, `nnn`, `lnav`, `btop`, `atuin`, `trip`, `viddy`, `harlequin`,
-`atac`, `fx`, `mprocs`, `clipse`, `stu`, `bmm`, `rovr`, `pgcli`, `mycli`, `aichat`, `w3m`,
-`bandwhich`, `croft`, `gh-dash`, `herald`, and `tiki`. These are pending verification
-against their upstream documentation rather than omitted by choice.
+**Documented in depth, each from a named source** — zellij, lazygit, k9s, lazydocker, broot,
+jqp, jnv, mpv, newsboat, wiper, micro, lnav, stu, fzf.
 
-`kondo` is deliberately absent: it is a CLI with a confirmation prompt, not a TUI, so it has
-no keymap to document.
+**Keymap is user-configurable, so there is no fixed default to memorise** — `trip`,
+`harlequin`, `clipse`. Set them in this repo's generated config rather than learning an
+upstream default that may not apply.
+
+**In-app help is the documentation** — nnn, lazysql, e1s, btop, atuin, fx, gh-dash, atac,
+viddy, mprocs, pgcli, mycli, w3m, bandwhich, rovr, bmm, aichat, croft, herald, tiki. Each
+was checked against its man page, its `--help`, and its upstream README or docs site. None
+publishes a keymap table. The table above records what was checked for each, so this is a
+finding rather than a gap.
+
+`kondo` is deliberately absent from every table: it is a CLI with a confirmation prompt, not
+a TUI, so it has no keymap at all.
