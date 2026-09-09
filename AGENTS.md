@@ -16,7 +16,48 @@ Nothing in a private `CLAUDE.md` binds a contribution you are helping someone el
 
 ## What this repo is
 
-A single idempotent Bash script, [`scripts/setup-dev-tools-mac.sh`](scripts/setup-dev-tools-mac.sh) (~10k lines), that provisions a macOS developer machine: installs CLI/GUI tools via Homebrew, writes dotfiles/config, and **generates the user's Claude Code environment** — `~/.claude/CLAUDE.md`, `~/.claude/rules/*`, agents, commands, skills, MCP servers — plus Desktop docs (`POST_SETUP_CHECKLIST.md`, `TOOL_REFERENCE.md`, `KEYBOARD_SHORTCUTS.md`, `TOOLKIT_SUMMARY.md`). Almost all work happens in that one script.
+A single idempotent Bash script, [`scripts/setup-dev-tools-mac.sh`](scripts/setup-dev-tools-mac.sh) (~18k lines), that provisions a macOS developer machine: installs CLI/GUI tools via Homebrew, writes dotfiles/config, and **generates the user's Claude Code environment** — `~/.claude/CLAUDE.md`, `~/.claude/rules/*`, agents, commands, skills, MCP servers — plus Desktop docs (`POST_SETUP_CHECKLIST.md`, `TOOL_REFERENCE.md`, `KEYBOARD_SHORTCUTS.md`, `TOOLKIT_SUMMARY.md`). Almost all work happens in that one script.
+
+## Commands
+
+Every command lives in the [`Justfile`](Justfile). Use these rather than retyping the
+underlying invocations, so there is one place to change when they change.
+
+| Action | Command | Does |
+| --- | --- | --- |
+| Install | *(nothing to install)* | No runtime, no dependency manifest, no build step |
+| Lint | `just lint` | `bash -n`, then `shellcheck -x -S warning` — the severity CI uses |
+| Test | `just test` | `bats tests/` — the helper layer under `SETUP_LIB_ONLY=1` |
+| Dry run | `just dry-run` | Preview a full run; must leave no trace |
+| Hooks | `just hooks` | `pre-commit run --all-files` |
+| **Preflight** | `just preflight` | All four above. **Run before every commit.** |
+| Verify | `just verify` | Ask each installed tool whether it reads what we generate |
+
+`verify` is deliberately outside `preflight`: it queries the tools on *this* machine, so it
+cannot gate a PR. Run it after touching any config path, and read a `FAIL` as *the file is
+fine, the tool is ignoring it*.
+
+The one manual prerequisite is **bash 4+** (`brew install bash`). macOS ships 3.2, and the
+script refuses to run without a newer one.
+
+## Planning and specs
+
+Evolving state lives in [`specs/`](specs/), not in this file. Read
+[`specs/state.yaml`](specs/state.yaml) before resuming interrupted work; `survey-context`
+does that for you and is the right entry point at the start of any task.
+
+- **Architecture decisions** are in [`specs/adr/`](specs/adr/), one file per decision. The
+  first seven were extracted from `CONVENTIONS.md`, which still explains the same rules to
+  someone working here today.
+- **What the project is built with, and why**, is in
+  [`specs/tech-architecture/tech-stack.md`](specs/tech-architecture/tech-stack.md).
+- **GitHub issues stay the system of record** for bugs and work items.
+  `specs/bugs/registry.yaml` holds working notes for an investigation in progress, not a
+  replacement for the issue.
+- `specs/state.yaml` carries `workflow_mode: team-pr`. Do not change it to `solo-git`: this
+  repo never commits to `main`.
+
+Keep this file stable. Put changing status in `specs/`.
 
 ## The golden rule: edit the generator, never the output
 
@@ -211,6 +252,10 @@ Two rules whenever you add or edit a table that is dispatched on a string field:
 
 ## Testing / verification loop (do this before every commit)
 
+**`just preflight` runs steps 1-3 plus the pre-commit hooks.** The numbered list below is
+what each one proves and why it cannot be dropped; the Justfile is where the commands
+actually live.
+
 1. `bash -n scripts/setup-dev-tools-mac.sh` — syntax.
 2. `shellcheck -x -S warning scripts/setup-dev-tools-mac.sh` — **this is what CI runs**
    (`.github/workflows/lint.yml`), `-x` included. Keep it clean — and note a green local run
@@ -308,3 +353,25 @@ Releases are hand-prepared in a PR, then **a tag push triggers the GitHub releas
 
 - **Skills** installed to `~/.claude/skills/`: `tiki` (curl'd `SKILL.md`) and a **scoped set of Google Workspace (`gws`) skills** — Drive/Docs/Slides/Sheets/Forms only (sparse-cloned from `googleworkspace/cli`; Gmail/Calendar/Chat/Meet deliberately excluded). Skills are recipes, **not** an access boundary — `gws`'s reach is set by the OAuth scopes granted at `gws auth setup`.
 - **MCP servers** registered via `claude mcp add` (not idempotent — the script guards): `filesystem, github, git, fetch, context7, aws-docs, aws-pricing, aws-iac, aws-knowledge, cloudwatch, iam, herald`.
+
+## Hard stops
+
+Each of these has cost a release at least once. The reasoning for all of them is above; this
+is the list to check against before you commit.
+
+- **Do not edit a generated file to make a change stick.** Edit the heredoc. A direct edit is
+  a temporary local patch and must be stated as one, because the next run reverts it.
+- **Do not audit your own machine and report it as a repo defect.** The output there may be
+  older than the script. Extract the heredoc first.
+- **Do not loosen the exact-match test in `write_managed`.** Anything short of an exact match
+  to our own output eats real user config.
+- **Do not add a `case` or a data-keyed lookup without a loud `*)` default.** A silent no-op
+  on an unrecognized key is how 12 rows did nothing for several releases.
+- **Do not commit directly to `main`,** and do not write code before the issue exists. The
+  carve-outs are a `chore(release)` bump and a trivial one-liner explicitly asked for.
+- **Do not ship a fix that only reaches fresh installs.** Ask how it reaches a machine that
+  was already provisioned.
+- **Do not commit secrets,** and do not read, echo, or type a credential. Auth is Apple
+  Passwords and the OS credential tools.
+- **Do not bypass a failing check without saying why.** `--no-verify` is an escape hatch, not
+  a workflow.

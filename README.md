@@ -20,6 +20,20 @@ A single setup script that installs and configures **220+ tools** with **60+ con
 - [Guide](docs/GUIDE.md) -- daily workflow, tool usage, and setup walkthrough
 - [Shortcuts](docs/SHORTCUTS.md) -- keyboard shortcuts and shell aliases reference
 
+## Project structure
+
+Everything below the script is documentation about the script, or CI that guards it.
+
+| Path | Holds |
+|---|---|
+| [`scripts/setup-dev-tools-mac.sh`](scripts/setup-dev-tools-mac.sh) | The whole product |
+| [`AGENTS.md`](AGENTS.md) | Procedural rules: workflow, commands, verification loop |
+| [`CONVENTIONS.md`](CONVENTIONS.md) | Normative rules: how the code must look and behave |
+| [`CONTRIBUTING.md`](CONTRIBUTING.md) | How to open a change, for humans |
+| [`specs/`](specs/) | Planning state, architecture decision records, tech stack |
+| [`Justfile`](Justfile) | Every command. `just preflight` before any commit. |
+| [`tests/`](tests/) | Helper unit tests (bats) and the Homebrew name check |
+
 ## Quick Start
 
 > **Before you start:** macOS ships `bash` 3.2, but this script needs **bash 4+**.

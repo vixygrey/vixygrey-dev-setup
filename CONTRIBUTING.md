@@ -1,74 +1,96 @@
 # Contributing
 
-Thanks for your interest in contributing to this project! Here's how to get involved.
+Thank you for taking the time to contribute.
 
-## Getting Started
+## Before you start
 
-1. Fork the repository
-2. Clone your fork locally
-3. Create a feature branch: `git switch -c feature/your-change`
-4. Make your changes
-5. Run the linters (see below)
-6. Commit using [conventional commits](https://www.conventionalcommits.org/): `type(scope): description`
-7. Push and open a pull request against `main`
+Two files define how this repository works. This document does not repeat them.
 
-## Development Requirements
+- **[`AGENTS.md`](AGENTS.md)** — procedural rules: the workflow, the commands, the
+  verification loop, and how a change reaches a machine that is already provisioned.
+- **[`CONVENTIONS.md`](CONVENTIONS.md)** — normative rules: helper usage, managed-block
+  discipline, category structure, test architecture, line endings.
 
-- [shellcheck](https://github.com/koalaman/shellcheck) for linting the setup script
-- [pre-commit](https://pre-commit.com/) (recommended) -- runs ShellCheck, gitleaks, typos, and file-hygiene checks before every commit
+Read both before you open a pull request. They apply to human contributors and to coding
+agents alike. When the two conflict, follow the process in `AGENTS.md` and the substance in
+`CONVENTIONS.md`.
 
-## Linting
+One rule from `AGENTS.md` is worth stating here, because it is the step people skip:
+**edit the generator, never the output.** Almost every config file, and the whole of the
+user's `~/.claude` tree, is written by a heredoc inside
+[`scripts/setup-dev-tools-mac.sh`](scripts/setup-dev-tools-mac.sh). Editing the produced file
+does nothing. The next run overwrites it.
 
-The setup script must pass ShellCheck with zero issues before merging.
+## Setup
 
-```bash
-shellcheck -x -S warning scripts/setup-dev-tools-mac.sh
-```
-
-CI runs ShellCheck automatically on every PR.
-
-### Pre-commit hooks (recommended)
-
-The repo ships a `.pre-commit-config.yaml` that runs ShellCheck (matching CI), gitleaks, typos, and a few file-hygiene checks. Install once:
+You need **bash 4+**. macOS ships 3.2, and the script refuses to run without a newer one.
 
 ```bash
-pre-commit install                    # installs the git hook
-pre-commit run --all-files            # run all hooks against the whole repo
-pre-commit autoupdate                 # bump hook versions
+brew install bash          # the one manual prerequisite
+brew install just          # the task runner used below
+pre-commit install         # installs the git hook
 ```
 
-`pre-commit` is installed by the setup script.
+## The short version
 
-## Guidelines
+1. **Open an issue first.** Use the templates in
+   [`.github/ISSUE_TEMPLATE/`](.github/ISSUE_TEMPLATE/). State the problem, the proposed fix,
+   and how we will know it worked. The issue is where the root cause gets recorded before the
+   fix shapes your thinking.
+2. Branch from `main` and keep the branch short lived. Prefixes are `feature/`, `fix/`,
+   `chore/`, and `docs/`.
+3. Implement in small commits, using [conventional commits](https://www.conventionalcommits.org/).
+4. **Update [`CHANGELOG.md`](CHANGELOG.md) as part of the change, not afterwards.** Add an
+   entry under `## [Unreleased]`, and cite the **issue** number rather than the pull request.
+5. Run `just preflight` until it passes.
+6. Open a pull request with a summary, the changes, and a test plan. Reference the issue with
+   `Closes #N`.
 
-- **Keep the script idempotent** -- every install block should skip if the tool is already present
-- **Use the existing helper functions** (`installed`, `brew_install`, `log`, `info`, `warn`, etc.) rather than raw commands
-- **Test with `--dry-run`** before running a full install to verify your changes parse correctly
-- **One tool per commit** when adding new tools; group related config changes together
-- **Update documentation** if you add a new tool or change behavior (README, GUIDE, SHORTCUTS)
-- **Follow the category system** -- place tools in the correct category and update `ALL_CATEGORIES` if adding a new one
+Do not commit directly to `main`.
 
-## Adding a New Tool
+## Verification
 
-1. Find the right category in the script (or propose a new one)
-2. Add an install block using the existing pattern:
-   ```bash
-   if ! installed tool_name; then
-     info "Installing tool_name..."
-     brew_install tool_name
-     mark_done "tool_name"
-   fi
-   ```
-3. Add any configuration below the install block
-4. Update `--list` output and the README tool table
-5. Test with `--dry-run` and a real install on a clean-ish system if possible
+```bash
+just preflight    # lint, tests, dry run, and the pre-commit hooks
+just verify       # ask each installed tool whether it reads what we generate
+```
 
-## Reporting Issues
+`just --list` shows every recipe. `preflight` mirrors what CI runs, so a green local run is
+the fastest way to predict a green pull request. Two cautions:
 
-- Use GitHub Issues for bugs, feature requests, and tool suggestions
-- Include your macOS version and the script output/log when reporting bugs
-- Check existing issues before opening a new one
+- A green local ShellCheck is **not** proof that CI is green. The runner may use a different
+  build. When CI disagrees with your ShellCheck, CI is the gate.
+- `verify` is separate on purpose. It queries the tools installed on your own machine, so it
+  cannot gate a pull request. Run it after you touch any config path. Read a `FAIL` as
+  *the file is fine, the tool is ignoring it*.
+
+## Adding a tool
+
+`AGENTS.md` and `CONVENTIONS.md` carry the full rules. In outline:
+
+1. Find the right category in the script, or propose a new one.
+2. Install through the existing helper, never through a raw `brew install`. The helpers
+   snapshot installed state and skip work already done, which is what keeps the script
+   idempotent.
+3. Put any configuration in the `configs` segment, not beside the install. Categories
+   install. The `configs` segment configures.
+4. Name the **binary**, not the package. A permission rule or a document that says `trippy`
+   never matches, because the binary is `trip`.
+5. Update the README tool table and `--list`.
+
+The `brew-name-check` CI job rejects a formula name that does not exist, in the declared
+type, in Homebrew's core API. Run `just hooks` before you push to catch the rest.
+
+## Reporting bugs and requesting features
+
+Use the issue templates. Include your macOS version, the output of
+`./scripts/setup-dev-tools-mac.sh --version`, and the relevant log from
+`~/.local/share/dev-setup/`. Check the existing issues first.
+
+## Security
+
+Do not open a public issue for a security problem. See [`SECURITY.md`](SECURITY.md).
 
 ## License
 
-By contributing, you agree that your contributions will be licensed under the [MIT License](LICENSE).
+Your contributions are licensed under the [MIT License](LICENSE).

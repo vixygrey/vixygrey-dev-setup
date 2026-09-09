@@ -1,0 +1,5 @@
+# Bug registry. Written by the `investigate-bug` and `inspect-quality` skills.
+#
+# GitHub issues remain the system of record for this repo. An entry here is the
+# working note for an investigation in progress, not a replacement for the issue.
+bugs: []
