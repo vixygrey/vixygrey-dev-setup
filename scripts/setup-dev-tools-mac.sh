@@ -93,8 +93,15 @@ success() {
     ((INSTALL_SUCCESS++)) || true
 }
 
-# configured() — a config file was written. Counts into `Configured:`, separately from
+# configured() — configuration was applied. Counts into `Configured:`, separately from
 # installs, and is SILENT under --dry-run.
+#
+# "Configuration", not "a config file was written": the macos-defaults segments apply
+# system settings through `defaults write`, `networksetup` and `dockutil` rather than
+# by writing a file we own, and they belong in this bucket for the same reason a
+# config file does (#500). They reported through success() until then, so a run that
+# installed nothing announced `Installed: 29` — the #381 defect surviving in a section
+# that fix did not reach. A fourth counter would split a distinction nobody needs.
 #
 # Silent rather than reworded: these messages are past-tense summaries ("delta
 # configured as git pager"), and no prefix makes a past-tense sentence honest about
@@ -6896,7 +6903,7 @@ if [[ "$DRY_RUN" != "true" ]] && installed dockutil; then
     dockutil --remove all --no-restart >> "$LOG_FILE" 2>&1 || true
     killall Dock >/dev/null 2>&1 || true
 fi
-success "Dock configured (cleared to Finder + Trash, small icons, auto-hide, scale effect)"
+configured "Dock configured (cleared to Finder + Trash, small icons, auto-hide, scale effect)"
 
 # -- Screenshots --
 # Save screenshots as PNG
@@ -6909,7 +6916,7 @@ defaults write com.apple.screencapture location -string "$SCREENSHOT_DIR"
 defaults write com.apple.screencapture disable-shadow -bool true
 # Don't show floating thumbnail after capture
 defaults write com.apple.screencapture show-thumbnail -bool false
-success "Screenshots configured (PNG, ~/Screenshots, no shadow)"
+configured "Screenshots configured (PNG, ~/Screenshots, no shadow)"
 
 # -- Global hotkey: free cmd+space for Ghostty's quick terminal --
 # Ghostty binds global:cmd+space, which macOS Spotlight owns by default. Disable
@@ -6920,7 +6927,7 @@ defaults write com.apple.symbolichotkeys.plist AppleSymbolicHotKeys -dict-add 64
     "<dict><key>enabled</key><false/><key>value</key><dict><key>type</key><string>standard</string><key>parameters</key><array><integer>32</integer><integer>49</integer><integer>1048576</integer></array></dict></dict>"
 defaults write com.apple.symbolichotkeys.plist AppleSymbolicHotKeys -dict-add 65 \
     "<dict><key>enabled</key><false/></dict>"
-success "Spotlight cmd+space disabled (freed for Ghostty; takes effect after logout)"
+configured "Spotlight cmd+space disabled (freed for Ghostty; takes effect after logout)"
 
 # -- Keyboard --
 # Faster key repeat rate (lower = faster, default is 6)
@@ -6941,19 +6948,19 @@ defaults write NSGlobalDomain NSAutomaticDashSubstitutionEnabled -bool false
 defaults write NSGlobalDomain NSAutomaticQuoteSubstitutionEnabled -bool false
 # Disable period substitution (double space -> period)
 defaults write NSGlobalDomain NSAutomaticPeriodSubstitutionEnabled -bool false
-success "Keyboard configured (fast repeat, no press-and-hold, no auto-correct)"
+configured "Keyboard configured (fast repeat, no press-and-hold, no auto-correct)"
 
 # -- Trackpad --
 # Faster tracking speed (0.0 to 3.0, default ~1.0)
 defaults write NSGlobalDomain com.apple.trackpad.scaling -float 2.0
-success "Trackpad configured (faster tracking)"
+configured "Trackpad configured (faster tracking)"
 
 # -- Mission Control --
 # Keep Spaces in a fixed order — don't auto-rearrange by most-recent-use, so swiping
 # between Spaces is predictable. The cosmetic Mission Control tweaks (animation speed,
 # group-by-app) were dropped as unused.
 defaults write com.apple.dock mru-spaces -bool false
-success "Mission Control: auto-rearrange Spaces disabled (fixed Space order)"
+configured "Mission Control: auto-rearrange Spaces disabled (fixed Space order)"
 
 # Hot Corners: left at macOS defaults (all off). The default is already no-action and
 # they aren't used here, so there's nothing to disable.
@@ -6967,7 +6974,7 @@ defaults write com.apple.Safari "com.apple.Safari.ContentPageGroupIdentifier.Web
 defaults write com.apple.Safari ShowFullURLInSmartSearchField -bool true 2>/dev/null || safari_ok=false
 
 if [[ "$safari_ok" == "true" ]]; then
-    success "Safari configured (developer menu, full URL)"
+    configured "Safari configured (developer menu, full URL)"
 else
     warn "Safari settings skipped — requires Full Disk Access (System Settings > Privacy & Security > Full Disk Access > Terminal)"
 fi
@@ -6978,7 +6985,7 @@ defaults write com.apple.TextEdit RichText -int 0
 # Open and save files as UTF-8
 defaults write com.apple.TextEdit PlainTextEncoding -int 4
 defaults write com.apple.TextEdit PlainTextEncodingForWrite -int 4
-success "TextEdit configured (plain text, UTF-8)"
+configured "TextEdit configured (plain text, UTF-8)"
 
 # -- Reduce motion / Faster animations --
 # Reduce motion for faster UI (universalaccess is protected — suppress the write error
@@ -6986,13 +6993,13 @@ success "TextEdit configured (plain text, UTF-8)"
 defaults write com.apple.universalaccess reduceMotion -bool true 2>/dev/null || true
 # Speed up window resize animations
 defaults write NSGlobalDomain NSWindowResizeTime -float 0.001
-success "Animations configured (reduced motion, fast resize)"
+configured "Animations configured (reduced motion, fast resize)"
 
 # -- Stage Manager --
 # Disable Stage Manager (prevent accidental activation)
 defaults write com.apple.WindowManager GloballyEnabled -bool false 2>/dev/null || true
 defaults write com.apple.WindowManager AutoHide -bool true 2>/dev/null || true
-success "Stage Manager disabled"
+configured "Stage Manager disabled"
 
 # -- Misc --
 # Disable Notification Center and remove from menu bar (restart required)
@@ -7007,14 +7014,14 @@ defaults write NSGlobalDomain AppleHighlightColor -string "0.741176 0.576471 0.9
 defaults write NSGlobalDomain AppleInterfaceStyle -string "Dark"
 # Keep the menu bar hidden in fullscreen
 defaults write NSGlobalDomain AppleMenuBarVisibleInFullscreen -bool false
-success "Misc macOS defaults configured"
+configured "Misc macOS defaults configured"
 
 # -- Screensaver & display sleep timing --
 # Screensaver kicks in at 45 min, display sleep at 2hr (charger) / 1hr 15min (battery)
 defaults -currentHost write com.apple.screensaver idleTime -int 2700 2>/dev/null || true
 sudo pmset -c displaysleep 120 2>/dev/null || true  # charger: 2 hours
 sudo pmset -b displaysleep 75 2>/dev/null || true   # battery: 1hr 15min
-success "Screensaver at 45min, display sleep at 2hr (charger) / 1h15m (battery)"
+configured "Screensaver at 45min, display sleep at 2hr (charger) / 1h15m (battery)"
 
 # Restart Dock to apply all Dock/Mission Control changes
 killall Dock 2>/dev/null || true
@@ -10820,7 +10827,7 @@ defaults write NSGlobalDomain PMPrintingExpandedStateForPrint2 -bool true
 # Restart Finder to apply changes
 killall Finder 2>/dev/null || true
 
-success "Finder configured (hidden files visible, list view, path bar, no .DS_Store on network)"
+configured "Finder configured (hidden files visible, list view, path bar, no .DS_Store on network)"
 
 # ---- Finder Sidebar Favorites ----
 # Uses LSSharedFileList API via inline-compiled Swift (mysides is deprecated and broken on macOS 13+)
@@ -10928,7 +10935,7 @@ SIDEBAR_SWIFT
         rmdir "$(dirname "$SIDEBAR_TOOL")" 2>/dev/null || true
 
         if [[ "$sidebar_added" -gt 0 ]]; then
-            success "Finder sidebar updated ($sidebar_added folders added)"
+            configured "Finder sidebar updated ($sidebar_added folders added)"
         else
             warn "Finder sidebar — no folders added (directories may not exist yet)"
         fi
@@ -10952,10 +10959,10 @@ else
 # sudo_local: local config for sudo (survives macOS updates)
 auth       sufficient     pam_tid.so
 EOF'
-        success "Touch ID for sudo enabled (use fingerprint instead of password)"
+        configured "Touch ID for sudo enabled (use fingerprint instead of password)"
     else
         sudo bash -c 'echo "auth       sufficient     pam_tid.so" >> /etc/pam.d/sudo_local'
-        success "Touch ID for sudo enabled"
+        configured "Touch ID for sudo enabled"
     fi
 fi
 
@@ -10982,7 +10989,7 @@ if [[ "$DNS_SET" == "true" ]]; then
     # Flush DNS cache
     sudo dscacheutil -flushcache 2>/dev/null || true
     sudo killall -HUP mDNSResponder 2>/dev/null || true
-    success "DNS set to Cloudflare (1.1.1.1) + Quad9 (9.9.9.9) + Google (8.8.8.8)"
+    configured "DNS set to Cloudflare (1.1.1.1) + Quad9 (9.9.9.9) + Google (8.8.8.8)"
 fi
 
 # ---- Spotlight exclusions (stop indexing dev directories) ----
@@ -11006,7 +11013,7 @@ done
 # Note: mdutil -i off on /usr/local or /opt/homebrew fails on macOS Ventura+
 # (they live on /System/Volumes/Data which doesn't support per-path indexing control).
 # The .metadata_never_index approach above is the reliable method.
-success "Spotlight exclusions set (node_modules, caches via .metadata_never_index)"
+configured "Spotlight exclusions set (node_modules, caches via .metadata_never_index)"
 
 # ---- Time Machine exclusions ----
 # tmutil exclusions ONLY affect Time Machine. Skip entirely when TM has no destination
@@ -11034,7 +11041,7 @@ else
             tmutil addexclusion -p "$dir" >> "$LOG_FILE" 2>&1 || tmutil addexclusion "$dir" >> "$LOG_FILE" 2>&1 || true
         fi
     done
-    success "Time Machine exclusions set (node_modules, Docker, caches, Downloads)"
+    configured "Time Machine exclusions set (node_modules, Docker, caches, Downloads)"
 fi
 
 # ---- Disable Siri ----
@@ -11043,7 +11050,7 @@ if defaults read com.apple.assistant.support "Assistant Enabled" 2>/dev/null | g
     defaults write com.apple.assistant.support "Assistant Enabled" -bool false
     defaults write com.apple.Siri StatusMenuVisible -bool false
     defaults write com.apple.Siri UserHasDeclinedEnable -bool true
-    success "Siri disabled and removed from menubar"
+    configured "Siri disabled and removed from menubar"
 else
     warn "Siri already disabled"
 fi
@@ -11053,13 +11060,13 @@ defaults write com.apple.AppleMultitouchTrackpad TrackpadThreeFingerDrag -bool f
 defaults write com.apple.driver.AppleBluetoothMultitouch.trackpad TrackpadThreeFingerDrag -bool false 2>/dev/null || true
 # Also disable via Accessibility (required on newer macOS)
 defaults write com.apple.AppleMultitouchTrackpad Dragging -bool false 2>/dev/null || true
-success "Three-finger drag disabled"
+configured "Three-finger drag disabled"
 
 # ---- Trackpad/mouse: disable natural scrolling and force click ----
 defaults write NSGlobalDomain com.apple.swipescrolldirection -bool false 2>/dev/null || true
 defaults write NSGlobalDomain com.apple.trackpad.forceClick -bool false 2>/dev/null || true
 defaults write com.apple.AppleMultitouchTrackpad ForceSuppressed -bool true 2>/dev/null || true
-success "Natural scrolling and force click disabled"
+configured "Natural scrolling and force click disabled"
 
 # ---- Trackpad: captured from this machine (tap-to-click off, secondary click, gestures) ----
 for _tp in com.apple.AppleMultitouchTrackpad com.apple.driver.AppleBluetoothMultitouch.trackpad; do
@@ -11076,38 +11083,38 @@ unset _tp
 defaults write com.apple.AppleMultitouchTrackpad FirstClickThreshold -int 1 2>/dev/null || true
 defaults write com.apple.AppleMultitouchTrackpad SecondClickThreshold -int 1 2>/dev/null || true
 defaults write com.apple.AppleMultitouchTrackpad ActuateDetents -bool true 2>/dev/null || true
-success "Trackpad preferences captured (tap-to-click off, two-finger secondary click, gestures)"
+configured "Trackpad preferences captured (tap-to-click off, two-finger secondary click, gestures)"
 
 # ---- Screen dim when idle: 30 minutes ----
 sudo pmset -a halfdim 1 2>/dev/null || true
 sudo pmset -c dim 30 2>/dev/null || true
 sudo pmset -b dim 30 2>/dev/null || true
-success "Screen dim set to 30 min"
+configured "Screen dim set to 30 min"
 
 # ---- Disable startup sound ----
 sudo nvram StartupMute=%01 2>/dev/null || true
-success "Startup sound disabled"
+configured "Startup sound disabled"
 
 # ---- Reduce transparency (slight performance boost, easier to read) ----
 defaults write com.apple.universalaccess reduceTransparency -bool true 2>/dev/null || true
-success "Transparency reduced"
+configured "Transparency reduced"
 
 # ---- Show Bluetooth in menu bar ----
 defaults write com.apple.controlcenter "NSStatusItem Visible Bluetooth" -bool true 2>/dev/null || true
-success "Bluetooth shown in menu bar"
+configured "Bluetooth shown in menu bar"
 
 # ---- Auto-set timezone ----
 sudo systemsetup -setusingnetworktime on 2>/dev/null || true
 # Use current timezone (don't override user's existing setting)
 # sudo systemsetup -settimezone "America/Chicago" 2>/dev/null || true
-success "Network time enabled (timezone auto-detected)"
+configured "Network time enabled (timezone auto-detected)"
 
 # ---- Software Update: auto-check but don't auto-install ----
 defaults write com.apple.SoftwareUpdate AutomaticCheckEnabled -bool true 2>/dev/null || true
 defaults write com.apple.SoftwareUpdate AutomaticDownload -bool true 2>/dev/null || true
 defaults write com.apple.SoftwareUpdate AutomaticallyInstallMacOSUpdates -bool false 2>/dev/null || true
 defaults write com.apple.commerce AutoUpdate -bool false 2>/dev/null || true
-success "Software Update configured (auto-check, no auto-install)"
+configured "Software Update configured (auto-check, no auto-install)"
 
 # ---- Disable iCloud Desktop & Documents sync (prevents dev files syncing) ----
 # This prevents projects in ~/Desktop and ~/Documents from being uploaded to iCloud

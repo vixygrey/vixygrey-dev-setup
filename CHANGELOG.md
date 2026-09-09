@@ -6,6 +6,18 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 > Release notes for 7.0.0–7.1.1 live in [GitHub Releases](https://github.com/vixygrey/vixygrey-dev-setup/releases) (auto-generated). This file resumes hand-written notes at 7.2.0.
 
+## [Unreleased]
+
+### Fixed
+
+- **`macos-defaults` reported configuration as installs** (#500). A run of `--only macos-defaults,mac-bloat` on 7.20.0 announced `Installed: 29, Configured: 0`. Nothing was installed. Twenty-nine things were configured, and the output said so in its own words: "Dock configured", "Screenshots configured", "Keyboard configured". Both segments reported through `success()`, which is defined as "a tool was INSTALLED" and counts into `INSTALL_SUCCESS`. They held 29 `success` calls and zero `configured` calls, which is exactly the number the run printed.
+
+  This is the #381 defect in a section that fix did not reach. That issue split one counter into three precisely because "a run that installed nothing still reported 71", and the same shape survived here for every release since.
+
+  Cosmetic rather than dangerous, in two respects. `--dry-run` was never affected: the segments carry 17 `DRY_RUN` guards and skip the work entirely, so a dry run always reported `Installed: 0` and the CI dry-run job stayed green throughout. No setting was ever misapplied either. The work was right and only the number describing it was wrong. What it cost is the thing #381 was about: the summary is the only part of a run most people read, and a number that counts configuration as installation cannot be used to spot a run that did not do its job.
+
+  The comment above `configured()` is widened to match. It said "a config file was written", and a macOS default is a system setting rather than a file we own. The bucket is still correct, and a fourth counter would split a distinction nobody needs. One incidental gain: `configured()` is silent under `--dry-run` by design, so a line that a future edit moves outside its guard now stays quiet instead of claiming an action that did not happen.
+
 ## [7.20.0] - 2026-09-08
 
 A release about this repo holding itself to the template it ships.
@@ -1102,6 +1114,7 @@ Minor release rolling up two follow-up PRs to v4.0.0: a tool-discoverability aud
 - Document all new tools in `GUIDE-MACOS.md`, `GUIDE-LINUX.md`, `GUIDE-WINDOWS.md` with usage examples (#5)
 - Update `SHORTCUTS-*.md` with new alias rows and a "Terminal Apps" section (#5)
 
+[Unreleased]: https://github.com/vixygrey/vixygrey-dev-setup/compare/v7.20.0...HEAD
 [7.20.0]: https://github.com/vixygrey/vixygrey-dev-setup/compare/v7.19.0...v7.20.0
 [7.19.0]: https://github.com/vixygrey/vixygrey-dev-setup/compare/v7.18.0...v7.19.0
 [7.18.0]: https://github.com/vixygrey/vixygrey-dev-setup/compare/v7.17.0...v7.18.0
