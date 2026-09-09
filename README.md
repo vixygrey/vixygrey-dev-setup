@@ -597,6 +597,10 @@ Applied consistently across the machine, with built-in Dracula variants kept whe
 | **aichat** | Dracula-Sakura dark TextMate theme plus rose/lilac prompt colors in config |
 | **herald** | Local Dracula-Sakura YAML theme in `~/.herald/themes/` with `theme.name` merged safely into `conf.yaml` |
 | **omp** | Full Dracula-Sakura custom theme in `~/.omp/agent/themes/dracula-sakura.json`, selected through `theme.dark` in `config.yml` |
+| **lnav** | Full Dracula-Sakura `theme-def` (151 values) as a config fragment in `~/.config/lnav/configs/dev-setup/`, selected with lnav's own `:config` |
+| **nushell** | 59 `color_config` keys in `config.nu` — types, shapes, and the reedline chrome |
+| **atuin** | 15-token theme in `~/.config/atuin/themes/dracula-sakura.toml` |
+| **pgcli / mycli** | `syntax_style = dracula`, plus a `[colors]` block for the prompt-toolkit chrome the Pygments style does not reach |
 | **claws** | Built-in `dracula` theme via `claws --theme dracula` alias |
 | **miniserve** | `--color-scheme-dark dracula` in the `serve` alias |
 | **vivid** | Dracula-themed LS_COLORS for file type coloring |

@@ -8,6 +8,26 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Added
+
+- **Four more tools carry the Dracula-Sakura palette: lnav, nushell, atuin, and pgcli/mycli** (#518). Each accepted a custom theme and had none. Every mechanism was verified against the tool or its source rather than its documentation, and each check was run with a control, because three of the four accept an invalid value in silence.
+
+  **lnav** gets a full `theme-def`: 151 values across `styles`, `syntax-styles`, `status-styles`, and `log-level-styles`. It ships a built-in `dracula`, which was the cheap option and not taken, because plain Dracula lacks the rose and lilac accents that make the house palette what it is. The theme is a config **fragment** under `~/.config/lnav/configs/dev-setup/`, because lnav rewrites its own `config.json`: one `:config` command makes it dump `tuning`, `theme-defs`, and `log.demux` into that file. Same rule as omp's `config.yml`, never own the file the tool owns. Selection goes through lnav's own `:config` writer.
+
+  **nushell** gets 59 `color_config` keys in a `config.nu` this script had never written. Until now it wrote `env.nu` only, so nushell ran stock colours while every other TUI carried the palette.
+
+  **atuin** gets a 15-token theme file. The `Meaning` enum in `atuin-client/src/theme.rs` defines fifteen tokens. The help text embedded in the binary lists seven and says values must be "lowercase entries" from the palette named-colour index, which reads as named-only. The parser disagrees: it checks for a leading `#` and reads hex pairs before falling back to named lookup, so the real palette is usable rather than approximated from CSS colour names.
+
+  **pgcli and mycli** move from `syntax_style = monokai`, commented "Dracula-ish", to `dracula`, which is a real Pygments style and present in this install. pgcli also gains a `[colors]` block for the completion menu, toolbar, and search chrome that a Pygments style never touches.
+
+  **Three traps are recorded in comments where they apply,** because each produced a false reading first:
+
+  - `nu -c '...'` does **not** load `config.nu`. Reading a colour back that way returns nushell's default and looks exactly like a config the tool ignores. The correct check names the file: `nu --config ~/.config/nushell/config.nu -c '...'`.
+  - nushell accepts **unknown** colour keys in silence, so a typo is a line that does nothing rather than an error. `date` and `custom` were wrong here until the keys were diffed against `$env.config.color_config | columns`. The real names are `datetime` and `shape_custom`.
+  - `lnav` refuses `/dev/null` with "unable to open file ... Invalid argument", so the selection step needs a real one-line temp file. Passing `/dev/null` failed the step on a real run while the theme itself was perfectly good.
+
+  The reason every check has a control: feeding atuin a theme containing `Base = "zzz-not-a-colour"` produced no error at all, because the command being run never rendered a theme. Acceptance only means something once the tool is shown to reject a bad value.
+
 ### Removed
 
 

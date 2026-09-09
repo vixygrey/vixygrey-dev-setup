@@ -2301,6 +2301,15 @@ if [[ "$VERIFY" == "true" ]]; then
     # asciinema has no `config check`. It does fail loudly on a config it cannot
     # read, so drive its cheapest subcommand and look for a CONFIG complaint —
     # not the unrelated "Device not configured" that a non-tty play always emits.
+    _verify_lnav() {
+        # lnav refuses /dev/null ("unable to open file ... Invalid argument"), so
+        # it needs a real file to open before it will answer anything (#518).
+        local probe out
+        probe="$(mktemp)"; printf 'verify\n' > "$probe"
+        out="$(lnav -n -c ':config /ui/theme' "$probe" 2>&1)"
+        rm -f "$probe"
+        grep -qE '^/ui/theme = "dracula-sakura"' <<<"$out"
+    }
     _verify_asciinema() {
         local out cast; cast="$(mktemp)"
         printf '{"version":2,"width":80,"height":24}\n' > "$cast"
@@ -2335,6 +2344,9 @@ if [[ "$VERIFY" == "true" ]]; then
         # Reading theme.dark rather than a model role keeps it honest when no
         # GEMINI_API_KEY is set: the theme resolves with no provider reachable at all.
         "validate|omp|$HOME/.omp/agent/config.yml|_verify_output_has 'dracula-sakura' omp config get theme.dark"
+        # Asks lnav which theme it RESOLVED, not whether the file parses. A pass
+        # means the fragment was found, loaded, and selected (#518).
+        "validate|lnav|${XDG_CONFIG_HOME:-$HOME/.config}/lnav/configs/dev-setup/dracula-sakura.json|_verify_lnav"
         "validate|ghostty|$HOME/.config/ghostty/config|ghostty +validate-config"
         "validate|zellij|$HOME/.config/zellij/config.kdl|_verify_output_has 'Well defined' zellij setup --check"
         "validate|ngrok|$HOME/Library/Application Support/ngrok/ngrok.yml|ngrok config check"
@@ -4991,6 +5003,13 @@ ATUIN_CONFIG="$ATUIN_CONFIG_DIR/config.toml"
     write_managed "$ATUIN_CONFIG" "#" <<'ATUIN_CONF'
 ## atuin configuration
 
+# -- Theme --------------------------------------------------------------------
+# Selects themes/dracula-sakura.toml, written beside this file. `style` below is
+# layout (compact vs full), not colour — atuin had no colours until #518.
+[theme]
+name = "dracula-sakura"
+
+
 # -- Search -------------------------------------------------------------------
 # Search mode: prefix, fulltext, fuzzy, skim
 search_mode = "fuzzy"
@@ -5048,6 +5067,40 @@ secrets_filter = true
 stats.show_in_footer = true
 ATUIN_CONF
     configured "atuin configured (fuzzy search, local-only, history filter, enter=paste)"
+
+    # -- Dracula-Sakura theme -----------------------------------------------------
+    # 15 tokens, taken from the `Meaning` enum in atuin-client/src/theme.rs. The
+    # help text embedded in the binary lists only 7 and says values must be
+    # "lowercase entries" from the palette named-colour list; both are out of date.
+    # The parser checks for a leading `#` and reads hex pairs BEFORE falling back
+    # to named lookup (theme.rs:184-215), so the real palette is usable (#518).
+    #
+    # An unknown token or an unparsable colour is skipped rather than rejected,
+    # and `atuin history list` renders no theme at all — a run that "does not
+    # complain" proves nothing here. `atuin` itself is the check.
+    ensure_dir "$ATUIN_CONFIG_DIR/themes"
+    write_generated "$ATUIN_CONFIG_DIR/themes/dracula-sakura.toml" <<'ATUIN_THEME_CONF'
+[theme]
+name = "dracula-sakura"
+
+[colors]
+Base = "#f8f8f2"
+Title = "#ff9fe3"
+Important = "#ffc2ec"
+Guidance = "#9be7ff"
+Annotation = "#8a88c7"
+Muted = "#a297cb"
+AlertInfo = "#9be7ff"
+AlertWarn = "#ffcf93"
+AlertError = "#ff7aa8"
+SyntaxCommand = "#ff9fe3"
+SyntaxFlag = "#d4b2ff"
+SyntaxString = "#fff0a8"
+SyntaxVariable = "#ffcf93"
+SyntaxOperator = "#ff9fe3"
+SyntaxComment = "#8a88c7"
+ATUIN_THEME_CONF
+    configured "atuin Dracula-Sakura theme written (~/.config/atuin/themes/dracula-sakura.toml)"
 
 # ---- lazygit Dracula theme ----
 if installed lazygit; then
@@ -6677,6 +6730,9 @@ W3M_CONF
 NUSHELL_ENV="$(XDG_CONFIG_HOME="$HOME/.config" nu -c '$nu.env-path' 2>/dev/null | tail -1)"
 NUSHELL_ENV="${NUSHELL_ENV:-$HOME/.config/nushell/env.nu}"
 NUSHELL_SUPERSEDED="$HOME/Library/Application Support/nushell/env.nu"
+# Same question for the config file, asked the same way rather than assumed.
+NUSHELL_CONFIG="$(XDG_CONFIG_HOME="$HOME/.config" nu -c '$nu.config-path' 2>/dev/null | tail -1)"
+NUSHELL_CONFIG="${NUSHELL_CONFIG:-$HOME/.config/nushell/config.nu}"
     info "Creating nushell env config..."
     write_managed "$NUSHELL_ENV" "#" <<'NUSHELL_ENV_CONF'
 # Nushell environment config
@@ -6694,6 +6750,262 @@ NUSHELL_ENV_CONF
     remove_superseded_managed "$NUSHELL_SUPERSEDED" \
         "nushell reads $NUSHELL_ENV" "(#333)"
     configured "nushell env configured (starship prompt, Homebrew paths)"
+
+    # -- Dracula-Sakura colours ---------------------------------------------------
+    # Until #518 this script wrote env.nu and never config.nu, so nushell ran with
+    # its stock colours while every other TUI carried the house palette.
+    #
+    # `$env.config.color_config` is the whole surface: `nu -c '$env.config.color_config
+    # | columns | length'` reports 68 keys. The ones below are the visible ones —
+    # the shape/type colours that every table cell goes through, plus the prompt and
+    # the reedline hints. Anything left unset keeps nushell's default rather than
+    # going unstyled, which is why this is not all 68.
+    #
+    # Two traps, both hit while writing this:
+    #
+    # `nu -c '...'` does NOT load config.nu. Reading a colour back that way returns
+    # nushell's default and looks exactly like a config the tool is ignoring. Check
+    # with `nu --config ~/.config/nushell/config.nu -c '$env.config.color_config.header'`
+    # instead, which reports the value this file actually sets.
+    #
+    # nushell accepts UNKNOWN colour keys in silence, so a typo is not an error, it
+    # is a line that does nothing. `date` and `shape_custom` were wrong here for
+    # exactly that reason until the keys were diffed against
+    # `nu -c '$env.config.color_config | columns'`. Do that after editing this block.
+    info "Creating nushell colour config..."
+    write_managed "$NUSHELL_CONFIG" "#" <<'NUSHELL_CONF'
+# Nushell colours — Dracula-Sakura
+
+$env.config.color_config = {
+    # Structural
+    separator: "#4b4963"
+    leading_trailing_space_bg: { attr: "n" }
+    header: { fg: "#ff9fe3" attr: "b" }
+    row_index: { fg: "#8a88c7" attr: "b" }
+    empty: "#9be7ff"
+    hints: "#8a88c7"
+    search_result: { fg: "#282a36" bg: "#fff0a8" }
+
+    # Types
+    bool: "#9be7ff"
+    int: "#d4b2ff"
+    float: "#d4b2ff"
+    string: "#f8f8f2"
+    nothing: "#8a88c7"
+    binary: "#d4b2ff"
+    duration: "#ffcf93"
+    filesize: "#8af7cf"
+    datetime: "#ffc2ec"
+    range: "#ffcf93"
+    cell-path: "#ddd2f7"
+    record: "#9be7ff"
+    list: "#9be7ff"
+    block: "#9be7ff"
+    closure: "#8af7cf"
+    glob: "#8af7cf"
+    shape_custom: "#8af7cf"
+
+    # Shapes — how the line you are typing is highlighted
+    shape_binary: { fg: "#d4b2ff" attr: "b" }
+    shape_bool: "#9be7ff"
+    shape_int: { fg: "#d4b2ff" attr: "b" }
+    shape_float: { fg: "#d4b2ff" attr: "b" }
+    shape_range: { fg: "#ffcf93" attr: "b" }
+    shape_string: "#fff0a8"
+    shape_string_interpolation: { fg: "#9be7ff" attr: "b" }
+    shape_record: { fg: "#9be7ff" attr: "b" }
+    shape_list: { fg: "#9be7ff" attr: "b" }
+    shape_table: { fg: "#d4b2ff" attr: "b" }
+    shape_block: { fg: "#9be7ff" attr: "b" }
+    shape_filepath: "#8af7cf"
+    shape_directory: "#8af7cf"
+    shape_globpattern: { fg: "#8af7cf" attr: "b" }
+    shape_external: "#ff9fe3"
+    shape_internalcall: { fg: "#8af7cf" attr: "b" }
+    shape_literal: "#9be7ff"
+    shape_operator: "#ff9fe3"
+    shape_pipe: { fg: "#ff9fe3" attr: "b" }
+    shape_redirection: { fg: "#d4b2ff" attr: "b" }
+    shape_signature: { fg: "#8af7cf" attr: "b" }
+    shape_flag: { fg: "#d4b2ff" attr: "b" }
+    shape_variable: "#ffcf93"
+    shape_vardecl: "#ffcf93"
+    shape_garbage: { fg: "#f8f8f2" bg: "#ff7aa8" attr: "b" }
+    shape_nothing: "#8a88c7"
+    shape_matching_brackets: { attr: "u" }
+    shape_closure: { fg: "#8af7cf" attr: "b" }
+    shape_datetime: { fg: "#ffc2ec" attr: "b" }
+    shape_keyword: { fg: "#ff9fe3" attr: "b" }
+    shape_externalarg: { fg: "#fff0a8" attr: "b" }
+    shape_raw_string: { fg: "#fff0a8" attr: "b" }
+    shape_match_pattern: "#8af7cf"
+    selection: { fg: "#282a36" bg: "#ff9fe3" }
+    semver: "#d4b2ff"
+}
+NUSHELL_CONF
+    configured "nushell Dracula-Sakura colours written ($NUSHELL_CONFIG)"
+
+# ---- lnav Dracula-Sakura theme ----
+# lnav REWRITES ~/.config/lnav/config.json itself: one `:config` command makes it
+# dump `tuning`, `theme-defs` and `log.demux` into that file. So it gets the same
+# treatment as omp's config.yml — never a managed block in the file the tool owns.
+#
+# lnav also reads every JSON file under <config-dir>/configs/, and those fragments
+# merge into the same tree. That is the clean seam: the theme lives in a file this
+# script owns outright, and the one setting that must reach lnav's own config is
+# applied with `:config`, which is lnav's own writer.
+#
+# A partial theme-def is legal — verified by selecting one that defined only `vars`
+# and `styles.text`, and reading `/ui/theme` back. The control matters as much: the
+# same command with a name lnav does not know fails with "invalid value for
+# property /ui/theme", so acceptance means something (#518).
+if installed lnav; then
+LNAV_CONFIG_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/lnav"
+LNAV_THEME_DIR="$LNAV_CONFIG_DIR/configs/dev-setup"
+if [[ "$DRY_RUN" == "true" ]]; then
+    info "[DRY RUN] Would write lnav Dracula-Sakura theme -> $LNAV_THEME_DIR/dracula-sakura.json"
+    info "[DRY RUN] Would select it with: lnav -n -c ':config /ui/theme dracula-sakura'"
+else
+    ensure_dir "$LNAV_THEME_DIR"
+    write_generated "$LNAV_THEME_DIR/dracula-sakura.json" <<'LNAV_THEME_CONF'
+{
+  "$schema": "https://lnav.org/schemas/config-v1.schema.json",
+  "ui": {
+    "theme-defs": {
+      "dracula-sakura": {
+        "vars": {
+          "black": "#282a36",
+          "red": "#ff7aa8",
+          "green": "#8af7cf",
+          "yellow": "#fff0a8",
+          "blue": "#9be7ff",
+          "magenta": "#ff9fe3",
+          "cyan": "#9be7ff",
+          "white": "#f8f8f2",
+          "semantic_highlight_color": "semantic()"
+        },
+        "styles": {
+          "text": { "color": "#f8f8f2", "background-color": "#282a36" },
+          "alt-text": { "color": "#ddd2f7", "background-color": "#2f3144" },
+          "identifier": { "color": "semantic()" },
+          "error": { "color": "#ff7aa8", "bold": true },
+          "warning": { "color": "#ffcf93", "bold": true },
+          "ok": { "color": "#8af7cf", "bold": true },
+          "info": { "color": "#9be7ff" },
+          "hidden": { "color": "#8a88c7", "bold": true },
+          "cursor-line": { "color": "#282a36", "background-color": "#ff9fe3", "bold": true },
+          "disabled-cursor-line": { "color": "#282a36", "background-color": "#d4b2ff" },
+          "adjusted-time": { "color": "#ffc2ec" },
+          "skewed-time": { "color": "#ffcf93" },
+          "offset-time": { "color": "#9be7ff" },
+          "time-ago": { "color": "#8a88c7" },
+          "time-column": { "color": "#a297cb" },
+          "file-offset": { "color": "#8a88c7" },
+          "invalid-msg": { "color": "#ff7aa8" },
+          "focused": { "color": "#282a36", "background-color": "#ffc2ec" },
+          "disabled-focused": { "color": "#f8f8f2", "background-color": "#4b4963" },
+          "popup": { "color": "#f8f8f2", "background-color": "#323448" },
+          "popup-border": { "color": "#d4b2ff", "background-color": "#323448" },
+          "scrollbar": { "color": "#d4b2ff", "background-color": "#4b4963" },
+          "h1": { "color": "#ff9fe3", "bold": true },
+          "h2": { "color": "#ffc2ec", "bold": true },
+          "h3": { "color": "#d4b2ff", "bold": true },
+          "h4": { "color": "#9be7ff" },
+          "h5": { "color": "#8af7cf" },
+          "h6": { "color": "#ffcf93" },
+          "hr": { "color": "#4b4963" },
+          "hyperlink": { "color": "#9be7ff", "underline": true },
+          "list-glyph": { "color": "#ff9fe3" },
+          "breadcrumb": { "color": "#a297cb" },
+          "table-border": { "color": "#4b4963" },
+          "table-header": { "color": "#ff9fe3", "bold": true },
+          "quote-border": { "color": "#4b4963", "background-color": "#2f3144" },
+          "quoted-text": { "color": "#ddd2f7", "background-color": "#2f3144" },
+          "footnote-border": { "color": "#4b4963", "background-color": "#2f3144" },
+          "footnote-text": { "color": "#8a88c7", "background-color": "#2f3144" },
+          "snippet-border": { "color": "#9be7ff" },
+          "indent-guide": { "color": "#4b4963" },
+          "fuzzy-match": { "color": "#fff0a8", "bold": true },
+          "selected-text": { "color": "#282a36", "background-color": "#ffc2ec" },
+          "timeline-bar": { "background-color": "#8a88c7" }
+        },
+        "syntax-styles": {
+          "comment": { "color": "#8a88c7" },
+          "doc-directive": { "color": "#8af7cf" },
+          "keyword": { "color": "#ff9fe3", "bold": true },
+          "string": { "color": "#fff0a8" },
+          "number": { "color": "#d4b2ff" },
+          "variable": { "color": "#ffcf93" },
+          "symbol": { "color": "#d4b2ff" },
+          "type": { "color": "#9be7ff" },
+          "function": { "color": "#8af7cf" },
+          "file": { "color": "#8af7cf" },
+          "object-key": { "color": "#ffc2ec" },
+          "null": { "color": "#8a88c7", "bold": true },
+          "ascii-control": { "color": "#8af7cf" },
+          "non-ascii": { "color": "#8af7cf" },
+          "separators-references-accessors": { "color": "#ff9fe3" },
+          "re-special": { "color": "#8af7cf" },
+          "re-repeat": { "color": "#d4b2ff" },
+          "diff-delete": { "color": "#ff7aa8" },
+          "diff-add": { "color": "#8af7cf" },
+          "diff-section": { "color": "#d4b2ff", "bold": true },
+          "inline-code": { "color": "#8af7cf", "background-color": "#2f3144" },
+          "quoted-code": { "color": "#f8f8f2", "background-color": "#2f3144" },
+          "code-border": { "color": "#4b4963", "background-color": "#2f3144" },
+          "spectrogram-low": { "background-color": "#8af7cf" },
+          "spectrogram-medium": { "background-color": "#ffcf93" },
+          "spectrogram-high": { "background-color": "#ff7aa8" }
+        },
+        "status-styles": {
+          "text": { "color": "#f8f8f2", "background-color": "#323448" },
+          "title": { "color": "#282a36", "background-color": "#ff9fe3", "bold": true },
+          "subtitle": { "color": "#282a36", "background-color": "#9be7ff", "bold": true },
+          "info": { "color": "#282a36", "background-color": "#d4b2ff" },
+          "warn": { "color": "#282a36", "background-color": "#ffcf93" },
+          "alert": { "color": "#282a36", "background-color": "#ff7aa8" },
+          "active": { "color": "#282a36", "background-color": "#8af7cf" },
+          "inactive": { "color": "#a297cb", "background-color": "#2f3144" },
+          "inactive-alert": { "color": "#ff7aa8", "background-color": "#2f3144" },
+          "inactive-warn": { "color": "#ffcf93", "background-color": "#2f3144" },
+          "hotkey": { "color": "#fff0a8", "bold": true, "underline": true },
+          "title-hotkey": { "color": "#282a36", "background-color": "#ffc2ec", "underline": true },
+          "disabled-title": { "color": "#ddd2f7", "background-color": "#4b4963", "bold": true },
+          "suggestion": { "color": "#8a88c7" },
+          "alert-title": { "color": "#282a36", "background-color": "#ff7aa8", "bold": true }
+        },
+        "log-level-styles": {
+          "warning": { "color": "#ffcf93" },
+          "error": { "color": "#ff7aa8" },
+          "critical": { "color": "#ff7aa8", "bold": true },
+          "fatal": { "color": "#ff7aa8", "bold": true }
+        }
+      }
+    }
+  }
+}
+LNAV_THEME_CONF
+    configured "lnav Dracula-Sakura theme written ($LNAV_THEME_DIR/dracula-sakura.json)"
+
+    # Select it through lnav's own writer. `:config` validates the name against the
+    # themes it loaded, so a failure here means the fragment above did not parse —
+    # which is exactly what we want to hear about.
+    #
+    # lnav needs a real file to open, and REFUSES /dev/null with "unable to open
+    # file ... Invalid argument". A one-line temp file is the smallest thing it
+    # will accept; passing /dev/null makes this step fail every run while the
+    # theme itself is perfectly good.
+    _lnav_probe="$(mktemp)"
+    printf 'dev-setup theme selection\n' > "$_lnav_probe"
+    if lnav -n -c ':config /ui/theme dracula-sakura' "$_lnav_probe" >> "$LOG_FILE" 2>&1; then
+        configured "lnav theme selected (dracula-sakura)"
+    else
+        warn "lnav did not accept the dracula-sakura theme — see $LOG_FILE"
+    fi
+    rm -f "$_lnav_probe"
+    unset _lnav_probe
+fi
+fi
 
 # ---- git-cliff config ----
 GIT_CLIFF_CONFIG_DIR="$HOME/.config/git-cliff"
@@ -8646,8 +8958,38 @@ history_file = ~/.config/pgcli/history
 # Enable destructive warning (DROP, DELETE, TRUNCATE, ALTER)
 destructive_warning = all
 
-# Syntax style (Dracula-ish)
-syntax_style = monokai
+# Syntax style. `dracula` is a real Pygments style and is present in this
+# install (`pygmentize -L styles`), so the house palette is available rather
+# than approximated — monokai stood in for it until #518.
+syntax_style = dracula
+
+# syntax_style colours the SQL. These colour the prompt-toolkit chrome around
+# it, which the Pygments style never touches: completion menu, toolbar, search.
+# Values are the Dracula-Sakura palette.
+[colors]
+completion-menu.completion.current = "bg:#ff9fe3 #282a36"
+completion-menu.completion = "bg:#323448 #f8f8f2"
+completion-menu.meta.completion.current = "bg:#d4b2ff #282a36"
+completion-menu.meta.completion = "bg:#2f3144 #ddd2f7"
+completion-menu.multi-column-meta = "bg:#2f3144 #ddd2f7"
+scrollbar.arrow = "bg:#282a36"
+scrollbar = "bg:#4b4963"
+selected = "#282a36 bg:#ff9fe3"
+search = "#8af7cf"
+search.current = "#282a36 bg:#8af7cf"
+bottom-toolbar = "bg:#323448 #ddd2f7"
+bottom-toolbar.off = "bg:#323448 #8a88c7"
+bottom-toolbar.on = "bg:#323448 #9be7ff"
+search-toolbar = "#f8f8f2"
+search-toolbar.text = "#f8f8f2"
+system-toolbar = "#f8f8f2"
+arg-toolbar = "#f8f8f2"
+arg-toolbar.text = "#f8f8f2"
+bottom-toolbar.transaction.valid = "bg:#323448 #8af7cf bold"
+bottom-toolbar.transaction.failed = "bg:#323448 #ff7aa8 bold"
+literal.string = "#fff0a8"
+literal.number = "#d4b2ff"
+keyword = "bold #ff9fe3"
 
 # Keyword casing
 keyword_casing = upper
@@ -8697,7 +9039,8 @@ pager = bat --style=plain --paging=always
 prompt = '\u@\h:\d> '
 
 # Syntax style
-syntax_style = monokai
+# `dracula` is a real Pygments style, verified present in this install (#518).
+syntax_style = dracula
 
 # Keyword casing
 keyword_casing = upper
