@@ -6,7 +6,13 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 > Release notes for 7.0.0–7.1.1 live in [GitHub Releases](https://github.com/vixygrey/vixygrey-dev-setup/releases) (auto-generated). This file resumes hand-written notes at 7.2.0.
 
-## [Unreleased]
+## [7.20.1] - 2026-09-08
+
+A one-line correction to a number, found by running 7.20.0 rather than by reading it.
+
+`--only macos-defaults,mac-bloat` reported `Installed: 29` on a run that installed nothing. The two `macos-defaults` segments announced their work through `success()`, which means "a tool was installed", so every system setting they applied landed in the wrong column. It is the defect #381 fixed, surviving in a section that fix did not reach.
+
+Nothing was ever misapplied and `--dry-run` was never affected. Only the summary was wrong, which is the part of a run most people read.
 
 ### Fixed
 
@@ -1114,7 +1120,7 @@ Minor release rolling up two follow-up PRs to v4.0.0: a tool-discoverability aud
 - Document all new tools in `GUIDE-MACOS.md`, `GUIDE-LINUX.md`, `GUIDE-WINDOWS.md` with usage examples (#5)
 - Update `SHORTCUTS-*.md` with new alias rows and a "Terminal Apps" section (#5)
 
-[Unreleased]: https://github.com/vixygrey/vixygrey-dev-setup/compare/v7.20.0...HEAD
+[7.20.1]: https://github.com/vixygrey/vixygrey-dev-setup/compare/v7.20.0...v7.20.1
 [7.20.0]: https://github.com/vixygrey/vixygrey-dev-setup/compare/v7.19.0...v7.20.0
 [7.19.0]: https://github.com/vixygrey/vixygrey-dev-setup/compare/v7.18.0...v7.19.0
 [7.18.0]: https://github.com/vixygrey/vixygrey-dev-setup/compare/v7.17.0...v7.18.0
