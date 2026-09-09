@@ -8,21 +8,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
-### Fixed
-
-- **`--cleanup` sweeps the global npm tree Homebrew's removed node left behind** (#515). #344 removed Homebrew's `node`. It did not remove the tree that node had created, so a machine provisioned before that change still carried 19 packages and 1.6 GB at `$HOMEBREW_PREFIX/lib/node_modules`, with no `node` in that prefix to use them.
-
-  It was not inert. **31 live symlinks** in `$HOMEBREW_PREFIX/bin` still pointed into it — `claude`, `tsc`, `cdk`, `turbo`, `ni`, `lighthouse`, `mmdc`, `carbonyl` and more. Every one resolved, and their shebangs find `node` through `PATH`, so they would execute the **old tree's code** against mise's node. None of the 19 was an installed formula; `brew list --formula` claimed none of them. They were leftovers of `npm install -g` under the node that #344 removed.
-
-  Versions happened to match mise's tree exactly at the time this was found, which is timing rather than safety. `npm_global_install` only ever writes to mise's tree, so the two diverge at the first upgrade, and which copy runs then depends on `PATH` order in the calling context. That is the #343 defect, and the same shape #513 found with pi installed under both npm and pnpm.
-
-  **The guard is that the prefix has no node at all.** `lib/node_modules` is npm's global root for that prefix's node, so while the formula is installed the tree is live and must not be touched. A run with a node present says so and declines. Removal goes through `trash`, and the bin links are removed before the tree, because a link into a directory that no longer exists is worse than either end of the operation alone.
-
-  Links are selected by **target**, never by name: anything else in that directory belongs to a formula, and a name list would go stale the moment a package is added. `orphaned_brew_node_links` lives in the tested helper layer for that reason, with five tests covering the cases that matter — a link into `lib/node_modules` is selected, a formula's own link is not, a real file is not, a missing `bin` directory is a no-op, and a mixed directory yields only the node link.
-
-  This is the "retiring a tool is not the same as cleaning up after it" lesson (#210, #214, #224) applied to the one case that had it backwards: the tool was removed and its data was not.
-
 ### Removed
+
+
 
 - **pi is retired; omp inherits everything it carried** (#513). omp is a fork of pi, so most of what the pi block generated is now a native omp feature rather than something to port. The install, the ~1290-line config block, and the `--verify` row are gone.
 
@@ -58,6 +46,22 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
   The useful consequence is that **`macos-defaults` is now the only category that needs a password at all.** Together with #502, a machine whose system settings are converged never invokes `sudo`, so a full unattended run is possible for the first time.
 
 ### Fixed
+
+
+
+- **`--cleanup` sweeps the global npm tree Homebrew's removed node left behind** (#515). #344 removed Homebrew's `node`. It did not remove the tree that node had created, so a machine provisioned before that change still carried 19 packages and 1.6 GB at `$HOMEBREW_PREFIX/lib/node_modules`, with no `node` in that prefix to use them.
+
+  It was not inert. **31 live symlinks** in `$HOMEBREW_PREFIX/bin` still pointed into it — `claude`, `tsc`, `cdk`, `turbo`, `ni`, `lighthouse`, `mmdc`, `carbonyl` and more. Every one resolved, and their shebangs find `node` through `PATH`, so they would execute the **old tree's code** against mise's node. None of the 19 was an installed formula; `brew list --formula` claimed none of them. They were leftovers of `npm install -g` under the node that #344 removed.
+
+  Versions happened to match mise's tree exactly at the time this was found, which is timing rather than safety. `npm_global_install` only ever writes to mise's tree, so the two diverge at the first upgrade, and which copy runs then depends on `PATH` order in the calling context. That is the #343 defect, and the same shape #513 found with pi installed under both npm and pnpm.
+
+  **The guard is that the prefix has no node at all.** `lib/node_modules` is npm's global root for that prefix's node, so while the formula is installed the tree is live and must not be touched. A run with a node present says so and declines. Removal goes through `trash`, and the bin links are removed before the tree, because a link into a directory that no longer exists is worse than either end of the operation alone.
+
+  Links are selected by **target**, never by name: anything else in that directory belongs to a formula, and a name list would go stale the moment a package is added. `orphaned_brew_node_links` lives in the tested helper layer for that reason, with five tests covering the cases that matter — a link into `lib/node_modules` is selected, a formula's own link is not, a real file is not, a missing `bin` directory is a no-op, and a mixed directory yields only the node link.
+
+  This is the "retiring a tool is not the same as cleaning up after it" lesson (#210, #214, #224) applied to the one case that had it backwards: the tool was removed and its data was not.
+
+
 
 
 
@@ -1253,6 +1257,7 @@ Minor release rolling up two follow-up PRs to v4.0.0: a tool-discoverability aud
 - Document all new tools in `GUIDE-MACOS.md`, `GUIDE-LINUX.md`, `GUIDE-WINDOWS.md` with usage examples (#5)
 - Update `SHORTCUTS-*.md` with new alias rows and a "Terminal Apps" section (#5)
 
+[Unreleased]: https://github.com/vixygrey/vixygrey-dev-setup/compare/v7.21.0...HEAD
 [7.21.0]: https://github.com/vixygrey/vixygrey-dev-setup/compare/v7.20.1...v7.21.0
 [7.20.1]: https://github.com/vixygrey/vixygrey-dev-setup/compare/v7.20.0...v7.20.1
 [7.20.0]: https://github.com/vixygrey/vixygrey-dev-setup/compare/v7.19.0...v7.20.0
