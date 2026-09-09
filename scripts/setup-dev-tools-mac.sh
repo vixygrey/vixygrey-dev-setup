@@ -14555,24 +14555,28 @@ OMP_THEME_CONF
         /bin/cat > "$OMP_OURS" <<'OMP_CONFIG_CONF'
 theme:
   dark: dracula-sakura
-# Nine roles, routed at Gemini. Flash carries ordinary turns, Pro carries the two
+# Nine roles, routed at Gemini. Flash carries ordinary turns, Pro carries the three
 # roles where depth pays for itself, Flash Lite carries the cheap fan-out. Every id
 # is verified against omp's shipped catalog; an unknown one is reported as a config
 # warning at startup rather than failing silently.
+#
+# `advisor` is the second model watching every turn. It sits on Pro because it
+# reviews rather than generates, which is the job worth paying for. Watch the spend
+# if you raise how often it fires: this is the one Pro role on a per-turn path.
 modelRoles:
   default: google/gemini-3.8-flash
   task: google/gemini-3.8-flash
-  advisor: google/gemini-3.8-flash
   vision: google/gemini-3.8-flash
   slow: google/gemini-3.1-pro-preview
   plan: google/gemini-3.1-pro-preview
+  advisor: google/gemini-3.1-pro-preview
   smol: google/gemini-3.1-flash-lite
   tiny: google/gemini-3.1-flash-lite
   commit: google/gemini-3.1-flash-lite
 # gemini-3.1-pro-preview is the only Pro on the Gemini API today and it is a preview
 # id, so it can be retired without notice. An exact model key outranks a role chain,
-# which keeps `slow` and `plan` working on the day that happens. retry.modelFallback
-# defaults to true, so no switch is needed to arm these.
+# which keeps `slow`, `plan`, and `advisor` working on the day that happens.
+# retry.modelFallback defaults to true, so no switch is needed to arm these.
 retry:
   fallbackChains:
     google/gemini-3.1-pro-preview:
@@ -15208,7 +15212,7 @@ unscriptable. Work through it once, then keep it only as long as it's useful.
 - [ ] **borgmatic backups:** the setup scaffolds `~/.config/borgmatic/config.yaml`. Set `repositories`, store the passphrase in Keychain (`security add-generic-password -a "$USER" -s borg-passphrase -w`), run `borgmatic init --encryption repokey-blake2`, check with `borgmatic create --dry-run`, then enable a daily run (e.g. a LaunchAgent calling `borgmatic --verbosity -1`). ClamAV's virus DB downloads itself in the background after setup.
 - [ ] **Claude AI in croft:** `croft pair` (the AI navigator in your primary IDE) defaults to `--provider claude`, which hands off to your existing `claude` CLI — so it just works on whatever auth that already has (a Claude Pro/Max subscription **or** an API key), no separate `ANTHROPIC_API_KEY` required. Want a fully local model with no key at all? Ollama is installed and running — use the `gemma3:4b` that setup already pulled (`croft pair --provider ollama --model gemma3:4b`) or the heavier `qwen2.5-coder:14b` that's also pre-pulled for coding-oriented local loops. An Anthropic API key is **optional** here — the only thing that uses one is the `llm` CLI, and `llm` itself is optional: if Claude Code and the Claude desktop app already cover you, you can skip it entirely. If you do want `llm` for one-off prompts (e.g. `> ! llm …` from micro's command bar) or shell scripting, run `llm keys set anthropic` — setup already installs the plugin (via uv) and sets the default model to `anthropic/claude-sonnet-4-5`. (Email/calendar AI is built into **herald** — configured separately above.)
 - [ ] **Pi** (optional second agent): `pi` is installed with the local Ollama provider preconfigured and `qwen2.5-coder:14b` as the default model, plus the shared skills bridge in `~/.agents/skills/`, five Pi-local Tiki companions in `~/.pi/agent/skills/` (`tiki-capture`, `tiki-review`, `tiki-groom`, `tiki-arc`, `tiki-journal`), a local SearXNG web-research layer (`~/.pi/agent/extensions/searxng-web.ts` + `~/.pi/agent/skills/searxng-web/`), and the pinned third-party `bigpowers` package through Pi's `packages` setting. Set `SEARXNG_BASE_URL` if your instance is not on `http://127.0.0.1:8080`, then run `pi` and `/searxng-check`. Claude Code also gets bigpowers' linked skills/hooks under `~/.claude/` from the same setup run. If you want a remote provider instead, run `pi` then `/login`; if you only want the local path, nothing else is required.
-- [ ] **Oh My Pi** (third agent, Gemini-routed): `omp` is installed from the `can1357/tap` Homebrew tap with the Dracula-Sakura theme, the shared `AGENTS.md` preferences, and nine model roles pointed at Gemini — Flash for ordinary turns, Pro for `slow` and `plan`, Flash Lite for cheap subagent fan-out. It reads the same `~/.agents/skills/` bridge as Pi, so no extra skills are installed. **It needs `GEMINI_API_KEY` exported in your environment**; the setup never writes a key. Get one from Google AI Studio, store it in Apple Passwords, and export it from a file your shell reads. Then run `omp` and check the model line, or `omp config get modelRoles.default` from any shell.
+- [ ] **Oh My Pi** (third agent, Gemini-routed): `omp` is installed from the `can1357/tap` Homebrew tap with the Dracula-Sakura theme, the shared `AGENTS.md` preferences, and nine model roles pointed at Gemini — Flash for ordinary turns, Pro for `slow`, `plan`, and `advisor`, Flash Lite for cheap subagent fan-out. It reads the same `~/.agents/skills/` bridge as Pi, so no extra skills are installed. **It needs `GEMINI_API_KEY` exported in your environment**; the setup never writes a key. Get one from Google AI Studio, store it in Apple Passwords, and export it from a file your shell reads. Then run `omp` and check the model line, or `omp config get modelRoles.default` from any shell.
 - [ ] **croft** (primary IDE): installed from git `main` via cargo — run `croft` in a project to open the workspace; re-run `cargo install --git https://github.com/vitali87/croft.git --locked` to upgrade.
 - [ ] **AI side-pane:** `zellij --layout dev` opens your editor + a Claude Code pane side by side (the strongest AI workflow).
 - [ ] **chezmoi:** `chezmoi init <your-dotfiles-repo>` to bring these configs under version control across the MacBook + Mac mini.

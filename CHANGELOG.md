@@ -18,7 +18,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
   **Installed from the `can1357/tap` Homebrew tap, not npm.** The npm package declares `engines.bun >= 1.3.14`, so it is a Bun program and `npm_global_install` cannot serve it. The tap also puts a prebuilt native binary in `$HOMEBREW_PREFIX/bin`, which is on the `PATH` of `sh`, git hooks, and launchd. A mise-managed or npm-managed copy is not, which is the #345 lesson applied before it could cost anything.
 
-  Nine roles carry three models. `default`, `task`, `advisor`, and `vision` use `gemini-3.8-flash`. `slow` and `plan` use `gemini-3.1-pro-preview`. `smol`, `tiny`, and `commit` use `gemini-3.1-flash-lite`. Every id is verified against the catalog omp ships. `gemini-3.1-pro-preview` is the only Gemini Pro on the API today, and a preview id can be retired without notice, so `retry.fallbackChains` pins an exact-model fallback to Flash for the two roles that use it.
+  Nine roles carry three models. `default`, `task`, and `vision` use `gemini-3.8-flash`. `slow`, `plan`, and `advisor` use `gemini-3.1-pro-preview`. `smol`, `tiny`, and `commit` use `gemini-3.1-flash-lite`. Every id is verified against the catalog omp ships. `gemini-3.1-pro-preview` is the only Gemini Pro on the API today, and a preview id can be retired without notice, so `retry.fallbackChains` pins an exact-model fallback to Flash for the three roles that use it.
+
+  Note that `gemini-3.1-pro` without the suffix is a different thing. Only `cursor`, `google-antigravity`, and `opencode-zen` serve that id. The direct `google` provider, `google-vertex`, and `google-gemini-cli` all carry the preview id instead.
 
   **Authentication stays user-owned.** The `google` provider reads `GEMINI_API_KEY` from the environment. This script never reads, writes, or echoes a key, which matches how the pi block treats `auth.json`. A run with no key set says so once instead of finishing quietly with no reachable model.
 

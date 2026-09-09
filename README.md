@@ -1109,8 +1109,8 @@ that route by intent. This setup points all nine at **Google Gemini**:
 
 | Roles | Model | Why |
 | --- | --- | --- |
-| `default`, `task`, `advisor`, `vision` | `gemini-3.8-flash` | Ordinary turns, 1M context |
-| `slow`, `plan` | `gemini-3.1-pro-preview` | The two roles where depth pays for itself |
+| `default`, `task`, `vision` | `gemini-3.8-flash` | Ordinary turns, 1M context |
+| `slow`, `plan`, `advisor` | `gemini-3.1-pro-preview` | The three roles where depth pays for itself. `advisor` is the second model watching every turn, so it reviews rather than generates |
 | `smol`, `tiny`, `commit` | `gemini-3.1-flash-lite` | Cheap subagent fan-out |
 
 `gemini-3.1-pro-preview` is the only Gemini Pro on the API today and preview ids can be
