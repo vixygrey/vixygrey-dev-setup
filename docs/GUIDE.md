@@ -1087,6 +1087,18 @@ Language-specific rules are in `~/.claude/rules/`:
 - `python.md` — uv for packages, ruff for linting, type hints
 - `docker.md` — Multi-stage builds, non-root, hadolint
 - `iac.md` — OpenTofu, tflint, infracost, resource tagging
+- `style.md` — Voice: calm and concise, Dracula-Sakura when there is stylistic latitude
+- `writing.md` — The 53 rules of ASD-STE100 Simplified Technical English
+
+`writing.md` is the one rule file that is shared with the other agent. The same
+generator function writes it and the tail of `~/.pi/agent/AGENTS.md`, so Claude Code
+and pi cannot disagree about how to write. It applies **strictly** to written
+artifacts (docs, READMEs, runbooks, commit messages, PR bodies, changelogs, error
+strings, UI copy, agent instructions) and **loosely** to chat, where only the
+mechanical subset carries over: no slop words, no filler adverbs, no Latin
+abbreviations, no hedging, one term per concept. The 20-word and 25-word sentence
+limits and the no-contractions rule are for artifacts, not conversation, because
+imperative 20-word sentences in chat read as a maintenance manual.
 
 ---
 

@@ -629,6 +629,8 @@ The script sets up Claude Code with a comprehensive configuration for full-stack
 | `~/.claude/rules/python.md` | Python rules (uv for packages, ruff for linting, type hints, pydantic) |
 | `~/.claude/rules/docker.md` | Docker rules (multi-stage builds, non-root, hadolint, dive) |
 | `~/.claude/rules/iac.md` | IaC rules (remote state, tflint, infracost, trivy config scan) |
+| `~/.claude/rules/style.md` | Voice rules (calm and concise, Dracula-Sakura when there is stylistic latitude) |
+| `~/.claude/rules/writing.md` | Writing rules -- the 53 rules of ASD-STE100 Simplified Technical English; strict on written artifacts, mechanical subset only in chat. pi gets the identical text at the tail of `~/.pi/agent/AGENTS.md` |
 | `~/.claude/hooks/format-on-edit.sh` | Auto-format with Prettier after Claude edits JS/TS/CSS/JSON/MD files |
 | `~/.claude/hooks/lint-python.sh` | Auto-lint and fix Python files with ruff after Claude edits them |
 | `~/.claude/hooks/lint-dockerfile.sh` | Lint Dockerfiles with hadolint after Claude edits them |
