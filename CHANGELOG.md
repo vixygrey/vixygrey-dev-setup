@@ -10,6 +10,29 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ### Removed
 
+- **pi is retired; omp inherits everything it carried** (#513). omp is a fork of pi, so most of what the pi block generated is now a native omp feature rather than something to port. The install, the ~1290-line config block, and the `--verify` row are gone.
+
+  What omp already did natively, and therefore what was deleted rather than moved:
+
+  | pi generated | omp equivalent |
+  | --- | --- |
+  | `extensions/searxng-web.ts`, about 300 lines of TypeScript, plus its skill | `searxng` is one of 23 built-in `web_search` backends, configured with `searxng.endpoint` |
+  | `models.json` registering four local Ollama models | native `ollama` provider with local discovery, key optional |
+  | `themes/dracula-sakura.json` | omp has its own, authored against its own schema |
+  | `AGENTS.md`, `settings.json` | already generated for omp, from the same emitters |
+
+  The SearXNG swap is the clearest of these: a hand-written tool became two lines of config pointing at the same instance, and the keyless backends stay behind it so search still works when the instance is down.
+
+  **Three things moved rather than went.** The five Tiki companion skills (`tiki-capture`, `tiki-review`, `tiki-groom`, `tiki-arc`, `tiki-journal`) now generate into `~/.omp/agent/skills/`, omp's native skills location. The `~/.agents/skills` bridge moved into the omp block, unchanged, because that directory was always omp's own canonical location rather than something pi lent it. And the Claude Code bigpowers link moved out intact: it lived inside the pi block but only ever ran bigpowers' `installGlobal` helper for the `claude` target. Only pi's `packages` pinning was actually pi-coupled, and that went with pi.
+
+  **`--cleanup` removes pi and sweeps `~/.pi`,** through the two mechanisms that already existed. `DEPRECATED_TOOLS` gets an `npm:` row, and `CONFIG_ORPHANS` gets `pi|$HOME/.pi|omp`. That list is guarded on binary presence and runs after the uninstall loop, so one invocation uninstalls the package and then sweeps the directory in the same pass, through `trash` rather than `rm -rf`. Both guards in `CONVENTIONS.md` section 15 are satisfied without new code.
+
+  CAUTION: `~/.pi` holds content this generator never wrote. Six hand-placed extensions, an `APPEND_SYSTEM.md`, a second theme, `auth.json`, and session history. Removing it is deliberate and was chosen explicitly. It goes to the Trash, so it is recoverable from Finder until that is emptied. Most of those extensions were approximations of things omp has as first-class settings: `permission-gate`, `confirm-destructive`, and `protected-paths` are what `tools.approvalMode`, `tools.approval.<tool>`, and `bash.patterns` do natively, with built-in rules for the critical destructive patterns.
+
+  One test was inverted. `tests/cleanup-npm.bats` asserted that pi must **not** carry a `DEPRECATED_TOOLS` row, citing #399: pi was a supported second agent, so reinstalling it by hand was legitimate and `--cleanup` had to leave it alone. That reasoning ended with the retirement, which is the same call already made for tmux, helix, and aider. A second test pins that `~/.pi` is swept by `CONFIG_ORPHANS` rather than by a bespoke `rm`.
+
+  `emit_agent_preferences` keeps its harness-name argument despite now having one consumer. The body is 50 lines of prose and the heading is the only part that varies, so a future second harness costs one call rather than a copy that drifts.
+
 
 
 - **The `mac-bloat` category** (#509). It removed exactly one app, GarageBand, which modern macOS does not preinstall. On a clean machine the category found nothing and reported `GarageBand — not found`, which is what it reported on the maintainer's machine.

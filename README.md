@@ -52,7 +52,7 @@ actionlint                              # lint GitHub Actions workflows
 duckdb                                  # local SQL shell for CSV/JSON/Parquet
 ps aux | jc --ps | jq '.[0]'            # classic command output -> JSON
 yaml-py -c 'import yaml; print(yaml.safe_load("a: 1"))'
-pi --list-models                        # local Pi model inventory
+omp config get modelRoles               # which Gemini model each omp role uses
 ```
 
 ## Bootstrap trust model
@@ -446,7 +446,6 @@ Faster, prettier, smarter replacements for standard Unix utilities.
 | **GitHub Copilot CLI** | `copilot` -- installed from `@github/copilot` (a standalone npm package now, not a `gh` extension). The VS Code side needs no install: current VS Code ships Copilot **built in**, and installing the marketplace extension fails against the newer bundled `copilot-chat`. Proprietary -- a deliberate exception to the open-source preference |
 | **llm** | Simon Willison's CLI -- one-shot prompts, plugin ecosystem, SQLite logging, embeddings. Installed via `uv tool` with the Anthropic plugin; default model `anthropic/claude-sonnet-4-5` |
 | **aichat** | All-in-one AI CLI chat / shell copilot -- lighter than a full coding agent, with local Ollama support and a configurable REPL |
-| **pi** | A second, deliberately minimal coding agent -- four core tools, custom Dracula-Sakura theme, curated shared skills, and local Ollama models wired through `~/.pi/agent/` |
 | **omp** | Oh My Pi -- the maximalist fork of pi, installed from the `can1357/tap` Homebrew tap. 32 tools, LSP, a DAP debugger, subagents, and nine model roles routed at Google Gemini through `~/.omp/agent/`. Shares pi's theme, preferences, and skill bridge. Needs `GEMINI_API_KEY` |
 | **chezmoi** | Dotfile manager -- backup and restore configs across machines |
 | **mitmproxy** | Free HTTP debugging proxy -- inspect and modify API calls from any app |
@@ -597,7 +596,6 @@ Applied consistently across the machine, with built-in Dracula variants kept whe
 | **newsboat** | Dracula-Sakura colors in the config |
 | **aichat** | Dracula-Sakura dark TextMate theme plus rose/lilac prompt colors in config |
 | **herald** | Local Dracula-Sakura YAML theme in `~/.herald/themes/` with `theme.name` merged safely into `conf.yaml` |
-| **pi** | Full Dracula-Sakura custom theme in `~/.pi/agent/themes/dracula-sakura.json` |
 | **omp** | Full Dracula-Sakura custom theme in `~/.omp/agent/themes/dracula-sakura.json`, selected through `theme.dark` in `config.yml` |
 | **claws** | Built-in `dracula` theme via `claws --theme dracula` alias |
 | **miniserve** | `--color-scheme-dark dracula` in the `serve` alias |
@@ -841,17 +839,11 @@ The script generates config files with sensible defaults:
 | `~/.config/broot/conf.hjson` + skin | broot | Git-aware defaults plus a custom Dracula-Sakura skin |
 | `~/.jqp.yaml` | jqp | Dracula base theme with Dracula-Sakura color overrides |
 | `~/.config/aichat/config.yaml` + `dark.tmTheme` | aichat | Local Ollama defaults, prompt behavior, document loaders, Dracula-Sakura dark theme |
-| `~/.pi/agent/settings.json` | pi | Dracula-Sakura theme, telemetry/analytics off, `micro` as external editor, local Ollama defaults (`qwen2.5-coder:14b`) |
-| `~/.pi/agent/AGENTS.md` | pi | Global Pi instruction layer: Dracula-Sakura house voice, durable context rules, token discipline, anti-trope writing guidance |
-| `~/.pi/agent/models.json` | pi | Registers four local Ollama chat/coding models; the embedding-only `nomic-embed-text-v2-moe` stays machine-local for herald/aichat and is intentionally not exposed as a Pi chat model |
-| `~/.pi/agent/themes/dracula-sakura.json` | pi | Full Dracula-Sakura theme with all required Pi color tokens |
-| `~/.pi/agent/extensions/searxng-web.ts` | pi | Local SearXNG-backed web tools: `searxng_search`, `searxng_fetch`, plus `/searxng-check` |
-| `~/.pi/agent/skills/*` | pi | Pi-local skills: Tiki companions (`tiki-capture`, `tiki-review`, `tiki-groom`, `tiki-arc`, `tiki-journal`) plus `searxng-web` for local web research |
-| `~/.pi/agent/settings.json` (`packages`) | pi | Pins the third-party `bigpowers` Pi package so its extension / skills / prompts load reproducibly |
-| `~/.agents/skills/*` | pi, omp | Symlinks to the curated shared skills (`api-testing`, `d2-diagrams`, `dbmate-migrations`, `office-docs`, `tiki`). omp treats this directory as its own native skills location, so it needs no separate wiring |
+| `~/.agents/skills/*` | omp | Symlinks to the curated shared skills (`api-testing`, `d2-diagrams`, `dbmate-migrations`, `office-docs`, `tiki`). omp treats this directory as its own native skills location |
+| `~/.omp/agent/skills/*` | omp | Five omp-local Tiki companions: `tiki-capture`, `tiki-review`, `tiki-groom`, `tiki-arc`, `tiki-journal` |
 | `~/.omp/agent/AGENTS.md` | omp | Global Oh My Pi instruction layer: the same house preferences and writing rules as pi, from the same generators. Outranks every other user-level context file, `~/.claude/CLAUDE.md` included |
 | `~/.omp/agent/themes/dracula-sakura.json` | omp | Full Dracula-Sakura theme with all 66 required omp color tokens, including the thirteen status-line colors pi has no equivalent for |
-| `~/.omp/agent/config.yml` | omp | Merged, not managed-block written, because `omp config set` and `/settings` write this file themselves. Carries `theme.dark` and nine Gemini model roles with a fallback chain |
+| `~/.omp/agent/config.yml` | omp | Merged, not managed-block written, because `omp config set` and `/settings` write this file themselves. Carries `theme.dark`, nine Gemini model roles with a fallback chain, and the local SearXNG endpoint at the head of `providers.webSearchOrder` |
 | `~/.newsboat/config` | newsboat | Vim keys, Dracula-Sakura colors, auto-reload |
 | `~/.newsboat/urls` | newsboat | Starter RSS feeds (Claude Code, Node, Rust, GitHub) |
 | `~/.config/nushell/env.nu` | nushell | Starship prompt, Homebrew paths |
@@ -1053,29 +1045,7 @@ Set `ANTHROPIC_API_KEY` (for `croft pair`) and run `llm keys set anthropic` (for
 plugin and sets the default model to `anthropic/claude-sonnet-4-5`, so only the key is
 left to add.
 
-### Secondary agent — Pi
-
-**Pi** (`pi`) is also installed as a deliberately smaller coding harness: four core tools,
-a custom Dracula-Sakura theme under `~/.pi/agent/themes/`, a small Pi-local skill set
-under `~/.pi/agent/` — Tiki companions in `skills/` (`tiki-capture`, `tiki-review`,
-`tiki-groom`, `tiki-arc`, `tiki-journal`), a `searxng-web` research skill, and a local
-SearXNG-backed web extension in `extensions/searxng-web.ts` that exposes
-`searxng_search`, `searxng_fetch`, and `/searxng-check` — plus the pinned third-party
-`bigpowers` package through Pi's `packages` setting, and a curated five-skill bridge via
-`~/.agents/skills/` (`api-testing`, `d2-diagrams`, `dbmate-migrations`, `office-docs`,
-`tiki`). Its config is written under `~/.pi/agent/`, not `~/.config`.
-
-The default Pi path here is **local Ollama**, with `qwen2.5-coder:14b` as the startup
-model and three other local chat/coding models registered alongside it. The embedding-only
-`nomic-embed-text-v2-moe` model still exists on the machine for herald/aichat, but is
-intentionally **not** exposed as a Pi chat model. If you want a remote provider instead,
-run `pi` and then `/login`.
-
-What Pi is **not** in this setup: not the MCP-capable agent, not the mail/calendar/AWS/GitHub
-surface, and not the place for the broadest automation. That remains **Claude Code**.
-Pi is the smaller loop for local model work and tight edit/bash sessions.
-
-### Third agent — Oh My Pi
+### Second agent — Oh My Pi
 
 **Oh My Pi** (`omp`) is the maximalist fork of Pi by can1357, installed from the
 `can1357/tap` Homebrew tap rather than npm: the package is a Bun program
@@ -1096,10 +1066,17 @@ that route by intent. This setup points all nine at **Google Gemini**:
 retired without notice, so `retry.fallbackChains` pins an exact-model fallback to Flash.
 An unknown model id surfaces as a config warning at startup rather than failing quietly.
 
-It shares everything visual and behavioral with Pi: the same Dracula-Sakura theme, the
-same `AGENTS.md` preferences and writing rules (both generated by one emitter, so they
-cannot drift), and the same five shared skills. Nothing extra is generated for skills,
-because `~/.agents/skills/` is omp's own canonical location rather than a foreign import.
+It carries the Dracula-Sakura theme, the house `AGENTS.md` preferences, and the writing
+rules from the same generators Claude Code uses, so the two cannot disagree about how to
+write. `~/.agents/skills/` is omp's own canonical skills location rather than a foreign
+import, so the five shared skills arrive with nothing extra to install, and five
+omp-local Tiki companions (`tiki-capture`, `tiki-review`, `tiki-groom`, `tiki-arc`,
+`tiki-journal`) sit in `~/.omp/agent/skills/`.
+
+**Web search is built in.** `web_search` carries 23 backends, and this setup puts your
+local **SearXNG** instance at the head of the chain via `searxng.endpoint`. That replaced
+a ~300-line TypeScript extension when pi was retired: the same capability, two config
+keys, nothing to maintain.
 
 Two things worth knowing. Its `~/.omp/agent/AGENTS.md` has the highest precedence of any
 user-level context file, so it **shadows** `~/.claude/CLAUDE.md` in omp sessions instead

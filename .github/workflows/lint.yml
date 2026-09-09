@@ -187,7 +187,6 @@ jobs:
           GEM_CONF|yq eval '.' /tmp/generated
           GHOSTTY_PLIST_EOF|python3 -c 'import plistlib, sys; plistlib.load(open("/tmp/generated","rb"))'
           AICHAT_THEME|python3 -c 'import plistlib, sys; plistlib.load(open("/tmp/generated","rb"))'
-          PI_THEME_CONF|jq empty /tmp/generated
           OMP_THEME_CONF|jq empty /tmp/generated
           CLAUDE_SETTINGS_CONF|jq empty /tmp/generated
           PRETTIER_CONF|jq empty /tmp/generated

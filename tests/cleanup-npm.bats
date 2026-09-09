@@ -111,11 +111,22 @@ teardown() {
     [[ "$output" != *"unknown entry type 'npm'"* ]]
 }
 
-@test "pi is deliberately absent from DEPRECATED_TOOLS" {
-    # #399: pi was dropped from the script in #360, but reinstalling it by hand is
-    # legitimate and --cleanup must not silently undo that. A row for it would.
+@test "pi carries a DEPRECATED_TOOLS row now that it is retired (#513)" {
+    # This test asserted the OPPOSITE until #513, citing #399: pi was a supported
+    # second agent, so reinstalling it by hand was legitimate and --cleanup had to
+    # leave it alone. That reasoning ended when pi was retired in favour of omp,
+    # which is its own fork. tmux, helix and aider all carry rows for the same
+    # reason, and the row is what makes --cleanup sweep ~/.pi through CONFIG_ORPHANS.
     run bash -c "grep -E '^[[:space:]]+\"npm:' '$SETUP_SCRIPT' | grep -c 'pi-coding-agent' || true"
-    [ "$output" -eq 0 ]
+    [ "$output" -eq 1 ]
+}
+
+@test "~/.pi is swept by CONFIG_ORPHANS, guarded on pi being gone (#513)" {
+    # The directory holds hand-placed extensions and auth.json, so the two guards
+    # in CONVENTIONS section 15 both have to hold: the sweep fires only when the
+    # binary is absent, and it goes to the Trash rather than rm -rf.
+    run grep -cE '^[[:space:]]+"pi\|\$HOME/\.pi\|omp"' "$SETUP_SCRIPT"
+    [ "$output" -eq 1 ]
 }
 
 @test "an unknown entry type still hits the loud default" {
