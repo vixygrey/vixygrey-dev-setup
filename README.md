@@ -601,6 +601,9 @@ Applied consistently across the machine, with built-in Dracula variants kept whe
 | **nushell** | 59 `color_config` keys in `config.nu` — types, shapes, and the reedline chrome |
 | **atuin** | 15-token theme in `~/.config/atuin/themes/dracula-sakura.toml` |
 | **pgcli / mycli** | `syntax_style = dracula`, plus a `[colors]` block for the prompt-toolkit chrome the Pygments style does not reach |
+| **stu** | 19 `ui.theme.*` keys in `~/.stu/config.toml` (hex, via Ratatouille's colour serde) |
+| **e1s** | 11 hex colour overrides in `~/.config/e1s/config.yml` |
+| **lazyenv** | built-in `dracula` preset — it ships 56 themes but offers no way to define a palette, so this is Dracula rather than Dracula-Sakura |
 | **claws** | Built-in `dracula` theme via `claws --theme dracula` alias |
 | **miniserve** | `--color-scheme-dark dracula` in the `serve` alias |
 | **vivid** | Dracula-themed LS_COLORS for file type coloring |
@@ -608,6 +611,24 @@ Applied consistently across the machine, with built-in Dracula variants kept whe
 | **macOS** | System highlight color set to Dracula purple |
 
 ---
+
+### Tools that cannot take the house theme
+
+Checked and recorded so they are not re-investigated each release. Every check
+used a control: a deliberately invalid value had to be **rejected** before
+acceptance of a valid one meant anything.
+
+| Tool | Why not |
+|------|---------|
+| `duf`, `taproom` | preset flags only (`dark\|light\|ansi`, `auto\|light\|dark`) — no palette, and no Dracula among them |
+| `fx` | numbered built-in themes via `FX_THEME="0"`; no custom theme definition |
+| `procs`, `nnn` | indexed colour only (`Color256`, `NNN_COLORS`), so the palette could only be approximated to nearest indices |
+| `atac`, `lazysql`, `viddy`, `wiper`, `kondo`, `bmm`, `cheznav`, `lazynpm`, `lazyrsync`, `lazyssh` | no theming found — nothing in `--help`, and no colour keys documented in their config schemas |
+
+`stu` and `e1s` are themed but carry **no `--verify` row**. Both are TUIs with no
+validate mode, and without a TTY they panic inside crossterm before config parsing
+is reached — a correct config and a deliberately broken one produce the identical
+panic, so a row built on that would prove nothing.
 
 ## Claude Code Configuration
 

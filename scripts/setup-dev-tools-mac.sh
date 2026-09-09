@@ -2347,6 +2347,15 @@ if [[ "$VERIFY" == "true" ]]; then
         # Asks lnav which theme it RESOLVED, not whether the file parses. A pass
         # means the fragment was found, loaded, and selected (#518).
         "validate|lnav|${XDG_CONFIG_HOME:-$HOME/.config}/lnav/configs/dev-setup/dracula-sakura.json|_verify_lnav"
+        # lazyenv is the only one of the #519 three that can answer without a TTY.
+        # `--check-config` prints "Config OK: <path>" and reports errors for a bad
+        # theme name, so a pass means it parsed AND accepted the theme.
+        #
+        # stu and e1s deliberately have no row. Both are TUIs with no validate mode,
+        # and without a TTY they panic in crossterm before config parsing is reached —
+        # a good config and a deliberately broken one produce the identical panic, so
+        # any row built on that would report nothing about the config (#519).
+        "validate|lazyenv|$HOME/Library/Application Support/lazyenv/config.toml|_verify_output_has '^Config OK' lazyenv --check-config"
         "validate|ghostty|$HOME/.config/ghostty/config|ghostty +validate-config"
         "validate|zellij|$HOME/.config/zellij/config.kdl|_verify_output_has 'Well defined' zellij setup --check"
         "validate|ngrok|$HOME/Library/Application Support/ngrok/ngrok.yml|ngrok config check"
@@ -7005,6 +7014,86 @@ LNAV_THEME_CONF
     rm -f "$_lnav_probe"
     unset _lnav_probe
 fi
+fi
+
+# ---- stu (S3 TUI) Dracula-Sakura theme ----
+# stu reads $STU_ROOT_DIR/config.toml and defaults that to ~/.stu — it does NOT
+# follow XDG, so this is one of the deliberate Library/dot-dir exceptions rather
+# than an oversight (#519). Colours deserialize through Ratatouille's Color serde,
+# which the docs record as accepting named, indexed, and hex values; hex is what
+# the house palette needs.
+#
+# `object_dir_bold` is a BOOL, not a colour. It sits in the same table and would
+# be a type error if treated as one.
+STU_ROOT_DIR_PATH="${STU_ROOT_DIR:-$HOME/.stu}"
+if installed stu; then
+    ensure_dir "$STU_ROOT_DIR_PATH"
+    write_managed "$STU_ROOT_DIR_PATH/config.toml" "#" <<'STU_CONF'
+[ui.theme]
+bg = "#282a36"
+fg = "#f8f8f2"
+divider = "#4b4963"
+link = "#9be7ff"
+list_selected_bg = "#ff9fe3"
+list_selected_fg = "#282a36"
+list_selected_inactive_bg = "#4b4963"
+list_selected_inactive_fg = "#ddd2f7"
+list_filter_match = "#fff0a8"
+detail_selected = "#ffc2ec"
+dialog_selected = "#ff9fe3"
+preview_line_number = "#8a88c7"
+help_key_fg = "#8af7cf"
+status_help = "#a297cb"
+status_info = "#9be7ff"
+status_success = "#8af7cf"
+status_warn = "#ffcf93"
+status_error = "#ff7aa8"
+object_dir_bold = true
+STU_CONF
+    configured "stu Dracula-Sakura theme written ($STU_ROOT_DIR_PATH/config.toml)"
+fi
+
+# ---- e1s (ECS TUI) Dracula-Sakura colours ----
+# e1s takes either a built-in theme name (`--theme dracula`, from the
+# alacritty-theme set) or explicit colour overrides in its config. The overrides
+# are used here: the built-in dracula is Dracula, and the house palette is the
+# sakura variant of it (#519).
+if installed e1s; then
+    ensure_dir "$HOME/.config/e1s"
+    write_managed "$HOME/.config/e1s/config.yml" "#" <<'E1S_CONF'
+colors:
+  BgColor: "#282a36"
+  FgColor: "#f8f8f2"
+  BorderColor: "#d4b2ff"
+  Black: "#282a36"
+  Red: "#ff7aa8"
+  Green: "#8af7cf"
+  Yellow: "#ffcf93"
+  Blue: "#9be7ff"
+  Magenta: "#ff9fe3"
+  Cyan: "#9be7ff"
+  Gray: "#8a88c7"
+E1S_CONF
+    configured "e1s Dracula-Sakura colours written (~/.config/e1s/config.yml)"
+fi
+
+# ---- lazyenv Dracula theme ----
+# lazyenv ships 56 built-in themes and `dracula` is one of them, but exposes no
+# way to define a custom palette — so this selects the preset rather than
+# authoring the sakura variant. Recorded as such: it is Dracula, not
+# Dracula-Sakura, and that is the ceiling the tool offers (#519).
+#
+# It ignores XDG_CONFIG_HOME entirely. `lazyenv --check-config` reports the same
+# three search paths with and without the variable set, and the only per-user one
+# is under Library/Application Support. That makes lazyenv a deliberate Library
+# case like ngrok (#334), not a candidate for the ~/.config sweep in #333.
+LAZYENV_CONFIG_DIR="$HOME/Library/Application Support/lazyenv"
+if installed lazyenv; then
+    ensure_dir "$LAZYENV_CONFIG_DIR"
+    write_managed "$LAZYENV_CONFIG_DIR/config.toml" "#" <<'LAZYENV_CONF'
+theme = "dracula"
+LAZYENV_CONF
+    configured "lazyenv theme set to dracula ($LAZYENV_CONFIG_DIR/config.toml)"
 fi
 
 # ---- git-cliff config ----

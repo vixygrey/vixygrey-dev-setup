@@ -10,6 +10,18 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ### Added
 
+- **Three more tools carry the palette, and the rest are recorded as unable to** (#519). The second tier from #518, investigated rather than assumed. Two of the three had been written off as low-confidence guesses in the first survey and turned out to be the best candidates in the set.
+
+  **stu** gets 19 `ui.theme.*` keys in `~/.stu/config.toml`. Its docs record that colours deserialize through Ratatouille's `Color` serde, which accepts named, indexed, and hex values. `object_dir_bold` sits in the same table and is a **bool**, not a colour, which would have been a type error treated as one. stu does not follow XDG: `$STU_ROOT_DIR` defaults to `~/.stu`.
+
+  **e1s** gets 11 hex overrides in `~/.config/e1s/config.yml`. It also accepts `--theme dracula` from a built-in set; the overrides are used instead, because the built-in is Dracula and the house palette is the sakura variant of it.
+
+  **lazyenv** gets the built-in `dracula` preset. It ships 56 themes and offers no way to define a palette, so this is honestly Dracula rather than Dracula-Sakura, and the comment says so. It also **ignores `XDG_CONFIG_HOME` entirely**: `lazyenv --check-config` reports the same three search paths with and without the variable set, and the only per-user one is under `Library/Application Support`. That makes it a deliberate Library case like ngrok (#334), not a candidate for the `~/.config` sweep in #333.
+
+  **Fifteen tools are recorded as unable to take the theme,** with the reason, in a new README table. `duf` and `taproom` offer preset flags with no Dracula among them. `fx` has numbered built-ins and no custom definition. `procs` and `nnn` are indexed-colour only, so the palette could only be approximated. The remaining ten document no theming at all. Writing this down is the point: it stops the same tools being re-investigated every few releases.
+
+  **`lazyenv` gets a `--verify` row; `stu` and `e1s` deliberately do not.** `lazyenv --check-config` prints `Config OK` and reports errors for an unknown theme, so a pass means it parsed and accepted the theme. The other two are TUIs with no validate mode, and without a TTY they panic inside crossterm before config parsing is reached. A correct config and a deliberately broken one produce the identical panic, so a row built on that would report nothing about the config. Their configs are written at the documented paths in the documented format, and that is the honest limit of what was verified.
+
 - **Four more tools carry the Dracula-Sakura palette: lnav, nushell, atuin, and pgcli/mycli** (#518). Each accepted a custom theme and had none. Every mechanism was verified against the tool or its source rather than its documentation, and each check was run with a control, because three of the four accept an invalid value in silence.
 
   **lnav** gets a full `theme-def`: 151 values across `styles`, `syntax-styles`, `status-styles`, and `log-level-styles`. It ships a built-in `dracula`, which was the cheap option and not taken, because plain Dracula lacks the rose and lilac accents that make the house palette what it is. The theme is a config **fragment** under `~/.config/lnav/configs/dev-setup/`, because lnav rewrites its own `config.json`: one `:config` command makes it dump `tuning`, `theme-defs`, and `log.demux` into that file. Same rule as omp's `config.yml`, never own the file the tool owns. Selection goes through lnav's own `:config` writer.
