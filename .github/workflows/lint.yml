@@ -137,13 +137,10 @@ jobs:
 
           # tag|validator — add a row when a new generated file has a real parser.
           #
-          # OMP_TURNS_EXT copies to a .ts name FIRST, and that is load-bearing.
-          # The harness extracts to /tmp/generated with no extension, and
-          # `bun build /tmp/generated` ACCEPTS deliberately broken TypeScript:
-          # bun treats an unknown extension as an asset to copy rather than
-          # source to parse. Written the obvious way the row could never fail,
-          # which is the vacuous pass the empty-extraction guard above exists to
-          # prevent. Verified both ways before this was added (#527).
+          # OMP_PROTECTED_PATHS_EXT copies to a .ts name first. This is
+          # load-bearing because Bun treats an unknown extension as an asset
+          # instead of TypeScript source. The explicit copy makes syntax errors
+          # fail this job (#527).
           fail=0
           while IFS='|' read -r tag validator; do
             [ -z "$tag" ] && continue
@@ -201,7 +198,7 @@ jobs:
           GHOSTTY_PLIST_EOF|python3 -c 'import plistlib, sys; plistlib.load(open("/tmp/generated","rb"))'
           AICHAT_THEME|python3 -c 'import plistlib, sys; plistlib.load(open("/tmp/generated","rb"))'
           OMP_THEME_CONF|jq empty /tmp/generated
-          OMP_TURNS_EXT|cp /tmp/generated /tmp/generated.ts && bun build /tmp/generated.ts --no-bundle --outdir /tmp/bunout
+          OMP_PROTECTED_PATHS_EXT|cp /tmp/generated /tmp/generated.ts && bun build /tmp/generated.ts --no-bundle --outdir /tmp/bunout
           LNAV_THEME_CONF|jq empty /tmp/generated
           CLAUDE_SETTINGS_CONF|jq empty /tmp/generated
           PRETTIER_CONF|jq empty /tmp/generated
@@ -231,6 +228,15 @@ jobs:
           ASCIINEMA_CONF|python3 -c 'import tomllib; tomllib.load(open("/tmp/generated","rb"))'
           CROFT_THEME_CONF|python3 -c 'import tomllib; tomllib.load(open("/tmp/generated","rb"))'
           CHECKS
+
+          extract OMP_PROTECTED_PATHS_EXT > /tmp/omp-protected-paths.ts
+          if [ -s /tmp/omp-protected-paths.ts ] &&
+             bun tests/ci/check-omp-protected-paths.ts /tmp/omp-protected-paths.ts; then
+            echo "  ok    OMP_PROTECTED_PATHS_EXT behavior"
+          else
+            echo "::error::OMP_PROTECTED_PATHS_EXT behavior check failed"
+            fail=1
+          fi
 
           exit "$fail"
 

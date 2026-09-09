@@ -388,7 +388,7 @@ declare -A CATEGORY_DESC=(
     [ux]="Lighthouse"
     [docs]="d2, Mermaid CLI"
     [mac-system]="Pearcleaner, dockutil, terminal-notifier"
-    [mac-productivity]="tiki, reminders-cli, Skim, LibreOffice"
+    [mac-productivity]="reminders-cli, Skim, LibreOffice"
     [mac-browsers]="Carbonyl, w3m, monolith"
     [mac-media]="mpv, oxipng, jpegoptim, 7zip, cliamp"
     [mac-cloud]="rclone, borg"
@@ -424,7 +424,7 @@ declare -A CONFIG_LIVES_IN_CONFIGS=(
     [containers]="lazydocker, k9s (config + Dracula skin)"
     [networking]="trippy"
     [dx]="atuin, croft config/theme, zellij, Ghostty, VS Code settings, aichat, omp (~/.omp/agent + shared ~/.agents/skills links) — and starship, which is in the \`dracula\` category"
-    [mac-productivity]="tiki workflow, herald theme asset + theme-name merge"
+    [mac-productivity]="herald theme asset + theme-name merge"
     [mac-focus]="newsboat"
     [mac-media]="mpv"
     [mac-browsers]="w3m"
@@ -1905,7 +1905,7 @@ if [[ "$UNINSTALL" == "true" ]]; then
     echo ""
     echo "# Remove bigpowers and the shared-skill links omp reads:"
     echo "  npm uninstall -g bigpowers"
-    echo "  rm -f ~/.agents/skills/api-testing ~/.agents/skills/d2-diagrams ~/.agents/skills/dbmate-migrations ~/.agents/skills/office-docs ~/.agents/skills/tiki"
+    echo "  rm -f ~/.agents/skills/api-testing ~/.agents/skills/d2-diagrams ~/.agents/skills/office-layout-check"
     echo ""
     echo "# Remove omp config and sessions (the formula goes with the brew bundle cleanup above):"
     echo "  rm -rf ~/.omp"
@@ -1962,9 +1962,11 @@ if [[ "$CLEANUP" == "true" ]]; then
         "npm:playwright:Playwright:removed"
         "npm:storybook:Storybook CLI:removed"
         "npm:repomix:repomix (npm copy):Claude Code"
-        # Retired in #513: omp is a fork of pi and now does natively everything the
-        # pi block generated. ~/.pi goes with it, through CONFIG_ORPHANS below.
+        # Retired in #513: omp replaced pi. ~/.pi goes with it through
+        # CONFIG_ORPHANS below.
         "npm:@earendil-works/pi-coding-agent:pi (superseded by omp):omp"
+        # Retired in #540. Personal notes under ~/Documents/notes stay untouched.
+        "brew:boolean-maybe/tap/tiki:tiki:plain Markdown + reminders"
         "cask:qlmarkdown:QLMarkdown (Quick Look):removed"
         "cask:qlstephen:QLStephen (Quick Look):removed"
         "cask:protonvpn:Proton VPN:Mullvad VPN"
@@ -1985,7 +1987,7 @@ if [[ "$CLEANUP" == "true" ]]; then
         "cask:cyberduck:Cyberduck:rclone:Cyberduck"
         "cask:google-drive:Google Drive:rclone:Google Drive"
         "cask:drawio:draw.io:d2 + mermaid-cli:draw.io"
-        "cask:notion:Notion:tiki:Notion"
+        "cask:notion:Notion:plain Markdown + reminders:Notion"
         "cask:notion-calendar:Notion Calendar:herald:Notion Calendar"
         "brew:yazi:yazi:rovr"
         "brew:cmus:cmus:cliamp"
@@ -2259,6 +2261,7 @@ if [[ "$CLEANUP" == "true" ]]; then
         # `pi` is absent from PATH, and it moves the directory to the Trash rather
         # than deleting it, so it stays recoverable from Finder until emptied.
         "pi|$HOME/.pi|omp"
+        "tiki|$HOME/.config/tiki|plain Markdown + reminders"
     )
     for entry in "${CONFIG_ORPHANS[@]}"; do
         _tool="${entry%%|*}"
@@ -2357,6 +2360,7 @@ if [[ "$CLEANUP" == "true" ]]; then
     DEPRECATED_TAPS=(
         "nikitabobko/tap|AeroSpace"
         "snyk/tap|snyk"
+        "boolean-maybe/tap|tiki"
     )
     for entry in "${DEPRECATED_TAPS[@]}"; do
         _tap="${entry%%|*}"
@@ -3954,10 +3958,8 @@ fi
 
 # AI tools
 brew_install "aichat" "aichat (all-in-one AI CLI chat / shell copilot)"
-# pi was retired in #513. omp is a fork of it, so everything the pi block generated
-# is now either a native omp feature (SearXNG web search, local Ollama discovery,
-# approval policies) or moved into the omp block (the Tiki skills, the shared skills
-# bridge). `--cleanup` uninstalls the package and sweeps ~/.pi.
+# pi was retired in #513. omp replaces its agent runtime, web search, local model
+# discovery, and approval policies. `--cleanup` uninstalls pi and sweeps ~/.pi.
 # Oh My Pi (omp) — the maximalist fork of Pi: 32 tools, LSP, DAP, subagents, and nine
 # workload-routed model roles. Claude Code keeps MCP and the broad automation.
 #
@@ -4100,255 +4102,7 @@ if should_run "mac-productivity"; then
 banner "Mac Apps — Productivity"
 
 brew_cask_install "claude" "Claude (AI assistant)"
-# Notion (GUI) replaced by tiki — terminal Markdown workspace (tasks/docs/kanban/wiki, git-backed).
-trust_tap boolean-maybe/tap
-brew_install "boolean-maybe/tap/tiki" "tiki (terminal Markdown workspace — tasks, docs, kanban, wiki; git-backed)"
-# tiki skill — teaches Claude/omp to manage the user's notes/tasks via `tiki exec`
-# (CRUD with auto git-staging). Keep a local generated copy rather than blindly
-# fetching upstream so the machine gets the notebook-specific workflow cautions,
-# JSON-first query guidance, and softer note-taking examples this setup relies on.
-write_generated "$HOME/.claude/skills/tiki/SKILL.md" <<'SKILL_TIKI'
----
-name: tiki
-description: Manage Tiki markdown workspaces with `tiki exec` and ruki — query, create, update, delete, organize dependencies, and inspect note/task metadata. Use when working with tikis, workflow.yaml-driven boards, or a git-backed notes workspace.
----
 
-# Tiki
-
-A `tiki` is a Markdown file in the project workspace — the current working directory — identified by a
-bare `id` in its frontmatter and carrying an open field map. Only `id` and `title` are intrinsic;
-**every other field is defined by the `workflow.yaml` that applies to the current project**. There are no
-hard-coded workflow fields — the names, types, allowed values, and defaults below are those of the
-built-in workflow, which is what a project gets when no `workflow.yaml` overrides it. A different
-resolved workflow declares a different field set. All fields beyond `id` and `title` are optional.
-
-The applicable `workflow.yaml` is resolved by the project's lookup chain (user config
-`~/.config/tiki/workflow.yaml`, then a `workflow.yaml` in the cwd, last match wins; a built-in workflow
-when neither exists). **The field names, types, values, and defaults in this skill describe that
-built-in workflow — they are examples, not guarantees.** The project you are working in may define
-different ones. Before relying on any field or value below, read the applicable `workflow.yaml` (check the
-cwd and `~/.config/tiki/` for one; if neither exists the built-in applies and this skill's tables hold).
-
-For agent-driven queries, prefer `tiki exec --format json '...'` and parse the result rather than relying
-on ASCII table output.
-
-If `~/.config/tiki/workflow.yaml` or a project `workflow.yaml` exists, read it before assuming visible
-labels or field captions. Stored enum values may remain stable while user-facing labels differ.
-
-- A tiki's identity is its `id:` frontmatter field, independent of the filename: a bare 6-character
-  uppercase alphanumeric value (e.g. `X7F4K2`). Locate, reference, and update a tiki by this `id`, not by
-  its filename — a file may be renamed or moved without changing which tiki it is. The `id:` value must be
-  exactly 6 characters of `[A-Z0-9]`; anything else (wrong length, lowercase, or a prefix/separator such
-  as `x7f4k2` or `task-1234`) fails to load and must be edited to the valid form manually.
-- Tikis are read from and written to the current working directory — the cwd is the scan/write root, and
-  no setup step is needed to start using it. Creating a tiki (via `tiki exec`, below) writes a new file
-  named after a slug of its title: `<cwd>/<slug>.md` (e.g. title "Weekly reset" → `weekly-reset.md`),
-  with a numeric suffix on collision (`weekly-reset-2.md`, …). Tikis may live at any depth under the cwd
-  and can be moved into subfolders without breaking references (`[[ID]]` wikilinks and `dependsOn` entries
-  are id-based). A `.doc/` subdirectory, if the project has one, is also scanned.
-- Use this skill for every tiki, whether it carries workflow-declared fields (in the built-in workflow:
-  `status:`, `type:`, `priority:`, `points:`, `dependsOn:`, …) or is a notes-only document with just
-  `id:` and `title:`. Workflow tikis appear on board / list views; notes-only tikis are reachable by id
-  and path, render in wiki and detail views, and fall outside any view whose lane filter requires
-  workflow-declared fields. To turn a notes-only tiki into a tracked one, just assign a workflow field
-  (e.g. `set status = "..."`) — that writes the key into its frontmatter and it starts appearing on the
-  relevant views.
-
-All CRUD operations go through `tiki exec '<ruki-statement>'`. `ruki` is the query-and-mutation language
-`tiki exec` accepts: SQL-like `select` / `create` / `update` / `delete` statements over tikis. The
-statements in this skill cover routine work; run `tiki exec --help` for the invocation reference. For full
-`ruki` syntax (operators, builtins, custom-field and extraction rules), fetch the language reference at
-https://github.com/boolean-maybe/tiki/blob/main/docs/ruki/index.md and the pages it links.
-Running a statement handles validation, triggers, file persistence, and git staging automatically. Never
-manually edit tiki files or run `git add` / `git rm` for tracked workflow tikis — `tiki exec` does it
-all. (Notes-only tikis with no workflow fields can be edited directly with `read` / `write` / `edit`; the
-frontmatter `id:` must be preserved unchanged. Resolve their path from the id via
-`select filepath where id = "..."` rather than assuming a filename.)
-
-## Field reference
-
-### Intrinsic fields (every project)
-
-These seven fields exist regardless of workflow and cannot be redeclared by a `workflow.yaml`:
-
-| Field | Type | Notes |
-|---|---|---|
-| `id` | `id` | immutable, auto-generated bare 6-char uppercase alphanumeric (e.g. `X7F4K2`) |
-| `title` | `string` | required on create |
-| `description` | `string` | markdown body content |
-| `createdBy` | `string` | immutable |
-| `createdAt` | `timestamp` | immutable |
-| `updatedAt` | `timestamp` | immutable |
-| `filepath` | `string` | synthetic — the tiki's absolute path on disk |
-
-### Workflow fields — EXAMPLE ONLY, not guaranteed
-
-> ⚠️ **The table below is an example, not a specification.** Every field in it — including its name,
-> type, allowed values, and default — is declared by a `workflow.yaml`, and **the project you are working
-> in may declare entirely different fields, values, and defaults, or none of these at all.** These rows
-> show only what the **built-in** workflow happens to declare, included so the `ruki` examples elsewhere
-> in this skill are concrete. **Never assume a field or value from this table exists in the current
-> project — read its `workflow.yaml` first** (see the lookup chain above) to find the real set. Naming a
-> field the workflow does not declare (e.g. `assignee` under a workflow that has no such field) is a hard
-> `unknown field` parse error in `select`, `where`, and `set` alike — not an empty result — so reference
-> only the intrinsic fields plus the fields this project's workflow actually declares.
-
-| Field (built-in example) | Type (example) | Built-in values (example) |
-|---|---|---|
-| `status` | enum | `inbox`, `ready`, `inProgress`, `done` (default `inbox`) |
-| `type` | enum | `story` (default), `bug`, `spike` |
-| `priority` | enum | `"high"`, `"medium-high"`, `"medium"` (default), `"medium-low"`, `"low"` — pass the key as a string |
-| `points` | enum | `"1"`, `"3"` (default), `"7"`, `"11"` — pass the key as a string |
-| `assignee` | user | free text; ruki still treats it as `string` |
-| `tags` | list<string> | e.g. `["writing", "urgent"]` |
-| `dependsOn` | list<ref> | bare tiki ids, e.g. `["ABC123", "DEF456"]` |
-| `due` | date | `YYYY-MM-DD` (a date, not a timestamp) — compare against date literals, not `now()` |
-| `recurrence` | recurrence | set with a constructor: `daily()`, `weekly("monday")` (full lowercase day name), `monthly(1)` (day 1–31). Stored as cron; a raw cron string is rejected on assignment |
-
-The `ruki` examples throughout this skill use these built-in values (e.g. `status="done"`,
-`priority="high"`) purely as illustrations — substitute the values your project's `workflow.yaml` actually
-defines. The built-in workflow may also guard some status transitions with triggers — see the Update
-section.
-
-## Query
-
-```sh
-tiki exec --format json 'select'                                         # all tikis under the cwd
-tiki exec --format json 'select where has(status)'                       # tikis carrying a status
-tiki exec --format json 'select title, status'                           # field projection
-tiki exec --format json 'select id, title where status = "done"'         # filter
-tiki exec --format json 'select where "writing" in tags order by priority' # tag filter + sort
-tiki exec --format json 'select where has(due) and due < 2026-07-15'     # due before a date
-tiki exec --format json 'select where dependsOn any status != "done"'    # blocked cards
-tiki exec --format json 'select where assignee = user()'                 # my cards
-```
-
-Output is JSON when `--format json` is used; prefer that for agent workflows. To read a tiki's full
-markdown body, either project it via `select description where id = "ABC123"` or read the file directly —
-get the path with `select filepath where id = "ABC123"`.
-
-**Scope note.** Bare `select` iterates every tiki under the cwd, including those with no workflow-declared
-fields. Predicates on absent fields are well-defined: `where status = "done"` is false for tikis with no
-status, and `where status != "done"` is true. Use `has(<field>)` to scope explicitly when needed — for
-example, `select where has(status)` lists only tikis that carry a status, regardless of value.
-
-## Create
-
-```sh
-tiki exec 'create title="Book dentist appointment"'
-tiki exec 'create title="Weekly reset" priority="medium-high" status="ready" tags=["ritual"]'
-tiki exec 'create title="Reading notes" due=2026-04-01 + 2day'
-tiki exec 'create title="Water the plants" recurrence=weekly("monday")'
-tiki exec 'create title="Story fragment: moonlit station" tags=["writing"]'
-```
-
-Output: `created <ID>` (bare 6-char id).
-Defaults: `status` from the `default: true` status in `workflow.yaml`, `type` from the `default: true`
-type (or the first type), `priority` from the `default: true` priority value.
-
-### Create from file
-
-When asked to create a tiki from a file:
-1. Read the source file.
-2. Summarize its content into a short title.
-3. Use the file content as the description.
-4. Escape content safely before embedding it in a `tiki exec` string.
-
-If the content is large or awkward to escape, prefer creating a minimal tiki first and then editing the
-resulting notes-only markdown file directly while preserving its `id:` frontmatter.
-
-## Update
-
-```sh
-tiki exec 'update where id = "X7F4K2" set status="done"'                   # status change
-tiki exec 'update where id = "X7F4K2" set priority="high"'                 # priority
-tiki exec 'update where status = "ready" set status="inProgress"'          # bulk update
-tiki exec 'update where id = "X7F4K2" set tags=tags + ["urgent"]'          # add tag
-tiki exec 'update where id = "X7F4K2" set due=2026-04-01'                  # set due date
-tiki exec 'update where id = "X7F4K2" set due=empty'                       # clear due date
-tiki exec 'update where id = "X7F4K2" set recurrence=weekly("monday")'     # set recurrence
-tiki exec 'update where id = "X7F4K2" set recurrence=empty'                # clear recurrence
-```
-
-Output: `updated N tikis`. `set status=` accepts only values the applicable `workflow.yaml` declares. A
-workflow may also guard transitions with triggers, which report `updated 0 tikis (1 failed)` with a
-reason when they refuse. Read the failure reason and satisfy the precondition in the same statement when
-possible.
-
-Assigning a field writes that key into the tiki's frontmatter — this is also how a notes-only tiki
-becomes a tracked one (`set status = "..."`).
-
-### Start work on a card
-
-When the user wants to begin actively working on a tiki, advance it to the workflow's in-progress state
-and satisfy any workflow preconditions in the same statement. Example for the built-in workflow:
-
-```sh
-tiki exec 'update where id = "X7F4K2" set assignee=user() status="inProgress"'
-```
-
-## Delete
-
-```sh
-tiki exec 'delete where id = "X7F4K2"'              # by ID
-tiki exec 'delete where status = "inbox"'           # bulk
-```
-
-Output: `deleted N tikis`. Delete works on any tiki regardless of which fields it carries.
-
-## Dependencies
-
-```sh
-# view a tiki's dependencies
-tiki exec --format json 'select id, title, status, dependsOn where id = "X7F4K2"'
-
-# find what depends on a tiki (reverse lookup)
-tiki exec --format json 'select id, title where dependsOn any id = "X7F4K2"'
-
-# find blocked cards (any dependency not done)
-tiki exec --format json 'select id, title where dependsOn any status != "done"'
-
-# add a dependency (bare id)
-tiki exec 'update where id = "X7F4K2" set dependsOn=dependsOn + ["ABC123"]'
-
-# remove a dependency
-tiki exec 'update where id = "X7F4K2" set dependsOn=dependsOn - ["ABC123"]'
-```
-
-`dependsOn` entries must each be a valid id — 6 characters of `[A-Z0-9]` (e.g. `ABC123`) — and must
-reference a tiki that exists, or the update is rejected.
-
-## Provenance
-
-`ruki` does not access git history. Use git commands for authorship questions — but first resolve the
-tiki's path from its id, since files can live anywhere under the cwd:
-
-```sh
-# get the tiki's path
-path=$(tiki exec --format json 'select filepath where id = "X7F4K2"' | jq -r '.[0].filepath')
-
-# who created this tiki
-git log --follow --diff-filter=A -- "$path"
-
-# who last edited this tiki
-git blame "$path"
-```
-
-Created timestamp and author are also available via:
-```sh
-tiki exec --format json 'select createdAt, createdBy where id = "X7F4K2"'
-```
-
-## Important
-
-- `tiki exec` handles `git add` and `git rm` automatically — never do manual git staging for tracked workflow tikis.
-- Never commit without user permission.
-- An id is exactly 6 characters, uppercase letters and digits only (e.g. `X7F4K2`); a value of any other shape is rejected. Ids are assigned by tiki on create — obtain one from a query or `created` output, never invent or reformat it.
-- Exit codes: 0 = ok, 2 = usage error, 3 = startup failure, 4 = query error.
-SKILL_TIKI
-if [[ "$DRY_RUN" != "true" ]]; then
-    success "tiki Claude/omp skill written (~/.claude/skills/tiki/)"
-fi
 # Terminal email + calendar → herald: one app for email AND calendar (Gmail work +
 # iCloud personal, IMAP/SMTP + CalDAV), with built-in AI triage/summaries and an MCP
 # server for Claude. Replaced aerc + khal + vdirsyncer (three tools → one). Herald
@@ -4431,8 +4185,8 @@ if installed ollama; then
     fi
 fi
 # reminders-cli — Apple Reminders (EventKit) from the terminal, so time/location alerts
-# that should reach iPhone/Watch via iCloud have a home. Complements rather than overlaps
-# the neighbours: tiki keeps notes/tasks in git, herald owns mail + calendar events.
+# that should reach iPhone/Watch via iCloud have a home. Herald owns mail and
+# calendar events. Plain notes stay ordinary files.
 # First invocation triggers a macOS TCC consent prompt for Reminders access — a GUI
 # dialog this script cannot pre-grant, so the checklist covers it as a first-run step.
 trust_tap keith/formulae
@@ -5332,396 +5086,7 @@ LAZYGIT_CONF
     configured "lazygit configured (Dracula Sakura theme, delta pager, croft open-file)"
 fi  # installed lazygit
 
-# ---- tiki workflow ----
-if installed tiki; then
-TIKI_CONFIG_DIR="$HOME/.config/tiki"
-TIKI_WORKFLOW="$TIKI_CONFIG_DIR/workflow.yaml"
-    info "Creating tiki workflow..."
-    write_managed "$TIKI_WORKFLOW" "#" <<'TIKI_WORKFLOW_CONF'
-version: "0.6.1"
-description: |
-  Dracula Sakura workflow for notes, errands, ideas, and longer arcs.
-  Four statuses (Moonpool → Petals → Starlight → Bloom) and four card
-  kinds (Note, Friction, Research, Arc). Tuned for elegant, readable
-  flow with a softer anime-feminine accent layer.
-fields:
-  - name: status
-    type: enum
-    caption: "Arc"
-    values:
-      - value: inbox
-        label: Moonpool
-        visual: "☾"
-        default: true
-      - value: ready
-        label: Petals
-        visual: "🌸"
-      - value: inProgress
-        label: "Starlight"
-        visual: "✦"
-      - value: done
-        label: Bloom
-        visual: "♡"
-  - name: type
-    type: enum
-    caption: "Kind"
-    values:
-      - value: story
-        label: Note
-        visual: "✿"
-        default: true
-      - value: bug
-        label: Friction
-        visual: "⚡"
-      - value: spike
-        label: Research
-        visual: "☄"
-      - value: project
-        label: Arc
-        visual: "☽"
-  - name: priority
-    type: enum
-    caption: "Mood"
-    values:
-      - {value: high, label: "Radiant", visual: "❤"}
-      - {value: medium-high, label: "Spark", visual: "✦"}
-      - {value: medium, label: "Petal", visual: "✿", default: true}
-      - {value: medium-low, label: "Hush", visual: "◌"}
-      - {value: low, label: "Moon", visual: "☾"}
-  - name: points
-    type: enum
-    caption: "Bloom"
-    values:
-      - {value: "11", label: "11", visual: "<action>❚❚❚❚❚❚❚❚❚❚❚"}
-      - {value: "7",  label: "7",  visual: "<action>❚❚❚❚❚❚❚<muted>❘❘❘❘"}
-      - {value: "3",  label: "3",  visual: "<action>❚❚❚<muted>❘❘❘❘❘❘❘❘", default: true}
-      - {value: "1",  label: "1",  visual: "<action>❚<muted>❘❘❘❘❘❘❘❘❘❘"}
-  - name: tags
-    type: stringList
-    caption: "Charms"
-    default: ["sakura", "idea"]
-  - name: dependsOn
-    type: tikiIdList
-    caption: "Links"
-  - name: due
-    type: date
-    caption: "Due"
-  - name: recurrence
-    type: recurrence
-    caption: "Rhythm"
-  - name: assignee
-    type: user
-    caption: "Keeper"
 
-actions:
-  - key: "y"
-    label: "Copy ID"
-    action: select id where id = id() | clipboard()
-  - key: "Y"
-    label: "Copy note"
-    action: select title, description where filepath = filepath() | clipboard()
-  - key: "o"
-    label: "Open in croft"
-    action: select filepath where filepath = filepath() | run("croft --open-file \"$1\" .")
-    hot: false
-  - key: "u"
-    label: "Make radiant"
-    action: update where id = id() set priority="high" tags=tags+["urgent"]
-    hot: false
-  - key: "A"
-    label: "Assign keeper..."
-    action: update where id = id() set assignee=input()
-    input: string
-    hot: false
-  - key: "t"
-    label: "Add charm"
-    action: update where filepath = filepath() set tags=tags+[input()]
-    input: string
-    hot: false
-  - key: "T"
-    label: "Remove charm"
-    action: update where filepath = filepath() set tags=tags-[input()]
-    input: string
-    hot: false
-  - key: Ctrl-Q
-    label: "Wish"
-    action: create title=input() tags=tags+["sakura"]
-    input: string
-    hot: false
-
-views:
-  - name: Moonboard
-    kind: board
-    description: "Move tiki through Moonpool → Petals → Starlight → Bloom\nShift Left/Right to move"
-    default: true
-    key: "F1"
-    layout: |
-      type.visual + " " + id
-      <text.secondary>title
-      "priority " + priority.visual + "  points " + points.visual
-    lanes:
-      - name: Moonpool
-        filter: select where status = "inbox" and type != "project" and has(priority) order by priority, createdAt
-        action: update where id = id() set status="inbox"
-      - name: Petals
-        filter: select where status = "ready" and type != "project" and has(priority) order by priority, createdAt
-        action: update where id = id() set status="ready"
-      - name: Starlight
-        filter: select where status = "inProgress" and type != "project" and has(priority) order by priority, createdAt
-        action: update where id = id() set status="inProgress"
-      - name: Bloom
-        filter: select where status = "done" and type != "project" and has(priority) order by priority, createdAt
-        action: update where id = id() set status="done"
-    actions:
-      - key: Enter
-        label: Open
-        kind: view
-        view: Detail
-        require: ["selection:one"]
-      - key: "a"
-        label: "Add to arc"
-        action: update where id = choose(select where type = "project" and outer.id not in dependsOn) set dependsOn = dependsOn + id()
-      - key: "e"
-        label: Edit
-        kind: view
-        view: Detail
-        mode: edit
-        require: ["selection:one"]
-      - key: "n"
-        label: New
-        kind: view
-        view: Detail
-        mode: new
-      - key: "m"
-        label: "Assign to me"
-        action: update where id = id() set assignee=user()
-      - key: "d"
-        label: "Add dependency"
-        action: update where id = id() set dependsOn = dependsOn + choose(select where has(type) and type != "project" and id != id() and id not in outer.dependsOn)
-      - key: "D"
-        label: "Remove dependency"
-        action: update where id = id() set dependsOn = dependsOn - choose(select where id in outer.dependsOn)
-      - key: "+"
-        label: "Priority up"
-        action: update where id = id() set priority = prev_enum(priority)
-      - key: "-"
-        label: "Priority down"
-        action: update where id = id() set priority = next_enum(priority)
-      - key: "Delete"
-        label: Delete
-        action: delete where id = id()
-        require: ["selection:one"]
-
-  - name: Petal Trail
-    kind: board
-    description: "Cards changed in the last 24 hours, newest sparkles first"
-    key: Ctrl-R
-    layout: |
-      type.visual + " " + id
-      <text.secondary>title
-      "priority " + priority.visual + "  points " + points.visual
-    lanes:
-      - name: Recent
-        columns: 4
-        filter: select where now() - updatedAt < 24hour and has(type) and type != "project" order by updatedAt desc
-    actions:
-      - key: Enter
-        label: Open
-        kind: view
-        view: Detail
-        require: ["selection:one"]
-      - key: "e"
-        label: Edit
-        kind: view
-        view: Detail
-        mode: edit
-        require: ["selection:one"]
-      - key: "n"
-        label: New
-        kind: view
-        view: Detail
-        mode: new
-      - key: "m"
-        label: "Assign to me"
-        action: update where id = id() set assignee=user()
-      - key: "d"
-        label: "Add dependency"
-        action: update where id = id() set dependsOn = dependsOn + choose(select where has(type) and type != "project" and id != id() and id not in outer.dependsOn)
-      - key: "D"
-        label: "Remove dependency"
-        action: update where id = id() set dependsOn = dependsOn - choose(select where id in outer.dependsOn)
-      - key: "+"
-        label: "Priority up"
-        action: update where id = id() set priority = prev_enum(priority)
-      - key: "-"
-        label: "Priority down"
-        action: update where id = id() set priority = next_enum(priority)
-      - key: "Delete"
-        label: Delete
-        action: delete where id = id()
-        require: ["selection:one"]
-
-  - name: Constellation
-    kind: board
-    description: "Arcs arranged by Now, Next, and Later horizons"
-    key: "F4"
-    layout: |
-      type.visual + " " + id
-      <text.secondary>title
-      <text.muted>dependsOn.count + <text.muted>" linked notes"
-      _
-      <text.muted>"tags: " + <text.value>tags
-      "priority " + priority.visual + "  points " + points.visual
-    lanes:
-      - name: Now
-        columns: 1
-        width: 25
-        filter: select where type = "project" and status in ["ready", "inProgress", "done"] and has(priority) and has(points) order by priority, points
-        action: update where id = id() set status="ready"
-      - name: Next
-        columns: 1
-        width: 25
-        filter: select where type = "project" and status = "inbox" and has(priority) and priority = "high" and has(points) order by priority, points
-        action: update where id = id() set status="inbox" priority="high"
-      - name: Later
-        columns: 2
-        width: 50
-        filter: select where type = "project" and status = "inbox" and has(priority) and priority > "high" and has(points) order by priority, points
-        action: update where id = id() set status="inbox" priority="medium-high"
-    actions:
-      - key: Enter
-        label: Open
-        kind: view
-        view: Project
-        require: ["selection:one"]
-      - key: "l"
-        label: "Add note to arc"
-        action: update where id = id() set dependsOn = dependsOn + choose(select where has(type) and type != "project" and id not in outer.dependsOn)
-      - key: "e"
-        label: Edit
-        kind: view
-        view: Project
-        mode: edit
-        require: ["selection:one"]
-      - key: "n"
-        label: New
-        kind: view
-        view: Project
-        mode: new
-        # seed the draft as an arc so a Constellation "new" lands on this board
-        # (Constellation lanes filter type = "project"); persisted only on form commit
-        action: create type="project"
-      - key: "m"
-        label: "Assign to me"
-        action: update where id = id() set assignee=user()
-      - key: "+"
-        label: "Priority up"
-        action: update where id = id() set priority = prev_enum(priority)
-      - key: "-"
-        label: "Priority down"
-        action: update where id = id() set priority = next_enum(priority)
-      - key: "Delete"
-        label: Delete
-        action: delete where id = id()
-        require: ["selection:one"]
-
-  - name: Atelier
-    kind: wiki
-    description: "Project notes, lore, and documentation"
-    path: "index.md"
-    key: "F2"
-
-  - name: Detail
-    kind: detail
-    description: "View and edit the selected card"
-    require: ["selection:one"]
-    layout: |
-      <highlight>title             | --                                        | --                            | --            | --                             | --          | --                       | --
-      _                            | _                                         | _                             | _             | _                              | _           | _                        | _
-      <text.label>status.caption   | (status.label + " " + status.visual):16.. | <text.label>assignee.caption  | assignee:18.. | <text.label>due.caption        | due:12..    | <text.label>tags.caption | <text.label>dependsOn.caption
-      <text.label>type.caption     | type.label + " " + type.visual            | <text.muted>createdBy.caption | createdBy     | <text.label>recurrence.caption | recurrence? | tags?:18..               | dependsOn?:16..fr
-      <text.label>priority.caption | priority                                  | <text.muted>createdAt.caption | createdAt     | _                              | _           | ^                        | ^
-      <text.label>points.caption   | points                                    | <text.muted>updatedAt.caption | updatedAt     | _                              | _           | ^                        | ^
-    actions:
-      - key: "R"
-        label: "Make recurring"
-        action: update where id = id() set recurrence=daily() due=next_date(daily())
-      - key: "d"
-        label: "Add dependency"
-        action: update where id = id() set dependsOn = dependsOn + choose(select where has(type) and type != "project" and id != id() and id not in outer.dependsOn)
-      - key: "D"
-        label: "Remove dependency"
-        action: update where id = id() set dependsOn = dependsOn - choose(select where id in outer.dependsOn)
-      - key: "L"
-        label: "List dependencies"
-        kind: view
-        view: Detail
-        choose: select where id in target.dependsOn
-
-  - name: Project
-    kind: detail
-    description: "View and edit the selected arc"
-    require: ["selection:one"]
-    layout: |
-      <highlight>title             | --                                 | --                    | --        | --                       | --    | --                                                                                                                                                                                                                                                                                    | --
-      _                            | _                                  | _                     | _         | _                        | _     | _                                                                                                                                                                                                                                                                                     | _
-      <text.label>status.caption   | (status.label + " " + status.visual):16.. | <text.muted>createdBy.caption  | createdBy | <text.label>tags.caption | tags?:18.. | (<text.muted>"Arcs gather related stories, bugs, and research notes into one planning thread. Press " + <status.warn>"<L>" + <text.muted>" to see every linked card. Move it across Now, Next, and Later as priorities shift; it auto-completes when all of its linked work is done."):fr | _
-      <text.label>priority.caption | priority                           | <text.muted>createdAt.caption  | createdAt | ^                        | ^     | ^                                                                                                                                                                                                                                                                                     | _
-      <text.label>points.caption   | points                             | <text.muted>updatedAt.caption  | updatedAt | ^                        | ^     | ^                                                                                                                                                                                                                                                                                     | _
-    actions:
-      - key: "L"
-        label: "List linked notes"
-        kind: view
-        view: Detail
-        choose: select where id in target.dependsOn
-      - key: "a"
-        label: "Add note to arc"
-        action: update where id = id() set dependsOn = dependsOn + choose(select where has(type) and type != "project" and id not in outer.dependsOn)
-
-triggers:
-  - description: block completion with open linked notes
-    ruki: >
-      before update
-        where new.status = "done" and new.dependsOn any status != "done"
-        deny "cannot complete: has open dependencies"
-  - description: cards must pass through in-progress before completion
-    ruki: >
-      before update
-        where new.status = "done" and old.status != "inProgress"
-        deny "cards must be in-progress before marking done"
-  - description: remove deleted card from dependency lists
-    ruki: >
-      after delete
-        update where old.id in dependsOn set dependsOn = dependsOn - [old.id]
-  - description: clean up completed cards after 24 hours
-    ruki: >
-      every 1day
-        delete where status = "done" and updatedAt < now() - 1day
-  - description: cards must have a keeper before starting
-    ruki: >
-      before update
-        where new.status = "inProgress" and new.assignee is empty and new.type != "project"
-        deny "assign a keeper before moving to in-progress"
-  - description: auto-complete arcs when all linked notes finish
-    ruki: >
-      after update
-        where new.status = "done" and new.type != "project"
-        update where type = "project" and new.id in dependsOn and dependsOn all status = "done"
-        set status="done"
-  - description: cannot delete cards that are actively being worked
-    ruki: >
-      before delete
-        where old.status = "inProgress"
-        deny "cannot delete an in-progress task — move to inbox or done first"
-  - description: spawn next occurrence when recurring task completes
-    ruki: >
-      after update
-        where new.status = "done" and old.recurrence is not empty
-        create title=old.title priority=old.priority tags=old.tags
-               recurrence=old.recurrence due=next_date(old.recurrence) status="inbox"
-TIKI_WORKFLOW_CONF
-    configured "tiki workflow configured (Dracula-Sakura anime board, constellation, triggers)"
-fi  # installed tiki
 
 # ---- k9s Dracula skin ----
 # k9s follows XDG too, so the Library path this used to write was read by nobody and
@@ -6720,30 +6085,22 @@ configured "zellij 'dev' layout created (editor + Claude pane: zellij --layout d
 # Launch with:  zellij --layout home
 #
 #   +---------------------+----------------------+
-#   |                     |  starlit  (weather)  |  25%
-#   |                     +----------------------+
-#   |   plain terminal    |  btop  (system)      |  25%
-#   |                     +----------------------+
-#   |                     |  tiki  (notes)       |  50%
+#   |                     |  starlit  (weather)  |  30%
+#   |   plain terminal    +----------------------+
+#   |                     |  btop  (system)      |  70%
 #   +---------------------+----------------------+
 #
-# The right column's three sizes must sum to 100: zellij treats a percentage
-# container as exact, not as a hint.
+# The right column's two sizes sum to 100.
 info "Creating zellij 'home' layout..."
 write_managed "$ZELLIJ_LAYOUTS/home.kdl" "//" <<'ZELLIJ_HOME'
 // Personal dashboard. Run:  zellij --layout home
 //
 // The tab-bar and status-bar panes are declared explicitly for the same reason
 // as the dev layout (#481): a custom layout replaces the default wholesale, and
-// those bars are ordinary plugin panes rather than implicit chrome. Without
-// them this renders with no mode line at all.
+// those bars are ordinary plugin panes rather than implicit chrome.
 //
-// Command choices that are not obvious:
-//   starlit  — `--interactive` is the persistent mode. Bare `starlit` prints a
-//              forecast once and exits, which leaves a dead pane behind.
-//   tiki     — opens the Markdown in whatever directory it starts in, so the
-//              cwd is pinned to the personal notes repo rather than inherited
-//              from wherever the layout happened to be launched.
+// `starlit --interactive` is the persistent mode. Bare `starlit` prints one
+// forecast and exits, which leaves a dead pane behind.
 layout {
     pane size=1 borderless=true {
         plugin location="tab-bar"
@@ -6753,19 +6110,14 @@ layout {
             name "terminal"
         }
         pane split_direction="horizontal" {
-            pane size="25%" {
+            pane size="30%" {
                 name "weather"
                 command "starlit"
                 args "--interactive"
             }
-            pane size="25%" {
+            pane size="70%" {
                 name "system"
                 command "btop"
-            }
-            pane size="50%" {
-                name "notes"
-                command "tiki"
-                cwd "~/Documents/notes"
             }
         }
     }
@@ -6774,7 +6126,7 @@ layout {
     }
 }
 ZELLIJ_HOME
-configured "zellij 'home' layout created (terminal + weather/system/notes: zellij --layout home)"
+configured "zellij 'home' layout created (terminal + weather/system: zellij --layout home)"
 fi  # installed zellij
 
 # ---- newsboat config ----
@@ -10115,14 +9467,6 @@ DIRS=(
     "$HOME/Documents/admin"      # legal, insurance, contracts
     "$HOME/Documents/receipts"
     "$HOME/Documents/travel"
-    "$HOME/Documents/notes"                  # tiki notebook repo (git-backed; git-initialized below)
-    "$HOME/Documents/notes/inbox"            # quick capture / unsorted sparks
-    "$HOME/Documents/notes/journal"          # dated entries, reflections
-    "$HOME/Documents/notes/ideas"            # concepts, sketches, prompts
-    "$HOME/Documents/notes/life-admin"       # planning, checklists, personal ops
-    "$HOME/Documents/notes/projects"         # longer-running arcs
-    "$HOME/Documents/notes/reference"        # evergreen notes, links, recipes
-    "$HOME/Documents/notes/archive"          # older / closed material
 
     # -- Creative (flat) ------------------------------------------------------
     "$HOME/Creative/writing"
@@ -10172,121 +9516,6 @@ else
 fi
 unset WALLPAPER_DEST_DIR WALLPAPER_DEST WALLPAPER_SOURCE
 
-# Git-init the tiki notes repo so it's ready as a git-backed workspace (idempotent).
-if installed git && [[ ! -d "$HOME/Documents/notes/.git" ]]; then
-    if git init -q "$HOME/Documents/notes" >> "$LOG_FILE" 2>&1; then
-        success "Initialized tiki notes repo at ~/Documents/notes (git-backed)"
-    else
-        warn "Could not git init ~/Documents/notes"
-    fi
-fi
-
-# Seed the tiki notebook with managed entry docs so the wiki view and the git repo
-# root both have a welcoming first page.
-TIKI_NOTES_DIR="$HOME/Documents/notes"
-TIKI_INDEX="$TIKI_NOTES_DIR/index.md"
-TIKI_README="$TIKI_NOTES_DIR/README.md"
-write_managed "$TIKI_INDEX" "[//]:" <<'TIKI_INDEX_CONF'
-# 🌙 Dracula-Sakura Notebook
-
-Welcome to your Tiki notebook — a soft little command center for notes, plans,
-errands, journal fragments, project arcs, and half-formed sparks.
-
-## Constellation map
-
-- [inbox/](inbox/) — quick captures and uncategorized thoughts
-- [journal/](journal/) — dated reflections, diary notes, mood logs
-- [ideas/](ideas/) — concepts, prompts, sketches, things to explore
-- [life-admin/](life-admin/) — planning, checklists, renewals, budgets, paperwork
-- [projects/](projects/) — longer arcs with linked notes and support material
-- [reference/](reference/) — evergreen notes, recipes, setup snippets, saved context
-- [archive/](archive/) — closed loops, finished arcs, older notes worth keeping
-
-## Gentle rituals
-
-- Use **Moonboard** for active cards and small moving pieces.
-- Use **Constellation** for bigger arcs that gather related notes.
-- Drop anything fast into `inbox/` first; sort it later when the mood is better.
-- Let `journal/` hold daily texture, not just action items.
-- Use tags like `sakura`, `ritual`, `errand`, `finance`, `health`, `writing`, or `home`.
-
-## Starter note ideas
-
-- Morning reset
-- Weekly glow-up checklist
-- Bills / renewals / appointments
-- Reading notes
-- Story fragments
-- Wish list
-- Packing list
-
-## Tiny command spells
-
-```bash
-cd ~/Documents/notes
-
-tiki
-
-echo "Pay electricity bill" | tiki
-
-tiki exec 'select id, title where status = "ready"'
-```
-
-Make it useful first, pretty second, and let the prettiness still stay.
-TIKI_INDEX_CONF
-write_managed "$TIKI_README" "[//]:" <<'TIKI_README_CONF'
-# 🌸 Dracula-Sakura Tiki Notebook
-
-A git-backed notebook for notes, reflections, errands, ideas, life-admin, and
-longer personal arcs — designed to feel calm, searchable, and easy to keep.
-
-## Layout
-
-- `inbox/` — quick capture, unsorted sparks, things to triage later
-- `journal/` — dated entries, reflections, check-ins, mood notes
-- `ideas/` — concepts, prompts, sketches, fragments, future maybes
-- `life-admin/` — practical planning: money, health, home, appointments, paperwork
-- `projects/` — larger arcs with linked notes and support material
-- `reference/` — evergreen notes, recipes, setup snippets, saved context
-- `archive/` — older or finished material worth keeping but not foregrounding
-- `index.md` — the themed landing page used by Tiki's wiki view
-
-## Tiki views
-
-- **Moonboard** — active cards moving through Moonpool → Petals → Starlight → Bloom
-- **Petal Trail** — recently touched cards
-- **Constellation** — bigger arcs and their linked notes
-- **Atelier** — the notebook wiki / document surface
-
-## Common flows
-
-```bash
-# open the notebook
-cd ~/Documents/notes && tiki
-
-# quick-capture from the shell
-cd ~/Documents/notes && echo "Book dentist appointment" | tiki
-
-# list cards ready to move
-cd ~/Documents/notes && tiki exec 'select id, title where status = "ready"'
-
-# list notes tagged for home or finance
-cd ~/Documents/notes && tiki exec 'select id, title where "home" in tags or "finance" in tags'
-```
-
-## Suggested tags
-
-`sakura`, `ritual`, `errand`, `home`, `finance`, `health`, `writing`, `reading`, `wishlist`, `travel`
-
-## Notes
-
-- Everything is plain Markdown, so the notebook stays portable and git-friendly.
-- The workflow is generated by this setup script, so re-running setup refreshes the managed notebook surface.
-- Use `reminders` for alerts that need to reach iPhone / Watch; keep Tiki for notes and planning.
-TIKI_README_CONF
-info "Seeded tiki notebook landing page: ~/Documents/notes/index.md"
-info "Seeded tiki notebook README: ~/Documents/notes/README.md"
-unset TIKI_NOTES_DIR TIKI_INDEX TIKI_README
 
 # ---- Helper Scripts ----
 info "Creating helper scripts in ~/Scripts/bin..."
@@ -11982,11 +11211,11 @@ if [[ -f "$CLAUDE_SETTINGS" ]]; then
     #   2. A "fileSuggestionSettings" key that Claude Code does not implement (ignored
     #      outright) — dropped; ~/.ignore below replaces it.
     #   3. A Linux-flavoured deny list (/dev/sda, mkfs) on a macOS-only target.
-    CLAUDE_ADD_ALLOW='["Bash(qalc *)","Bash(has *)","Bash(doxx *)","Bash(mdfind *)","Bash(atac *)","Bash(leaf *)","Bash(manly *)","Bash(soffice *)","Bash(office-py *)","Bash(pdftoppm *)","Bash(pdftotext *)","Bash(pdfinfo *)","Bash(tiki exec *)","Bash(reminders show*)","Bash(git status *)","Bash(git diff *)","Bash(git log *)","Bash(git show *)","Bash(git branch *)","Bash(git remote -v)","Bash(git stash list)"]'
+    CLAUDE_ADD_ALLOW='["Bash(qalc *)","Bash(has *)","Bash(doxx *)","Bash(mdfind *)","Bash(atac *)","Bash(leaf *)","Bash(manly *)","Bash(soffice *)","Bash(office-py *)","Bash(pdftoppm *)","Bash(pdftotext *)","Bash(pdfinfo *)","Bash(reminders show*)","Bash(git status *)","Bash(git diff *)","Bash(git log *)","Bash(git show *)","Bash(git branch *)","Bash(git remote -v)","Bash(git stash list)"]'
     CLAUDE_DENY_ALLOW='["Bash(npm *)","Bash(npm install *)","Bash(npx *)","Bash(pnpm *)","Bash(bun *)","Bash(node *)","Bash(tsx *)","Bash(ts-node *)","Bash(python3 *)","Bash(pip *)","Bash(uv *)","Bash(uvx *)","Bash(cargo *)","Bash(go *)","Bash(just *)","Bash(make *)","Bash(nu *)","Bash(nushell *)","Bash(topgrade *)","Bash(watchexec *)","Bash(viddy *)","Bash(parallel *)","Bash(act *)","Bash(curl *)","Bash(xh *)","Bash(wget *)","Bash(curlie *)","Bash(aria2c *)","Bash(grpcurl *)","Bash(yt-dlp *)","Bash(llm *)","WebFetch","Bash(aws *)","Bash(cdk *)","Bash(sam *)","Bash(docker *)","Bash(docker-compose *)","Bash(docker compose *)","Bash(kubectl *)","Bash(tofu *)","Bash(s5cmd *)","Bash(dynein *)","Bash(steampipe *)","Bash(iamlive *)","Bash(granted *)","Bash(assume *)","Bash(mitmproxy *)","Bash(mitmdump *)","Bash(nmap *)","Bash(chezmoi *)","Bash(dbmate *)","Bash(env *)","Bash(export *)","Bash(git *)","Bash(git-*)","Bash(gh *)","Bash(glab *)","Bash(cp *)","Bash(mv *)","Bash(trash *)","Bash(sd *)","Bash(sed *)","Bash(awk *)","Bash(find *)","Bash(npkill *)","Bash(ouch *)","Bash(7z *)","Bash(mkcert *)","Write"]'
     # Allowlist entries that are dead rather than dangerous: renamed binaries or rules
     # already covered by a broader prefix. Stripped on re-run so they don't accumulate.
-    CLAUDE_STALE_ALLOW='["Bash(trippy *)","Bash(wc -l *)"]'
+    CLAUDE_STALE_ALLOW='["Bash(trippy *)","Bash(wc -l *)","Bash(tiki exec *)"]'
     # Deny rules retargeted from Linux to macOS, plus the common rm spellings the
     # original literal-prefix rules missed. These are fat-finger guardrails, NOT a
     # security boundary — permission rules match literally, so variants still pass.
@@ -12096,7 +11325,6 @@ else
       "Bash(manly *)",
       "Bash(soffice *)",
       "Bash(office-py *)",
-      "Bash(tiki exec *)",
       "Bash(reminders show*)",
       "Bash(pdftoppm *)",
       "Bash(pdftotext *)",
@@ -12331,16 +11559,15 @@ Rules that follow from this:
 - Shell note: `bat` is aliased to `cat`; use `/bin/cat` only inside heredoc subshells where bat breaks syntax
 - Dotfiles: chezmoi
 - Launcher: Ghostty quick terminal (global cmd+space) + shell functions `a` (app launcher), `ff`/`rgf`/`s` (file/content/Spotlight search). Window mgmt: native macOS Spaces + built-in window tiling (no tiling WM). Bar: SketchyBar. Clipboard: clipse (`clip`)
-- API testing/exploration → **use ATAC** (terminal — scriptable CLI + TUI; JSON/YAML collections, Postman import; allow-listed) for anything collection-based or repeatable; reach for `hurl` / `xh` / `curlie` / `grpcurl` for quick one-offs
+- API testing: use `xh` for one-off HTTP requests, Hurl for repeatable assertions, and `grpcurl` for gRPC. Use ATAC only for interactive saved collections.
 - Database: pgcli, mycli, lazysql, harlequin (SQL IDE TUI), usql, sq; migrations via dbmate
 - Diagrams: d2 / Mermaid (code-based, in the terminal)
 - Screenshots → Shottr saves them to **~/Screenshots**. When the user mentions "a screenshot" without a path, read the newest file in ~/Screenshots (`ls -t ~/Screenshots | head`) rather than asking where it is
 - File transfer: rclone (CLI — SFTP/S3/cloud)
 - Proxy/debugger: mitmproxy
 - Tunneling: ngrok
-- Notes, tasks & project boards → **use tiki** (git-backed Markdown workspace), not ad-hoc scratch files, for anything worth keeping. The `tiki` **skill is installed** (~/.claude/skills/tiki) — use it: CRUD via `tiki exec '<ruki>'` (SQL-like; auto-validates + git-stages), quick-capture via `echo "note" | tiki` (first line = title). Tikis live in the cwd as Markdown. Personal (non-project) notes/tasks go in **~/Documents/notes** (a git repo) — cd there for general notes; for project-specific tasks, use the project's cwd.
 - Email & calendar: **herald** (one terminal app for both — Gmail work + iCloud personal, unified CalDAV calendar, built-in AI triage/summaries). Herald exposes an **MCP server** (registered in Claude Code) — prefer its MCP tools for reading/searching mail and calendar. **Never send, reply, delete, archive, or modify mail or events without explicit user confirmation** (mutations also require `herald serve` running).
-- Reminders → **use `reminders`** (reminders-cli) for anything that should fire as an alert on the user's iPhone/Watch via iCloud. This is the deciding line between three neighbours: **tiki** holds notes/tasks worth keeping in git, **herald** owns mail and calendar *events*, and **`reminders`** owns time- and location-triggered *alerts*. When the user says "remind me", that is this tool — do not write it into a scratch file or a tiki task and call it done. Read freely (`reminders show-lists`, `reminders show <list>`); creating, completing, or deleting a reminder changes state on every synced device, so **do that only when the user actually asked for it**, and echo back what you created. Common forms: `reminders add <list> "<text>" --due-date "tomorrow 9am"`, `reminders complete <list> <index>`. First run triggers a one-time macOS Reminders permission prompt.
+- Reminders: use `reminders` for alerts that must sync to the user's iPhone or Watch through iCloud. Herald owns mail and calendar events. Plain notes stay ordinary files. Read freely with `reminders show-lists` or `reminders show <list>`. Creating, completing, or deleting a reminder changes every synced device. Do that only when the user asks, then report the change. Common forms: `reminders add <list> "<text>" --due-date "tomorrow 9am"`, `reminders complete <list> <id>`, `reminders delete <list> <id>`.
 - Cloud storage: rclone (Google Drive, S3, Dropbox, etc.); borg for versioned backups
 - Browser: Google Chrome (primary); Carbonyl / w3m in the terminal
 - Credentials → **never read, type, enter, or exfiltrate passwords, tokens, API keys, or secrets**, and never echo them into a terminal. Auth is handled by Apple Passwords (iCloud Keychain) and the OS credential tools; defer to the user for anything that needs a credential (no third-party password manager is installed)
@@ -12365,15 +11592,11 @@ Rules that follow from this:
 - **Code quality**: `typos` for spell checking, `ast-grep` for structural search/replace, `shellcheck`/`shfmt` for shell, `scc` to count lines of code by language with complexity + COCOMO cost, `manly` to explain a command's flags from its man page
 - **Security**: `trivy` to scan containers/IaC, `gitleaks` for secrets, `semgrep` for static analysis, `detect-secrets` for pre-commit secret detection, `sops` for secrets encryption
 - **IaC**: `tofu` (Terraform), `tflint` for linting, `terraform-docs` for module READMEs, `checkov` for static analysis, `infracost` for cost estimation, `cfn-lint` for CloudFormation, `sam` for SAM (note: `tfsec` checks live in `trivy config`)
-- **AI / agentic**: `claude` (Claude Code) is the coding agent — do agentic, multi-file edits yourself. `llm` for one-shot prompts and embeddings. `copilot` (GitHub Copilot CLI) is available too. One secondary harness sits alongside: **`omp`** (Oh My Pi — a maximalist fork of pi, routed at Gemini, needs `GEMINI_API_KEY`). It reads `~/.agents/skills/` and carries the same house preferences and writing rules as this file. omp does have MCP and inherits servers already declared under `.claude`, but this setup registers none for it, so treat herald, gws, GitHub and AWS as Claude Code's until that changes. pi was retired in 7.22.0; omp is its fork and does natively what pi needed extensions for.
+- **AI / agentic**: `claude` (Claude Code) is the coding agent. `llm` handles one-shot prompts and embeddings. `copilot` provides the GitHub Copilot CLI. The secondary harness is **`omp`** (Oh My Pi), routed at Gemini and requiring `GEMINI_API_KEY`. It reads `~/.agents/skills/` and carries the same house preferences and writing rules. Native approval policies cover command execution. A scoped extension blocks native file mutations to credential stores, dependency trees, and repository metadata.
 - **HTTP**: `xh` for colorized requests, `curlie` for curl with httpie output, `grpcurl` for gRPC
 - **Network**: `trip` (trippy) for traceroute TUI, `sudo mtr` (requires root, lives in sbin), `bandwhich` for bandwidth, `nmap` for scanning, `mkcert` for local TLS certs
 - **Docs**: `d2` for diagrams, `pandoc` for conversion, `leaf` for Markdown preview, `doxx` to read/preview `.docx` files in the terminal
-- **Office files** (.pptx/.xlsx/.docx) — three complementary tools:
-  - **Render**: `soffice --headless --convert-to pdf --outdir /tmp file.pptx` (LibreOffice) — the fidelity renderer
-  - **See it**: `pdftoppm -png -r 150 /tmp/file.pdf /tmp/page` (poppler) rasterizes the PDF to PNGs you can inspect (this is the PDF→image tool — `magick` needs ghostscript for PDFs and is for editing the resulting images: resize/crop/composite); `pdftotext`/`pdfinfo` for text/metadata
-  - **Assert on content**: `office-py` (a venv with python-docx/openpyxl/python-pptx), e.g. `office-py -c 'from pptx import Presentation; p=Presentation("deck.pptx"); print(len(p.slides))'`
-  - **Skills**: the `office-docs` skill wraps this render→see→assert loop into one recipe; Claude Code's **bundled** `docx`/`pptx`/`xlsx`/`pdf` skills author & edit local files with the same libraries (preview results via the render step above). Local files only — cloud Google Docs/Sheets/Slides use `gws`.
+- **Office files** (.pptx/.xlsx/.docx): the harness read tool handles text extraction and basic inspection. Use `office-layout-check` only for visual fidelity. It converts through LibreOffice, rasterizes the PDF with `pdftoppm`, and inspects each page image. Use `office-py` only for precise structural assertions. Author cloud files through the scoped `gws` skills.
 - **Database**: `pgcli`/`mycli` for auto-completing SQL, `lazysql` for TUI, `sq` for cross-database queries, `dbmate` for migrations
 - **File management**: `rovr` for the TUI file manager (`nnn` as a minimal fallback), `wiper` for interactive disk-usage cleanup (ncdu-like, Trash-safe), `watchexec` for running commands on file changes, `rclone` for cloud storage sync
 - **Kubernetes**: `k9s` for TUI, `stern` for log tailing (kubectl via OrbStack)
@@ -13716,192 +12939,115 @@ CMD_PROBE_IMPLICATIONS
 configured "Claude Code commands created (23 commands: /pr-review, /test-plan, /dep-audit, /quick-doc, /cleanup, /security-scan, /perf-check, /docker-lint, /iac-review, /convert, /new-feature, /fix-bug, /create-readme, /init-project, /refactor, /add-endpoint, /add-component, /ci-fix, /changelog, /commit-msg, /probe-assumptions, /probe-evidence, /probe-implications)"
 
 # ---- Claude Code first-party skills (authored here) ----
-# Skills that teach Claude to use tools THIS script installs, written fresh each run
-# (script-owned, like the gws skills, so updates propagate). Unlike the commands above,
-# a SKILL.md must start with its YAML frontmatter on line 1 — so these use plain
-# heredocs, NOT write_managed (its leading comment marker would break the frontmatter).
+# Skills that teach Claude and omp to use tools this script installs. A SKILL.md
+# must start with YAML frontmatter, so these use plain heredocs.
 if [[ "$DRY_RUN" == "true" ]]; then
-    info "[DRY RUN] Would write first-party Claude skills (office-docs, d2-diagrams, dbmate-migrations, api-testing) -> ~/.claude/skills/"
+    info "[DRY RUN] Would write three first-party skills -> ~/.claude/skills/"
+    info "[DRY RUN] Would retire the dbmate-migrations, office-docs, and tiki skills"
 else
     info "Writing first-party Claude Code skills..."
-    mkdir -p "$HOME/.claude/skills/office-docs"
-    cat > "$HOME/.claude/skills/office-docs/SKILL.md" <<'SKILL_OFFICE_DOCS'
+    mkdir -p "$HOME/.claude/skills/office-layout-check"
+    cat > "$HOME/.claude/skills/office-layout-check/SKILL.md" <<'SKILL_OFFICE_LAYOUT'
 ---
-name: office-docs
-description: Inspect, validate, convert, and visually verify LOCAL Office / OpenDocument files (.docx, .pptx, .xlsx, .odt, .ods, .odp) from the terminal — render to PDF/PNG to actually see them, extract text/metadata, and assert on structured content. Use when handed a local office file to check, screenshot, convert, or verify. NOT for authoring (that stays in Google Workspace) and NOT for cloud Drive files (use the gws skills).
+name: office-layout-check
+description: Verify the visual layout of local Office and OpenDocument files. Use when exact page, slide, or sheet rendering matters.
 ---
 
-# office-docs — work with local Office / OpenDocument files
+# Office layout check
 
-This machine has a purpose-built local toolchain for `.docx`/`.pptx`/`.xlsx` (installed by the dev setup). Authoring belongs in Google Workspace; this skill is for **inspecting, validating, converting, and visually verifying files already on the local filesystem**.
+Use the harness read tool for text extraction and basic inspection. Use this skill only when visual fidelity matters.
 
-## The three moves
+## Visual check
 
-1. **Render (fidelity) — see what it actually looks like.** LibreOffice headless is the renderer; rasterize the PDF to PNGs you can open and read:
-   ```bash
-   soffice --headless --convert-to pdf --outdir /tmp "deck.pptx"
-   pdftoppm -png -r 150 /tmp/deck.pdf /tmp/deck-page   # -> /tmp/deck-page-1.png, -2.png, ...
-   ```
-   Then Read the PNGs to judge layout and visuals. `soffice` also converts formats: `--convert-to csv` (xlsx->csv), `--convert-to docx`, `--convert-to txt`.
+1. Create a scratch directory outside the source directory.
+2. Convert the source file to PDF with LibreOffice.
+3. Rasterize the PDF pages to PNG files.
+4. Read every PNG file and inspect the layout.
+5. Report clipping, overflow, spacing, font, image, or pagination defects.
 
-2. **Extract text / metadata** without rendering:
-   ```bash
-   pdftotext /tmp/deck.pdf -     # text to stdout
-   pdfinfo   /tmp/deck.pdf       # page count, dimensions, metadata
-   doxx report.docx             # read a .docx directly in the terminal
-   ```
+```bash
+soffice --headless --convert-to pdf --outdir /tmp/office-check "deck.pptx"
+pdftoppm -png -r 150 /tmp/office-check/deck.pdf /tmp/office-check/deck-page
+```
 
-3. **Assert on structured content** with `office-py` (a venv carrying python-docx / openpyxl / python-pptx):
-   ```bash
-   office-py -c 'from pptx import Presentation; p=Presentation("deck.pptx"); print(len(p.slides))'
-   office-py -c 'import openpyxl; wb=openpyxl.load_workbook("data.xlsx"); print(wb.sheetnames)'
-   office-py -c 'import docx; d=docx.Document("report.docx"); print(len(d.paragraphs))'
-   ```
+Use `office-py` only for precise structural assertions that the read tool cannot answer.
 
-## Guidance
+```bash
+office-py -c 'from pptx import Presentation; print(len(Presentation("deck.pptx").slides))'
+office-py -c 'import openpyxl; print(openpyxl.load_workbook("data.xlsx").sheetnames)'
+```
 
-- To **create or heavily edit** a local `.docx`/`.pptx`/`.xlsx`, prefer Claude Code's bundled `docx` / `pptx` / `xlsx` skills (same underlying libraries); use move #1 to preview the result.
-- For **cloud** Google Docs/Sheets/Slides, use the `gws` skills — this skill is for local files only.
-- Always render into `/tmp` (or the scratch dir), never next to the source file.
-- If `soffice` errors on a file, report it — usually a corrupt or password-protected document. `soffice` needs no running instance; it runs fully headless.
-SKILL_OFFICE_DOCS
+Keep scratch output outside the source directory. Do not edit or author documents unless the user asks.
+SKILL_OFFICE_LAYOUT
 
     mkdir -p "$HOME/.claude/skills/d2-diagrams"
     cat > "$HOME/.claude/skills/d2-diagrams/SKILL.md" <<'SKILL_D2'
 ---
 name: d2-diagrams
-description: Create and render diagrams as code — architecture, flowcharts, sequence, ER, network — with d2 (primary) or mermaid/mmdc (fallback), producing SVG/PNG. Use when the user asks to diagram, visualize, sketch, or draw a system/flow/architecture, or to turn a description or code into a diagram file.
+description: Create reproducible diagram artifacts with D2. Use when the user requests a rendered diagram file or maintainable diagram source.
 ---
 
-# d2-diagrams — diagrams as code
+# D2 diagrams
 
-This setup uses **`d2`** as the primary diagram tool (it replaced draw.io); `mmdc` (mermaid) is the fallback when the user specifically wants mermaid or a diagram type d2 handles awkwardly.
+Use inline Mermaid for conversation-only diagrams. Use D2 for persisted or rendered artifacts.
 
-## d2 workflow
-
-1. Write the diagram source to a `.d2` file (keep it next to the output so it stays regenerable):
-   ```d2
-   # arch.d2
-   user -> api: request
-   api -> db: query
-   api -> cache: read-through
-   ```
-2. Render, then Read the PNG (or open the SVG) to actually see it:
-   ```bash
-   d2 arch.d2 arch.svg              # SVG (default, crisp, scalable)
-   d2 arch.d2 arch.png              # PNG (for inline viewing)
-   d2 --theme 200 arch.d2 arch.svg  # apply a theme
-   d2 --layout elk arch.d2 out.svg  # ELK engine for dense graphs (default is dagre)
-   d2 --watch arch.d2               # live-reload preview in the browser
-   ```
-
-## mermaid fallback
+1. Write a focused `.d2` source file.
+2. Keep the source beside the rendered output.
+3. Render the source to SVG or PNG.
+4. Read the rendered output and inspect its layout.
 
 ```bash
-mmdc -i flow.mmd -o flow.svg     # flowcharts, sequence, ER, gantt
+d2 architecture.d2 architecture.svg
+d2 --layout elk architecture.d2 architecture.svg
 ```
 
-## Guidance
+Use the default layout first. Use ELK only when the default layout tangles a dense graph.
 
-- Default to d2 unless the user asks for mermaid.
-- Commit the `.d2`/`.mmd` source, not just the rendered image.
-- For big graphs, try `--layout elk` if dagre gets tangled.
+Use `mmdc` only when the user requests Mermaid source or Mermaid output.
 SKILL_D2
-
-    mkdir -p "$HOME/.claude/skills/dbmate-migrations"
-    cat > "$HOME/.claude/skills/dbmate-migrations/SKILL.md" <<'SKILL_DBMATE'
----
-name: dbmate-migrations
-description: Create and run database schema migrations with dbmate — new timestamped up/down SQL files, apply, roll back, and check status. Use when the user wants to add or alter a table/column, create a migration, or manage schema changes. Follows this setup's DB conventions.
----
-
-# dbmate-migrations — database migrations
-
-`dbmate` manages plain-SQL migrations, driven by `DATABASE_URL` (it reads `.env` by default).
-
-## Workflow
-
-```bash
-dbmate new add_users_table   # -> db/migrations/<timestamp>_add_users_table.sql
-dbmate up                    # apply all pending migrations
-dbmate down                  # roll back the most recent migration
-dbmate status                # list applied + pending
-```
-
-Each file has an up and a down section:
-
-```sql
--- migrate:up
-create table users (
-  id         bigint generated always as identity primary key,
-  email      text not null unique,
-  created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now()
-);
-create index idx_users_email on users (email);
-
--- migrate:down
-drop table users;
-```
-
-## Conventions (from the global DB rules)
-
-- Table names **plural, snake_case** (`user_accounts`, `order_items`).
-- Always include `id`, `created_at`, `updated_at`.
-- Foreign keys are `<table_singular>_id`; **index** FKs and any column used in WHERE/ORDER BY.
-- **Never edit an already-applied migration** — write a new one.
-- Always provide a working `-- migrate:down` so rollbacks are safe.
-SKILL_DBMATE
 
     mkdir -p "$HOME/.claude/skills/api-testing"
     cat > "$HOME/.claude/skills/api-testing/SKILL.md" <<'SKILL_API'
 ---
 name: api-testing
-description: Test and debug HTTP/gRPC APIs from the terminal — send requests, write repeatable test files with assertions, and inspect responses. Use when the user wants to hit an endpoint, verify an API response, write an API test, or debug a request. Leads with headless tools (hurl, xh, curlie, grpcurl); atac is the interactive TUI for saved collections.
+description: Exercise HTTP and gRPC APIs from the terminal. Use for live requests, response diagnosis, or repeatable protocol assertions.
 ---
 
-# api-testing — HTTP/gRPC from the terminal
+# API testing
 
-## One-off requests — `xh` (or `curlie`)
+Use `xh` for one-off HTTP requests. Use Hurl for repeatable HTTP assertions.
 
 ```bash
-xh GET api.example.com/users limit==20 Authorization:"Bearer $TOKEN"   # ==  query param,  :  header
-xh POST api.example.com/users name=Ada email=ada@example.com           # =  builds a JSON body
+xh GET api.example.com/users limit==20 Authorization:"Bearer $TOKEN"
+xh POST api.example.com/users name=Ada email=ada@example.com
 ```
-`curlie` is curl's interface with httpie-style colored output.
 
-## Repeatable tests with assertions — `hurl` (preferred for anything worth keeping)
+Store durable HTTP checks in `.hurl` files.
 
 ```hurl
-# users.hurl
 GET https://api.example.com/users
 HTTP 200
 [Asserts]
-jsonpath "$.data" count > 0
 jsonpath "$.data[0].id" exists
 ```
-```bash
-hurl --test users.hurl   # run as a test: assertions + exit code + report
-hurl users.hurl          # just execute and print the response body
-```
 
-## gRPC — `grpcurl`
+Run durable checks with `hurl --test <file>`. Use `grpcurl` for gRPC discovery and requests.
 
 ```bash
 grpcurl -plaintext localhost:50051 list
 grpcurl -d '{"id":1}' localhost:50051 svc.Users/Get
 ```
 
-## Interactive / saved collections — `atac`
-
-`atac` is the TUI API client (Postman-like; imports Postman collections, stores JSON/YAML on disk). Point the user there for exploratory work; use `hurl`/`xh` for anything Claude should run headlessly.
-
-## Guidance
-
-- Save anything worth rerunning as a `.hurl` file (assertable, version-controlled) rather than ad-hoc `xh` commands.
-- Never hard-code secrets — reference env vars / `{{token}}` variables.
+Reference secrets through environment variables. Do not store tokens in commands, fixtures, or checked-in files.
 SKILL_API
-    success "First-party Claude skills written: office-docs, d2-diagrams, dbmate-migrations, api-testing -> ~/.claude/skills/"
+
+    RETIRED_CLAUDE_SKILLS=(dbmate-migrations office-docs tiki)
+    for _skill in "${RETIRED_CLAUDE_SKILLS[@]}"; do
+        rm -f "$HOME/.claude/skills/$_skill/SKILL.md"
+        rmdir "$HOME/.claude/skills/$_skill" 2>/dev/null || true
+    done
+    unset RETIRED_CLAUDE_SKILLS _skill
+    success "First-party Claude skills written: office-layout-check, d2-diagrams, api-testing -> ~/.claude/skills/"
 fi
 
 # ---- Claude Code: bigpowers skills/hooks ----
@@ -13945,45 +13091,49 @@ fi
 #   * `google` is the MODEL provider (the Gemini API). `gemini` is a DISCOVERY
 #     provider — the source that reads GEMINI.md. Disabling or configuring the
 #     wrong one does nothing visible. Roles below are all `google/...`.
-#   * `~/.agents/skills` is omp's CANONICAL native skills location, not a foreign
-#     import. The five skills the pi block links there are picked up with no extra
-#     work, which is why this block generates no skills of its own.
+#   * `~/.agents/skills` is omp's CANONICAL shared skills location, not a foreign
+#     import. The three skills linked there need no separate omp copies.
 OMP_DIR="$HOME/.omp/agent"
 OMP_THEME_DIR="$OMP_DIR/themes"
 OMP_THEME_FILE="$OMP_THEME_DIR/dracula-sakura.json"
 # Two skill directories, both verified against omp's source rather than its docs,
 # which describe the layout without pinning the user-level path (#513):
-#   ~/.omp/agent/skills  — the `native` provider, priority 100. Confirmed at
-#                          src/discovery/builtin.ts:294, "User-level scan from
-#                          ~/.omp/agent/skills/".
-#   ~/.agents/skills     — the `agents` provider, priority 70. On by default:
-#                          `omp config list` reports skills.enableAgentsUser=true.
-# Note `omp read skill://<name>` answers "Unknown skill" for both from a bare
-# shell. That subcommand does not load the session skill registry, so it is not
-# evidence of a discovery problem — do not "fix" a working path because of it.
+#   ~/.omp/agent/skills  — the `native` provider, priority 100.
+#   ~/.agents/skills     — the `agents` provider, priority 70.
 OMP_SKILLS_DIR="$OMP_DIR/skills"
-OMP_EXTENSIONS_DIR="$OMP_DIR/extensions"   # auto-discovered for .ts/.js (#525)
+OMP_EXTENSIONS_DIR="$OMP_DIR/extensions"
 AGENTS_SKILLS="$HOME/.agents/skills"
-# The five shared skills, symlinked from ~/.claude/skills. omp reads this
-# directory natively; the list is unchanged from what pi shared (#513).
-OMP_SHARED_SKILLS=(api-testing d2-diagrams dbmate-migrations office-docs tiki)
-# Tiki companions generated locally. The general `tiki` CRUD skill is shared
-# above; these five are the workflow recipes layered on top of it.
-OMP_LOCAL_TIKI_SKILLS=(tiki-capture tiki-review tiki-groom tiki-arc tiki-journal)
-# config.yml is canonical; an existing config.yaml is loaded and updated in place by
-# omp itself, so target whichever one is already there rather than creating a second
-# file the tool would then ignore.
+OMP_SHARED_SKILLS=(api-testing d2-diagrams office-layout-check)
+OMP_RETIRED_SKILLS=(tiki-capture tiki-review tiki-groom tiki-arc tiki-journal)
+OMP_RETIRED_EXTENSIONS=(
+    turn-counter.ts
+    permission-gate.ts
+    permissions-gate.ts
+    confirm-destructive.ts
+    git-checkpoint.ts
+    dirty-repo-guard.ts
+    notify.ts
+)
+# config.yml is canonical. Preserve config.yaml when omp already uses that name.
 OMP_CONFIG_FILE="$OMP_DIR/config.yml"
 [[ -f "$OMP_DIR/config.yaml" && ! -f "$OMP_CONFIG_FILE" ]] && OMP_CONFIG_FILE="$OMP_DIR/config.yaml"
 
 if [[ "$DRY_RUN" == "true" ]]; then
     info "[DRY RUN] Would write omp config -> $OMP_DIR (AGENTS.md, themes/dracula-sakura.json)"
     info "[DRY RUN] Would merge omp settings -> $OMP_CONFIG_FILE (theme, model roles, fallbacks)"
-    info "[DRY RUN] Would write ${#OMP_LOCAL_TIKI_SKILLS[@]} omp-local Tiki skills -> $OMP_SKILLS_DIR/"
     info "[DRY RUN] Would link ${#OMP_SHARED_SKILLS[@]} shared skills -> $AGENTS_SKILLS/"
-    info "[DRY RUN] Would write the turn-counter widget -> $OMP_EXTENSIONS_DIR/turn-counter.ts"
+    info "[DRY RUN] Would retire obsolete omp skills and extensions"
+    info "[DRY RUN] Would write the protected-paths guard -> $OMP_EXTENSIONS_DIR/protected-paths.ts"
 else
     mkdir -p "$OMP_THEME_DIR" "$OMP_SKILLS_DIR" "$OMP_EXTENSIONS_DIR" "$AGENTS_SKILLS"
+    for _skill in "${OMP_RETIRED_SKILLS[@]}"; do
+        rm -f "$OMP_SKILLS_DIR/$_skill/SKILL.md"
+        rmdir "$OMP_SKILLS_DIR/$_skill" 2>/dev/null || true
+    done
+    for _extension in "${OMP_RETIRED_EXTENSIONS[@]}"; do
+        rm -f "$OMP_EXTENSIONS_DIR/$_extension"
+    done
+    unset _skill _extension
 
     # -- AGENTS.md ----------------------------------------------------------------
     # Same two-part shape as pi's: shared preferences, then the shared writing rules.
@@ -14103,718 +13253,241 @@ else
 OMP_THEME_CONF
     success "omp: Dracula-Sakura theme written (~/.omp/agent/themes/dracula-sakura.json)"
 
-    # -- omp-local Tiki skills -----------------------------------------------------
-    # Keep the general tiki CRUD skill shared with Claude via ~/.agents/skills/, but add
-    # a small omp-native companion set for capture/review/groom/arc/journal flows.
-    write_generated "$OMP_SKILLS_DIR/tiki-capture/SKILL.md" <<'OMP_TIKI_CAPTURE_SKILL'
----
-name: tiki-capture
-description: Fast capture into a Tiki notebook — create inbox notes, journal entries, ideas, life-admin cards, or recurring rituals with sensible titles, tags, and optional due dates. Use when the user wants to quickly save a thought, task, reflection, or plan into Tiki.
----
 
-# Tiki Capture
-
-Use this skill for quick intake into a Tiki notebook, especially one shaped like:
-
-- `inbox/`
-- `journal/`
-- `ideas/`
-- `life-admin/`
-- `projects/`
-- `reference/`
-- `archive/`
-
-Default to the smallest useful capture. If the user gives only a fragment, preserve it rather than over-structuring it.
-
-## Before capture
-
-1. Work in the notebook root the user intends. If unclear, ask or use the current directory.
-2. Read `workflow.yaml` if the request depends on workflow fields like `status`, `priority`, `type`, or `assignee`.
-3. Prefer `tiki exec` for tracked cards. For plain notes, `echo "..." | tiki` or `tiki exec 'create ...'` is fine.
-
-## Capture routing
-
-Map intent to destination and defaults:
-
-| Intent | Folder | Suggested defaults |
-|---|---|---|
-| quick unsorted thought | `inbox/` | `tags=["sakura"]` |
-| reflection / diary / check-in | `journal/` | `tags=["journal"]` |
-| concept / prompt / future maybe | `ideas/` | `tags=["idea"]` |
-| errand / bill / appointment / paperwork | `life-admin/` | `status="ready"` when appropriate; tags like `home`, `finance`, `health`, `travel` |
-| larger ongoing effort | `projects/` | consider `type="project"` or the local workflow's arc/project equivalent |
-| evergreen notes / recipes / saved context | `reference/` | tags by topic |
-
-If the workflow is unknown or the note is plainly freeform, avoid guessing fields that may not exist.
-
-## Good capture behavior
-
-- Keep titles short, concrete, and easy to scan.
-- Preserve user wording when it carries emotional or journal meaning.
-- Add only a few high-confidence tags.
-- Do not invent dates, recurrence, or assignees.
-- If the user provides a due date in natural language, convert it to `YYYY-MM-DD` before writing.
-
-## Common capture patterns
-
-### Quick inbox note
-
-```sh
-tiki exec 'create title="Call landlord" tags=["sakura"]'
-```
-
-### Journal entry
-
-Prefer a dated, readable title:
-
-```sh
-tiki exec 'create title="Journal - 2026-09-08" tags=["journal"]'
-```
-
-If the user provides body text, include it as `description=...` or create first and then edit the file directly if safer.
-
-### Life-admin card
-
-```sh
-tiki exec 'create title="Renew passport" status="ready" tags=["travel","life-admin"]'
-```
-
-Only set `status` when you have confirmed the workflow declares it.
-
-### Recurring ritual
-
-```sh
-tiki exec 'create title="Water plants" recurrence=weekly("sunday") tags=["ritual","home"]'
-```
-
-### Capture from a pasted note
-
-1. Distill the first useful line into a title.
-2. Keep the remaining content as description.
-3. Choose the lightest sensible tags.
-
-## When folder placement matters
-
-Tiki creates files in the cwd by default. If the user wants the note physically inside a notebook subfolder:
-
-1. Capture the tiki.
-2. Resolve its path with `tiki exec --format json 'select filepath where id = "..."'`.
-3. Move the file into the target folder, keeping the same contents and `id:`.
-
-Because tiki identity is id-based, moving the file does not break references.
-
-## Suggested tag palette
-
-Use only when clearly helpful:
-
-- `sakura`
-- `journal`
-- `idea`
-- `ritual`
-- `home`
-- `finance`
-- `health`
-- `travel`
-- `writing`
-- `reading`
-- `wishlist`
-
-## Safety notes
-
-- Read the active `workflow.yaml` before setting workflow fields.
-- Prefer minimal captures over over-modeled ones.
-- Never fabricate a tiki id.
-- Never commit without user permission.
-OMP_TIKI_CAPTURE_SKILL
-
-    write_generated "$OMP_SKILLS_DIR/tiki-review/SKILL.md" <<'OMP_TIKI_REVIEW_SKILL'
----
-name: tiki-review
-description: Review and summarize a Tiki notebook — inspect inbox, ready, overdue, recurring, stale, or tagged cards and produce a daily or weekly reset. Use when the user wants a Tiki review, triage session, focus list, or notebook summary.
----
-
-# Tiki Review
-
-Use this skill to help the user reset, triage, and understand their Tiki notebook.
-
-## Review style
-
-Aim for calm, actionable summaries:
-- surface the smallest meaningful next step
-- group related cards
-- distinguish urgent from merely noisy
-- keep summaries compact unless the user asks for a deeper review
-
-Prefer `tiki exec --format json '...'` for queries.
-
-## First steps
-
-1. Confirm the notebook root if needed.
-2. Read the active `workflow.yaml` before assuming fields like `status`, `priority`, `due`, `assignee`, `dependsOn`, or `tags`.
-3. Query only the fields the workflow actually declares, plus intrinsic fields.
-
-## Useful review slices
-
-Use whichever fit the current workflow.
-
-### Inbox / unsorted
-
-```sh
-tiki exec --format json 'select id, title, updatedAt where status = "inbox" order by updatedAt desc'
-```
-
-### Ready / next-up
-
-```sh
-tiki exec --format json 'select id, title, priority, due where status = "ready" order by priority, due, updatedAt desc'
-```
-
-### In progress
-
-```sh
-tiki exec --format json 'select id, title, assignee, due where status = "inProgress" order by due, updatedAt desc'
-```
-
-### Overdue
-
-```sh
-tiki exec --format json 'select id, title, due where has(due) and due < 2026-09-08 order by due'
-```
-
-Replace the date literal with today's date.
-
-### Recurring
-
-```sh
-tiki exec --format json 'select id, title, recurrence, due where has(recurrence) order by due, updatedAt desc'
-```
-
-### Blocked
-
-```sh
-tiki exec --format json 'select id, title where dependsOn any status != "done"'
-```
-
-### By tag
-
-```sh
-tiki exec --format json 'select id, title, tags where "finance" in tags or "health" in tags order by updatedAt desc'
-```
-
-### Stale
-
-```sh
-tiki exec --format json 'select id, title, updatedAt where updatedAt < now() - 30day order by updatedAt'
-```
-
-## Daily review output
-
-A good daily review usually includes:
-- inbox count
-- ready / next-up cards
-- overdue items
-- active in-progress cards
-- 1-3 suggested focus items
-
-## Weekly review output
-
-A good weekly review usually includes:
-- what changed recently
-- overdue / lingering items
-- recurring rituals coming up
-- neglected tags or areas such as `home`, `finance`, `health`, `writing`
-- cards worth archiving, retagging, or turning into arcs
-
-## Optional artifact
-
-If the user wants the review saved, create a notes-only markdown tiki or a journal-style review note summarizing:
-- date
-- counts / categories
-- suggested next steps
-- any follow-up cleanup actions
-
-## Safety notes
-
-- Never assume a workflow field exists without checking.
-- When the notebook is mostly freeform notes, summarize rather than force task vocabulary.
-- Never commit without user permission.
-OMP_TIKI_REVIEW_SKILL
-
-    write_generated "$OMP_SKILLS_DIR/tiki-groom/SKILL.md" <<'OMP_TIKI_GROOM_SKILL'
----
-name: tiki-groom
-description: Tidy and reorganize a Tiki notebook — clean up inbox notes, retag cards, find stale or duplicate-ish entries, normalize titles, and turn loose notes into tracked cards. Use when the user wants to prune, organize, or maintain a Tiki workspace.
----
-
-# Tiki Groom
-
-Use this skill when the notebook feels a little overgrown and the user wants help restoring shape without losing softness.
-
-## What this skill is for
-
-- triaging `inbox/`
-- retagging or lightly normalizing notes
-- finding stale cards or neglected areas
-- identifying likely duplicates or near-duplicates for user review
-- moving notes into a better folder
-- converting freeform notes into tracked cards by adding workflow fields
-- suggesting archive candidates
-
-Prefer the smallest high-leverage cleanup first.
-
-## First steps
-
-1. Confirm the notebook root if needed.
-2. Read the active `workflow.yaml` before using workflow fields like `status`, `type`, `priority`, `due`, or `assignee`.
-3. Prefer `tiki exec --format json '...'` for inventory and selection.
-4. For notes-only tikis, direct file edits are allowed if the `id:` frontmatter is preserved.
-
-## Good grooming behavior
-
-- Preserve meaning over consistency theater.
-- Do not rewrite the user's voice unless asked.
-- Suggest destructive cleanup before doing it.
-- Batch small safe changes together when appropriate.
-- When unsure whether two notes are duplicates, present them as candidates rather than merging or deleting.
-
-## Common grooming moves
-
-### Triage inbox
-
-Start by listing recent inbox items:
-
-```sh
-tiki exec --format json 'select id, title, updatedAt where status = "inbox" order by updatedAt desc'
-```
-
-For each item, consider:
-- leave as inbox
-- add a few tags
-- move to `journal/`, `ideas/`, `life-admin/`, `projects/`, `reference/`, or `archive/`
-- promote into a tracked card by adding `status` or another workflow field
-
-### Find stale notes or cards
-
-```sh
-tiki exec --format json 'select id, title, updatedAt where updatedAt < now() - 30day order by updatedAt'
-```
-
-Use this to suggest:
-- archive candidates
-- items worth closing
-- notes that need retagging or reframing
-
-### Review by tag
-
-```sh
-tiki exec --format json 'select id, title, tags where "home" in tags or "finance" in tags order by updatedAt desc'
-```
-
-Use tag reviews to spot:
-- overloaded tags
-- inconsistent tag spelling
-- notes missing obvious tags
-
-### Normalize titles lightly
-
-Good title cleanup is small and reversible:
-- remove accidental ALL CAPS unless intentional
-- trim obvious prefixes/suffix clutter
-- make titles easier to scan
-- keep journal or emotionally meaningful wording intact
-
-If the title lives in frontmatter, edit only that exact field.
-
-### Move notes into better folders
-
-Tiki identity is id-based, so files can be moved safely as long as contents and `id:` stay intact.
-
-Recommended flow:
-1. resolve path via `tiki exec --format json 'select filepath where id = "..."'`
-2. move the file to the target folder
-3. re-check that the tiki still resolves by id
-
-### Convert a loose note into a tracked card
-
-If a notes-only tiki should appear on boards, add a workflow field the active workflow declares.
-
-Example:
-
-```sh
-tiki exec 'update where id = "X7F4K2" set status="ready"'
-```
-
-Only do this after checking the workflow supports the field/value.
-
-### Suggest duplicate candidates
-
-There is no built-in semantic dedupe in tiki, so use a conservative process:
-- scan titles for near-matches
-- inspect tags and nearby timestamps
-- present candidate pairs to the user
-- delete or merge only with explicit approval
-
-## Useful folder heuristics
-
-Use these gently, not rigidly:
-
-- `inbox/` — unsorted capture
-- `journal/` — dated reflections and personal texture
-- `ideas/` — concepts, prompts, fragments, future maybes
-- `life-admin/` — errands, renewals, health, travel, money, paperwork
-- `projects/` — multi-note arcs
-- `reference/` — durable lookup notes
-- `archive/` — quiet storage, not deletion
-
-## Suggested tag cleanup patterns
-
-Common tidy tag palette:
-- `sakura`
-- `journal`
-- `idea`
-- `ritual`
-- `home`
-- `finance`
-- `health`
-- `travel`
-- `writing`
-- `reading`
-- `wishlist`
-
-Possible grooming actions:
-- collapse duplicates like `errands` -> `errand` if the user wants singular tags
-- add one contextual tag to otherwise opaque notes
-- remove noisy tags that do not help retrieval
-
-## Archive guidance
-
-Archive is a soft ending, not destruction.
-
-Suggest archiving when notes are:
-- complete and unlikely to need active visibility
-- superseded by a newer note
-- useful for record-keeping but no longer current
-
-Prefer moving to `archive/` over deletion unless the user explicitly wants removal.
-
-## Safety notes
-
-- Never assume workflow fields without reading `workflow.yaml`.
-- Never delete or merge ambiguous notes without explicit user approval.
-- Preserve `id:` exactly when editing or moving a tiki file.
-- Never commit without user permission.
-OMP_TIKI_GROOM_SKILL
-
-    write_generated "$OMP_SKILLS_DIR/tiki-arc/SKILL.md" <<'OMP_TIKI_ARC_SKILL'
----
-name: tiki-arc
-description: Manage larger Tiki arcs — create and organize project-like parent cards, attach linked notes, inspect blockers, and summarize arc state. Use when the user wants to plan, review, or restructure a multi-note effort in Tiki.
----
-
-# Tiki Arc
-
-Use this skill for bigger clusters of work or thought: moving house, planning travel, a writing project, a life-admin campaign, a learning path, or any longer thread that gathers many related notes.
-
-In some workflows, an arc is stored as `type="project"` or an equivalent enum value. Always read the active `workflow.yaml` before assuming the field name or value.
-
-## What an arc is
-
-An arc is a parent tiki that gathers related child notes or cards through dependency links such as `dependsOn`.
-
-Typical arc uses:
-- apartment move
-- trip planning
-- health admin
-- annual reset
-- writing project
-- research topic
-- home reorganization
-
-## First steps
-
-1. Confirm the notebook root if needed.
-2. Read the active `workflow.yaml` to confirm how the workflow represents project/arc-like items.
-3. Prefer `tiki exec --format json '...'` for inspection and selection.
-4. Preserve id-based linking; never assume filenames are stable identifiers.
-
-## Common arc operations
-
-### Create a new arc
-
-If the workflow has a project-like type, create the parent with that type.
-
-Example:
-
-```sh
-tiki exec 'create title="Apartment move" type="project" status="inbox" tags=["home","life-admin"]'
-```
-
-Only use fields and enum values confirmed by the active workflow.
-
-### Find existing arcs
-
-```sh
-tiki exec --format json 'select id, title, status, priority where type = "project" order by updatedAt desc'
-```
-
-If the workflow uses a different value than `project`, substitute it.
-
-### Add a note or card to an arc
-
-```sh
-tiki exec 'update where id = "ARC123" set dependsOn = dependsOn + ["ABC123"]'
-```
-
-Before linking:
-- confirm both ids exist
-- avoid duplicate links
-- avoid linking the arc to itself
-
-### List everything in an arc
-
-```sh
-tiki exec --format json 'select id, title, status where id in target.dependsOn'
-```
-
-If `target` is not available in the current query context, first query the parent arc's `dependsOn` list, then query those ids directly.
-
-### Find arcs blocked by open items
-
-```sh
-tiki exec --format json 'select id, title where type = "project" and dependsOn any status != "done"'
-```
-
-### Find arcs ready to close
-
-```sh
-tiki exec --format json 'select id, title where type = "project" and dependsOn all status = "done"'
-```
-
-Only mark an arc done after checking whether local triggers already auto-complete it.
-
-## Arc review
-
-A useful arc summary includes:
-- parent arc title and id
-- current status / priority / due date if present
-- number of linked notes
-- open vs done linked items
-- blocked items
-- likely next step
-
-Suggested review flow:
-1. query the parent arc
-2. query its linked notes/cards
-3. group linked items by status or tag if the workflow supports that
-4. summarize the arc in plain language
-
-## Restructuring arcs
-
-Use this skill when an arc has become messy.
-
-Possible cleanup moves:
-- split one large arc into two clearer arcs
-- move unrelated notes out of an arc
-- add missing tags to child notes
-- create a parent arc for an already-related cluster
-- archive a finished arc and its quiet support notes
-
-Be conservative with bulk relinking. Show the user the proposed before/after shape for non-trivial changes.
-
-## Folder and notebook fit
-
-Arcs often live well in `projects/`, but the linked notes may belong elsewhere:
-- `life-admin/` for paperwork-heavy arcs
-- `ideas/` for conceptual arcs
-- `reference/` for support material
-- `journal/` for reflective notes linked to a personal arc
-
-Because tiki links by id, physical file location and conceptual grouping can differ safely.
-
-## Safety notes
-
-- Read `workflow.yaml` before assuming `type`, `status`, `priority`, or enum values.
-- Never fabricate tiki ids.
-- Avoid self-links and duplicate dependency links.
-- Do not delete or heavily restructure an arc without user approval.
-- Never commit without user permission.
-OMP_TIKI_ARC_SKILL
-
-    write_generated "$OMP_SKILLS_DIR/tiki-journal/SKILL.md" <<'OMP_TIKI_JOURNAL_SKILL'
----
-name: tiki-journal
-description: Create and maintain journal-style notes in a Tiki notebook — morning pages, evening reflections, check-ins, and themed review entries with gentle prompts and links to related notes or arcs. Use when the user wants to journal in Tiki.
----
-
-# Tiki Journal
-
-Use this skill for reflective notebook work inside Tiki: daily entries, mood logs, creative check-ins, weekly reflections, and soft summaries that link life texture to plans or arcs.
-
-## First steps
-
-1. Confirm the notebook root if needed.
-2. Prefer `journal/` for physically journal-like entries when that folder exists.
-3. Read `workflow.yaml` only if the user wants the entry to participate in workflow fields such as `status`, `type`, `due`, or `tags`.
-4. Preserve the user's voice; do not sand away feeling in the name of structure.
-
-## Good journal behavior
-
-- Keep the title readable and date-forward.
-- Preserve emotional nuance.
-- Add only a few helpful tags.
-- Prefer notes-first capture; do not force task structure onto reflections.
-- When a reflection clearly implies an action item, ask whether to also create or link a separate card.
-
-## Common journal patterns
-
-### Morning entry
-
-```sh
-tiki exec 'create title="Morning notes - 2026-09-08" tags=["journal","ritual"]'
-```
-
-### Evening reflection
-
-```sh
-tiki exec 'create title="Evening reflection - 2026-09-08" tags=["journal"]'
-```
-
-### Weekly reset note
-
-```sh
-tiki exec 'create title="Weekly reset - 2026-09-08" tags=["journal","ritual"]'
-```
-
-### Creative check-in
-
-```sh
-tiki exec 'create title="Writing check-in - 2026-09-08" tags=["journal","writing"]'
-```
-
-## Suggested prompt shapes
-
-Use or adapt lightly:
-- what feels bright today?
-- what feels heavy or snagged?
-- what wants attention next?
-- what am I avoiding?
-- what softened, improved, or bloomed this week?
-- what should become a separate card or arc?
-
-## Linking reflection to action
-
-When a journal note surfaces a concrete follow-up:
-1. keep the journal note intact
-2. ask whether to create a separate card
-3. optionally link the journal note to an existing arc or related note
-
-This keeps reflection from being flattened into task management.
-
-## Folder placement
-
-If the entry should physically live in `journal/`:
-1. create the tiki
-2. resolve its path by id
-3. move it into `journal/`
-4. keep the `id:` unchanged
-
-## Suggested tags
-
-Use sparingly:
-- `journal`
-- `ritual`
-- `writing`
-- `reading`
-- `health`
-- `home`
-- `travel`
-- `sakura`
-
-## Safety notes
-
-- Preserve the user's voice over stylistic normalization.
-- Do not infer private emotional conclusions the user did not state.
-- Read `workflow.yaml` before setting workflow fields.
-- Never commit without user permission.
-OMP_TIKI_JOURNAL_SKILL
-
-    success "omp: local Tiki skills written (~/.omp/agent/skills: tiki-capture, tiki-review, tiki-groom, tiki-arc, tiki-journal)"
-
-    # -- Turn-counter widget ------------------------------------------------------
-    # Shows how many turns the session has used, above the prompt, in the theme's
-    # own colours (#525).
-    #
-    # Three things here were settled by reading omp's shipped type definitions and
-    # by observation, not by assumption:
-    #
-    #   * `ctx.ui.setStatus()` is the obvious-looking API and is the WRONG one. The
-    #     footer documents that it strips ANSI and control characters, and
-    #     footer.ts pushes the joined extension statuses as a plain line with no
-    #     theme colour applied at all. Nothing set through it can be styled.
-    #     `setWidget` with placement "aboveEditor" is the surface that renders
-    #     where this is wanted AND can carry colour.
-    #
-    #   * `turnIndex` is ZERO-BASED. Verified by running one turn with a probe
-    #     extension: both `turn_start` and `turn_end` reported `turnIndex=0`. The
-    #     display adds one so the first turn reads as 1 rather than 0.
-    #
-    #   * Colours come from `ctx.ui.theme.fg(token, text)` rather than hardcoded
-    #     hex, so this follows the active theme. It is Dracula-Sakura here because
-    #     that is what config.yml selects, and it stays correct if that changes.
-    ensure_dir "$OMP_EXTENSIONS_DIR"
-    write_generated "$OMP_EXTENSIONS_DIR/turn-counter.ts" <<'OMP_TURNS_EXT'
-/**
- * Turn counter — shows the number of turns used, above the prompt.
- *
- * Styled from the active theme rather than hardcoded hex, so it matches
- * whatever theme is selected (Dracula-Sakura, as configured by this setup).
- */
+    # -- Protected paths ----------------------------------------------------------
+    # This extension blocks native file mutations to credential stores, dependency
+    # trees, and repository metadata. It does not claim to sandbox Bash or Eval.
+    # omp's native approval policies govern those execution surfaces.
+    write_generated "$OMP_EXTENSIONS_DIR/protected-paths.ts" <<'OMP_PROTECTED_PATHS_EXT'
+import { existsSync, realpathSync } from "node:fs";
+import { homedir } from "node:os";
+import {
+    basename,
+    dirname,
+    isAbsolute,
+    relative,
+    resolve,
+    sep,
+} from "node:path";
+import { fileURLToPath } from "node:url";
 import type { ExtensionAPI } from "@oh-my-pi/pi-coding-agent";
 
-const WIDGET_KEY = "turn-counter";
+type Input = Record<string, unknown>;
 
-export default function turnCounter(pi: ExtensionAPI) {
-    // turnIndex is zero-based: the first turn reports 0. Render it one-based,
-    // because "turn 0" is not what a human means by turns used.
-    const render = (ctx: any, turnIndex: number, inFlight: boolean): void => {
-        const theme = ctx?.ui?.theme;
-        if (!theme || typeof ctx.ui.setWidget !== "function") return;
+const SAFE_ENV_SUFFIXES = [".example", ".sample", ".template", ".dist"];
+const PROTECTED_COMPONENTS = new Map([
+    [".git", "version-control metadata"],
+    [".hg", "version-control metadata"],
+    [".svn", "version-control metadata"],
+    ["node_modules", "the dependency tree"],
+]);
+const EXACT_HOME_SECRETS = new Set([
+    ".npmrc",
+    ".netrc",
+    ".config/gh/hosts.yml",
+    ".docker/config.json",
+    ".kube/config",
+    ".claude/.credentials.json",
+    ".omp/auth-broker.token",
+    ".omp/auth-gateway.token",
+]);
 
-        const count = turnIndex + 1;
-        // `muted` and `statusLineContext` are core theme tokens, so this works
-        // against any theme rather than only against ours.
-        const label = theme.fg("muted", inFlight ? "turn" : "turns");
-        const value = theme.fg("statusLineContext", String(count));
-        const suffix = inFlight ? theme.fg("muted", " in flight") : "";
+function isRecord(value: unknown): value is Input {
+    return typeof value === "object" && value !== null && !Array.isArray(value);
+}
 
-        ctx.ui.setWidget(WIDGET_KEY, [`${label} ${value}${suffix}`], {
-            placement: "aboveEditor",
-        });
-    };
+function withoutContainerSelector(value: string): string {
+    const match = value.match(/^(.+\.(?:db3?|sqlite3?))(?::.*)?$/i);
+    return match?.[1] ?? value;
+}
 
-    pi.on("turn_start", (event: any, ctx: any) => {
-        render(ctx, event.turnIndex, true);
-    });
-
-    pi.on("turn_end", (event: any, ctx: any) => {
-        render(ctx, event.turnIndex, false);
-    });
-
-    // Clear on shutdown so a stale count cannot outlive the session it counted.
-    pi.on("session_shutdown", (_event: any, ctx: any) => {
-        if (typeof ctx?.ui?.setWidget === "function") {
-            ctx.ui.setWidget(WIDGET_KEY, undefined);
+function expandPath(value: string, cwd: string, home: string): string | null {
+    let candidate = withoutContainerSelector(value.trim());
+    if (!candidate) return null;
+    if (candidate.startsWith("file://")) {
+        try {
+            candidate = fileURLToPath(candidate);
+        } catch {
+            return null;
         }
+    } else if (/^[a-z][a-z0-9+.-]*:\/\//i.test(candidate)) {
+        return null;
+    }
+    if (candidate === "~") candidate = home;
+    if (candidate.startsWith(`~${sep}`)) {
+        candidate = resolve(home, candidate.slice(2));
+    }
+    return isAbsolute(candidate) ? resolve(candidate) : resolve(cwd, candidate);
+}
+
+function canonicalPath(candidate: string): string {
+    const suffix: string[] = [];
+    let cursor = candidate;
+    while (!existsSync(cursor)) {
+        const parent = dirname(cursor);
+        if (parent === cursor) return candidate;
+        suffix.unshift(basename(cursor));
+        cursor = parent;
+    }
+    try {
+        return resolve(realpathSync.native(cursor), ...suffix);
+    } catch {
+        return candidate;
+    }
+}
+
+function isWithin(candidate: string, root: string): boolean {
+    const offset = relative(root, candidate);
+    return offset === "" ||
+        (offset !== ".." && !offset.startsWith(`..${sep}`) && !isAbsolute(offset));
+}
+
+function homeRelative(candidate: string, home: string): string | null {
+    if (!isWithin(candidate, home)) return null;
+    return relative(home, candidate).split(sep).join("/");
+}
+
+function reasonFor(candidate: string, home: string): string | null {
+    const components = candidate.split(sep).filter(Boolean);
+    for (const component of components) {
+        const reason = PROTECTED_COMPONENTS.get(component.toLowerCase());
+        if (reason) return reason;
+    }
+
+    const fileName = basename(candidate).toLowerCase();
+    if (fileName === ".env" || fileName.startsWith(".env.")) {
+        if (!SAFE_ENV_SUFFIXES.some((suffix) => fileName.endsWith(suffix))) {
+            return "an environment secret file";
+        }
+    }
+
+    const homePath = homeRelative(candidate, home);
+    if (homePath === null) return null;
+    if (
+        homePath === ".ssh" ||
+        homePath.startsWith(".ssh/") ||
+        homePath === ".aws" ||
+        homePath.startsWith(".aws/") ||
+        homePath === "Library/Keychains" ||
+        homePath.startsWith("Library/Keychains/")
+    ) {
+        return "a credential directory";
+    }
+
+    if (EXACT_HOME_SECRETS.has(homePath)) return "a credential file";
+    if (
+        /^\.omp\/agent\/agent\.db(?:-(?:wal|shm))?$/.test(homePath) ||
+        /^\.omp\/profiles\/[^/]+\/agent\/agent\.db(?:-(?:wal|shm))?$/.test(homePath) ||
+        /^\.omp\/profiles\/[^/]+\/auth-(?:broker|gateway)\.token$/.test(homePath)
+    ) {
+        return "the omp credential database";
+    }
+    return null;
+}
+
+export function classifyProtectedPath(
+    value: string,
+    cwd = process.cwd(),
+    home = homedir(),
+): string | null {
+    const lexical = expandPath(value, cwd, home);
+    if (!lexical) return null;
+    const canonical = canonicalPath(lexical);
+    const canonicalHome = canonicalPath(resolve(home));
+    return reasonFor(lexical, home) ?? reasonFor(canonical, canonicalHome);
+}
+
+function addPath(value: unknown, paths: Set<string>): void {
+    if (typeof value === "string") {
+        paths.add(value);
+        return;
+    }
+    if (Array.isArray(value)) {
+        for (const item of value) addPath(item, paths);
+    }
+}
+
+function addCommonPaths(input: Input, paths: Set<string>): void {
+    for (const key of ["path", "paths", "file", "files", "file_path"]) {
+        addPath(input[key], paths);
+    }
+}
+
+function addPatchPaths(value: unknown, paths: Set<string>): void {
+    if (typeof value !== "string") return;
+    for (const match of value.matchAll(/^\[([^#\r\n]+)#[0-9A-F]{4}\]$/gm)) {
+        paths.add(match[1]);
+    }
+    for (const match of value.matchAll(/^\*\*\* (?:Add|Update|Delete) File: (.+)$/gm)) {
+        paths.add(match[1]);
+    }
+}
+
+function addLspPaths(input: Input, paths: Set<string>): void {
+    const mutates = input.action === "rename" ||
+        input.action === "rename_file" ||
+        (input.action === "code_actions" && input.apply === true);
+    if (!mutates) return;
+    addPath(input.file, paths);
+    if (input.action === "rename_file") addPath(input.new_name, paths);
+}
+
+function addDevicePaths(input: Input, paths: Set<string>): void {
+    if (typeof input.content !== "string") return;
+    let args: Input;
+    try {
+        const parsed: unknown = JSON.parse(input.content);
+        if (!isRecord(parsed)) return;
+        args = parsed;
+    } catch {
+        return;
+    }
+
+    if (input.path === "xd://ast_edit") {
+        addPath(args.paths, paths);
+        return;
+    }
+    if (input.path === "xd://lsp") addLspPaths(args, paths);
+}
+
+export function collectMutationPaths(toolName: string, input: unknown): string[] {
+    if (!isRecord(input)) return [];
+    const paths = new Set<string>();
+    if (toolName === "write") {
+        addCommonPaths(input, paths);
+        addDevicePaths(input, paths);
+    } else if (toolName === "edit" || toolName === "apply_patch") {
+        addCommonPaths(input, paths);
+        addPatchPaths(input.patch, paths);
+        addPatchPaths(input.input, paths);
+    } else if (toolName === "ast_edit") {
+        addPath(input.paths, paths);
+    } else if (toolName === "lsp") {
+        addLspPaths(input, paths);
+    }
+    return [...paths];
+}
+
+export default function protectedPaths(pi: ExtensionAPI): void {
+    pi.on("tool_call", (event, ctx) => {
+        for (const path of collectMutationPaths(event.toolName, event.input)) {
+            const reason = classifyProtectedPath(path, ctx.cwd);
+            if (reason) {
+                return {
+                    block: true,
+                    reason: `Blocked a write to ${path}. The target is protected: ${reason}.`,
+                };
+            }
+        }
+        return undefined;
     });
 }
-OMP_TURNS_EXT
-    configured "omp turn-counter widget written (~/.omp/agent/extensions/turn-counter.ts)"
+OMP_PROTECTED_PATHS_EXT
+    configured "omp protected-paths guard written (~/.omp/agent/extensions/protected-paths.ts)"
 
     # -- Shared skills ------------------------------------------------------------
-    # ~/.agents/skills is omp's OWN canonical skills location (the `agents` provider,
-    # with its own enableAgentsUser toggle), not a foreign import. This loop lived in
-    # the pi block until #513 and moved here intact: the five shared skills and the
-    # symlink-scoped prune are unchanged, only the owner is.
+    # ~/.agents/skills is omp's canonical shared skills location. The prune only
+    # removes links that point into this script's ~/.claude/skills directory.
     _omp_linked=0 _omp_missing=0
     for _skill in "${OMP_SHARED_SKILLS[@]}"; do
         if [[ -d "$HOME/.claude/skills/$_skill" ]]; then
@@ -14841,7 +13514,7 @@ OMP_TURNS_EXT
     if [[ "$_omp_missing" -gt 0 ]]; then
         warn "omp: $_omp_linked shared skill(s) linked -> ~/.agents/skills/ ($_omp_missing missing from ~/.claude/skills)"
     else
-        success "omp: $_omp_linked shared skills linked -> ~/.agents/skills/ (api-testing, d2-diagrams, dbmate-migrations, office-docs, tiki)"
+        success "omp: $_omp_linked shared skills linked -> ~/.agents/skills/ (api-testing, d2-diagrams, office-layout-check)"
     fi
     unset _omp_linked _omp_missing
 
@@ -14966,6 +13639,8 @@ OMP_CONFIG_CONF
         info "omp: set GEMINI_API_KEY in your environment to reach the Gemini models above"
     fi
 fi
+unset OMP_DIR OMP_THEME_DIR OMP_THEME_FILE OMP_SKILLS_DIR OMP_EXTENSIONS_DIR
+unset AGENTS_SKILLS OMP_SHARED_SKILLS OMP_RETIRED_SKILLS OMP_RETIRED_EXTENSIONS OMP_CONFIG_FILE
 
 
 fi  # configs (Claude Code)
@@ -15466,7 +14141,7 @@ echo "  [~/.jqp.yaml]           jq playground theme overrides"
 echo "  [~/.config/aichat]      Local AI chat config + Dracula-Sakura dark theme"
 echo "  [~/.config/croft]       Croft config + Dracula-Sakura theme extension"
 echo "  [~/.herald/themes]      Herald Dracula-Sakura theme asset + theme-name merge"
-echo "  [~/.omp/agent]          Oh My Pi settings, model routing, theme, local Tiki skills"
+echo "  [~/.omp/agent]          Oh My Pi settings, model routing, theme, protected-path guard"
 echo "  [~/.agents/skills]      Curated skills Oh My Pi reads natively"
 echo "  [leaf]                  Terminal Markdown previewer (live watch, fuzzy picker, Mermaid)"
 echo "  [~/.config/yt-dlp]      Best quality, aria2c downloader"
@@ -15570,12 +14245,11 @@ unscriptable. Work through it once, then keep it only as long as it's useful.
 - [ ] **infracost** (IaC cost estimates): run `infracost auth login` for a free API key — `infracost breakdown` errors with "No INFRACOST_API_KEY" until then.
 - [ ] **borgmatic backups:** the setup scaffolds `~/.config/borgmatic/config.yaml`. Set `repositories`, store the passphrase in Keychain (`security add-generic-password -a "$USER" -s borg-passphrase -w`), run `borgmatic init --encryption repokey-blake2`, check with `borgmatic create --dry-run`, then enable a daily run (e.g. a LaunchAgent calling `borgmatic --verbosity -1`). ClamAV's virus DB downloads itself in the background after setup.
 - [ ] **Claude AI in croft:** `croft pair` (the AI navigator in your primary IDE) defaults to `--provider claude`, which hands off to your existing `claude` CLI — so it just works on whatever auth that already has (a Claude Pro/Max subscription **or** an API key), no separate `ANTHROPIC_API_KEY` required. Want a fully local model with no key at all? Ollama is installed and running — use the `gemma3:4b` that setup already pulled (`croft pair --provider ollama --model gemma3:4b`) or the heavier `qwen2.5-coder:14b` that's also pre-pulled for coding-oriented local loops. An Anthropic API key is **optional** here — the only thing that uses one is the `llm` CLI, and `llm` itself is optional: if Claude Code and the Claude desktop app already cover you, you can skip it entirely. If you do want `llm` for one-off prompts (e.g. `> ! llm …` from micro's command bar) or shell scripting, run `llm keys set anthropic` — setup already installs the plugin (via uv) and sets the default model to `anthropic/claude-sonnet-4-5`. (Email/calendar AI is built into **herald** — configured separately above.)
-- [ ] **Oh My Pi** (workload-routed): `omp` is installed from the `can1357/tap` Homebrew tap with the Dracula-Sakura theme and shared `AGENTS.md` preferences. Codex handles default and task work. Gemini handles vision, advisor, and lightweight roles. Claude Sonnet 5 is primary only for `slow` and `plan`. Fallback chains never select Anthropic: they use hosted models first and end at local `ollama/qwen2.5-coder:14b`. It reads `~/.agents/skills/` plus five omp-local Tiki companions in `~/.omp/agent/skills/`. Local SearXNG is first in the web-search chain.
+- [ ] **Oh My Pi** (workload-routed): `omp` is installed from the `can1357/tap` Homebrew tap with the Dracula-Sakura theme and shared `AGENTS.md` preferences. Codex handles default and task work. Gemini handles vision, advisor, and lightweight roles. Claude Sonnet 5 is primary only for `slow` and `plan`. Fallback chains never select Anthropic. Three scoped skills come from `~/.agents/skills/`. The `protected-paths.ts` extension guards native file mutations. Local SearXNG is first in the web-search chain.
 - [ ] **croft** (primary IDE): installed from git `main` via cargo — run `croft` in a project to open the workspace; re-run `cargo install --git https://github.com/vitali87/croft.git --locked` to upgrade.
 - [ ] **AI side-pane:** `zellij --layout dev` opens your editor + a Claude Code pane side by side (the strongest AI workflow).
-- [ ] **Home dashboard:** `zellij --layout home` opens a plain terminal on the left, with weather, `btop`, and your `~/Documents/notes` tiki stacked on the right. **`starlit` needs one-time setup before the weather pane shows a forecast**: run `starlit --setup`, then put your API key in the config it creates. Until then that pane shows the setup prompt. The setup never writes a key for you.
+- [ ] **Home dashboard:** `zellij --layout home` opens a plain terminal on the left, with weather and `btop` stacked on the right. Run `starlit --setup`, then add your API key to its config. The setup never writes this key.
 - [ ] **chezmoi:** `chezmoi init <your-dotfiles-repo>` to bring these configs under version control across the MacBook + Mac mini.
-- [ ] **tiki** (notes): your personal notes repo is pre-created and git-initialized at `~/Documents/notes`, with a themed `index.md` landing page, a matching `README.md`, and starter folders (`inbox`, `journal`, `ideas`, `life-admin`, `projects`, `reference`, `archive`). Run `cd ~/Documents/notes && tiki` to start. Claude can manage tikis there — its skill is installed at `~/.claude/skills/tiki/` (CRUD via `tiki exec`, quick-capture via `echo "note" | tiki`).
 - [ ] **cliamp** (music): drop music into `~/Media/music`, then run `cliamp ~/Media/music` (or set the folder in its UI). Streaming (YouTube/SoundCloud/Spotify/radio) + EQ + 20+ visualizers are built in.
 - [ ] **leaf** (Markdown): if tab-completion isn't working, run `leaf --auto-complete` and restart your shell (the script attempts this automatically).
 
@@ -15684,13 +14358,12 @@ applying it to you.
 ## Dev workflow
 - **lazygit / lazydocker / lazysql / lazynpm / lazyssh / lazyrsync / lazyenv** — full-screen TUIs for git, containers, SQL, npm, SSH, rsync, `.env` files.
 - **gh** (GitHub) / **glab** (GitLab) — repo/PR/MR CLIs; glab mirrors gh's aliases (→ merge requests). **scc** — code counter (LOC + complexity + COCOMO). **keyward** — SSH-key manager + security audit.
-- **ATAC** — terminal API client (TUI + scriptable CLI) replacing Bruno; **hurl/xh/curlie/grpcurl** for one-shot + tests.
-- **harlequin / pgcli / mycli / usql / sq** — database CLIs/TUIs (replaced DBeaver).
-- **d2 / mermaid** — diagrams as code (replaced draw.io). **qalc** — calculator. **vhs** — scripted terminal recordings. **doxx** — .docx viewer. **manly** — explain a command's flags. **LibreOffice/poppler/office-py** — headless validate & render .pptx/.xlsx/.docx (Claude's doc-check stack).
+- **ATAC** provides an interactive API client with saved collections. Use **xh** for one-off HTTP requests, **Hurl** for repeatable assertions, and **grpcurl** for gRPC.
+- **harlequin / pgcli / mycli / usql / sq** provide database CLIs and TUIs.
+- **d2 / mermaid** provide diagrams as code. **office-layout-check** uses LibreOffice and poppler for visual checks of Office files.
 
 ## Communication & knowledge
 - **herald** — terminal email **+** calendar in one app (Gmail work + iCloud personal, unified CalDAV), with built-in AI triage/summaries and an MCP server for Claude.
-- **tiki** — Markdown workspace (tasks/docs/kanban/wiki) replacing Notion.
 - **gws** (google-workspace-cli) — Drive/Gmail/Docs/Sheets/Calendar from the terminal (structured JSON; Claude's Workspace surface).
 - **newsboat** — RSS. **cliamp** — music. **starlit** — weather. **surge** — download manager (browser-download capture, alongside aria2). **bmm** — bookmarks.
 
@@ -15865,7 +14538,7 @@ omp config path
 omp -p "summarise the diff on this branch"
 ```
 
-> Tip: omp's config lives entirely under `~/.omp/agent/`, not `~/.config`. It reads `~/.agents/skills/` as its own native skills location, so the five shared skills arrive with nothing extra to install, and five omp-local Tiki companions sit in `~/.omp/agent/skills/`. Its `~/.omp/agent/AGENTS.md` outranks every other user-level context file, `~/.claude/CLAUDE.md` included, so that file is where its global preferences belong. Settings are merged into `config.yml` rather than written as a managed block, because `omp config set` and `/settings` write that file themselves.
+> Tip: omp's config lives under `~/.omp/agent/`, not `~/.config`. It reads three scoped skills from `~/.agents/skills/`: `api-testing`, `d2-diagrams`, and `office-layout-check`. The `protected-paths.ts` extension guards native file mutations to sensitive paths. Its `AGENTS.md` outranks other user-level context files. Settings merge into `config.yml` because omp writes that file.
 >
 > Tip: `web_search` is built in with 23 backends, and this setup puts your local **SearXNG** instance at the head of the chain (`searxng.endpoint`). The keyless backends stay behind it, so search still works when the instance is down. It needs `GEMINI_API_KEY` in the environment to reach a model.
 
@@ -18305,20 +16978,9 @@ gws sheets spreadsheets create --json '{"properties": {"title": "Q1 Budget"}}'
 
 > Tip: add `--dry-run` to preview the request before it's sent — invaluable before anything that mutates data.
 
-### `tiki` — Terminal Markdown Workspace
-A git-backed workspace for notes, errands, journal entries, kanban cards, and a wiki — all stored as plain Markdown files you can browse and edit as a TUI or from the CLI. It replaces a Notion-style app with something that lives in a repo, diffs like code, and syncs via git. This setup also seeds `~/Documents/notes` with a themed landing page, a matching `README.md`, and a small notebook structure for `inbox`, `journal`, `ideas`, `life-admin`, `projects`, `reference`, and `archive`.
-
-```bash
-# launch the TUI over the Markdown files in this directory
-tiki
-# quick-capture a note from piped input (first line = title)
-echo "Follow up with client" | tiki
-# run a ruki query against the workspace and exit
-tiki exec 'select id, title where status = "ready"'
-```
 
 ### `reminders` — Apple Reminders CLI
-Reads and writes the real Apple Reminders database through EventKit, so anything you add here syncs to iPhone and Watch via iCloud like it was typed into the Reminders app. This is the piece tiki and herald deliberately leave out: tiki keeps tasks in git, herald owns mail and calendar events, and `reminders` owns alerts that need to follow you off the machine. First run raises a one-time macOS consent prompt (granted to your terminal, not to the binary); until you approve it, commands return an empty list rather than an error.
+Reads and writes Apple Reminders through EventKit. New reminders sync to the user's iPhone and Watch through iCloud. Herald owns mail and calendar events. Plain notes stay ordinary files. The first command opens a macOS consent prompt for the terminal application.
 
 ```bash
 # see which lists exist, then what's on one

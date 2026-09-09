@@ -516,7 +516,6 @@ Preview files in Finder by pressing spacebar.
 
 | App | Description |
 |-----|-------------|
-| **tiki** | Terminal Markdown workspace -- tasks, docs, kanban, wiki (git-backed); replaced the Notion GUI. Its official Claude Code skill is installed to `~/.claude/skills/tiki/`, so Claude manages notes/tasks via `tiki exec` (ruki) |
 | **herald** | Terminal email **+** calendar in one app -- Gmail (work) + iCloud (personal), unified CalDAV, built-in AI triage/summaries + an MCP server for Claude; replaced aerc + khal + vdirsyncer + Notion Calendar. Theme-integrated with a local Dracula-Sakura theme asset and a narrow config merge |
 | **gws** (google-workspace-cli) | One CLI for Drive/Gmail/Docs/Sheets/Calendar/Chat with structured JSON output -- Claude's read/query surface for Workspace (`gws auth login` first; instructed to confirm before any mutation). A **scoped set of gws Claude skills -- Drive/Docs/Slides/Sheets/Forms only** -- is installed to `~/.claude/skills/` (Gmail/Calendar/Chat/Meet excluded); the real access boundary is the OAuth scopes granted at `gws auth`, not the skills |
 | **Shottr** | Fast native screenshots -- scrolling capture, OCR, annotations (local-only, no account) |
@@ -693,7 +692,7 @@ The allowlist is deliberately **read-heavy and scoped** -- Claude runs safe loca
 - **Read-only TUIs**: k9s, stern, lazygit, lazydocker, dive, btop, procs, lnav (no `docker`/`kubectl`/`docker-compose`)
 - **Docs & media**: pandoc, d2, mmdc, ffmpeg, magick, manly, soffice, office-py, pdftoppm/pdftotext/pdfinfo, oxipng, jpegoptim, mpv
 - **DB clients**: pgcli, mycli, sq, lazysql
-- **Misc CLIs**: atac, hurl, trippy, bandwhich, gping, doggo, gum, leaf, qalc, has, doxx, harlequin/hq, git-cliff, git-absorb, act3, commitizen, commitlint, tiki exec, fastfetch, newsboat, zellij
+- **Misc CLIs**: atac, hurl, trippy, bandwhich, gping, doggo, gum, leaf, qalc, has, doxx, harlequin/hq, git-cliff, git-absorb, act3, commitizen, commitlint, fastfetch, newsboat, zellij
 - **Tool permissions**: `Read`, `Edit`
 
 ### Denied Commands
@@ -864,9 +863,8 @@ The script generates config files with sensible defaults:
 | `~/.config/broot/conf.hjson` + skin | broot | Git-aware defaults plus a custom Dracula-Sakura skin |
 | `~/.jqp.yaml` | jqp | Dracula base theme with Dracula-Sakura color overrides |
 | `~/.config/aichat/config.yaml` + `dark.tmTheme` | aichat | Local Ollama defaults, prompt behavior, document loaders, Dracula-Sakura dark theme |
-| `~/.agents/skills/*` | omp | Symlinks to the curated shared skills (`api-testing`, `d2-diagrams`, `dbmate-migrations`, `office-docs`, `tiki`). omp treats this directory as its own native skills location |
-| `~/.omp/agent/skills/*` | omp | Five omp-local Tiki companions: `tiki-capture`, `tiki-review`, `tiki-groom`, `tiki-arc`, `tiki-journal` |
-| `~/.omp/agent/extensions/turn-counter.ts` | omp | Shows turns used above the prompt, coloured from the active theme. `~/.omp/agent/extensions/` is auto-discovered for `.ts`/`.js` |
+| `~/.agents/skills/*` | omp | Symlinks to three scoped shared skills: `api-testing`, `d2-diagrams`, and `office-layout-check` |
+| `~/.omp/agent/extensions/protected-paths.ts` | omp | Blocks native file mutations to credentials, dependency trees, and repository metadata. Bash and Eval remain under native approval policies |
 | `~/.omp/agent/AGENTS.md` | omp | Global Oh My Pi instruction layer: the same house preferences and writing rules as pi, from the same generators. Outranks every other user-level context file, `~/.claude/CLAUDE.md` included |
 | `~/.omp/agent/themes/dracula-sakura.json` | omp | Full Dracula-Sakura theme with all 66 required omp color tokens, including the thirteen status-line colors pi has no equivalent for |
 | `~/.omp/agent/config.yml` | omp | Merged because omp also writes this file. Codex handles normal work, Gemini handles vision and lightweight roles, and Claude Sonnet handles only `slow` and `plan`. Fallbacks never use Anthropic and end at local Qwen 2.5 Coder |
@@ -1068,7 +1066,7 @@ Claude is wired into the terminal tools in four tiers:
 | Layout | Command | Panes |
 |--------|---------|-------|
 | `dev` | `zellij --layout dev` | editor + a `claude` pane, side by side |
-| `home` | `zellij --layout home` | plain terminal on the left; weather (`starlit`), system monitor (`btop`), and notes (`tiki`, opened on `~/Documents/notes`) stacked down the right |
+| `home` | `zellij --layout home` | plain terminal on the left; weather (`starlit`) and system monitor (`btop`) stacked down the right |
 
 `home` needs one manual step before the weather pane is useful: run `starlit --setup`
 and add your API key to the config it creates. The setup script never writes a key.
@@ -1103,11 +1101,9 @@ retired without notice, so `retry.fallbackChains` pins an exact-model fallback t
 An unknown model id surfaces as a config warning at startup rather than failing quietly.
 
 It carries the Dracula-Sakura theme, the house `AGENTS.md` preferences, and the writing
-rules from the same generators Claude Code uses, so the two cannot disagree about how to
-write. `~/.agents/skills/` is omp's own canonical skills location rather than a foreign
-import, so the five shared skills arrive with nothing extra to install, and five
-omp-local Tiki companions (`tiki-capture`, `tiki-review`, `tiki-groom`, `tiki-arc`,
-`tiki-journal`) sit in `~/.omp/agent/skills/`.
+rules from the same generators Claude Code uses. The two agents therefore use the same
+house rules. `~/.agents/skills/` is omp's canonical shared skills location. It contains
+three scoped skills: `api-testing`, `d2-diagrams`, and `office-layout-check`.
 
 **Web search is built in.** `web_search` carries 23 backends, and this setup puts your
 local **SearXNG** instance at the head of the chain via `searxng.endpoint`. That replaced
@@ -1118,6 +1114,11 @@ Two things worth knowing. Its `~/.omp/agent/AGENTS.md` has the highest precedenc
 user-level context file, so it **shadows** `~/.claude/CLAUDE.md` in omp sessions instead
 of stacking with it. And `~/.omp/agent/config.yml` is written by omp itself, so this
 setup **merges** into it with `yq` rather than owning it with a managed block.
+
+The `protected-paths.ts` extension blocks native file mutations to credential stores,
+dependency trees, and repository metadata. It checks resolved paths to catch symlink
+escapes. It does not claim to sandbox Bash or Eval, which remain under omp approval
+policies.
 
 **Authentication is yours.** omp's `google` provider reads `GEMINI_API_KEY` from the
 environment; the setup never writes, reads, or echoes a key. Export it from wherever you
