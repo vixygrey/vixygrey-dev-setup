@@ -11367,12 +11367,16 @@ write_managed "$CLAUDE_MD" "#" <<'CLAUDE_MD_CONF'
 - Do not roleplay, overuse emoji, or lean on cutesy filler.
 - Keep confidence proportional to evidence. State uncertainty plainly when it exists.
 - The full writing standard is `rules/writing.md`: the 53 rules of ASD-STE100 Simplified
-  Technical English. It applies **strictly to written artifacts** (docs, READMEs, runbooks,
-  commit messages, PR bodies, changelogs, error strings, UI copy, agent instructions) and
-  **loosely to chat**, where only the mechanical subset carries over: no slop words, no filler
-  adverbs, no Latin abbreviations, no hedging, one term per concept. Sentence limits and the
-  no-contractions rule are for artifacts, not conversation. pi follows the identical file at
-  the tail of `~/.pi/agent/AGENTS.md`, generated from the same source.
+  Technical English, in two tiers by document type.
+  - **Strict** (every rule, both sentence limits, no contractions): commit messages, PR titles
+    and bodies, specs, technical documentation, changelogs, release notes, incident reports,
+    error messages and CLI output, UI copy, instructions for AI agents.
+  - **Loose** (mechanical subset only: no slop words, no filler adverbs, no Latin
+    abbreviations, no hedging, one term per concept): issues and their comments, wikis, chat.
+  - Note the asymmetry: an issue body is loose, its PR body is strict. One carve-out overrides
+    the tier, and it is safety. A warning about data loss or an irreversible action is
+    command-first, risk-second wherever it appears.
+  - pi follows the identical file at the tail of `~/.pi/agent/AGENTS.md`, from the same source.
 
 ## Agent instructions in a repo: public `AGENTS.md`, private `CLAUDE.md`
 Two files, two audiences. Keep them separate in every repository.
@@ -11656,16 +11660,36 @@ one word, one meaning, one part of speech.
 
 ## Scope: two tiers
 
-**Written artifacts, strict.** Every rule below applies to text written to a file or
-published: documentation, READMEs, runbooks, procedures, commit messages, PR bodies,
-changelogs, release notes, incident reports, error messages, CLI output, UI copy, and
-instructions for AI agents.
+Membership is by document type, not by whether the text lands in a file. Decide the
+tier before you decide anything else.
 
-**Chat replies, loose.** In conversation, apply only the mechanical subset: no slop
-words, no filler adverbs, no Latin abbreviations, no hedging, one term per concept.
-The sentence-length limits and Rule 4.2 (no contractions) do NOT apply to chat,
-because 20-word imperative sentences read as a maintenance manual and contradict the
-house voice in `style.md`.
+| Tier | Applies to |
+|---|---|
+| **Strict** | Commit messages. PR titles and bodies. Specs. Technical documentation (READMEs, runbooks, procedures, API guides, architecture notes). Changelogs and release notes. Incident reports. Error messages and CLI output. UI copy. Instructions for AI agents. |
+| **Loose** | Issues and their comments. Wikis. Chat replies. |
+
+**Strict** means every rule below, including passage classification, the 20-word and
+25-word limits, and Rule 4.2.
+
+**Loose** means the mechanical subset only: no slop words, no filler adverbs, no Latin
+abbreviations, no hedging, one term per concept. The sentence-length limits and Rule
+4.2 (no contractions) do NOT apply.
+
+Why those three are loose. An issue is the first draft of a thought and often a
+dialogue, so a 20-word imperative register makes people write less than the problem
+needs. A wiki is collaborative prose that many hands edit, and a rule that every editor
+must relearn will not hold. Chat written as a maintenance manual contradicts the house
+voice in `style.md`. In all three the rules cost more than the slop they remove.
+
+Note the asymmetry inside one workflow: **an issue body is loose, its PR body is
+strict**. The issue argues for a change while the shape of the change is still open.
+The PR records what the change is, and that record gets read later by someone who was
+not there.
+
+**One carve-out, and it overrides the tier.** A warning about data loss, an
+irreversible action, or a destructive flag follows Section 7 wherever it appears,
+including inside a loose document. Command or condition first, risk second. The tier
+controls register. It does not control safety.
 
 ## Before you write
 
