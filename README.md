@@ -1129,7 +1129,11 @@ setup **merges** into it with `yq` rather than owning it with a managed block.
 
 **Authentication is yours.** omp's `google` provider reads `GEMINI_API_KEY` from the
 environment; the setup never writes, reads, or echoes a key. Export it from wherever you
-keep secrets, then confirm with `omp config get modelRoles.default`.
+keep secrets, then confirm with `omp config get modelRoles`.
+
+> `modelRoles` is a **record**, so it reads as a whole and not by sub-key.
+> `omp config get modelRoles.default` answers `Unknown setting`, which reports a
+> schema shape rather than a missing value.
 
 ### Claude Code MCP Servers
 
