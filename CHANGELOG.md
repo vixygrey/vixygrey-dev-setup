@@ -10,6 +10,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ### Added
 
+- **`lsp.diagnosticsOnEdit` is enabled for omp** (#527). Diagnostics now run as omp edits rather than only when it writes. The three features it sits beside need no configuration at all: omp ships `lsp.enabled` and `debug.enabled` on, and `edit.mode` already defaults to `hashline`. This one defaults to off.
+
 - **omp: hand-made config keys adopted, the always-on advisor turned off, and a turn-counter widget** (#525).
 
   Six keys had been set by hand on the machine and are now written by the generator: `composer.shape`, `github.enabled`, `symbolPreset` (`nerd`, since this machine installs the nerd fonts), `theme.light` (the generator had only ever set `theme.dark`, so a light terminal background fell back to omp's stock theme), and a `retry.fallbackChains.smol` chain so the cheap fan-out role degrades to the next cheapest model rather than the default chain's more expensive one.
@@ -44,6 +46,15 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
   `starlit` needs one manual step before the weather pane is useful: `starlit --setup`, then an API key in the config it creates. That is a credential, so the generator does not write it. The post-setup checklist says so.
 
+### Fixed
+
+- **CI now syntax-checks the omp turn-counter extension, and the check can actually fail** (#527). The `generated-config` job parses 50-odd heredocs; the TypeScript extension added in #525 was not among them, so a syntax error in it would have passed CI and failed on a machine at load time. Most heredocs legitimately have no row, because the job adds one where a generated file has a real parser and Markdown has none. TypeScript has one, so this was a gap rather than an accepted omission.
+
+  **The row copies the extraction to a `.ts` name first, and that is load-bearing.** The harness extracts to `/tmp/generated` with no extension, and `bun build /tmp/generated --no-bundle` **accepts deliberately broken TypeScript**: bun treats an unknown extension as an asset to copy rather than source to parse. Written the obvious way the row could never fail, which is exactly the vacuous pass the job's empty-extraction guard already exists to prevent. Both forms were run against a deliberately broken copy before the row was added; only the `.ts` form rejects it. `bun` is the right parser here regardless of availability, because omp declares `engines.bun` and so it is the runtime that will actually load the file.
+
+- **Stale `pi` references in three documents** (#527). `specs/state.yaml`, `README.md`, and `docs/GUIDE.md` still described pi as a live second agent writing `~/.pi/agent/AGENTS.md`, which the script stopped doing when pi was retired in #513. All three were live claims about current behavior rather than history.
+
+  `specs/adr/0001` also names that path and is deliberately unchanged. It appears in that ADR's Context section, recording what was true when the decision was taken, and `specs/adr/README.md` says to supersede an ADR rather than edit it. The decision itself — edit the generator, never the output — has not changed, so there is nothing to supersede either. Editing an ADR to tidy a dated example would damage the record it exists to keep.
 
 ## [7.22.0] - 2026-09-09
 

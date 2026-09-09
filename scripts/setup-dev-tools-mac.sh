@@ -14757,6 +14757,12 @@ composer:
 github:
   enabled: true
 
+# Diagnostics as omp edits, not only when it writes. omp ships lsp.enabled and
+# debug.enabled on, and edit.mode already defaults to hashline, so those need no
+# configuring; this one defaults to off (#527).
+lsp:
+  diagnosticsOnEdit: true
+
 # The advisor is a SECOND model watching every turn. Off deliberately (#525).
 # Written as an explicit `false` rather than omitted: the schema default is
 # already false, but stating it records the decision and survives an upstream
