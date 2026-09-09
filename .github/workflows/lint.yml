@@ -188,10 +188,13 @@ jobs:
           GHOSTTY_PLIST_EOF|python3 -c 'import plistlib, sys; plistlib.load(open("/tmp/generated","rb"))'
           AICHAT_THEME|python3 -c 'import plistlib, sys; plistlib.load(open("/tmp/generated","rb"))'
           OMP_THEME_CONF|jq empty /tmp/generated
+          LNAV_THEME_CONF|jq empty /tmp/generated
           CLAUDE_SETTINGS_CONF|jq empty /tmp/generated
           PRETTIER_CONF|jq empty /tmp/generated
           VSCODE_CONF|jq empty /tmp/generated
           MICRO_CONF|jq empty /tmp/generated
+          PGCLI_CONF|python3 -c 'import configparser; configparser.ConfigParser().read("/tmp/generated")'
+          MYCLI_CONF|python3 -c 'import configparser; configparser.ConfigParser().read("/tmp/generated")'
           CROFT_CONF|jq empty /tmp/generated
           LAZYGIT_CONF|yq eval '.' /tmp/generated
           K9S_DRACULA|yq eval '.' /tmp/generated
@@ -205,6 +208,7 @@ jobs:
           OMP_CONFIG_CONF|yq eval '.' /tmp/generated
           STARSHIP_CONF|python3 -c 'import tomllib; tomllib.load(open("/tmp/generated","rb"))'
           ATUIN_CONF|python3 -c 'import tomllib; tomllib.load(open("/tmp/generated","rb"))'
+          ATUIN_THEME_CONF|python3 -c 'import tomllib; tomllib.load(open("/tmp/generated","rb"))'
           MISE_CONF|python3 -c 'import tomllib; tomllib.load(open("/tmp/generated","rb"))'
           TOPGRADE_CONF|python3 -c 'import tomllib; tomllib.load(open("/tmp/generated","rb"))'
           TRIPPY_CONF|python3 -c 'import tomllib; tomllib.load(open("/tmp/generated","rb"))'
