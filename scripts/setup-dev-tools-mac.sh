@@ -9586,6 +9586,12 @@ cd "$PROJECT_DIR"
 
 git init -b main
 
+# Shell and bats get 4 spaces, not the 2-space default (#494). The file carved
+# out Makefile, Go and Python and left shell on the default, which is the wrong
+# way round on a machine whose own flagship project is 18k lines of 4-space bash.
+# It also mattered beyond taste: croft does not read EditorConfig at all and
+# defaults shell to 4, VS Code does read it, so without this rule the two editors
+# reformat each other's work.
 cat > .editorconfig <<'EDITORCONFIG'
 root = true
 
@@ -9607,6 +9613,9 @@ indent_style = tab
 indent_style = tab
 
 [*.py]
+indent_size = 4
+
+[*.{sh,bash,bats}]
 indent_size = 4
 EDITORCONFIG
 
@@ -9798,6 +9807,14 @@ This file defines how the code and project artifacts should look and behave.
 - Prefer the smallest correct change over broad rewrites.
 - Update user facing docs when behavior changes.
 
+## Decisions
+
+- Record an architecture decision in `specs/adr/`, one file per decision, named `NNNN-short-slug.md`.
+- Write the context that forced the choice, the choice, and what it costs.
+- Record a decision here once it is made. An open question belongs in an issue.
+- An ADR answers why a rule exists. This file answers what the rule is. Keep both.
+- When a decision changes, supersede the record and update the rule in the same change.
+
 ## Line endings and text files
 
 - All text files MUST use LF line endings.
@@ -9891,9 +9908,10 @@ cat >> AGENTS.md <<'AGENTSMD'
 <!-- Replace with a short module and boundary summary. -->
 
 ## Planning and specs
-- All planning and verification artifacts live in `specs/`.
+- All planning and verification artifacts live in `specs/`. Read `specs/README.md` for the full map.
 - Product scope lives under `specs/product/`.
 - Technical architecture lives under `specs/tech-architecture/`.
+- Architecture decisions live under `specs/adr/`, one file per decision. Record a decision there once it is made, and keep the matching rule in `CONVENTIONS.md`.
 - Release and execution state live in `specs/release-plan.yaml`, `specs/planning-status.yaml`, `specs/execution-status.yaml`, and `specs/state.yaml`.
 
 ## Bigpowers workflow
@@ -9928,7 +9946,52 @@ cat > specs/README.md <<'SPECSREADME'
 # Specs
 
 All planning, scope, architecture, release, and verification artifacts for this project live here.
+
+This directory holds **evolving state**. `CONVENTIONS.md` holds **normative rules** and
+`AGENTS.md` holds **procedure**. A fact that changes as work progresses belongs here. A
+standing rule belongs in one of those two files.
+
+Most files here are written by a skill rather than by hand. Each one names its owner.
+
+| Path | Holds | Written by |
+|---|---|---|
+| `state.yaml` | Workflow mode, active phase, handoff | `session-state` |
+| `planning-status.yaml` | Discover-phase checklist | `run-planning` |
+| `execution-status.yaml` | Per-story and per-epic status | `build-epic` |
+| `release-plan.yaml` | Release index, epics in WSJF order | `plan-release` |
+| `product/` | Scope, vision, glossary | `scope-work`, `elaborate-spec`, `define-language` |
+| `tech-architecture/` | Stack, test plan, security plan, design and refactor plans | `map-codebase`, `plan-tests`, `security-review` |
+| `adr/` | Architecture decision records | By hand, one file per decision |
+| `epics/` | Epic capsules and their stories | `slice-tasks`, `plan-work` |
+| `bugs/` | `registry.yaml` plus one `BUG-*.md` per investigation | `investigate-bug` |
+| `verifications/` | Verification output per story | `verify-work` |
+| `metrics/` | Cycle times and benchmark output | `generate-allure-report` |
+
+Start with `state.yaml`. It names the active phase and the next skill to run.
 SPECSREADME
+
+# Five of the seven directories above hold no seeded file, and git does not track
+# an empty directory — so they never reached the first commit (#496). They existed
+# for whoever ran new-project and vanished on clone, which is the quietest possible
+# failure: the author sees the full tree and everyone else gets a partial one.
+#
+# A README rather than a .gitkeep, for the same reason _spec_stub writes a heading
+# instead of calling touch: an empty tracked file tells a reader nothing, and a tool
+# guarding on `[ -d ... ]` reads "present" as "done". Each one names what belongs
+# there and which skill fills it.
+_spec_dir_readme() { # <dir> <title> <brief>
+    printf '# %s\n\n%s\n' "$2" "$3" > "$1/README.md"
+}
+_spec_dir_readme specs/adr "Architecture decision records" \
+    "One file per decision, named \`NNNN-short-slug.md\`. Record the context that forced a choice, the choice, and what it costs. Written by hand. These are *made* decisions: an open question belongs in an issue. When a decision changes, supersede the record rather than editing it."
+_spec_dir_readme specs/verifications "Verifications" \
+    "Verification output, one file per story. Written by the \`verify-work\` skill."
+_spec_dir_readme specs/epics/archive "Archived epics" \
+    "Completed epic capsules, moved here once their stories are done. Written by the \`build-epic\` skill."
+_spec_dir_readme specs/product/snapshots "Product snapshots" \
+    "Point-in-time copies of the \`product/\` documents, kept when scope changes materially. Written by the \`scope-work\` skill."
+_spec_dir_readme specs/metrics "Metrics" \
+    "Cycle times and benchmark output. Written by the \`generate-allure-report\` and \`run-benchmark\` skills."
 
 cat > specs/state.yaml <<STATE
 workflow_mode: solo-git
