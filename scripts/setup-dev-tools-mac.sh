@@ -1351,7 +1351,7 @@ disable_omp_mcp_server() {
     else
         printf '{}\n' > "$current"
     fi
-    if jq --arg server "$server" '
+    if jq -e --arg server "$server" '
         if type != "object" then
             error("OMP MCP config must be an object")
         elif (.disabledServers != null and (.disabledServers | type) != "array") then
