@@ -505,13 +505,13 @@ EOF
 }
 
 # ---------------------------------------------------------------------------
-# #565: Zed rewrites valid settings with trailing commas. The normalizer must
-# accept that form without changing string content that contains punctuation.
+# Code OSS editors rewrite valid settings with trailing commas. The normalizer
+# must accept that form without changing string content that contains punctuation.
 # ---------------------------------------------------------------------------
 
-@test "normalize_zed_jsonc: accepts Zed trailing commas without changing strings (#565)" {
+@test "normalize_editor_jsonc: accepts trailing commas without changing strings (#589)" {
     run run_with_helpers '
-        cat > "$HOME/zed.jsonc" <<"EOF"
+        cat > "$HOME/editor.jsonc" <<"EOF"
 {
   "nested": {
     "enabled": true,
@@ -522,23 +522,25 @@ EOF
   "literal": "keep,}"
 }
 EOF
-        normalize_zed_jsonc "$HOME/zed.jsonc" "$HOME/zed.json"
-        jq -cS . "$HOME/zed.json"
+        normalize_editor_jsonc "$HOME/editor.jsonc" "$HOME/editor.json"
+        jq -cS . "$HOME/editor.json"
     '
     [ "$status" -eq 0 ]
     [ "$output" = '{"array":["rose"],"literal":"keep,}","nested":{"enabled":true}}' ]
 }
 
-@test "merge_json_defaults: reads a validated source and writes the destination (#565)" {
+@test "merge_json_defaults: reasserts Kiro theme and preserves unrelated settings (#589)" {
     run run_with_helpers '
-        printf "%s\n" "{\"theme\":\"old\",\"personal\":true}" > "$HOME/source.json"
-        merge_json_defaults "$HOME/settings.json" ".theme = \"Dracula-Sakura\"" "$HOME/source.json" <<"EOF"
-{"generated":true}
+        printf "%s\n" "{\"workbench.colorTheme\":\"Other\",\"personal\":true}" > "$HOME/source.json"
+        merge_json_defaults "$HOME/settings.json" \
+            ".[\"workbench.colorTheme\"] = \"Dracula-Sakura\"" \
+            "$HOME/source.json" <<"EOF"
+{"editor.fontSize":14,"workbench.colorTheme":"Dracula-Sakura"}
 EOF
         jq -cS . "$HOME/settings.json"
     '
     [ "$status" -eq 0 ]
-    [ "$output" = '{"generated":true,"personal":true,"theme":"Dracula-Sakura"}' ]
+    [ "$output" = '{"editor.fontSize":14,"personal":true,"workbench.colorTheme":"Dracula-Sakura"}' ]
 }
 
 # ---------------------------------------------------------------------------

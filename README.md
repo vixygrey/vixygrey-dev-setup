@@ -426,7 +426,7 @@ The generated OMP policy selects Pyright for Python type intelligence and Ruff f
 | **Bun** | Package manager used by OMP to install and update plugin packages |
 | **micro** | The `$EDITOR` -- git/gh/lazygit commit messages, leaf's Ctrl+E, quick edits. Non-modal, on-screen key menu (`Ctrl+G` for help), Dracula theme |
 | **Croft** | VS Code-style terminal IDE with LSP, debugging, source control, PDF previews, and a Dracula-Sakura theme |
-| **Zed** | Fast native editor with a named Dracula-Sakura theme and OMP in the Agent Panel through ACP |
+| **Kiro** | Native agent-centric editor with practical defaults and a named Dracula-Sakura theme |
 | **omp** | Oh My Pi coding agent with LSP, DAP, subagents, and role-based routing across Codex, Gemini, Claude Sonnet, and local llama.cpp |
 | **Bigpowers** | OMP plugin with workflow skills, slash commands, and git safety guards |
 | **chezmoi** | Dotfile manager -- backup and restore configs across machines |
@@ -525,7 +525,7 @@ Applied consistently across the machine, with built-in Dracula variants kept whe
 | **Yazi** | Dracula-Sakura manager, status, dialog, mode, and file-type colors in `theme.toml` |
 | **broot** | Full Dracula-Sakura skin in `~/.config/broot/skins/dracula-sakura.hjson` |
 | **Herald** | Full role-based Dracula-Sakura theme in `~/.herald/themes/dracula-sakura.yaml` |
-| **Zed** | Named interface, syntax, and terminal theme in `~/.config/zed/themes/dracula-sakura.json` |
+| **Kiro** | Named interface, syntax, and terminal theme from a local extension under `~/.kiro/extensions/` |
 | **Croft** | Native extension manifest with full interface, syntax, terminal, and tab palettes |
 | **Emeraldian** | Native custom theme for the interface, Markdown, syntax, and graph views |
 | **Caligula** | Uses named terminal colors, which Kitty maps to the Dracula-Sakura palette |
@@ -731,7 +731,7 @@ The script generates config files with sensible defaults:
 | `~/.config/gh-dash/config.yml` | gh-dash | PR/issue sections, Dracula-Sakura theme |
 | `~/Library/Application Support/ngrok/ngrok.yml` | ngrok | Base config (add authtoken). ngrok's real macOS path — **not** `~/.config/ngrok`, which it never reads; a stranded copy there is removed on the next run |
 | `~/.config/micro/settings.json` | micro | Dracula (`dracula-tc`), whitespace cleanup, soft wrap, mouse support, and the shared `$EDITOR` role |
-| `~/.config/zed/settings.json` | Zed | House fonts, Dracula-Sakura overrides, editor defaults, and an `omp acp` external agent |
+| `~/Library/Application Support/Kiro/User/settings.json` | Kiro | House fonts, Dracula-Sakura, format-on-save, autosave, editor guides, and terminal defaults |
 | `~/Library/Application Support/emeraldian/config.toml` | Emeraldian | Reading-first defaults, images, and an offline read-only assistant |
 | `~/Library/Application Support/emeraldian/themes/dracula-sakura.toml` | Emeraldian | Native Dracula-Sakura interface, Markdown, syntax, and graph theme |
 | `~/.config/croft/config.json` | Croft | Format on save, selection whitespace, copy on select, 20k terminal scrollback, and whole-project diagnostics |

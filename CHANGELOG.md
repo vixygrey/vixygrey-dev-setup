@@ -14,8 +14,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - Added generated-output inventory checks for verification and parser coverage (#534).
 - Added an omp protected-path extension for native mutations to credentials, dependency trees, and repository metadata (#540).
 - Added an OMP provider-key template for Anthropic and Gemini credentials (#548).
-- Restored Herald, Broot, Mullvad VPN, `mullvad-tui`, and Zed with Dracula-Sakura styling where supported (#550).
-- Added Oh My Pi to Zed as an Agent Client Protocol server through `omp acp` (#550).
+- Restored Herald, Broot, Mullvad VPN, and `mullvad-tui` with Dracula-Sakura styling where supported (#550).
 - Added Firefox, Obsidian, Docker Desktop, and Bitwarden with supported application defaults (#557).
 - Added eilmeldung, concord, chamber, spotatui, and cfait with Dracula-Sakura styling where supported (#557).
 - Added the requested OMP language servers and exposed every command on the default `PATH` (#559).
@@ -45,6 +44,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - Added Sakura color overrides and a read-only shell default for Claws (#572).
 - Stopped changing the Dock auto-hide preference (#578).
 - Corrected stale counts, commands, workflow checks, and generated tool references across the documentation (#585).
+- Replaced Zed with Kiro and added a local Dracula-Sakura theme plus practical editor defaults (#589).
 
 ### Removed
 
@@ -83,8 +83,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - The llama.cpp model download now overrides the generated 30-second curl timeout (#553).
 - `--cleanup` now keeps ffmpeg because mpv and cliamp require its Homebrew formula (#563).
 - Eilmeldung now uses its verified macOS binary, which avoids the missing custom tap and duplicate Homebrew Rust toolchain (#563).
-- Zed and registered Obsidian vaults now expose native Dracula-Sakura custom themes (#565).
-- Zed settings merges now accept the trailing commas that Zed writes (#565).
+- Registered Obsidian vaults now expose a native Dracula-Sakura custom theme (#565).
+- Code OSS settings merges now accept trailing commas without changing string content (#565, #589).
 - The generated-config CI job now pins its just release, which prevents failures when latest-release discovery changes upstream (#571).
 - The setup now disables Bigpowers' broken duplicate MCP server while its native OMP skills remain available (#580).
 

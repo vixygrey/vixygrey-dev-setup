@@ -7,9 +7,11 @@
 workflow_mode: team-pr
 
 active_phase: sustain
+active_flow: release_branch
+
 
 metrics:
-  story_start: "2026-09-10T20:04:22Z"
+  story_start: "2026-09-10T23:12:45Z"
 
 
 project:
@@ -20,8 +22,8 @@ project:
 
 status:
   summary: >-
-    Issues #585 and #586 merged through PR #587.
-    SurgeDM is retired, and CI passed for merge commit 744d5e0.
+    Issue #589 is implemented and verified on feature/replace-zed-with-kiro.
+    Kiro replaces Zed with a local Dracula-Sakura theme and merged editor defaults.
 
 handoff:
-  next_skill: survey-context
+  next_skill: release-branch

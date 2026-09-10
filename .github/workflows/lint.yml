@@ -180,6 +180,9 @@ jobs:
           LNAV_THEME_CONF|jq empty /tmp/generated
           PRETTIER_CONF|jq empty /tmp/generated
           MICRO_CONF|jq empty /tmp/generated
+          KIRO_EXTENSION_CONF|jq empty /tmp/generated
+          KIRO_THEME_CONF|jq empty /tmp/generated
+          KIRO_CONF|jq empty /tmp/generated
           LAZYGIT_CONF|yq eval '.' /tmp/generated
           GHDASH_CONF|yq eval '.' /tmp/generated
           LAZYDOCKER_CONF|yq eval '.' /tmp/generated
