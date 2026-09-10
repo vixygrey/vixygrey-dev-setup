@@ -22,6 +22,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - Routed omp by workload and made local Qwen the final fallback (#538).
 - Narrowed omp's shared skills to `api-testing`, `d2-diagrams`, and `office-layout-check` (#540).
 - Replaced Ollama with source-built llama.cpp configured for Vulkan only, Qwen2.5 Coder 14B, and a login service (#542).
+- Replaced Ghostty with Kitty and ported the managed terminal theme, font, window, selection, and behavior settings (#544).
+- Restored `Cmd+Space` to Spotlight and `Cmd+Option+Space` to Finder search (#544).
+- Added a generated OMP instruction to complete each TODO item when its work finishes (#544).
 
 ### Removed
 
@@ -32,6 +35,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - Removed act3, ni, broot, asciinema, jolt, Visual Studio Code, GitHub Copilot CLI, aichat, Turborepo, and Lighthouse (#542).
 - Removed Pearcleaner, dockutil, terminal-notifier, herald, Shottr, Skim, office-py, p7zip, newsboat, and Google Workspace CLI (#542).
 - Removed OrbStack, SketchyBar, croft, reminders-cli, apw, and the exclusive artifacts owned by all retired tools (#542).
+- Removed Ghostty, its global quick terminal, its login agent, and the `a` shell application launcher (#544).
 
 ### Fixed
 
