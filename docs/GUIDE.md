@@ -41,7 +41,6 @@ duckdb              # local SQL shell for CSV/JSON/Parquet
 yaml-py -c 'import yaml; print(yaml.safe_load("a: 1"))'
 omp
 curl -s http://127.0.0.1:8081/v1/models | jq
-kondo --dry-run ~/Code
 
 # Update everything at once
 update              # topgrade: brew, npm, pip, system updates
@@ -256,21 +255,6 @@ yq -i '.spec.replicas = 3' deployment.yaml
 yq -o json config.yaml
 ```
 
-### miller (CSV/JSON/tabular data)
-
-```bash
-# Pretty-print CSV
-mlr --csv --opprint cat data.csv
-
-# Filter rows
-mlr --csv filter '$age > 30' data.csv
-
-# Sort by column
-mlr --csv sort-by name data.csv
-
-# Group by and aggregate
-mlr --csv group-by department then stats1 -a mean -f salary data.csv
-```
 
 ### csvkit (CSV tools)
 
@@ -334,15 +318,6 @@ gh rerun                     # alias: re-run failed jobs
 ghd                          # alias: gh-dash (TUI dashboard)
 ```
 
-### git-cliff (changelog generator)
-
-```bash
-# Generate changelog from conventional commits
-git-cliff                    # full changelog to stdout
-git-cliff --unreleased       # only unreleased changes
-git-cliff -o CHANGELOG.md    # write to file
-git-cliff v1.0.0..HEAD       # specific range
-```
 
 ### Git Aliases
 
@@ -424,24 +399,6 @@ k logs -f pod-name           # follow logs
 
 ## Database
 
-### pgcli / mycli (auto-completing SQL)
-
-```bash
-pgcli -h localhost -U postgres mydb   # connect to PostgreSQL
-mycli -h localhost -u root mydb       # connect to MySQL
-# Tab — autocomplete table names, columns, SQL keywords
-# \dt — list tables
-# \d tablename — describe table
-# Ctrl+D — quit
-```
-
-### lazysql (database TUI)
-
-```bash
-lazysql                      # interactive database TUI
-# Connect to Postgres, MySQL, SQLite
-# Browse tables, run queries, view results in a table
-```
 
 ### harlequin (terminal SQL IDE)
 
@@ -457,14 +414,6 @@ harlequin --adapter mysql -h localhost mydb   # connect to MySQL
 
 Adapters bundled by the setup script: DuckDB (default), Postgres, MySQL, S3.
 
-### sq (jq for databases)
-
-```bash
-sq inspect data.csv          # inspect a CSV file
-sq '.data | .name, .email'   # query with jq-like syntax
-sq @mydb '.users'            # query a database source
-sq add mydb postgres://...   # add a database source
-```
 
 ### dbmate (database migrations)
 
@@ -583,17 +532,10 @@ mitmproxy                    # interactive TUI proxy
 ### trippy (modern traceroute TUI)
 
 ```bash
-trippy google.com            # traceroute with live charts
+trip google.com              # traceroute with live charts
 # Real-time hop-by-hop latency visualization
-# Better than mtr for understanding network paths
 ```
 
-### mtr (ping + traceroute combined)
-
-```bash
-mtr google.com               # combined ping and traceroute
-mtr --report google.com      # generate a report
-```
 
 ### bandwhich (bandwidth monitor)
 
@@ -618,15 +560,12 @@ nmap -p 1-1000 target        # scan ports
 nmap -sV target              # detect service versions
 ```
 
-### xh / curlie (HTTP clients)
+### xh (HTTP client)
 
 ```bash
 xh httpbin.org/get           # GET request (colorized)
 xh POST api.example.com/data name=John  # POST with JSON
-xh -d api.example.com/file  # download file
-
-curlie httpbin.org/get       # curl syntax, httpie output
-curlie -X POST api.example.com -d '{"key":"val"}'
+xh -d api.example.com/file   # download file
 ```
 
 ---
@@ -643,14 +582,6 @@ mpv https://youtube.com/...  # play URL (with yt-dlp)
 # [ / ] — slower / faster playback
 ```
 
-### ffmpeg (video/audio processing)
-
-```bash
-ffq -i input.mp4 -c:v libx264 output.mp4    # alias: convert video
-ffq -i input.mp4 -ss 00:01:00 -t 30 clip.mp4 # extract 30s clip
-ffq -i input.mp4 -vn -acodec mp3 audio.mp3   # extract audio
-ffq -i input.mov -vf scale=1280:720 output.mp4 # resize
-```
 
 ### Image tools
 
@@ -758,20 +689,6 @@ gum spin --title "Building..." -- npm run build
 
 # Styled text
 gum style --border rounded "Hello, World!"
-```
-
-### nushell (structured data shell)
-
-```bash
-nu                           # start nushell
-
-# Pipelines output tables, not strings
-ls | where size > 1mb | sort-by modified
-ps | where cpu > 5
-open data.json | get users | where age > 30
-
-# Built-in data operations
-http get https://api.example.com | get data
 ```
 
 ### watchexec (file watcher)
@@ -980,7 +897,6 @@ The setup script does not install any MAS apps by default — `mas` is provided 
 | `ytdl` | `yt-dlp` | Media |
 | `ytmp3` | `yt-dlp -x --audio-format mp3` | Media |
 | `resize` | `magick mogrify -resize` | Media |
-| `ffq` | `ffmpeg -hide_banner -loglevel warning` | Media |
 | `md2pdf` | `pandoc -f markdown -t pdf` | Docs |
 | `md2html` | `pandoc -f markdown -t html -s` | Docs |
 | `md2docx` | `pandoc -f markdown -t docx` | Docs |

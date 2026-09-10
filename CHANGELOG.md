@@ -42,6 +42,11 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - Removed OrbStack, SketchyBar, croft, reminders-cli, apw, and the exclusive artifacts owned by all retired tools (#542).
 - Removed Ghostty, its global quick terminal, its login agent, and the `a` shell application launcher (#544).
 - Removed starlit, its credential configuration, and its zellij dashboard pane (#546).
+- Removed cdk-nag, tree, curlie, detect-secrets, global commitlint, Commitizen, npkill, Homebrew nano, and four redundant fonts (#555).
+- Removed mtr, Watchman, has, taproom, keyward, lazyenv, kondo, Miller, grpcurl, and ffmpeg (#555).
+- Removed `llm`, `pgcli`, `mycli`, `lazysql`, `sq`, `git-cliff`, Mermaid CLI, Nushell, and their generated configuration (#555).
+- Removed Caddy and ClamAV automation. The cleanup command stops ClamAV before package removal (#555).
+- Removed four redundant font packages. JetBrains Mono, its Nerd Font variant, and Inter remain (#555).
 
 ### Fixed
 
