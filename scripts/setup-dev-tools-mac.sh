@@ -355,12 +355,12 @@ declare -A CATEGORY_DESC=(
     [aws]="AWS CLI, CDK, SAM, Granted, cfn-lint, e1s/e2c/stu/claws (TUIs), s5cmd, steampipe, dynein, iamlive"
     [iac]="OpenTofu (Terraform), tflint, terraform-docs, checkov, infracost"
     [security]="detect-secrets, gitleaks, trivy, semgrep, ClamAV, Objective-See"
-    [replacements]="eza, bat, fd, ripgrep, zoxide, btop, sd, dust, just, rovr, fx, etc."
+    [replacements]="eza, bat, fd, ripgrep, zoxide, btop, sd, dust, just, Yazi, fx, etc."
     [data-processing]="yq, miller, csvkit, jc, jqp, pandoc, ffmpeg, ImageMagick"
     [code-quality]="shellcheck, shfmt, actionlint, act, hadolint, ruff, prettier, commitizen"
     [perf-testing]="hyperfine, oha"
     [dev-servers]="ngrok, miniserve, caddy"
-    [terminal-productivity]="leaf, watchexec, gum, nushell, topgrade, fastfetch, mprocs, nnn, taproom, qalc, lazyssh/rsync/npm, lazyenv, keyward, cheznav, has, starlit, kondo"
+    [terminal-productivity]="leaf, watchexec, gum, nushell, topgrade, fastfetch, mprocs, taproom, qalc, lazyssh/rsync/npm, lazyenv, keyward, cheznav, has, kondo"
     [k8s-github]="stern, gh-dash"
     [database]="duckdb, pgcli, mycli, lazysql, harlequin, usql, sq"
     [containers]="lazydocker, dive, kubectl, k9s"
@@ -396,7 +396,7 @@ declare -A CONFIG_LIVES_IN_CONFIGS=(
     [aws]="the AWS CLI config (\$HOME/.aws/config)"
     [iac]="tflint"
     [code-quality]="shellcheck, act, prettier, editorconfig"
-    [replacements]="btop, ripgreprc, fdignore, aria2"
+    [replacements]="btop, ripgreprc, fdignore, aria2, Yazi"
     [data-processing]="yt-dlp, miller, jqp"
     [terminal-productivity]="leaf, nushell, topgrade, fastfetch, mprocs"
     [k8s-github]="stern, gh-dash"
@@ -1877,6 +1877,11 @@ if [[ "$CLEANUP" == "true" ]]; then
         # Retired in #544. The managed config and exact generated login agent are
         # removed in the configs segment, where normal reruns also reach them.
         "cask:ghostty:Ghostty:Kitty:Ghostty"
+        # Retired in #546. Yazi replaces both file managers. starlit has no
+        # replacement. Exclusive config is handled through CONFIG_ORPHANS.
+        "uv:rovr:rovr:Yazi"
+        "formula:nnn:nnn:Yazi"
+        "uv:starlit-cli:starlit:removed"
         "formula:vhs:vhs:removed"
         "cask:claude:Claude:removed:Claude"
         "formula:ollama:Ollama:llama.cpp"
@@ -1938,7 +1943,6 @@ if [[ "$CLEANUP" == "true" ]]; then
         "cask:drawio:draw.io:d2 + mermaid-cli:draw.io"
         "cask:notion:Notion:plain Markdown + reminders:Notion"
         "cask:notion-calendar:Notion Calendar:removed:Notion Calendar"
-        "brew:yazi:yazi:rovr"
         "brew:cmus:cmus:cliamp"
         "brew:kew:kew:cliamp"
         "brew:tokei:tokei:scc"
@@ -2257,7 +2261,9 @@ if [[ "$CLEANUP" == "true" ]]; then
         "cmus|$HOME/.config/cmus|cliamp"
         "kew|$HOME/.config/kew|cliamp"
         "glow|$HOME/.config/glow|leaf"
-        "yazi|$HOME/.config/yazi|rovr"
+        "rovr|$HOME/.config/rovr|Yazi"
+        "nnn|$HOME/.config/nnn|Yazi"
+        "starlit|$HOME/.config/starlit|removed"
         "tmux|$HOME/.tmux.conf|zellij"
         "aerospace|$HOME/.aerospace.toml|native Spaces + tiling"
         "nvm|$HOME/.nvm|mise"
@@ -2552,6 +2558,9 @@ if [[ "$VERIFY" == "true" ]]; then
         "validate|lazyenv|$HOME/Library/Application Support/lazyenv/config.toml|_verify_output_has '^Config OK' lazyenv --check-config"
         "validate|kitty|$HOME/.config/kitty/kitty.conf|_verify_kitty"
         "validate|zellij|$HOME/.config/zellij/config.kdl|_verify_output_has 'Well defined' zellij setup --check"
+        # Yazi has no headless validator or command that reports its config path.
+        # Both TOML files carry official schema links for editor validation.
+        "unchecked|yazi|$HOME/.config/yazi/theme.toml|"
         "validate|ngrok|$HOME/Library/Application Support/ngrok/ngrok.yml|ngrok config check"
         "template|borgmatic|$HOME/.config/borgmatic/config.yaml|borgmatic config validate"
         "path|k9s|$HOME/.config/k9s/config.yaml|k9s info 2>/dev/null | sed 's/\x1b\[[0-9;]*m//g' | sed -n 's/^Config: *//p'"
@@ -3406,11 +3415,8 @@ brew_install "vivid" "vivid (LS_COLORS generator — colorize file listings by t
 # make -> just: modern command runner, simpler syntax, no tab weirdness
 brew_install "just" "just (replaces make — simpler task runner, no tab issues)"
 
-# file manager -> rovr: mouse-first project-tree TUI file manager (Textual).
-# nnn is kept (below) as a fast, minimal fallback. rovr is not on Homebrew — install
-# via uv (needs Python 3.13, which uv fetches automatically).
-uv_tool_install rovr rovr "rovr (mouse-first TUI file manager; uv fetches Python 3.13)" \
-    "rovr installed (mouse-first TUI file manager)" --python 3.13
+# file manager -> Yazi: fast terminal file manager with previews and bulk tasks.
+brew_install "yazi" "Yazi (terminal file manager with previews and bulk tasks)"
 
 # jq (interactive) -> fx: interactive JSON viewer/processor
 brew_install "fx" "fx (interactive JSON viewer — better than jq for exploring)"
@@ -3616,7 +3622,6 @@ brew_install "fastfetch" "fastfetch (quick system info display — faster neofet
 brew_install "mprocs" "mprocs (TUI for running multiple dev processes)"
 brew_install "nano" "nano (latest — better than macOS built-in)"
 brew_install "lnav" "lnav (advanced log file viewer — auto-format, SQL queries on logs)"
-brew_install "nnn" "nnn (tiny, fast terminal file manager)"
 brew_install "progress" "progress (coreutils progress viewer — cp, mv, dd, tar)"
 
 # -- Additional TUI/CLI tools (homebrew-core) --
@@ -3641,9 +3646,6 @@ brew_install "lazynop/tap/lazyenv" "lazyenv (TUI for .env files — diff/sync ac
 trust_tap gateway-of-last-resort/tap
 brew_cask_install "gateway-of-last-resort/tap/keyward" "keyward (SSH-key manager + security audit — offline, single binary)"
 
-# starlit (weather CLI) — PyPI package 'starlit-cli', installed via uv.
-uv_tool_install starlit-cli starlit "starlit (weather CLI)" \
-    "starlit installed (run 'starlit --setup' to add an OpenWeatherMap key)"
 # kondo — interactive-ish cleanup tool for build/dependency cruft across many ecosystems.
 brew_install "kondo" "kondo (clean dependency/build cruft from projects)"
 
@@ -5395,21 +5397,16 @@ remove_superseded_managed "$ZELLIJ_LAYOUTS/dev.kdl" \
 # Launch with:  zellij --layout home
 #
 #   +---------------------+----------------------+
-#   |                     |  starlit  (weather)  |  30%
-#   |   plain terminal    +----------------------+
-#   |                     |  btop  (system)      |  70%
+#   |                     |                      |
+#   |   plain terminal    |  btop  (system)      |
+#   |                     |                      |
 #   +---------------------+----------------------+
-#
-# The right column's two sizes sum to 100.
 info "Creating zellij 'home' layout..."
 write_managed "$ZELLIJ_LAYOUTS/home.kdl" "//" <<'ZELLIJ_HOME'
 // Personal dashboard. Run:  zellij --layout home
 //
 // The tab-bar and status-bar panes keep this custom layout as discoverable as
 // the built-in default layout.
-//
-// `starlit --interactive` is the persistent mode. Bare `starlit` prints one
-// forecast and exits, which leaves a dead pane behind.
 layout {
     pane size=1 borderless=true {
         plugin location="tab-bar"
@@ -5418,16 +5415,9 @@ layout {
         pane {
             name "terminal"
         }
-        pane split_direction="horizontal" {
-            pane size="30%" {
-                name "weather"
-                command "starlit"
-                args "--interactive"
-            }
-            pane size="70%" {
-                name "system"
-                command "btop"
-            }
+        pane {
+            name "system"
+            command "btop"
         }
     }
     pane size=1 borderless=true {
@@ -5435,8 +5425,153 @@ layout {
     }
 }
 ZELLIJ_HOME
-configured "zellij 'home' layout created (terminal + weather/system: zellij --layout home)"
+configured "zellij 'home' layout created (terminal + system: zellij --layout home)"
 fi  # installed zellij
+
+# ---- Yazi config ------------------------------------------------------------
+YAZI_CONFIG_DIR="$HOME/.config/yazi"
+YAZI_CONFIG="$YAZI_CONFIG_DIR/yazi.toml"
+YAZI_THEME="$YAZI_CONFIG_DIR/theme.toml"
+info "Configuring Yazi..."
+write_managed "$YAZI_CONFIG" "#" <<'YAZI_CONF'
+#:schema https://yazi-rs.github.io/schemas/yazi.json
+
+[mgr]
+ratio = [ 1, 4, 3 ]
+sort_by = "natural"
+sort_sensitive = false
+sort_reverse = false
+sort_dir_first = true
+linemode = "size"
+show_hidden = true
+show_symlink = true
+scrolloff = 5
+
+[preview]
+wrap = "yes"
+tab_size = 2
+max_width = 1000
+max_height = 1000
+image_filter = "lanczos3"
+image_quality = 75
+YAZI_CONF
+
+write_managed "$YAZI_THEME" "#" <<'YAZI_THEME_CONF'
+#:schema https://yazi-rs.github.io/schemas/theme.json
+
+# Dracula-Sakura palette:
+# background #282a36, foreground #f8f8f2, rose #ff7aa8,
+# mint #8af7cf, yellow #fff0a8, lilac #d4b2ff, cyan #9be7ff.
+
+[app]
+overall = { bg = "#282a36" }
+
+[mgr]
+cwd = { fg = "#9be7ff", bold = true }
+find_keyword = { fg = "#fff0a8", bold = true, italic = true, underline = true }
+find_position = { fg = "#ff9fe3", bg = "#282a36", bold = true, italic = true }
+symlink_target = { fg = "#8a88c7", italic = true }
+marker_copied = { fg = "#8af7cf", bg = "#8af7cf" }
+marker_cut = { fg = "#ff7aa8", bg = "#ff7aa8" }
+marker_marked = { fg = "#9be7ff", bg = "#9be7ff" }
+marker_selected = { fg = "#d4b2ff", bg = "#d4b2ff" }
+count_copied = { fg = "#282a36", bg = "#8af7cf" }
+count_cut = { fg = "#282a36", bg = "#ff7aa8" }
+count_selected = { fg = "#282a36", bg = "#d4b2ff" }
+border_style = { fg = "#6a5d86" }
+
+[tabs]
+active = { fg = "#282a36", bg = "#d4b2ff", bold = true }
+inactive = { fg = "#8a88c7", bg = "#2f3144" }
+
+[mode]
+normal_main = { fg = "#282a36", bg = "#9be7ff", bold = true }
+normal_alt = { fg = "#9be7ff", bg = "#2f3144" }
+select_main = { fg = "#282a36", bg = "#ff7aa8", bold = true }
+select_alt = { fg = "#ff7aa8", bg = "#2f3144" }
+unset_main = { fg = "#282a36", bg = "#fff0a8", bold = true }
+unset_alt = { fg = "#fff0a8", bg = "#2f3144" }
+
+[indicator]
+parent = { fg = "#8a88c7" }
+current = { fg = "#d4b2ff", reversed = true }
+preview = { fg = "#9be7ff", underline = true }
+
+[status]
+overall = { fg = "#f8f8f2", bg = "#282a36" }
+perm_sep = { fg = "#6a5d86" }
+perm_type = { fg = "#8af7cf" }
+perm_read = { fg = "#fff0a8" }
+perm_write = { fg = "#ff7aa8" }
+perm_exec = { fg = "#9be7ff" }
+progress_label = { fg = "#f8f8f2", bold = true }
+progress_normal = { fg = "#8af7cf", bg = "#2f3144" }
+progress_error = { fg = "#282a36", bg = "#ff7aa8" }
+
+[which]
+border = { fg = "#d4b2ff" }
+cand = { fg = "#9be7ff" }
+rest = { fg = "#8a88c7" }
+desc = { fg = "#ff9fe3" }
+separator_style = { fg = "#6a5d86" }
+
+[confirm]
+border = { fg = "#d4b2ff" }
+title = { fg = "#d4b2ff", bold = true }
+btn_yes = { fg = "#282a36", bg = "#8af7cf", bold = true }
+btn_no = { fg = "#f8f8f2", bg = "#2f3144" }
+
+[spot]
+border = { fg = "#d4b2ff" }
+title = { fg = "#d4b2ff", bold = true }
+tbl_col = { fg = "#9be7ff" }
+tbl_cell = { fg = "#fff0a8", reversed = true }
+
+[notify]
+title_info = { fg = "#8af7cf" }
+title_warn = { fg = "#fff0a8" }
+title_error = { fg = "#ff7aa8" }
+
+[pick]
+border = { fg = "#d4b2ff" }
+active = { fg = "#ff9fe3", bold = true }
+inactive = { fg = "#f8f8f2" }
+
+[input]
+border = { fg = "#d4b2ff" }
+title = { fg = "#9be7ff" }
+value = { fg = "#f8f8f2" }
+selected = { fg = "#282a36", bg = "#d4b2ff" }
+
+[cmp]
+border = { fg = "#d4b2ff" }
+active = { fg = "#282a36", bg = "#9be7ff" }
+inactive = { fg = "#f8f8f2" }
+
+[tasks]
+border = { fg = "#d4b2ff" }
+title = { fg = "#9be7ff" }
+hovered = { fg = "#ff9fe3", bold = true }
+
+[help]
+border = { fg = "#d4b2ff" }
+chord = { fg = "#9be7ff" }
+action = { fg = "#f8f8f2" }
+hovered = { fg = "#282a36", bg = "#d4b2ff", bold = true }
+
+[filetype]
+rules = [
+    { mime = "**/image/*", fg = "#fff0a8" },
+    { mime = "**/{audio,video}/*", fg = "#ff9fe3" },
+    { mime = "**/application/{zip,rar,7z*,tar,gzip,xz,zstd,bzip*,lzma,compress,archive,cpio,arj,xar,ms-cab*}", fg = "#ff7aa8" },
+    { mime = "**/application/{pdf,doc,rtf}", fg = "#9be7ff" },
+    { url = "*", is = "orphan", fg = "#ff7aa8" },
+    { url = "*", is = "exec", fg = "#8af7cf" },
+    { url = "*/", fg = "#d4b2ff" },
+    { url = "*", fg = "#f8f8f2" },
+]
+YAZI_THEME_CONF
+configured "Yazi configured (previews, natural sorting, hidden files, Dracula-Sakura theme)"
 
 # ---- retired newsboat config ----
 remove_superseded_managed "$HOME/.newsboat/config" \
@@ -10878,11 +11013,7 @@ export FZF_CTRL_T_OPTS="--preview 'bat --color=always --style=numbers --line-ran
 export FZF_ALT_C_COMMAND='fd --type d --hidden --follow --exclude .git'
 export FZF_ALT_C_OPTS="--preview 'eza --tree --icons --level=2 --color=always {}' --preview-window='right:50%:wrap'"
 
-# -- nnn (terminal file manager) ----------------------------------------------
-export NNN_OPTS="deH"
-export NNN_COLORS="2136"
-export NNN_FCOLORS="c1e2272e006033f7c6d6abc4"
-export NNN_PLUG="f:fzcd;o:fzopen;p:preview-tui"
+# Yazi uses theme.toml for its house palette. The `y` alias starts the manager.
 
 # zsh plugins (deterministic prefix — no `brew --prefix` fork)
 : "${HOMEBREW_PREFIX:=/opt/homebrew}"
@@ -10949,7 +11080,16 @@ alias rg="rg"          # ripgrep (already the command name)
 alias f="fd"           # fd (fast find)
 alias sd="sd"          # sd (fast sed)
 alias dft="difft"      # difftastic
-alias y="rovr"         # rovr file manager (mouse-first TUI; nnn 'n' is the minimal fallback)
+# Yazi's recommended wrapper changes the parent shell directory after exit.
+# Press `Q` instead of `q` in Yazi to leave the shell directory unchanged.
+y() {
+  local tmp cwd
+  tmp="$(mktemp -t 'yazi-cwd.XXXXXX')"
+  command yazi "$@" --cwd-file="$tmp"
+  IFS= read -r -d '' cwd < "$tmp" || true
+  [[ "$cwd" != "$PWD" && -d "$cwd" ]] && builtin cd -- "$cwd"
+  /bin/rm -f -- "$tmp"
+}
 alias jx="fx"          # fx interactive JSON viewer
 
 # -- Download & Transfer ------------------------------------------------------
@@ -11006,7 +11146,6 @@ alias lint-sh="shellcheck"
 alias fmt-sh="shfmt -w -i 4"
 
 # -- Terminal Apps ------------------------------------------------------------
-alias n="nnn -de"
 alias prog="progress -m"
 alias clip="clipse"    # clipboard-history TUI (replaces Raycast clipboard)
 
@@ -11245,7 +11384,6 @@ Complete the manual permissions, credentials, and account steps after the script
 - [ ] Run `aws configure sso` or `aws configure` before you use AWS tools.
 - [ ] Run `atuin register` to enable optional encrypted shell-history synchronization.
 - [ ] Run `infracost auth login` before you use infrastructure cost estimates.
-- [ ] Run `starlit --setup` and enter an OpenWeatherMap API key.
 - [ ] Run `ngrok config add-authtoken <TOKEN>` before you create public tunnels.
 
 ## Services and storage
@@ -11308,7 +11446,7 @@ Every binding is on screen: the **key menu** sits along the bottom, and there ar
 | zellij `Ctrl + p` then `n` | New pane. zellij is **modal**: press a mode key, then act |
 | zellij mode keys | `Ctrl + p` pane · `Ctrl + t` tab · `Ctrl + n` resize · `Ctrl + s` scroll · `Ctrl + o` session · `Ctrl + g` lock (toggles) |
 | lazygit / lazydocker / lazysql / lazynpm / lazyssh / lazyrsync | Full-screen TUIs (arrows + on-screen keys) |
-| `y` rovr · `n` nnn | File managers |
+| `y` Yazi | File manager |
 | `cliamp` | Terminal music player (Winamp-style) — playback, EQ, cycle visualizers |
 | `atac` | API client TUI (or `atac request send <coll>/<req>` headless) |
 
@@ -11343,10 +11481,9 @@ The setup installs a Dracula-Sakura wallpaper at `~/Media/photos/dracula-sakura.
 - **LibreOffice** and **poppler** support visual checks of Office documents.
 
 ## Data, media, and storage
-- **rovr** and **nnn** provide file managers.
+- **Yazi** provides file management, previews, and bulk tasks.
 - **eza**, **bat**, **fd**, **ripgrep**, **dust**, **duf**, and **sd** replace common file utilities.
 - **cliamp** provides music playback.
-- **starlit** provides weather data.
 - **surge** and **aria2** manage downloads.
 - **rclone** and **borg** provide synchronization and backups.
 
@@ -11833,25 +11970,17 @@ ast-grep run -p 'var $NAME = $VAL' -r 'let $NAME = $VAL' -l js
 ast-grep scan
 ```
 
-### `rovr` — rovr
-A mouse-first TUI file manager: browse, preview, copy, move, and delete files from a full-screen terminal UI instead of typing every `mv`/`cp` by hand. It's the primary file manager in this setup (with `nnn` kept as a minimal keyboard-only fallback). Reach for it when you want to visually navigate and reorganize a messy directory rather than scripting the operations.
+### `yazi` — Yazi
+Yazi is a fast terminal file manager with previews, fuzzy search, bulk operations, and asynchronous file tasks. The `y` wrapper preserves Yazi's final directory in the parent shell.
 
 ```bash
-# launch rovr in the current directory
-rovr
-# launch rovr in a specific directory
-rovr ~/Downloads
+# launch Yazi in the current directory
+y
+# launch Yazi in a specific directory
+y ~/Downloads
 ```
 
-### `nnn` — nnn
-A tiny, extremely fast, keyboard-driven TUI file manager — no mouse needed, minimal dependencies, near-instant startup even on huge directories. It's kept as the lightweight fallback to `rovr` for when you want pure keyboard navigation or are on a constrained/remote session. Navigate with arrow keys or hjkl, open files with Enter, and quit with `q`.
-
-```bash
-# launch nnn in the current directory
-nnn
-# launch nnn with the built-in file preview plugin
-nnn -e
-```
+Press `q` to quit and change the parent shell directory. Press `Q` to quit without changing it.
 
 ### `kondo` — Kondo
 A project cleanup CLI that finds generated dependency, build, and cache directories across many language ecosystems.
@@ -13626,16 +13755,15 @@ cliamp next
 
 > Tip: `cliamp setup` walks through connecting streaming providers like Spotify or Qobuz.
 
-### `starlit` — Weather CLI
-A minimal, nicely styled weather CLI — current conditions and forecast, right in the terminal, no browser tab or app needed. Requires a free OpenWeatherMap API key on first use.
+### `yazi` (Terminal File Manager)
+Yazi provides file previews, fuzzy search, bulk operations, and directory navigation.
+The generated theme uses the Dracula-Sakura house palette.
 
 ```bash
-# one-time setup: store your OpenWeatherMap key
-starlit --setup
-# get weather for your default city
-starlit
-# get weather for a specific city
-starlit tokyo
+# open Yazi in the current directory
+y
+# open a specific directory
+yazi ~/Code
 ```
 
 ### `surge` — Download Manager (TUI)
@@ -13890,7 +14018,7 @@ if installed mise; then
     # mise ships SHIMS for exactly this case: they resolve the active version with no shell
     # activation at all. The shims directory itself cannot go on a system-wide PATH without
     # sudo, but ~/.local/bin is already on PATH in that `sh` environment and this script
-    # already uses it for soffice, yaml-py, and starlit, so link the shims there.
+    # already uses it for soffice and yaml-py, so link the shims there.
     #
     # Two constraints, both verified rather than assumed:
     #   * The link NAME must match the shim name. mise dispatches on argv[0], so a link

@@ -27,7 +27,7 @@ Quick reference for all **209+ shortcuts** configured by the setup scripts.
 | `make` | `just` | Simpler task runner |
 | `f` | `fd` | Fast file finder |
 | `dft` | `difft` | Syntax-aware structural diff |
-| `y` | `rovr` | Terminal file manager (mouse-first TUI; `n` = nnn, the minimal fallback) |
+| `y` | Yazi shell wrapper | Open Yazi and keep its directory after `q` |
 | `jx` | `fx` | Interactive JSON viewer |
 
 ### Downloads & Network
@@ -99,7 +99,6 @@ Quick reference for all **209+ shortcuts** configured by the setup scripts.
 
 | Alias | Runs | What it does |
 |-------|------|-------------|
-| `n` | `nnn -de` | File manager (detail view, text in pager) |
 | `prog` | `progress -m` | Live progress bars for running cp/mv/dd/tar |
 
 ### Directory Shortcuts (via zoxide)
@@ -529,7 +528,24 @@ comes from the online reference.
 | `Esc` | Hide help |
 | `Ctrl-c` | Quit |
 
+### Yazi
+
+*Source: [Yazi Quick Start](https://yazi-rs.github.io/docs/quick-start/).*
+
+| Key | Action |
+|-----|--------|
+| `h` / `j` / `k` / `l` | Parent / down / up / enter directory |
+| `Enter` | Open selected files |
+| `Space` | Toggle selection |
+| `y` / `x` / `p` | Copy / cut / paste |
+| `a` / `r` | Create / rename |
+| `d` | Move selected files to Trash |
+| `.` | Toggle hidden files |
+| `F1` or `~` | Open help |
+| `q` / `Q` | Quit and change directory / quit without changing |
+
 ---
+
 
 ### Tools whose keymap you configure, not memorise
 
@@ -555,7 +571,6 @@ section survived for years.
 
 | Tool | Help key | What was checked |
 |------|----------|------------------|
-| `nnn` | `?` | `man nnn` says only "Press '?' in nnn to see the list of keybinds" |
 | `lazysql` | `?` | upstream README: "For a list of keyboard shortcuts press `?`" |
 | `e1s` | `?` | upstream README key-bindings section |
 | `btop` | in-app | 1,593-line README, no keymap; `--help` has none |
@@ -565,7 +580,6 @@ section survived for years.
 | `viddy`, `mprocs` | in-app | no man page; upstream repo renamed, docs not reachable |
 | `pgcli`, `mycli` | in-app | no man page; both use standard readline editing |
 | `w3m`, `bandwhich` | in-app | man pages carry no keybindings section |
-| `rovr` | in-app | no published keymap found |
 
 `kondo` is deliberately absent from every table: it is a CLI with a confirmation prompt, not
 a TUI, so it has no keymap at all.

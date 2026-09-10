@@ -25,6 +25,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - Replaced Ghostty with Kitty and ported the managed terminal theme, font, window, selection, and behavior settings (#544).
 - Restored `Cmd+Space` to Spotlight and `Cmd+Option+Space` to Finder search (#544).
 - Added a generated OMP instruction to complete each TODO item when its work finishes (#544).
+- Replaced rovr and nnn with Yazi and added managed Dracula-Sakura configuration files (#546).
 
 ### Removed
 
@@ -36,6 +37,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - Removed Pearcleaner, dockutil, terminal-notifier, herald, Shottr, Skim, office-py, p7zip, newsboat, and Google Workspace CLI (#542).
 - Removed OrbStack, SketchyBar, croft, reminders-cli, apw, and the exclusive artifacts owned by all retired tools (#542).
 - Removed Ghostty, its global quick terminal, its login agent, and the `a` shell application launcher (#544).
+- Removed starlit, its credential configuration, and its zellij dashboard pane (#546).
 
 ### Fixed
 

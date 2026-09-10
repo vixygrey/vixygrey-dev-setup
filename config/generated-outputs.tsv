@@ -22,6 +22,8 @@ stern-config|$STERN_CONFIG|managed|text|configs|none|stern
 zellij-config|$ZELLIJ_CONFIG|managed|text|configs|none|zellij
 zellij-layouts-dev-kdl|$ZELLIJ_LAYOUTS/dev.kdl|managed|kdl|configs|zellij|none
 zellij-layouts-home-kdl|$ZELLIJ_LAYOUTS/home.kdl|managed|kdl|configs|zellij|none
+yazi-config|$YAZI_CONFIG|managed|toml|configs|taplo|none
+yazi-theme|$YAZI_THEME|managed|toml|configs|taplo|yazi
 mpv-config|$MPV_CONFIG|managed|text|configs|none|none
 w3m-config|$W3M_CONFIG|managed|text|configs|none|none
 nushell-env|$NUSHELL_ENV|managed|shell|configs|bash|nu

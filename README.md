@@ -271,7 +271,7 @@ Faster, prettier, smarter replacements for standard Unix utilities.
 | `rsync` | **rsync** (latest) | Updated rsync with better progress and Apple metadata |
 | `tree` | **tree** | Directory listing in tree format |
 | `make` | **just** | Modern task runner -- simpler syntax, no tab weirdness |
-| file manager | **rovr** | Mouse-first, tree-style TUI file manager. `nnn` remains a fast fallback |
+| file manager | **Yazi** | Fast terminal file manager with previews, fuzzy search, and bulk operations |
 | `jq` (interactive) | **fx** | Interactive JSON viewer/processor for exploring large JSON |
 | `jq` (interactive) | **jnv** | Interactive JSON navigator with jq filtering |
 | `LS_COLORS` | **vivid** | LS_COLORS generator -- colorize file listings by type (Dracula themed) |
@@ -353,7 +353,6 @@ Faster, prettier, smarter replacements for standard Unix utilities.
 | **qalc** | Powerful terminal calculator (units, currencies, variables) |
 | **has** | Check for the presence/version of CLIs on PATH |
 | **lazyssh** | TUI SSH connection manager |
-| **starlit** | Terminal weather (run `starlit --setup` for an API key) |
 | **kondo** | Clean dependency/build cruft from software projects across many ecosystems |
 
 ---
@@ -519,6 +518,7 @@ Applied consistently across the machine, with built-in Dracula variants kept whe
 | **bat** | Dracula syntax theme in config |
 | **delta** | Dracula syntax theme for git diffs |
 | **Kitty** | Full 16-color Dracula-Sakura palette in `kitty.conf` |
+| **Yazi** | Dracula-Sakura manager, status, dialog, mode, and file-type colors in `theme.toml` |
 | **jqp** | Dracula base theme with Dracula-Sakura override colors in `~/.jqp.yaml` |
 | **fzf** | Dracula colors in `FZF_DEFAULT_OPTS` |
 | **Starship** | Dracula-Sakura palette in `starship.toml` |
@@ -557,7 +557,7 @@ acceptance of a valid one meant anything.
 |------|---------|
 | `duf`, `taproom` | preset flags only (`dark\|light\|ansi`, `auto\|light\|dark`) — no palette, and no Dracula among them |
 | `fx` | numbered built-in themes via `FX_THEME="0"`; no custom theme definition |
-| `procs`, `nnn` | indexed colour only (`Color256`, `NNN_COLORS`), so the palette could only be approximated to nearest indices |
+| `procs` | indexed color only (`Color256`), so the palette can only use nearest terminal indices |
 | `atac`, `lazysql`, `viddy`, `kondo`, `cheznav`, `lazynpm`, `lazyrsync`, `lazyssh` | no theming found in their help or configuration schemas |
 
 `stu` and `e1s` are themed but carry **no `--verify` row**. Both are TUIs with no
@@ -726,6 +726,8 @@ The script generates config files with sensible defaults:
 | `~/Library/LaunchAgents/dev.vixygrey.llama-cpp.plist` | llama.cpp | Runs Qwen2.5 Coder 14B on port 8081 with the Vulkan backend |
 | `~/.config/nushell/env.nu` | nushell | Starship prompt, Homebrew paths |
 | `~/.config/kitty/kitty.conf` | Kitty | JetBrainsMono Nerd Font, Dracula-Sakura palette, compact padding, integrated titlebar |
+| `~/.config/yazi/yazi.toml` | Yazi | Natural sorting, hidden files, symlink targets, previews |
+| `~/.config/yazi/theme.toml` | Yazi | Dracula-Sakura interface and file-type palette |
 | `~/.config/fastfetch/config.jsonc` | fastfetch | Nerd Font icons, package counts, Node/Python/Go/Rust/Docker versions, battery, disk, colored output |
 | `~/.config/mise/config.toml` | mise | Auto-install, trust ~/Code |
 | `~/.config/topgrade.toml` | topgrade | Cleanup, greedy cask updates |
@@ -812,7 +814,7 @@ All aliases are auto-written to `~/.zshrc`:
 | `hexdump` | `hexyl` | Hex viewer |
 | `rm` | `trash` | Safe delete (Trash) |
 | `make` | `just` | Task runner |
-| `y` | `rovr` | File manager (`n` → nnn fallback) |
+| `y` | `yazi` | File manager with directory changes preserved after exit |
 | `ff` / `rgf` / `s` | find / grep / mdfind | Terminal file and content search |
 | `clip` | `clipse` | Clipboard-history TUI |
 | `jx` | `fx` | Interactive JSON viewer |
