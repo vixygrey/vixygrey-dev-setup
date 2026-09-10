@@ -18,6 +18,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - Added Oh My Pi to Zed as an Agent Client Protocol server through `omp acp` (#550).
 - Added Firefox, Obsidian, Docker Desktop, and Bitwarden with supported application defaults (#557).
 - Added eilmeldung, borgtui, concord, chamber, spotatui, and cfait with Dracula-Sakura styling where supported (#557).
+- Added the requested OMP language servers and exposed every command on the default `PATH` (#559).
 
 ### Changed
 

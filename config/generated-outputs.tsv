@@ -77,6 +77,7 @@ home-scripts-bin-export-brewfile|$HOME/Scripts/bin/export-brewfile|managed-scrip
 omp-theme-file|$OMP_THEME_FILE|generated|text|configs|none|none
 omp-extensions-dir-protected-paths-ts|$OMP_EXTENSIONS_DIR/protected-paths.ts|generated|text|configs|none|none
 omp-env-file|$OMP_ENV_FILE|seed|dotenv|configs|bash|none
+omp-lsp-policy|$OMP_LSP_FILE|managed|yaml|configs|yq|none
 zshrc|$ZSHRC|managed|shell|configs|bash|none
 micro-settings|$MICRO_CONFIG_DIR/settings.json|merged|json|configs|jq|none
 zed-settings|$ZED_CONFIG|merged|json|configs|jq|none

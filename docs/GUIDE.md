@@ -49,7 +49,35 @@ update              # topgrade: brew, npm, pip, system updates
 sysinfo             # fastfetch: quick hardware/software summary
 ```
 
+## OMP Language Servers
+
+OMP starts a language server after the current project matches its root markers.
+The setup script puts each required command on the default `PATH`.
+
+| Languages | Server command |
+|---|---|
+| TypeScript and JavaScript | `typescript-language-server` |
+| HTML | `vscode-html-language-server` |
+| CSS, SCSS, Sass, and Less | `vscode-css-language-server` |
+| JSON and JSONC | `vscode-json-language-server` |
+| ESLint | `vscode-eslint-language-server` |
+| YAML | `yaml-language-server` |
+| Bash and Zsh | `bash-language-server` |
+| Python types | `pyright-langserver` |
+| Python lint and format | `ruff server` |
+| C, C++, and Objective-C | `clangd` |
+| Rust | `rust-analyzer` |
+| C# | `omnisharp` |
+| Lua | `lua-language-server` |
+| Dockerfile | `docker-language-server start --stdio` |
+| Markdown | `marksman` |
+| TypeScript, JavaScript, JSON, and CSS lint | `biome lsp-proxy` |
+
+The generated `~/.omp/agent/lsp.yml` selects the current Docker server.
+This policy disables `ty` and `basedpyright` to prevent duplicate Python type diagnostics.
+
 ---
+
 
 ## Daily Workflow
 
