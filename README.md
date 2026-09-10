@@ -5,15 +5,10 @@
 [![GitHub release](https://img.shields.io/github/v/release/vixygrey/vixygrey-dev-setup?display_name=tag&sort=semver)](https://github.com/vixygrey/vixygrey-dev-setup/releases/latest)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 ![macOS](https://img.shields.io/badge/macOS-supported-brightgreen)
-![ShellCheck](https://img.shields.io/badge/ShellCheck-passing-brightgreen)
-![Tools](https://img.shields.io/badge/tools-220%2B-purple)
-![Configs](https://img.shields.io/badge/configs-60%2B-purple)
 
-A single setup script that installs and configures **220+ tools** with **60+ config files** for development, GitHub, AWS/CDK, IaC, DX, UI/UX, security, backup, and daily productivity on macOS. Safe to re-run -- it skips anything already installed.
+A single setup script that installs and configures a curated macOS development environment. It covers development, GitHub, AWS/CDK, infrastructure, security, backup, and daily productivity.
 
-| Script | Package Manager |
-|--------|-----------------|
-| `scripts/setup-dev-tools-mac.sh` | Homebrew |
+Homebrew is the primary package manager. npm, Cargo, Go, uv, the OMP plugin manager, upstream installers, and pinned source builds cover packages outside Homebrew.
 
 ## Documentation
 
@@ -21,17 +16,21 @@ A single setup script that installs and configures **220+ tools** with **60+ con
 
 ## Project structure
 
-Everything below the script is documentation about the script, or CI that guards it.
+The script is the product. The other tracked files define its assets, generated outputs, documentation, tests, workflows, and planning state.
 
 | Path | Holds |
 |---|---|
-| [`scripts/setup-dev-tools-mac.sh`](scripts/setup-dev-tools-mac.sh) | The whole product |
+| [`scripts/setup-dev-tools-mac.sh`](scripts/setup-dev-tools-mac.sh) | The generator and installer |
+| [`assets/`](assets/) | Files copied onto provisioned machines |
+| [`config/generated-outputs.tsv`](config/generated-outputs.tsv) | Generated-output policy and verification inventory |
+| [`docs/`](docs/) | User reference documents |
 | [`AGENTS.md`](AGENTS.md) | Procedural rules: workflow, commands, verification loop |
 | [`CONVENTIONS.md`](CONVENTIONS.md) | Normative rules: how the code must look and behave |
 | [`CONTRIBUTING.md`](CONTRIBUTING.md) | How to open a change, for humans |
 | [`specs/`](specs/) | Planning state, architecture decision records, tech stack |
-| [`Justfile`](Justfile) | Every command. `just preflight` before any commit. |
-| [`tests/`](tests/) | Helper unit tests (bats) and the Homebrew name check |
+| [`.github/`](.github/) | CI, issue templates, pull request template, and branch rules |
+| [`Justfile`](Justfile) | Local commands. Run `just preflight` before any commit. |
+| [`tests/`](tests/) | Helper unit tests and the Homebrew name check |
 
 ## Quick Start
 
@@ -51,7 +50,7 @@ actionlint                              # lint GitHub Actions workflows
 duckdb                                  # local SQL shell for CSV/JSON/Parquet
 ps aux | jc --ps | jq '.[0]'            # classic command output -> JSON
 yaml-py -c 'import yaml; print(yaml.safe_load("a: 1"))'
-omp config get modelRoles               # which Gemini model each omp role uses
+omp config get modelRoles               # which model each OMP role uses
 ```
 
 ## Bootstrap trust model
@@ -74,11 +73,13 @@ and prefer tagged release artifacts with the published SHA256 checksum.
 ```bash
 ./scripts/setup-dev-tools-mac.sh --help              # Show all options
 ./scripts/setup-dev-tools-mac.sh --dry-run           # Preview changes without installing
-./scripts/setup-dev-tools-mac.sh --list              # List all tools that would be installed
+./scripts/setup-dev-tools-mac.sh --no-prompt         # Disable interactive prompts
+./scripts/setup-dev-tools-mac.sh --interactive       # Choose categories interactively
+./scripts/setup-dev-tools-mac.sh --list              # List declared Homebrew and npm packages
 ./scripts/setup-dev-tools-mac.sh --resume            # Continue from where a previous run left off
 ./scripts/setup-dev-tools-mac.sh --uninstall         # Show commands to remove everything (no changes made)
 ./scripts/setup-dev-tools-mac.sh --cleanup           # Remove tools from previous versions no longer in script
-./scripts/setup-dev-tools-mac.sh --verify            # Check every tool actually reads the config we generate
+./scripts/setup-dev-tools-mac.sh --verify            # Check supported generated configs with installed consumers
 ./scripts/setup-dev-tools-mac.sh --list-categories   # List all available categories
 ./scripts/setup-dev-tools-mac.sh --skip mac-media,mac-cloud  # Skip specific categories
 ./scripts/setup-dev-tools-mac.sh --only core,git,aws,dx      # Only install specific categories
@@ -97,12 +98,12 @@ and prefer tagged release artifacts with the published SHA256 checksum.
 ## What It Does
 
 1. **Pre-flight checks** -- verifies macOS version, disk space, internet, admin privileges
-2. Installs all tools via Homebrew, Cask, npm, `go install`, and `uv tool` with **progress tracking**
-3. Configures every tool with sensible defaults
+2. Installs tools through idempotent Homebrew, npm, Cargo, Go, uv, OMP plugin, and upstream installer paths, plus pinned source builds
+3. Writes managed defaults for supported tools and preserves user-owned settings
 4. Applies a cohesive **Dracula-Sakura** theme across the terminal, editor, and TUI surfaces
 5. Sets macOS system defaults (Dock, keyboard, Finder, screenshots, screensaver, etc.)
 6. Configures Finder sidebar with custom favorites via **LSSharedFileList** API
-7. Sets the Dock to auto-hide and keeps its pins unchanged
+7. Configures Dock size, recent-app visibility, and minimize behavior while keeping auto-hide and pins unchanged
 8. Auto-writes `~/.zshrc` with a managed block (preserves your customizations)
 9. Exports a `Brewfile` snapshot (with descriptions) for reproducibility
 10. **Post-install verification** -- verifies critical tools work
@@ -119,10 +120,10 @@ and prefer tagged release artifacts with the published SHA256 checksum.
 | **Resume** | Continue after a failure with `--resume` -- skips previously completed items |
 | **Uninstall guide** | Show removal commands with `--uninstall` (no destructive actions taken) |
 | **Cleanup** | Remove tools from previous versions with `--cleanup` (auto-detects deprecated tools) |
-| **Verify** | Check with `--verify` that each tool reads the config we write, and accepts it. CI proves these files parse; only a machine with the tools installed can prove anything *reads* them. Exits 1 on a mismatch |
+| **Verify** | Check supported generated configs with installed consumers. The report names unchecked inventory rows and exits 1 on a verified mismatch |
 | **Lockfile** | Prevents concurrent runs via atomic directory-based lock |
 | **Category filtering** | Install only what you need with `--only` / `--skip` (validates category names) |
-| **List tools** | See everything that would be installed with `--list` |
+| **List packages** | List declared Homebrew formulae, casks, and npm packages with `--list` |
 | **Progress bar** | Visual progress counter with dynamic total (capped at 100%) |
 | **Fast installs** | `HOMEBREW_NO_AUTO_UPDATE` set after initial update for faster installs |
 | **Error resilient** | Continues on failure, reports all failures at the end with separate error log |
@@ -151,7 +152,7 @@ and prefer tagged release artifacts with the published SHA256 checksum.
 
 | Tool | Description |
 |------|-------------|
-| **mise** | Universal version manager -- Node, Python, Go, Ruby all in one tool |
+| **mise** | Runtime manager used here for Node and Python |
 | **Node.js LTS** | JavaScript runtime (latest Long Term Support version, installed via mise) |
 | **Go** | Go programming language |
 | **Python 3.12** | Python runtime (installed via mise) |
@@ -279,7 +280,6 @@ Faster, prettier, smarter replacements for standard Unix utilities.
 | **poppler** | PDF tools -- `pdftoppm` (PDF→PNG), `pdftotext`, `pdfinfo` |
 | **imagemagick** | Image manipulation CLI -- resize, convert, composite, watermark |
 | **yt-dlp** | Video/audio downloader for YouTube and hundreds of other sites |
-| **surge** | TUI download manager (MIT) -- a browser extension captures browser-started downloads and routes them to a background daemon (port 1700). Complements aria2 (aria2 = scriptable CLI; surge = interactive + browser capture) |
 
 ---
 
@@ -355,7 +355,7 @@ The generated OMP policy selects Pyright for Python type intelligence and Ruff f
 | **watchexec** | Run commands on file changes -- supports globs, debouncing, process groups |
 | **pv** | Pipe viewer -- add progress bars to any piped command |
 | **gum** | Shell script UI toolkit -- pretty prompts, spinners, confirmations |
-| **topgrade** | Update everything at once -- brew, npm, pip, macOS, all in one command |
+| **topgrade** | Update supported package managers and system components from one command |
 | **fastfetch** | Quick system info display -- faster neofetch replacement |
 | **nano** | macOS fallback editor, configured with syntax highlighting |
 | **lnav** | Advanced log file viewer -- auto-format, SQL queries on logs |
@@ -422,7 +422,7 @@ The generated OMP policy selects Pyright for Python type intelligence and Ruff f
 | **zsh-autosuggestions** | Fish-like inline suggestions as you type |
 | **zsh-syntax-highlighting** | Command coloring in the terminal -- red for errors |
 | **atuin** | Replaces shell history with SQLite-backed, fuzzy-searchable database |
-| **mise** | Universal version manager -- Node, Python, Go, Ruby all in one (replaces nvm + pyenv + rbenv) |
+| **mise** | Manages Node and Python here while replacing separate per-language version managers |
 | **Bun** | Package manager used by OMP to install and update plugin packages |
 | **micro** | The `$EDITOR` -- git/gh/lazygit commit messages, leaf's Ctrl+E, quick edits. Non-modal, on-screen key menu (`Ctrl+G` for help), Dracula theme |
 | **Croft** | VS Code-style terminal IDE with LSP, debugging, source control, PDF previews, and a Dracula-Sakura theme |
@@ -711,7 +711,7 @@ The script generates config files with sensible defaults:
 |------|------|------------|
 | `~/.zshrc` | Shell | Auto-written managed block with all init scripts, aliases, welcome screen |
 | `~/.zprofile` | Shell | Login shell PATH, editor, pager, LESS, XDG dirs, ulimit increase for Node.js |
-| `~/.gitconfig` | git | Rebase pull, histogram diff, 30 aliases (st, co, lg, wip, cleanup, gone, standup, recent, worktree, stash-all, etc.), delta, rerere, auto-stash |
+| `~/.gitconfig` | git | Rebase pull, histogram diff, delta, rerere, auto-stash, and workflow aliases |
 | `~/.gitignore_global` | git | .DS_Store, .env, node_modules, editor files, secrets |
 | `~/.gitmessage` | git | Commit template with type/scope format |
 | `~/.gnupg/gpg-agent.conf` | GPG | pinentry-mac, 8-hour passphrase cache |
@@ -730,7 +730,7 @@ The script generates config files with sensible defaults:
 | `~/.config/yt-dlp/config` | yt-dlp | Best quality mp4, aria2c downloader, metadata, subtitles |
 | `~/.config/gh-dash/config.yml` | gh-dash | PR/issue sections, Dracula-Sakura theme |
 | `~/Library/Application Support/ngrok/ngrok.yml` | ngrok | Base config (add authtoken). ngrok's real macOS path — **not** `~/.config/ngrok`, which it never reads; a stranded copy there is removed on the next run |
-| `~/.config/micro/settings.json` | micro | Dracula (`dracula-tc`), the $EDITOR for git/gh/lazygit and leaf's Ctrl+Ents, auto-format on save (ruff for Python, taplo/marksman/TS/CSS/bash/yaml servers, rust-analyzer, gopls) |
+| `~/.config/micro/settings.json` | micro | Dracula (`dracula-tc`), whitespace cleanup, soft wrap, mouse support, and the shared `$EDITOR` role |
 | `~/.config/zed/settings.json` | Zed | House fonts, Dracula-Sakura overrides, editor defaults, and an `omp acp` external agent |
 | `~/Library/Application Support/emeraldian/config.toml` | Emeraldian | Reading-first defaults, images, and an offline read-only assistant |
 | `~/Library/Application Support/emeraldian/themes/dracula-sakura.toml` | Emeraldian | Native Dracula-Sakura interface, Markdown, syntax, and graph theme |
@@ -745,13 +745,13 @@ The script generates config files with sensible defaults:
 | `~/.config/cfait/config.toml` | cfait | User-owned local-first seed with Dracula, privacy blur, reminders, and the micro editor |
 | `~/Media/photos/dracula-sakura.jpg` | Wallpaper | Bundled Dracula-Sakura wallpaper asset copied onto every provisioned machine |
 | _(cliamp)_ | cliamp | Music player — self-configured on first run (point at `~/Media/music`) |
-| `~/.config/zellij/config.kdl` | zellij | Dracula-Sakura theme, compact layout, mouse, Ctrl-a prefix |
+| `~/.config/zellij/config.kdl` | zellij | Dracula-Sakura theme, compact layout, mouse support, and stock modal keybindings |
 | `~/.config/mpv/mpv.conf` | mpv | Hardware accel, save position, screenshots to ~/Screenshots |
 | `~/.jqp.yaml` | jqp | Dracula base theme with Dracula-Sakura color overrides |
 | `~/.agents/skills/*` | omp | Four scoped shared skills: `api-testing`, `d2-diagrams`, `inspect-machine`, and `office-layout-check` |
 | `~/.omp/agent/extensions/protected-paths.ts` | omp | Blocks native file mutations to credentials, dependency trees, and repository metadata. Bash and Eval remain under native approval policies |
 | `~/.omp/agent/AGENTS.md` | omp | Global Oh My Pi instruction layer with house preferences and writing rules |
-| `~/.omp/agent/themes/dracula-sakura.json` | omp | Full Dracula-Sakura theme with all 66 required omp color tokens, including the thirteen status-line colors pi has no equivalent for |
+| `~/.omp/agent/themes/dracula-sakura.json` | omp | Full Dracula-Sakura theme, including OMP status-line colors |
 | `~/.omp/agent/config.yml` | omp | Merged because OMP also writes this file. Uses automatic reasoning, workload routing, usage-aware fallback, provider caching, disabled MiniMax, disabled macOS word completion hints, and local Qwen last |
 | `~/.omp/agent/.env` | omp | User-owned seed with blank `ANTHROPIC_API_KEY` and `GEMINI_API_KEY` entries. Later runs leave it unchanged |
 | `~/.omp/plugins/node_modules/bigpowers` | omp | Enabled Bigpowers plugin package with workflow skills, slash commands, and the `bigpowers_skill` tool |
@@ -771,7 +771,7 @@ The script generates config files with sensible defaults:
 | `~/.aws/config` | AWS CLI | Default region, json output, bat pager, auto-prompt, SSO template |
 | `~/.config/git/hooks/` | git | Global pre-commit hooks (debug statements, large files >5MB, conflict markers) |
 | `~/.config/brewfile/Brewfile` | Homebrew | Snapshot of all installed packages with descriptions |
-| `~/.justfile` | just | 26 global task-runner recipes (system, git, Docker, network, cleanup, info) |
+| `~/.justfile` | just | Global recipes for system, git, Docker, network, cleanup, and project information |
 | `~/.shellcheckrc` | shellcheck | External sources, disabled false positives |
 | `~/.config/leaf/config.toml` | leaf | Ctrl+E hands off to micro at the current line |
 | `~/.config/trippy/trippy.toml` | trippy | Dracula-Sakura theme-colors |
@@ -782,14 +782,12 @@ The script generates config files with sensible defaults:
 | `~/.config/posting/config.yaml` | Posting | Compact layout, secret redaction, isolated request environment |
 | `~/.local/share/posting/themes/dracula-sakura.yaml` | Posting | Full application, syntax, URL, variable, and HTTP-method palette |
 | `~/.zshenv` | Shell | mise activation for all shell types (login + non-login) — coverage. mise is activated **again** at the end of `~/.zshrc` for *precedence*: `.zshenv` runs first, so everything prepended afterwards (`brew shellenv`, gnubin, `~/.local/bin`, `$PNPM_HOME`) would otherwise outrank it |
-| `~/.actrc` | act | Medium Ubuntu images, container reuse |
 | `~/.hushlogin` | Terminal | Suppresses "Last login" message |
-| `~/.ripgreprc` | ripgrep | Smart case, hidden files, ignore patterns, custom types (web, config, doc, style) |
 | `~/.fdignore` | fd | Global ignore patterns (node_modules, .git, dist, etc.) |
 | `~/.vimrc` | vim | Line numbers, clipboard, mouse, Dracula colors, space leader, persistent undo |
 | `~/.nanorc` | nano | Line numbers, auto-indent, mouse, syntax highlighting |
 | `~/.gemrc` | Ruby | No docs on gem install |
-| `~/.config/lazygit/config.yml` | lazygit | Dracula-Sakura theme, delta pager, nerd fonts, auto-fetch, micro editor (`hx`), rounded borders |
+| `~/.config/lazygit/config.yml` | lazygit | Dracula-Sakura theme, delta pager, Nerd Fonts, auto-fetch, micro editor, and rounded borders |
 | `~/.local/bin/*` | mise | Links non-Python mise shims for git hooks, launchd jobs, editors, and non-zsh shells |
 
 ---
@@ -798,7 +796,7 @@ The script generates config files with sensible defaults:
 
 | Category | Changes |
 |----------|---------|
-| **Dock** | Small icons, no recent applications, scale minimization, no delay, and unchanged pins |
+| **Dock** | Small icons, no recent applications, scale minimization into app icons, and unchanged auto-hide and pins |
 | **Screensaver** | 45min idle, display sleep at 2hr (charger) / 1h15m (battery) |
 | **Screenshots** | PNG format, saved to `~/Screenshots`, no shadow, no thumbnail |
 | **Keyboard** | Fast key repeat (2/15), no press-and-hold, no auto-correct/capitalize/smart quotes/dashes/periods |
@@ -896,24 +894,7 @@ All aliases are auto-written to `~/.zshrc`:
 
 ---
 
-## Language Servers
-
-The script installs language servers on `PATH` for OMP and other compatible editors.
-They provide completion, diagnostics, definitions, and formatting:
-
-| Language | Server | Install |
-|----------|--------|---------|
-| Python | ty (types) + basedpyright (fallback) + ruff (lint) | uv tool |
-| TypeScript / JS | typescript-language-server | npm |
-| HTML / CSS / JSON / ESLint | vscode-langservers-extracted | npm |
-| YAML | yaml-language-server | npm |
-| Bash | bash-language-server | npm |
-| TOML | taplo | brew |
-| Markdown | marksman | brew |
-| Rust | rust-analyzer | rustup component |
-| Go | gopls | go install |
-
-Python uses `ty` and `basedpyright` for type analysis. Ruff provides linting and formatting.
+## AI and editors
 
 ### AI agents
 
@@ -946,10 +927,9 @@ The shared skill directory is `~/.agents/skills/`.
 It contains `api-testing`, `d2-diagrams`, `inspect-machine`, and `office-layout-check`.
 The enabled Bigpowers plugin adds its workflow skills, slash commands, git safety guards, and `bigpowers_skill` tool.
 
-**Web search is built in.** `web_search` carries 23 backends, and this setup puts your
-local **SearXNG** instance at the head of the chain via `searxng.endpoint`. That replaced
-a ~300-line TypeScript extension when pi was retired: the same capability, two config
-keys, nothing to maintain.
+**Web search is built in.** `web_search` exposes selectable provider backends. This setup configures
+`http://127.0.0.1:8080` as the preferred SearXNG endpoint but does not install or manage
+that service. Keyless backends remain available when the local endpoint is unavailable.
 
 The `~/.omp/agent/AGENTS.md` file has the highest precedence among user context files.
 OMP owns `~/.omp/agent/config.yml`, so this setup merges managed values into that file.

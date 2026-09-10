@@ -52,11 +52,11 @@ Do not commit directly to `main`.
 
 ```bash
 just preflight    # lint, tests, dry run, and the pre-commit hooks
-just verify       # ask each installed tool whether it reads what we generate
+just verify       # ask supported installed tools whether they read generated config
 ```
 
-`just --list` shows every recipe. `preflight` mirrors what CI runs, so a green local run is
-the fastest way to predict a green pull request. Two cautions:
+`just --list` shows every recipe. `preflight` covers the local equivalents of the core
+checks. CI adds workflow validation, Homebrew name validation, and generated-config parsing.
 
 - A green local ShellCheck is **not** proof that CI is green. The runner may use a different
   build. When CI disagrees with your ShellCheck, CI is the gate.
@@ -72,14 +72,14 @@ the fastest way to predict a green pull request. Two cautions:
 2. Install through the existing helper, never through a raw `brew install`. The helpers
    snapshot installed state and skip work already done, which is what keeps the script
    idempotent.
-3. Put any configuration in the `configs` segment, not beside the install. Categories
-   install. The `configs` segment configures.
+3. Put any configuration in the `configs` category, not beside the install. Categories
+   install. The three ordered `configs` segments configure.
 4. Name the **binary**, not the package. A permission rule or a document that says `trippy`
    never matches, because the binary is `trip`.
 5. Update the README tool table and `--list`.
 
 The `brew-name-check` CI job rejects a formula name that does not exist, in the declared
-type, in Homebrew's core API. Run `just hooks` before you push to catch the rest.
+type, in Homebrew's core API. CI also validates workflows and generated config.
 
 ## Reporting bugs and requesting features
 

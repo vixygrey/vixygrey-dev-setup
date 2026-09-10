@@ -44,6 +44,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - Replaced ATAC with Posting and added a custom Dracula-Sakura theme for the HTTP client (#572).
 - Added Sakura color overrides and a read-only shell default for Claws (#572).
 - Stopped changing the Dock auto-hide preference (#578).
+- Corrected stale counts, commands, workflow checks, and generated tool references across the documentation (#585).
 
 ### Removed
 
@@ -69,6 +70,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - Removed kubectl, k9s, stern, bandwhich, OpenTofu, tflint, Infracost, and Thunderbird (#578).
 - Removed mitmproxy, GNU parallel, sops, hyperfine, and oha after usage audits (#578).
 - Removed `docs/GUIDE.md` from the repository and release archive (#578).
+- Retired SurgeDM and added guarded cleanup for its service, qualified cask, and unused tap (#586).
 
 ### Fixed
 

@@ -20,10 +20,9 @@ indent_style = tab
 [*.py]
 indent_size = 4
 
-# Shell and bats are 4-space here, not the 2-space default above. The setup
-# script is ~18k lines at 4 spaces and tests/*.bats follows it. croft does not
-# read EditorConfig and defaults shell to 4, so this rule is what makes croft
-# and VS Code agree rather than reformat each other's work.
+# Shell and bats use 4 spaces, not the 2-space default above. The large setup
+# script and tests/*.bats follow this style. This rule keeps EditorConfig-aware
+# editors aligned with the repository.
 [*.{sh,bash,bats}]
 indent_size = 4
 

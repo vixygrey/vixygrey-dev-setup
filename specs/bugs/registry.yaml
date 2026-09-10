@@ -18,3 +18,22 @@ bugs:
     approach: Disable the redundant server through the generated OMP user denylist.
     risk_level: low
     commit_message: "fix(omp): disable redundant broken Bigpowers MCP"
+  - bug_id: BUG-2026-09-10T203750Z
+    date: 2026-09-10
+    severity: medium
+    priority: high
+    scope: setup
+    summary: The recent retirement sweep omitted SurgeDM and left active installation and documentation.
+    file: specs/bugs/BUG-2026-09-10T203750Z-incomplete-surge-retirement.md
+    status: fixed
+    issue: 586
+    risk_level: medium
+    files_changed:
+      - scripts/setup-dev-tools-mac.sh
+      - tests/cleanup-surge.bats
+      - README.md
+      - docs/SHORTCUTS.md
+      - CHANGELOG.md
+      - specs/bugs/BUG-2026-09-10T203750Z-incomplete-surge-retirement.md
+    approach: Remove active SurgeDM paths and clean only its qualified cask, service, and unused tap.
+    commit_message: "fix(setup): complete SurgeDM retirement"

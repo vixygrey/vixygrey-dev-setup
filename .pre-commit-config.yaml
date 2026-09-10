@@ -27,7 +27,7 @@ repos:
       - id: typos
 
   # File hygiene — restricted to text-config files to avoid touching the
-  # 7k-line setup scripts (which embed heredocs that may rely on exact bytes).
+  # large setup script, which embeds heredocs that may rely on exact bytes.
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v5.0.0
     hooks:

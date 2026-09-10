@@ -229,7 +229,7 @@ omits the plugin that draws them.
 
 ### lazygit
 
-*Source: `lazygit --config`, which dumps the full default `keybinding:` tree (178 entries).*
+*Source: `lazygit --config`, which dumps the current default `keybinding:` tree.*
 
 **Universal**
 
@@ -535,13 +535,14 @@ Use current in-app help or upstream documentation because default bindings can c
 | Tool | Help access | Reference |
 |------|-------------|-----------|
 | `e1s` | `?` | upstream README key-bindings section |
-| `btop` | in-app | 1,593-line README, no keymap; `--help` has none |
-| `atuin` | in-app | docs keybinds page 404s; `--help` "key" hits are about encryption keys |
-| `fx` | in-app | README defers to fx.wtf, which publishes no keybindings page |
+| `btop` | `?` | upstream [Help menu](https://github.com/aristocratos/btop#help-menu) and current in-app help |
+| `atuin` | in-app | current [key binding guide](https://docs.atuin.sh/latest/configuration/key-binding/) |
+| `fx` | `?` | current [key bindings](https://fx.wtf/key-bindings) |
 | `gh-dash`, `posting`, `caligula`, `nerdlog` | in-app | upstream help and manuals do not publish a stable keymap table |
-| `viddy`, `mprocs` | in-app | no man page; upstream repo renamed, docs not reachable |
+| `viddy` | `?` | upstream [README keymap](https://github.com/sachaos/viddy#keymaps) |
+| `mprocs` | visible keymap pane and `p` | [legacy mprocs default keymap](https://github.com/pvolok/dekit/blob/master/README-mprocs.md#default-keymap) in the renamed dekit repository |
 | `cha` | in-app | the man page carries no complete keybindings section |
-| `broot`, `e2c`, `claws`, `chamber`, `surge`, `leaf`, `emeraldian`, `watchtower`, `eilmeldung`, `concord`, `cfait`, `lazyssh`, `lazyrsync`, `lazynpm`, `cheznav`, `croft`, `spotatui`, `cliamp`, `mullvad-tui` | in-app | no house keymap. Use the current application help |
+| `broot`, `e2c`, `claws`, `chamber`, `leaf`, `emeraldian`, `watchtower`, `eilmeldung`, `concord`, `cfait`, `lazyssh`, `lazyrsync`, `lazynpm`, `cheznav`, `croft`, `spotatui`, `cliamp`, `mullvad-tui` | in-app | no house keymap. Use the current application help |
 
 
 ---

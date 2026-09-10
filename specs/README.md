@@ -22,7 +22,7 @@ named in each file.
 | `epics/` | Epic capsules and their stories | `slice-tasks`, `plan-work` |
 | `bugs/` | `registry.yaml` plus one `BUG-*.md` per investigation | `investigate-bug` |
 | `verifications/` | Verification output per story | `verify-work` |
-| `metrics/` | Cycle times and benchmark output | `generate-allure-report` |
+| `metrics/` | Cycle times and benchmark output | `generate-allure-report`, `run-benchmark` |
 
 ## Reading order
 
