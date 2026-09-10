@@ -406,7 +406,7 @@ declare -A CONFIG_LIVES_IN_CONFIGS=(
     [dx]="atuin, zellij, Kitty, Zed, omp (~/.omp/agent + ~/.agents/skills) — and starship, which is in the \`dracula\` category"
     [mac-media]="mpv, spotatui"
     [mac-browsers]="w3m"
-    [mac-productivity]="Herald, llama.cpp service"
+    [mac-productivity]="Obsidian vault themes, Herald, llama.cpp service"
 )
 
 # Loud default: a key here that is not a real category is a notice that can never
@@ -1256,12 +1256,13 @@ write_seed_once() {
     return 0
 }
 
-# merge_json_defaults <file> [jq-filter]   (defaults on stdin)
+# merge_json_defaults <file> [jq-filter] [source-file]   (defaults on stdin)
 # Merges script defaults below an existing JSON object. The on-disk object wins unless
-# the optional filter reasserts an owned key. Invalid JSON and missing jq leave the file
-# byte-for-byte unchanged (#533).
+# the optional filter reasserts an owned key. A source file lets a caller supply a
+# validated representation while the destination remains the generated output path.
+# Invalid JSON and missing jq leave the destination byte-for-byte unchanged (#533).
 merge_json_defaults() {
-    local file="$1" filter="${2:-.}"
+    local file="$1" filter="${2:-.}" source="${3:-$1}"
     local defaults current tmp
     defaults="$(mktemp)"
     current="$(mktemp)"
@@ -1276,8 +1277,8 @@ merge_json_defaults() {
         rm -f "$defaults" "$current" "$tmp"
         return 2
     fi
-    if [[ -f "$file" ]]; then
-        cat "$file" > "$current"
+    if [[ -f "$source" ]]; then
+        cat "$source" > "$current"
     else
         printf '{}\n' > "$current"
     fi
@@ -1289,6 +1290,18 @@ merge_json_defaults() {
     fi
     rm -f "$defaults" "$current" "$tmp"
     return 1
+}
+
+# normalize_zed_jsonc <input> <output>
+# Zed rewrites settings with trailing commas. Remove only commas immediately
+# before a closing object or array, then require jq to accept the result.
+# Comments and all other JSONC syntax fail closed.
+normalize_zed_jsonc() {
+    local input="$1" output="$2"
+    command -v perl &>/dev/null || return 1
+    command -v jq &>/dev/null || return 1
+    perl -0pe '1 while s/,[ \t]*\n([ \t]*[}\]])/\n$1/g' "$input" |
+        jq . > "$output" 2>/dev/null
 }
 
 # link_mise_shims <shims-dir> <bin-dir> [excluded-name ...]
@@ -5191,11 +5204,112 @@ fi
 unset MICRO_DEFAULTS
 
 # ---- Zed editor config ----
-# Zed reads this JSON from the XDG config root on macOS. Merge defaults below
-# existing settings so local editor choices win. The Oh My Pi ACP entry connects
-# Zed's Agent Panel to the same OMP runtime, auth, models, tools, and instructions.
-ZED_CONFIG="$HOME/.config/zed/settings.json"
+# Zed reads settings and local themes from the XDG config root on macOS.
+# The named theme appears in the picker; settings keep local editor choices.
+# The Oh My Pi ACP entry connects Zed's Agent Panel to the same OMP runtime,
+# authentication, models, tools, and instructions.
+ZED_CONFIG_DIR="$HOME/.config/zed"
+ZED_CONFIG="$ZED_CONFIG_DIR/settings.json"
+ZED_THEME="$ZED_CONFIG_DIR/themes/dracula-sakura.json"
 info "Configuring Zed (Dracula-Sakura, house fonts, editor defaults)..."
+ZED_THEME_JSON=$(cat <<'ZED_THEME_CONF'
+{
+  "$schema": "https://zed.dev/schema/themes/v0.2.0.json",
+  "name": "Dracula-Sakura",
+  "author": "vixygrey-dev-setup",
+  "themes": [
+    {
+      "name": "Dracula-Sakura",
+      "appearance": "dark",
+      "style": {
+        "background": "#282a36ff",
+        "surface.background": "#2f3144ff",
+        "elevated_surface.background": "#323448ff",
+        "border": "#4b4963ff",
+        "border.focused": "#d4b2ffff",
+        "element.hover": "#3b3d52ff",
+        "element.active": "#4b4963ff",
+        "element.selected": "#4b4963ff",
+        "text": "#f8f8f2ff",
+        "text.muted": "#a297cbff",
+        "text.placeholder": "#8a88c7ff",
+        "text.accent": "#ff9fe3ff",
+        "icon": "#ddd2f7ff",
+        "icon.muted": "#a297cbff",
+        "icon.accent": "#ff9fe3ff",
+        "status_bar.background": "#282a36ff",
+        "title_bar.background": "#282a36ff",
+        "title_bar.inactive_background": "#2f3144ff",
+        "toolbar.background": "#282a36ff",
+        "tab_bar.background": "#2f3144ff",
+        "tab.inactive_background": "#2f3144ff",
+        "tab.active_background": "#282a36ff",
+        "search.match_background": "#fff0a866",
+        "search.active_match_background": "#ff9fe366",
+        "panel.background": "#2f3144ff",
+        "editor.foreground": "#f8f8f2ff",
+        "editor.background": "#282a36ff",
+        "editor.gutter.background": "#282a36ff",
+        "editor.active_line.background": "#323448bf",
+        "editor.line_number": "#6272a4ff",
+        "editor.active_line_number": "#ffc2ecff",
+        "terminal.background": "#282a36ff",
+        "terminal.foreground": "#f8f8f2ff",
+        "terminal.bright_foreground": "#ffffffff",
+        "terminal.dim_foreground": "#a297cbff",
+        "terminal.ansi.black": "#282a36ff",
+        "terminal.ansi.bright_black": "#6272a4ff",
+        "terminal.ansi.red": "#ff7aa8ff",
+        "terminal.ansi.bright_red": "#ff94b8ff",
+        "terminal.ansi.green": "#8af7cfff",
+        "terminal.ansi.bright_green": "#a8ffdcff",
+        "terminal.ansi.yellow": "#ffcf93ff",
+        "terminal.ansi.bright_yellow": "#fff0a8ff",
+        "terminal.ansi.blue": "#9be7ffff",
+        "terminal.ansi.bright_blue": "#b9eeffff",
+        "terminal.ansi.magenta": "#ff9fe3ff",
+        "terminal.ansi.bright_magenta": "#ffc2ecff",
+        "terminal.ansi.cyan": "#8af7cfff",
+        "terminal.ansi.bright_cyan": "#9be7ffff",
+        "terminal.ansi.white": "#f8f8f2ff",
+        "terminal.ansi.bright_white": "#ffffffff",
+        "error": "#ff7aa8ff",
+        "warning": "#ffcf93ff",
+        "success": "#8af7cfff",
+        "info": "#9be7ffff",
+        "accents": [
+          "#ff9fe3ff",
+          "#d4b2ffff",
+          "#9be7ffff",
+          "#8af7cfff",
+          "#ffcf93ff",
+          "#ff7aa8ff"
+        ],
+        "syntax": {
+          "boolean": { "color": "#d4b2ffff" },
+          "comment": { "color": "#6272a4ff", "font_style": "italic" },
+          "comment.doc": { "color": "#8a88c7ff", "font_style": "italic" },
+          "constant": { "color": "#d4b2ffff" },
+          "function": { "color": "#8af7cfff" },
+          "keyword": { "color": "#ff9fe3ff" },
+          "number": { "color": "#d4b2ffff" },
+          "operator": { "color": "#ff9fe3ff" },
+          "property": { "color": "#ff7aa8ff" },
+          "punctuation": { "color": "#ddd2f7ff" },
+          "string": { "color": "#fff0a8ff" },
+          "type": { "color": "#9be7ffff" },
+          "variable": { "color": "#f8f8f2ff" },
+          "variable.parameter": { "color": "#ffcf93ff" }
+        }
+      }
+    }
+  ]
+}
+ZED_THEME_CONF
+)
+write_generated "$ZED_THEME" <<< "$ZED_THEME_JSON"
+configured "Zed Dracula-Sakura theme written (~/.config/zed/themes/dracula-sakura.json)"
+
 ZED_DEFAULTS=$(cat <<'ZED_CONF'
 {
   "ui_font_family": "Inter",
@@ -5247,107 +5361,264 @@ ZED_DEFAULTS=$(cat <<'ZED_CONF'
   "theme": {
     "mode": "dark",
     "light": "One Light",
-    "dark": "One Dark"
-  },
-  "theme_overrides": {
-    "One Dark": {
-      "background": "#282a36ff",
-      "surface.background": "#2f3144ff",
-      "elevated_surface.background": "#323448ff",
-      "border": "#4b4963ff",
-      "border.focused": "#d4b2ffff",
-      "element.hover": "#3b3d52ff",
-      "element.active": "#4b4963ff",
-      "element.selected": "#4b4963ff",
-      "text": "#f8f8f2ff",
-      "text.muted": "#a297cbff",
-      "text.placeholder": "#8a88c7ff",
-      "text.accent": "#ff9fe3ff",
-      "icon": "#ddd2f7ff",
-      "icon.muted": "#a297cbff",
-      "icon.accent": "#ff9fe3ff",
-      "status_bar.background": "#282a36ff",
-      "title_bar.background": "#282a36ff",
-      "title_bar.inactive_background": "#2f3144ff",
-      "toolbar.background": "#282a36ff",
-      "tab_bar.background": "#2f3144ff",
-      "tab.inactive_background": "#2f3144ff",
-      "tab.active_background": "#282a36ff",
-      "search.match_background": "#fff0a866",
-      "search.active_match_background": "#ff9fe366",
-      "panel.background": "#2f3144ff",
-      "editor.foreground": "#f8f8f2ff",
-      "editor.background": "#282a36ff",
-      "editor.gutter.background": "#282a36ff",
-      "editor.active_line.background": "#323448bf",
-      "editor.line_number": "#6272a4ff",
-      "editor.active_line_number": "#ffc2ecff",
-      "terminal.background": "#282a36ff",
-      "terminal.foreground": "#f8f8f2ff",
-      "terminal.bright_foreground": "#ffffffff",
-      "terminal.dim_foreground": "#a297cbff",
-      "terminal.ansi.black": "#282a36ff",
-      "terminal.ansi.bright_black": "#6272a4ff",
-      "terminal.ansi.red": "#ff7aa8ff",
-      "terminal.ansi.bright_red": "#ff94b8ff",
-      "terminal.ansi.green": "#8af7cfff",
-      "terminal.ansi.bright_green": "#a8ffdcff",
-      "terminal.ansi.yellow": "#ffcf93ff",
-      "terminal.ansi.bright_yellow": "#fff0a8ff",
-      "terminal.ansi.blue": "#9be7ffff",
-      "terminal.ansi.bright_blue": "#b9eeffff",
-      "terminal.ansi.magenta": "#ff9fe3ff",
-      "terminal.ansi.bright_magenta": "#ffc2ecff",
-      "terminal.ansi.cyan": "#8af7cfff",
-      "terminal.ansi.bright_cyan": "#9be7ffff",
-      "terminal.ansi.white": "#f8f8f2ff",
-      "terminal.ansi.bright_white": "#ffffffff",
-      "error": "#ff7aa8ff",
-      "warning": "#ffcf93ff",
-      "success": "#8af7cfff",
-      "info": "#9be7ffff",
-      "accents": [
-        "#ff9fe3ff",
-        "#d4b2ffff",
-        "#9be7ffff",
-        "#8af7cfff",
-        "#ffcf93ff",
-        "#ff7aa8ff"
-      ],
-      "syntax": {
-        "boolean": { "color": "#d4b2ffff" },
-        "comment": { "color": "#6272a4ff", "font_style": "italic" },
-        "comment.doc": { "color": "#8a88c7ff", "font_style": "italic" },
-        "constant": { "color": "#d4b2ffff" },
-        "function": { "color": "#8af7cfff" },
-        "keyword": { "color": "#ff9fe3ff" },
-        "number": { "color": "#d4b2ffff" },
-        "operator": { "color": "#ff9fe3ff" },
-        "property": { "color": "#ff7aa8ff" },
-        "punctuation": { "color": "#ddd2f7ff" },
-        "string": { "color": "#fff0a8ff" },
-        "type": { "color": "#9be7ffff" },
-        "variable": { "color": "#f8f8f2ff" },
-        "variable.parameter": { "color": "#ffcf93ff" }
-      }
-    }
+    "dark": "Dracula-Sakura"
   }
 }
 ZED_CONF
 )
-if merge_json_defaults "$ZED_CONFIG" <<< "$ZED_DEFAULTS"; then
+
+# Zed rewrites settings as JSONC with trailing commas. Normalize that specific
+# syntax before the JSON merge. Files with comments or other unsupported syntax
+# still fail closed and remain byte-for-byte unchanged.
+ZED_MERGE_FILE="$ZED_CONFIG"
+ZED_JSONC_TMP=""
+if [[ "$DRY_RUN" != "true" && -f "$ZED_CONFIG" ]] && installed jq &&
+   ! jq -e . "$ZED_CONFIG" &>/dev/null; then
+    ZED_JSONC_TMP="$(mktemp)"
+    if normalize_zed_jsonc "$ZED_CONFIG" "$ZED_JSONC_TMP"; then
+        ZED_MERGE_FILE="$ZED_JSONC_TMP"
+    else
+        rm -f "$ZED_JSONC_TMP"
+        ZED_JSONC_TMP=""
+    fi
+fi
+
+# Migrate only the exact One Dark override emitted before #565. A changed override
+# is a user choice and stays untouched. The settings merge then preserves all other
+# local values while new installations select the named theme.
+ZED_SETTINGS_FILTER="."
+if [[ "$DRY_RUN" != "true" && -f "$ZED_MERGE_FILE" ]] && installed jq; then
+    ZED_THEME_STYLE="$(jq -c '.themes[0].style' <<< "$ZED_THEME_JSON")"
+    if jq -e --argjson style "$ZED_THEME_STYLE" \
+        '.theme_overrides["One Dark"] == $style' "$ZED_MERGE_FILE" &>/dev/null; then
+        ZED_SETTINGS_FILTER='
+          if .theme.dark == "One Dark" then .theme.dark = "Dracula-Sakura" else . end
+          | del(.theme_overrides["One Dark"])
+          | if .theme_overrides == {} then del(.theme_overrides) else . end
+        '
+    fi
+fi
+if merge_json_defaults "$ZED_CONFIG" "$ZED_SETTINGS_FILTER" "$ZED_MERGE_FILE" <<< "$ZED_DEFAULTS"; then
+    [[ -n "$ZED_JSONC_TMP" ]] && rm -f "$ZED_JSONC_TMP"
     [[ "$DRY_RUN" == "true" ]] \
-        || success "Zed settings merged (Dracula-Sakura defaults and OMP ACP added; your changes kept)"
+        || success "Zed settings merged with Dracula-Sakura defaults and OMP ACP. Your changes remain."
 else
     _zed_merge_status=$?
+    [[ -n "$ZED_JSONC_TMP" ]] && rm -f "$ZED_JSONC_TMP"
     if [[ "$_zed_merge_status" -eq 2 ]]; then
-        warn "Zed settings exist but jq is missing — not merging new defaults"
+        warn "Zed settings exist, but jq is missing. New defaults did not merge."
     else
-        warn "Could not merge Zed settings — left unchanged: $ZED_CONFIG"
+        warn "Could not merge Zed settings. The script left $ZED_CONFIG unchanged."
     fi
     unset _zed_merge_status
 fi
-unset ZED_DEFAULTS
+unset ZED_CONFIG_DIR ZED_CONFIG ZED_THEME ZED_MERGE_FILE ZED_JSONC_TMP
+unset ZED_THEME_JSON ZED_THEME_STYLE ZED_DEFAULTS ZED_SETTINGS_FILTER
+
+# ---- Obsidian per-vault theme ----
+# Obsidian stores custom themes inside each vault. Read its registry instead of
+# assuming a notes path, then refresh only theme directories this script owns.
+OBSIDIAN_REGISTRY="$HOME/Library/Application Support/obsidian/obsidian.json"
+OBSIDIAN_THEME_NAME="Dracula-Sakura"
+OBSIDIAN_THEME_MANIFEST=$(cat <<'OBSIDIAN_MANIFEST_CONF'
+{
+  "name": "Dracula-Sakura",
+  "version": "1.0.0",
+  "minAppVersion": "1.0.0",
+  "author": "vixygrey-dev-setup"
+}
+OBSIDIAN_MANIFEST_CONF
+)
+OBSIDIAN_THEME_CSS=$(cat <<'OBSIDIAN_THEME_CONF'
+/*
+ * Dracula-Sakura for Obsidian.
+ * Dark plum surfaces use rose, lilac, cyan, and mint accents.
+ */
+.theme-dark,
+.theme-light {
+  color-scheme: dark;
+
+  --accent-h: 319;
+  --accent-s: 100%;
+  --accent-l: 81%;
+
+  --color-red: #ff7aa8;
+  --color-orange: #ffcf93;
+  --color-yellow: #fff0a8;
+  --color-green: #8af7cf;
+  --color-cyan: #9be7ff;
+  --color-blue: #8bb8ff;
+  --color-purple: #d4b2ff;
+  --color-pink: #ff9fe3;
+
+  --color-base-00: #282a36;
+  --color-base-05: #2c2e3c;
+  --color-base-10: #2f3144;
+  --color-base-20: #323448;
+  --color-base-25: #383a50;
+  --color-base-30: #4b4963;
+  --color-base-35: #5d5878;
+  --color-base-40: #6f6990;
+  --color-base-50: #8a88c7;
+  --color-base-60: #a297cb;
+  --color-base-70: #c6bce5;
+  --color-base-100: #f8f8f2;
+
+  --color-accent: #ff9fe3;
+  --color-accent-1: #ffc2ec;
+  --color-accent-2: #d4b2ff;
+
+  --background-primary: #282a36;
+  --background-primary-alt: #2c2e3c;
+  --background-secondary: #2f3144;
+  --background-secondary-alt: #323448;
+  --background-modifier-hover: #3b3d52;
+  --background-modifier-active-hover: #4b4963;
+  --background-modifier-border: #4b4963;
+  --background-modifier-border-hover: #6f6990;
+  --background-modifier-border-focus: #d4b2ff;
+  --background-modifier-form-field: #323448;
+  --background-modifier-error: #ff7aa8;
+  --background-modifier-warning: #ffcf93;
+  --background-modifier-success: #8af7cf;
+
+  --text-normal: #f8f8f2;
+  --text-muted: #c6bce5;
+  --text-faint: #8a88c7;
+  --text-on-accent: #282a36;
+  --text-on-accent-inverted: #f8f8f2;
+  --text-error: #ff7aa8;
+  --text-warning: #ffcf93;
+  --text-success: #8af7cf;
+  --text-accent: #ff9fe3;
+  --text-accent-hover: #ffc2ec;
+  --text-selection: rgba(212, 178, 255, 0.28);
+  --text-highlight-bg: rgba(255, 240, 168, 0.28);
+
+  --interactive-normal: #323448;
+  --interactive-hover: #3b3d52;
+  --interactive-accent: #ff9fe3;
+  --interactive-accent-hover: #ffc2ec;
+
+  --titlebar-background: #282a36;
+  --titlebar-background-focused: #282a36;
+  --titlebar-text-color: #a297cb;
+  --titlebar-text-color-focused: #f8f8f2;
+  --tab-container-background: #2f3144;
+  --tab-outline-color: #4b4963;
+  --tab-text-color: #a297cb;
+  --tab-text-color-active: #f8f8f2;
+  --tab-text-color-focused-active: #ffc2ec;
+
+  --nav-item-color: #c6bce5;
+  --nav-item-color-hover: #f8f8f2;
+  --nav-item-color-active: #ffc2ec;
+  --nav-item-background-hover: #3b3d52;
+  --nav-item-background-active: #4b4963;
+
+  --h1-color: #ffc2ec;
+  --h2-color: #ff9fe3;
+  --h3-color: #d4b2ff;
+  --h4-color: #9be7ff;
+  --h5-color: #8af7cf;
+  --h6-color: #fff0a8;
+  --link-color: #9be7ff;
+  --link-color-hover: #b9eeff;
+  --link-unresolved-color: #ff7aa8;
+  --tag-color: #ffc2ec;
+  --tag-background: rgba(255, 159, 227, 0.13);
+  --tag-background-hover: rgba(255, 159, 227, 0.23);
+  --tag-border-color: rgba(255, 159, 227, 0.34);
+
+  --code-background: #232530;
+  --code-normal: #f8f8f2;
+  --code-comment: #8a88c7;
+  --code-function: #8af7cf;
+  --code-important: #ffcf93;
+  --code-keyword: #ff9fe3;
+  --code-operator: #ffc2ec;
+  --code-property: #ff7aa8;
+  --code-punctuation: #ddd2f7;
+  --code-string: #fff0a8;
+  --code-tag: #9be7ff;
+  --code-value: #d4b2ff;
+
+  --blockquote-border-color: #d4b2ff;
+  --blockquote-color: #c6bce5;
+  --checkbox-color: #ff9fe3;
+  --checkbox-color-hover: #ffc2ec;
+  --hr-color: #4b4963;
+  --graph-line: #4b4963;
+  --graph-node: #d4b2ff;
+  --graph-node-focused: #ff9fe3;
+  --graph-node-tag: #8af7cf;
+  --graph-node-attachment: #9be7ff;
+}
+
+.workspace-tab-header.is-active {
+  box-shadow: inset 0 -2px 0 #ff9fe3;
+}
+
+.markdown-rendered mark,
+mark {
+  color: #282a36;
+  border-radius: 3px;
+  padding: 0 0.15em;
+}
+OBSIDIAN_THEME_CONF
+)
+
+OBSIDIAN_VAULTS=()
+if [[ -f "$OBSIDIAN_REGISTRY" ]]; then
+    if ! installed jq; then
+        warn "Obsidian vault registry exists, but jq is missing. Theme installation stopped."
+    elif ! jq -e '.vaults | type == "object"' "$OBSIDIAN_REGISTRY" &>/dev/null; then
+        warn "Obsidian vault registry is malformed. The script left all vaults unchanged."
+    else
+        mapfile -t OBSIDIAN_VAULTS < <(jq -r '.vaults[]? | .path // empty' "$OBSIDIAN_REGISTRY")
+    fi
+fi
+
+if [[ "${#OBSIDIAN_VAULTS[@]}" -eq 0 ]]; then
+    info "No registered Obsidian vaults found. After you create a vault, run --only configs."
+fi
+
+for OBSIDIAN_VAULT in "${OBSIDIAN_VAULTS[@]}"; do
+    if [[ ! -d "$OBSIDIAN_VAULT" ]]; then
+        warn "Obsidian vault path does not exist: $OBSIDIAN_VAULT"
+        continue
+    fi
+
+    OBSIDIAN_THEME_DIR="$OBSIDIAN_VAULT/.obsidian/themes/$OBSIDIAN_THEME_NAME"
+    OBSIDIAN_THEME_MARKER="$OBSIDIAN_THEME_DIR/.dev-setup-owned"
+    if [[ -e "$OBSIDIAN_THEME_DIR" && ! -f "$OBSIDIAN_THEME_MARKER" ]]; then
+        warn "Obsidian theme directory is not script-owned: $OBSIDIAN_THEME_DIR"
+        warn "The script left this directory unchanged."
+        continue
+    fi
+
+    write_generated "$OBSIDIAN_THEME_MARKER" <<'OBSIDIAN_THEME_MARKER_CONF'
+Dracula-Sakura theme generated by vixygrey-dev-setup.
+OBSIDIAN_THEME_MARKER_CONF
+    write_generated "$OBSIDIAN_THEME_DIR/manifest.json" <<< "$OBSIDIAN_THEME_MANIFEST"
+    write_generated "$OBSIDIAN_THEME_DIR/theme.css" <<< "$OBSIDIAN_THEME_CSS"
+
+    if merge_json_defaults "$OBSIDIAN_VAULT/.obsidian/appearance.json" <<'OBSIDIAN_APPEARANCE_CONF'
+{
+  "baseTheme": "dark",
+  "cssTheme": "Dracula-Sakura"
+}
+OBSIDIAN_APPEARANCE_CONF
+    then
+        configured "Obsidian Dracula-Sakura theme installed in $OBSIDIAN_VAULT"
+    else
+        warn "Could not merge the Obsidian appearance settings."
+        warn "The script left $OBSIDIAN_VAULT/.obsidian/appearance.json unchanged."
+    fi
+done
+
+unset OBSIDIAN_REGISTRY OBSIDIAN_THEME_NAME OBSIDIAN_THEME_MANIFEST OBSIDIAN_THEME_CSS
+unset OBSIDIAN_VAULTS OBSIDIAN_VAULT OBSIDIAN_THEME_DIR OBSIDIAN_THEME_MARKER
 
 # Croft was retired in #542. Its merged user config can contain personal edits,
 # so only the explicit --cleanup path moves ~/.config/croft to the Trash.
@@ -11805,6 +12076,7 @@ echo "  [~/.jqp.yaml]           jq playground theme overrides"
 echo "  [~/.omp/agent]          OMP settings, LSP policy, model routing, theme, and path guard"
 echo "  [~/.agents/skills]      Curated skills Oh My Pi reads natively"
 echo "  [~/.config/zed]         Zed house fonts, Dracula-Sakura theme, and OMP ACP agent"
+echo "  [Obsidian vaults]       Per-vault Dracula-Sakura theme and appearance defaults"
 echo "  [~/.herald]             Herald email/calendar config and Dracula-Sakura theme"
 echo "  [~/.config/eilmeldung] Dracula-Sakura RSS reader theme"
 echo "  [~/.config/concord]    Keychain credentials and Dracula-Sakura theme"
@@ -11898,8 +12170,7 @@ Complete the manual permissions, credentials, and account steps after the script
 - [ ] Select an RSS provider.
 - [ ] Open the Firefox theme page at `https://draculatheme.com/firefox`.
 - [ ] Install the theme in the Firefox profile.
-- [ ] Open an Obsidian vault.
-- [ ] Install the theme from `https://draculatheme.com/obsidian`.
+- [ ] Open each registered Obsidian vault and confirm Dracula-Sakura under Settings > Appearance > Themes.
 
 ## Services and storage
 - [ ] Run `surge service install`, then pair the browser extension with `surge service token`.
@@ -14114,7 +14385,9 @@ Theme installation stays profile-owned.
 
 ### Obsidian
 Obsidian provides a local Markdown knowledge base.
-Themes remain scoped to each vault.
+The script installs Dracula-Sakura in each registered vault.
+An existing theme choice remains unchanged.
+After you create another vault, run `setup-dev-tools-mac.sh --only configs` to install the theme there.
 
 ### Docker Desktop
 Docker Desktop provides the macOS Docker engine, Compose, and Buildx.

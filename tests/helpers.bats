@@ -505,6 +505,43 @@ EOF
 }
 
 # ---------------------------------------------------------------------------
+# #565: Zed rewrites valid settings with trailing commas. The normalizer must
+# accept that form without changing string content that contains punctuation.
+# ---------------------------------------------------------------------------
+
+@test "normalize_zed_jsonc: accepts Zed trailing commas without changing strings (#565)" {
+    run run_with_helpers '
+        cat > "$HOME/zed.jsonc" <<"EOF"
+{
+  "nested": {
+    "enabled": true,
+  },
+  "array": [
+    "rose",
+  ],
+  "literal": "keep,}"
+}
+EOF
+        normalize_zed_jsonc "$HOME/zed.jsonc" "$HOME/zed.json"
+        jq -cS . "$HOME/zed.json"
+    '
+    [ "$status" -eq 0 ]
+    [ "$output" = '{"array":["rose"],"literal":"keep,}","nested":{"enabled":true}}' ]
+}
+
+@test "merge_json_defaults: reads a validated source and writes the destination (#565)" {
+    run run_with_helpers '
+        printf "%s\n" "{\"theme\":\"old\",\"personal\":true}" > "$HOME/source.json"
+        merge_json_defaults "$HOME/settings.json" ".theme = \"Dracula-Sakura\"" "$HOME/source.json" <<"EOF"
+{"generated":true}
+EOF
+        jq -cS . "$HOME/settings.json"
+    '
+    [ "$status" -eq 0 ]
+    [ "$output" = '{"generated":true,"personal":true,"theme":"Dracula-Sakura"}' ]
+}
+
+# ---------------------------------------------------------------------------
 # #532: the late mise linker is pure filesystem policy and can be exercised
 # without installing a runtime or relying on the current machine PATH.
 # ---------------------------------------------------------------------------

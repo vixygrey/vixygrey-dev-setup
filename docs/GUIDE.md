@@ -236,7 +236,7 @@ zed .                      # open the current project in Zed
 
 Zed lists **Oh My Pi** as an External Agent. It starts `omp acp` with the existing OMP configuration.
 
-Eilmeldung, concord, cfait, Herald, Broot, and Zed use Dracula-Sakura colors where their schemas support them.
+Eilmeldung, concord, cfait, Herald, Broot, Zed, and Obsidian use Dracula-Sakura colors through supported custom themes.
 
 Chamber and Mullvad do not expose theme configuration.
 
@@ -845,6 +845,18 @@ The script configures Kitty with the Dracula-Sakura palette and JetBrains Mono N
 1. To change the font size, edit `~/.config/kitty/kitty.conf`.
 2. To add transparency, set `background_opacity 0.95`.
 3. To reload the configuration, press `Ctrl+Cmd+,`.
+
+### Zed
+
+The script installs `Dracula-Sakura` as a named local theme.
+The theme file is `~/.config/zed/themes/dracula-sakura.json`.
+Select the theme from the Zed theme picker if you keep another explicit choice.
+
+### Obsidian
+
+The script installs `Dracula-Sakura` in every vault registered with Obsidian.
+The theme stays under `.obsidian/themes/Dracula-Sakura` in each vault.
+After you create another vault, run `setup-dev-tools-mac.sh --only configs`.
 
 ### Kiro
 

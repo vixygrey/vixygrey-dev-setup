@@ -65,6 +65,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - The llama.cpp model download now overrides the generated 30-second curl timeout (#553).
 - `--cleanup` now keeps ffmpeg because mpv and cliamp require its Homebrew formula (#563).
 - Eilmeldung now uses its verified macOS binary, which avoids the missing custom tap and duplicate Homebrew Rust toolchain (#563).
+- Zed and registered Obsidian vaults now expose native Dracula-Sakura custom themes (#565).
+- Zed settings merges now accept the trailing commas that Zed writes (#565).
 
 ## [7.23.0] - 2026-09-09
 
