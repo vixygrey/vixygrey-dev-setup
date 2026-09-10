@@ -72,12 +72,12 @@ Risk level: Low. The fix disables only the duplicate server and preserves the na
 
 **Fix applied:** The generated OMP user denylist disables only the redundant server. The native Bigpowers extension remains active.
 
-**Hardening added:** An atomic JSON helper validates the denylist shape. Its regression test covers preservation and idempotency.
+**Hardening added:** An atomic JSON helper validates the denylist shape. Tests cover preservation, idempotency, empty input, malformed input, and dry runs.
 
 **Generalization sweep:** The repository contains no other workspace placeholders or plugin MCP definitions.
 
-**Evidence:** `just preflight` passed 84 tests. `just verify` reported 23 verified and zero failed configurations.
+**Evidence:** `just preflight` passed 87 tests. `just verify` reported 23 verified and zero failed configurations.
 
 The OMP runtime listed `bigpowers-mcp` as disabled and loaded 81 native Bigpowers skills.
 
-**Commits:** `2d65f56`, `f173750`
+**Commits:** `2d65f56`, `f173750`, `de4d8dc`, `061ed9f`, `fc7b0dc`, `203262b`
