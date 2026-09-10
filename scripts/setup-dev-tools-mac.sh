@@ -1269,8 +1269,8 @@ set_toml_top_level_string() {
         info "[DRY RUN] Would set $key in $file"
         return 0
     fi
-    command -v taplo &>/dev/null || return 2
-    taplo check "$file" &>/dev/null || return 1
+    command -v python3 &>/dev/null || return 2
+    python3 -c 'import sys, tomllib; tomllib.load(open(sys.argv[1], "rb"))' "$file" &>/dev/null || return 1
     tmp="$(mktemp)"
     if awk -v key="$key" -v replacement="$key = \"$value\"" '
         BEGIN { done = 0 }
@@ -1287,7 +1287,7 @@ set_toml_top_level_string() {
         END {
             if (!done) print replacement
         }
-    ' "$file" > "$tmp" && taplo check "$tmp" &>/dev/null; then
+    ' "$file" > "$tmp" && python3 -c 'import sys, tomllib; tomllib.load(open(sys.argv[1], "rb"))' "$tmp" &>/dev/null; then
         mv "$tmp" "$file"
         return 0
     fi
@@ -5604,7 +5604,7 @@ elif set_toml_top_level_string "$EMERALDIAN_CONFIG" theme "dracula-sakura"; then
 else
     _emeraldian_theme_status=$?
     if [[ "$_emeraldian_theme_status" -eq 2 ]]; then
-        warn "Emeraldian config exists, but taplo is missing. The theme selection did not change."
+        warn "Emeraldian config exists, but python3 is missing. The theme selection did not change."
     else
         warn "Could not update the Emeraldian theme setting. The script left $EMERALDIAN_CONFIG unchanged."
     fi

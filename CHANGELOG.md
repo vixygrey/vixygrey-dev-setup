@@ -70,6 +70,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - Eilmeldung now uses its verified macOS binary, which avoids the missing custom tap and duplicate Homebrew Rust toolchain (#563).
 - Zed and registered Obsidian vaults now expose native Dracula-Sakura custom themes (#565).
 - Zed settings merges now accept the trailing commas that Zed writes (#565).
+- The generated-config CI job now pins its just release, which prevents failures when latest-release discovery changes upstream (#571).
 
 ## [7.23.0] - 2026-09-09
 
