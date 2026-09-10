@@ -50,6 +50,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - Existing JSON merges now preserve malformed files without mutation (#533).
 - Removed Anthropic models from every omp fallback chain (#538).
 - Removed stale completion notifier calls that failed after successful real runs (#551).
+- The llama.cpp model download now overrides the generated 30-second curl timeout (#553).
 
 ## [7.23.0] - 2026-09-09
 
