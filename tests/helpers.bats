@@ -662,7 +662,7 @@ EOF
         }" "$mcp_file"
     '
     [ "$status" -eq 0 ]
-    [ "$output" = '{"schema":"https://example.test/mcp-schema.json","personal":"https://example.test/mcp","disabled":["bigpowers-mcp","personal-disabled"]}' ]
+    [ "$output" = '{"schema":"https://example.test/mcp-schema.json","personal":"https://example.test/mcp","disabled":["personal-disabled","bigpowers-mcp"]}' ]
 }
 
 @test "run_remote_installer: executes the downloaded installer through the requested runner (#430)" {

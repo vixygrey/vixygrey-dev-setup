@@ -1357,7 +1357,7 @@ disable_omp_mcp_server() {
         elif (.disabledServers != null and (.disabledServers | type) != "array") then
             error("disabledServers must be an array")
         elif all((.disabledServers // [])[]; type == "string") then
-            .disabledServers = (((.disabledServers // []) + [$server]) | unique)
+            .disabledServers = ((.disabledServers // []) | if index($server) then . else . + [$server] end)
         else
             error("disabledServers entries must be strings")
         end
