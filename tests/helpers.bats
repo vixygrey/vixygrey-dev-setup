@@ -579,6 +579,64 @@ EOF
     [[ "$output" == *"file=kept"* ]]
 }
 
+@test "omp_plugin_install: installs once when the plugin is absent (#576)" {
+    run run_with_helpers '
+        export LOG_FILE="$HOME/setup.log"
+        export ERROR_LOG="$HOME/error.log"
+        mkdir -p "$HOME/bin"
+        mkdir -p "$STATE_DIR"
+        cat > "$HOME/bin/omp" <<"EOF"
+#!/usr/bin/env bash
+if [[ "$1 $2" == "plugin list" ]]; then
+  if [[ -f "$HOME/plugin-installed" ]]; then
+    printf "{\"npm\":[{\"name\":\"bigpowers\",\"enabled\":true}]}\n"
+  else
+    printf "{\"npm\":[]}\n"
+  fi
+elif [[ "$1 $2 $3" == "plugin install bigpowers" ]]; then
+  touch "$HOME/plugin-installed"
+  printf "install\n" >> "$HOME/install.log"
+fi
+EOF
+        printf "#!/usr/bin/env bash\nexit 0\n" > "$HOME/bin/bun"
+        chmod +x "$HOME/bin/omp" "$HOME/bin/bun"
+        export PATH="$HOME/bin:$PATH"
+
+        omp_plugin_install bigpowers bigpowers "Bigpowers"
+        omp_plugin_install bigpowers bigpowers "Bigpowers"
+        printf "installed=%s calls=%s\n" \
+          "$([[ -f "$HOME/plugin-installed" ]] && echo yes || echo no)" \
+          "$(/usr/bin/wc -l < "$HOME/install.log" | tr -d " ")"
+    '
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"installed=yes calls=1"* ]]
+}
+
+@test "omp_plugin_install: dry-run does not invoke the plugin manager (#576)" {
+    run run_with_helpers '
+        export LOG_FILE="$HOME/setup.log"
+        export ERROR_LOG="$HOME/error.log"
+        mkdir -p "$HOME/bin"
+        cat > "$HOME/bin/omp" <<"EOF"
+#!/usr/bin/env bash
+if [[ "$1 $2" == "plugin list" ]]; then
+  printf "{\"npm\":[]}\n"
+elif [[ "$1 $2" == "plugin install" ]]; then
+  touch "$HOME/plugin-installed"
+fi
+EOF
+        printf "#!/usr/bin/env bash\nexit 0\n" > "$HOME/bin/bun"
+        chmod +x "$HOME/bin/omp" "$HOME/bin/bun"
+        export PATH="$HOME/bin:$PATH"
+        DRY_RUN=true
+
+        omp_plugin_install bigpowers bigpowers "Bigpowers"
+        [[ ! -e "$HOME/plugin-installed" ]]
+    '
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"[DRY RUN] Would install: Bigpowers"* ]]
+}
+
 @test "run_remote_installer: executes the downloaded installer through the requested runner (#430)" {
     run run_with_helpers '
         export LOG_FILE="$HOME/log"

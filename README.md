@@ -435,10 +435,12 @@ The generated OMP policy selects Pyright for Python type intelligence and Ruff f
 | **zsh-syntax-highlighting** | Command coloring in the terminal -- red for errors |
 | **atuin** | Replaces shell history with SQLite-backed, fuzzy-searchable database |
 | **mise** | Universal version manager -- Node, Python, Go, Ruby all in one (replaces nvm + pyenv + rbenv) |
+| **Bun** | Package manager used by OMP to install and update plugin packages |
 | **micro** | The `$EDITOR` -- git/gh/lazygit commit messages, leaf's Ctrl+E, quick edits. Non-modal, on-screen key menu (`Ctrl+G` for help), Dracula theme |
 | **Croft** | VS Code-style terminal IDE with LSP, debugging, source control, PDF previews, and a Dracula-Sakura theme |
 | **Zed** | Fast native editor with a named Dracula-Sakura theme and OMP in the Agent Panel through ACP |
 | **omp** | Oh My Pi coding agent with LSP, DAP, subagents, and role-based routing across Codex, Gemini, Claude Sonnet, and local llama.cpp |
+| **Bigpowers** | OMP plugin with workflow skills, slash commands, and git safety guards |
 | **chezmoi** | Dotfile manager -- backup and restore configs across machines |
 | **mitmproxy** | Free HTTP debugging proxy -- inspect and modify API calls from any app |
 | **Kitty** | Fast GPU-accelerated terminal with native macOS support |
@@ -770,6 +772,7 @@ The script generates config files with sensible defaults:
 | `~/.omp/agent/themes/dracula-sakura.json` | omp | Full Dracula-Sakura theme with all 66 required omp color tokens, including the thirteen status-line colors pi has no equivalent for |
 | `~/.omp/agent/config.yml` | omp | Merged because OMP also writes this file. Uses automatic reasoning, workload routing, usage-aware fallback, provider caching, disabled MiniMax, disabled macOS word completion hints, and local Qwen last |
 | `~/.omp/agent/.env` | omp | User-owned seed with blank `ANTHROPIC_API_KEY` and `GEMINI_API_KEY` entries. Later runs leave it unchanged |
+| `~/.omp/plugins/node_modules/bigpowers` | omp | Enabled Bigpowers plugin package with workflow skills, slash commands, and the `bigpowers_skill` tool |
 | `~/Library/LaunchAgents/dev.vixygrey.llama-cpp.plist` | llama.cpp | Runs Qwen2.5 Coder 14B on port 8081 with the Vulkan backend |
 | `~/.config/kitty/kitty.conf` | Kitty | JetBrainsMono Nerd Font, Dracula-Sakura palette, compact padding, integrated titlebar |
 | `~/.config/yazi/yazi.toml` | Yazi | Natural sorting, hidden files, symlink targets, previews |
@@ -955,7 +958,8 @@ curl -s http://127.0.0.1:8081/v1/models | jq
 ```
 
 OMP installs from the `can1357/tap` Homebrew tap as a prebuilt binary.
-The binary remains available to shells, git hooks, and launchd jobs without a separate runtime.
+The OMP runtime remains available to shells, git hooks, and launchd jobs.
+Bun handles package installation for the OMP plugin manager.
 
 OMP includes native tools, LSP operations, a DAP debugger, subagents, memory, and nine model roles.
 Automatic reasoning handles ordinary turns.
@@ -969,6 +973,7 @@ The `LLAMA_CPP_BASE_URL` variable points OMP to the Vulkan service on port 8081.
 OMP also carries the Dracula-Sakura theme and the generated `AGENTS.md`.
 The shared skill directory is `~/.agents/skills/`.
 It contains `api-testing`, `d2-diagrams`, and `office-layout-check`.
+The enabled Bigpowers plugin adds its workflow skills, slash commands, git safety guards, and `bigpowers_skill` tool.
 
 **Web search is built in.** `web_search` carries 23 backends, and this setup puts your
 local **SearXNG** instance at the head of the chain via `searxng.endpoint`. That replaced

@@ -7,13 +7,14 @@
 - **Bash 4+**, not the bash 3.2 that macOS ships. The script opens with a 3.2-compatible
   guard that re-execs under a newer bash and refuses to run without one. Associative arrays
   are the reason.
-- **Homebrew** is the primary package manager. Five more sit beside it.
-  Each manager uses an idempotent helper: `npm_global_install`, `go_install`, `uv_tool_install`,
-  `cargo_install`, or `run_remote_installer`.
+- **Homebrew** is the primary package manager. Six installation paths sit beside it.
+  Each path uses an idempotent helper: `npm_global_install`, `omp_plugin_install`,
+  `go_install`, `uv_tool_install`, `cargo_install`, or `run_remote_installer`.
 - **mise** is the version manager for Node, Python, Go, and Ruby. No `nvm`, `pyenv`, or
   `asdf`: mixing them is called out in `CONVENTIONS.md` section 16.
 - **zsh** is the target login shell. The script writes `~/.zshenv`, `~/.zprofile`, and
   `~/.zshrc`, and their read order decides which tool wins on `PATH`.
+- **Bun** installs OMP plugin packages. OMP remains a prebuilt native binary.
 - **bats** for unit tests, **ShellCheck** for lint, **pre-commit** for the local gate,
   **GitHub Actions** for CI, **just** for the task spine.
 - No application runtime, no dependency manifest, no build step. There is nothing to

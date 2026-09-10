@@ -23,6 +23,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - Restored Croft with safe editor defaults and a native Dracula-Sakura theme (#568).
 - Added Emeraldian, Watchtower, and Linecast with supported defaults and Dracula-Sakura styling where available (#569).
 - Added Caligula, Nerdlog, and Chawan with private defaults and supported Dracula-Sakura styling (#572).
+- Added Bigpowers as an enabled OMP plugin with Bun-backed installation and verification (#576).
 
 ### Changed
 
