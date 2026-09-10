@@ -198,6 +198,11 @@ jobs:
           TOPGRADE_CONF|python3 -c 'import tomllib; tomllib.load(open("/tmp/generated","rb"))'
           TRIPPY_CONF|python3 -c 'import tomllib; tomllib.load(open("/tmp/generated","rb"))'
           HARLEQUIN_CONF|python3 -c 'import tomllib; tomllib.load(open("/tmp/generated","rb"))'
+          EILMELDUNG_CONF|python3 -c 'import tomllib; tomllib.load(open("/tmp/generated","rb"))'
+          CONCORD_CONF|python3 -c 'import tomllib; tomllib.load(open("/tmp/generated","rb"))'
+          CONCORD_THEME_CONF|python3 -c 'import tomllib; tomllib.load(open("/tmp/generated","rb"))'
+          SPOTATUI_CONF|yq eval '.' /tmp/generated
+          CFAIT_CONF|python3 -c 'import tomllib; tomllib.load(open("/tmp/generated","rb"))'
           CHECKS
 
           awk -v tag="LLAMA_PLIST_EOF" \

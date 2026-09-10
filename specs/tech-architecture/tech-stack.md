@@ -7,9 +7,9 @@
 - **Bash 4+**, not the bash 3.2 that macOS ships. The script opens with a 3.2-compatible
   guard that re-execs under a newer bash and refuses to run without one. Associative arrays
   are the reason.
-- **Homebrew** is the primary package manager. Four more sit beside it, each wrapped in its
-  own idempotent helper: `npm_global_install`, `go_install`, `uv_tool_install`, and
-  `run_remote_installer` for vendors that ship only a curl-to-shell script.
+- **Homebrew** is the primary package manager. Five more sit beside it.
+  Each manager uses an idempotent helper: `npm_global_install`, `go_install`, `uv_tool_install`,
+  `cargo_install`, or `run_remote_installer`.
 - **mise** is the version manager for Node, Python, Go, and Ruby. No `nvm`, `pyenv`, or
   `asdf`: mixing them is called out in `CONVENTIONS.md` section 16.
 - **zsh** is the target login shell. The script writes `~/.zshenv`, `~/.zprofile`, and

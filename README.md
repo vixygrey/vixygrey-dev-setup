@@ -228,6 +228,8 @@ and prefer tagged release artifacts with the published SHA256 checksum.
 | **cosign** | Sign and verify container images and artifacts |
 | **mkcert** | Create locally-trusted HTTPS certificates for development |
 | **ssh-audit** | Audit SSH server and client configuration for security |
+| **Bitwarden** | Encrypted password manager for native and browser workflows |
+| **chamber** | Local encrypted secrets vault with a terminal interface |
 
 ---
 
@@ -337,6 +339,9 @@ Faster, prettier, smarter replacements for standard Unix utilities.
 | **lnav** | Advanced log file viewer -- auto-format, SQL queries on logs |
 | **qalc** | Powerful terminal calculator (units, currencies, variables) |
 | **lazyssh** | TUI SSH connection manager |
+| **eilmeldung** | Fast RSS reader with vim-style navigation and a Dracula-Sakura palette |
+| **concord** | Discord terminal client with Keychain tokens and opt-in microphone transmission |
+| **cfait** | Offline-first task manager with optional CalDAV synchronization |
 
 ---
 
@@ -364,6 +369,7 @@ Faster, prettier, smarter replacements for standard Unix utilities.
 
 | Tool | Description |
 |------|-------------|
+| **Docker Desktop** | Docker engine, Compose, Buildx, and the macOS virtual machine runtime |
 | **lazydocker** | Terminal UI for Docker -- manage containers, images, volumes |
 | **dive** | Explore Docker image layers -- find what's taking up space |
 | **kubectl** | Kubernetes CLI for managing clusters |
@@ -438,6 +444,7 @@ Faster, prettier, smarter replacements for standard Unix utilities.
 |-----|-------------|
 | **LuLu** | Free open-source outbound firewall -- see what phones home |
 | **Mullvad VPN** | Privacy-focused VPN app with the bundled `mullvad` CLI and source-built `mullvad-tui` |
+| **Bitwarden** | End-to-end encrypted password manager with browser and native application support |
 
 ---
 
@@ -447,6 +454,7 @@ Faster, prettier, smarter replacements for standard Unix utilities.
 |-----|-------------|
 | **LibreOffice** | Headless office suite for validation and conversion of `.pptx`, `.xlsx`, and `.docx` files |
 | **Herald** | Terminal email and calendar client with a local Dracula-Sakura theme |
+| **Obsidian** | Local Markdown knowledge base with per-vault extensions and themes |
 | **rclone** | SFTP/S3/cloud file transfer from the terminal (replaced the Cyberduck GUI) |
 
 ---
@@ -456,6 +464,7 @@ Faster, prettier, smarter replacements for standard Unix utilities.
 | App | Description |
 |-----|-------------|
 | **Google Chrome** | Primary Chromium browser for development and DevTools |
+| **Firefox** | Privacy-focused browser with a separate engine for cross-browser development |
 
 ---
 
@@ -466,6 +475,7 @@ Faster, prettier, smarter replacements for standard Unix utilities.
 | **mpv** | Terminal video player -- keyboard-driven, scriptable |
 | **oxipng** | Lossless PNG compression -- CLI, scriptable, CI-friendly |
 | **jpegoptim** | Lossless JPEG compression -- strip metadata, optimize |
+| **spotatui** | Multi-source terminal music player with a seeded Dracula-Sakura theme |
 
 ---
 
@@ -476,6 +486,7 @@ Faster, prettier, smarter replacements for standard Unix utilities.
 | **rclone** | Sync files to any cloud -- Google Drive, S3, Dropbox, etc. (replaced the Google Drive desktop app) |
 | **borg** | Deduplicated encrypted backups -- better than Time Machine for offsite |
 | **borgmatic** | Automated borg backup scheduling and configuration |
+| **borgtui** | Interactive Borg backup manager with Keychain passphrase support |
 
 ---
 
@@ -507,6 +518,10 @@ Applied consistently across the machine, with built-in Dracula variants kept whe
 | **trippy** | Dracula-Sakura `theme-colors` in `~/.config/trippy/trippy.toml` |
 | **zellij** | Dracula-Sakura theme in the config |
 | **omp** | Full Dracula-Sakura custom theme in `~/.omp/agent/themes/dracula-sakura.json`, selected through `theme.dark` in `config.yml` |
+| **eilmeldung** | Full RGB Dracula-Sakura palette in `~/.config/eilmeldung/config.toml` |
+| **concord** | Dracula-Sakura Highlight Groups and rounded borders in `~/.config/concord/theme.toml` |
+| **spotatui** | Seeded Dracula preset with Sakura rose accents in `~/.config/spotatui/config.yml` |
+| **cfait** | Built-in Dracula theme in its local-first seed configuration |
 | **lnav** | Full Dracula-Sakura `theme-def` (151 values) as a config fragment in `~/.config/lnav/configs/dev-setup/`, selected with lnav's own `:config` |
 | **atuin** | 15-token theme in `~/.config/atuin/themes/dracula-sakura.toml` |
 | **stu** | 19 `ui.theme.*` keys in `~/.stu/config.toml` (hex, via Ratatouille's colour serde) |
@@ -532,6 +547,8 @@ acceptance of a valid one meant anything.
 | `procs` | indexed color only (`Color256`), so the palette can only use nearest terminal indices |
 | `atac`, `viddy`, `cheznav`, `lazynpm`, `lazyrsync`, `lazyssh` | no theming found in their help or configuration schemas |
 | `mullvad-tui`, Mullvad VPN | Both clients use fixed application colors and expose no theme configuration |
+| `borgtui`, `chamber` | Their current configuration schemas expose no theme settings |
+| Firefox, Obsidian, Bitwarden, Docker Desktop | Appearance belongs to application or profile state, which the generator does not overwrite |
 
 `stu` and `e1s` are themed but carry **no `--verify` row**. Both are TUIs with no
 validate mode, and without a TTY they panic inside crossterm before config parsing
@@ -689,6 +706,11 @@ The script generates config files with sensible defaults:
 | `~/.config/zed/settings.json` | Zed | House fonts, Dracula-Sakura overrides, editor defaults, and an `omp acp` external agent |
 | `~/.herald/conf.yaml` | Herald | User-owned account config with `theme.name` merged to select Dracula-Sakura |
 | `~/.herald/themes/dracula-sakura.yaml` | Herald | Managed Dracula-Sakura role palette |
+| `~/.config/eilmeldung/config.toml` | eilmeldung | Managed Dracula-Sakura palette, rounded borders, Nerd Font icons, and the macOS URL opener |
+| `~/.config/concord/config.toml` | concord | Keychain token storage, Kitty images, selected-only animation, and opt-in microphone transmission |
+| `~/.config/concord/theme.toml` | concord | Managed Dracula-Sakura Highlight Groups, semantic colors, and rounded borders |
+| `~/.config/spotatui/config.yml` | spotatui | User-owned seed with Dracula-Sakura colors and optional network presence disabled |
+| `~/.config/cfait/config.toml` | cfait | User-owned local-first seed with Dracula, privacy blur, reminders, and the micro editor |
 | `~/Media/photos/dracula-sakura.jpg` | Wallpaper | Bundled Dracula-Sakura wallpaper asset copied onto every provisioned machine |
 | _(cliamp)_ | cliamp | Music player — self-configured on first run (point at `~/Media/music`) |
 | `~/.config/zellij/config.kdl` | zellij | Dracula-Sakura theme, compact layout, mouse, Ctrl-a prefix |
