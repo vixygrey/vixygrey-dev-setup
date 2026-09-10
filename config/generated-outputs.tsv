@@ -82,6 +82,11 @@ micro-settings|$MICRO_CONFIG_DIR/settings.json|merged|json|configs|jq|none
 zed-settings|$ZED_CONFIG|merged|json|configs|jq|none
 herald-theme|$HERALD_THEME_FILE|generated|yaml|configs|yq|none
 herald-config|$HERALD_CONFIG|merged|yaml|configs|yq|none
+eilmeldung-config|$EILMELDUNG_CONFIG|managed|toml|configs|taplo|eilmeldung
+concord-config|$CONCORD_CONFIG|managed|toml|configs|taplo|concord
+concord-theme|$CONCORD_THEME|managed|toml|configs|taplo|concord
+spotatui-config|$SPOTATUI_CONFIG|seed|yaml|configs|yq|spotatui
+cfait-config|$CFAIT_CONFIG|seed|toml|configs|taplo|cfait
 docker-daemon|$DOCKER_DAEMON|merged|json|configs|jq|none
 omp-config|$OMP_CONFIG_FILE|merged|yaml|configs|yq|omp
 borgmatic-config|$BORGMATIC_CONFIG|seed|yaml|configs|yq|borgmatic

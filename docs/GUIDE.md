@@ -196,6 +196,10 @@ tldr tar                                             # simplified with examples
 
 ```bash
 br                         # browse files and keep directory changes
+eilmeldung                 # read RSS feeds in the terminal
+concord                    # open Discord in the terminal
+cfait                      # manage local or CalDAV tasks
+borgtui                    # manage Borg repositories and backups
 herald --demo              # preview Herald without an account
 herald                     # configure email and calendar accounts
 mullvad account login      # authenticate the bundled Mullvad CLI
@@ -203,9 +207,11 @@ mullvad-tui                # control Mullvad from the terminal
 zed .                      # open the current project in Zed
 ```
 
-Zed lists **Oh My Pi** as an External Agent. It starts `omp acp` and uses the existing OMP configuration.
+Zed lists **Oh My Pi** as an External Agent. It starts `omp acp` with the existing OMP configuration.
 
-Herald, Broot, and Zed use the Dracula-Sakura palette. Mullvad does not expose a theme configuration.
+Eilmeldung, concord, cfait, Herald, Broot, and Zed use Dracula-Sakura colors where their schemas support them.
+
+Borgtui, chamber, and Mullvad do not expose theme configuration.
 
 ## Data & JSON
 
@@ -346,6 +352,12 @@ pre-commit autoupdate        # update hook versions
 
 ## Docker & Kubernetes
 
+### Docker Desktop
+
+Docker Desktop provides the macOS Docker engine, Compose, Buildx, and container virtual machine.
+
+Docker Desktop owns its application settings. The script does not replace this application state.
+
 ### lazydocker (Docker TUI)
 
 ```bash
@@ -427,6 +439,20 @@ dbmate status                # show migration status
 ---
 
 ## Security & Scanning
+
+### Bitwarden
+
+Bitwarden provides the native password manager. The application owns account, vault, and appearance state.
+
+### chamber
+
+```bash
+chamber init                 # create an encrypted local vault
+chamber ui                   # open the terminal interface
+chamber list                 # list secret names and types
+```
+
+Chamber stores encrypted vault data locally. The script does not create a vault or store a master password.
 
 ### typos (spell checker for code)
 
@@ -608,19 +634,35 @@ yt-dlp -f best URL                       # best quality
 yt-dlp --list-formats URL                # show available formats
 ```
 
-### cmus (terminal music player)
+### spotatui (terminal music player)
 
 ```bash
-cmus                         # launch the TUI
-# Inside cmus:
-#   1–7 — switch views (library, playlist, queue, browser, filters, settings)
-#   a   — add directory to library
-#   c   — toggle pause     x — play     v — stop
-#   b / z — next / previous track
-#   s / r — toggle shuffle / repeat
-#   /   — search current view    q — quit
-# Config: ~/.config/cmus/rc (Dracula colors pre-configured)
+spotatui                     # select a music source and open the player
+spotatui --help              # list scripted playback commands
+spotatui history recap --period 30d  # create a local listening recap
 ```
+
+The seed configuration uses Dracula-Sakura colors. It disables Discord presence and the anonymous global counter.
+
+Spotatui rewrites its configuration from the Settings screen. Therefore, the script never replaces an existing file.
+
+### eilmeldung (RSS reader)
+
+```bash
+eilmeldung                   # select an RSS provider and open the reader
+```
+
+Eilmeldung uses rounded borders, Nerd Font icons, and the managed Dracula-Sakura palette.
+
+### borgtui (Borg backup manager)
+
+```bash
+borgtui                      # open the interactive backup manager
+borgtui add ~/Documents      # add a backup source
+borgtui config-path          # print the active profile path
+```
+
+Borgtui stores repository locations and Keychain passphrase settings in user-owned profile files.
 
 ### w3m (terminal web browser)
 

@@ -176,7 +176,7 @@ managed_list() { [[ -s "$MANAGED_STATE" ]] && awk -F'\t' -v k="$1" '$1 == k { pr
 # Count all install calls + standalone progress calls for accurate progress bar
 # Note: `grep -c` prints "0" AND exits 1 on zero matches, so `|| echo 0` would append
 # a SECOND "0" ("0\n0") and break the arithmetic. Use `|| true` + a default instead.
-_INSTALL_CALLS=$(grep -cE '^\s*(brew_install|brew_cask_install|npm_global_install|go_install|uv_tool_install) ' "$0" 2>/dev/null || true)
+_INSTALL_CALLS=$(grep -cE '^\s*(brew_install|brew_cask_install|npm_global_install|go_install|uv_tool_install|cargo_install) ' "$0" 2>/dev/null || true)
 _PROGRESS_CALLS=$(grep -cE '^\s*progress\s*$' "$0" 2>/dev/null || true)
 INSTALL_TOTAL=$(( ${_INSTALL_CALLS:-0} + ${_PROGRESS_CALLS:-0} ))
 [[ "$INSTALL_TOTAL" -eq 0 ]] && INSTALL_TOTAL=200
@@ -354,25 +354,25 @@ declare -A CATEGORY_DESC=(
     [git]="Git, GitHub CLI, delta, lazygit, pre-commit framework (hooks + config: configs)"
     [aws]="AWS CLI, CDK, SAM, Granted, cfn-lint, e1s/e2c/stu/claws (TUIs), s5cmd, steampipe, dynein, iamlive"
     [iac]="OpenTofu (Terraform), tflint, terraform-docs, checkov, infracost"
-    [security]="gitleaks, trivy, semgrep, Objective-See"
+    [security]="gitleaks, trivy, semgrep, Objective-See, Bitwarden, chamber"
     [replacements]="eza, bat, fd, ripgrep, zoxide, btop, sd, dust, just, Yazi, fx, etc."
     [data-processing]="yq, csvkit, jc, jqp, pandoc, ImageMagick"
     [code-quality]="shellcheck, shfmt, actionlint, act, hadolint, ruff, prettier"
     [perf-testing]="hyperfine, oha"
     [dev-servers]="ngrok, miniserve"
-    [terminal-productivity]="leaf, topgrade, fastfetch, mprocs, Broot, qalc, lazyssh/rsync/npm, cheznav"
+    [terminal-productivity]="leaf, topgrade, fastfetch, mprocs, Broot, qalc, lazyssh/rsync/npm, cheznav, eilmeldung, concord, cfait"
     [k8s-github]="stern, gh-dash"
     [database]="duckdb, harlequin, usql, dbmate"
-    [containers]="lazydocker, dive, kubectl, k9s"
+    [containers]="Docker Desktop, lazydocker, dive, kubectl, k9s"
     [api]="ATAC"
     [networking]="bandwhich, nmap, trippy"
     [dx]="fzf, starship, atuin, micro, Zed, Kitty, zellij, omp"
     [docs]="d2"
     [mac-system]="LuLu, Mullvad VPN, mullvad CLI, mullvad-tui"
-    [mac-productivity]="Herald, LibreOffice, Vulkan llama.cpp"
-    [mac-browsers]="Carbonyl, w3m, monolith"
-    [mac-media]="mpv, oxipng, jpegoptim, cliamp"
-    [mac-cloud]="rclone, borg"
+    [mac-productivity]="Obsidian, Herald, LibreOffice, Vulkan llama.cpp"
+    [mac-browsers]="Firefox, Carbonyl, w3m, monolith"
+    [mac-media]="mpv, oxipng, jpegoptim, cliamp, spotatui"
+    [mac-cloud]="rclone, borg, borgtui"
     [dracula]="Dracula-Sakura theme pass for terminal, editor, and TUI surfaces"
     [configs]="Every tool's generated config, git hooks, and omp setup"
     [filesystem]="Directory structure, helper scripts, git identity"
@@ -398,13 +398,13 @@ declare -A CONFIG_LIVES_IN_CONFIGS=(
     [code-quality]="shellcheck, act, prettier, editorconfig"
     [replacements]="btop, ripgreprc, fdignore, aria2, Yazi"
     [data-processing]="yt-dlp, jqp"
-    [terminal-productivity]="leaf, topgrade, fastfetch, mprocs, Broot"
+    [terminal-productivity]="leaf, topgrade, fastfetch, mprocs, Broot, eilmeldung, concord, cfait"
     [k8s-github]="stern, gh-dash"
     [database]="harlequin"
-    [containers]="lazydocker, k9s (config + Dracula skin)"
+    [containers]="Docker daemon, lazydocker, k9s (config + Dracula skin)"
     [networking]="trippy"
     [dx]="atuin, zellij, Kitty, Zed, omp (~/.omp/agent + ~/.agents/skills) — and starship, which is in the \`dracula\` category"
-    [mac-media]="mpv"
+    [mac-media]="mpv, spotatui"
     [mac-browsers]="w3m"
     [mac-productivity]="Herald, llama.cpp service"
 )
@@ -1534,6 +1534,28 @@ uv_tool_install() {
     progress
 }
 
+# cargo_install <pkg> <cmd-name> <description> [cargo install args...]
+# Installs a Rust CLI from crates.io or a Git repository. The command name is
+# checked first because package and binary names can differ (chamber-tui -> chamber).
+cargo_install() {
+    local package="$1" name="$2" desc="$3"; shift 3
+    if command -v "$name" &>/dev/null; then
+        warn "$name already installed"; progress; return 0
+    fi
+    if ! installed cargo; then
+        warn "Skipping $name — cargo not installed"; progress; return 0
+    fi
+    info "Installing $desc via cargo..."
+    if [[ "$DRY_RUN" == "true" ]]; then
+        info "[DRY RUN] Would: cargo install $package${*:+ $*}"
+    elif cargo install "$package" "$@" >> "$LOG_FILE" 2>&1; then
+        success "$name installed"
+    else
+        error "Failed to install $name via cargo"
+    fi
+    progress
+}
+
 # run_remote_installer <label> <url> <optional-sha256> <runner>... [-- <script-args...>]
 # Download an upstream installer script to a temp file, optionally verify it by
 # SHA256, then execute it via the given runner command. Any args after `--` are
@@ -1926,7 +1948,6 @@ if [[ "$CLEANUP" == "true" ]]; then
         "cask:proton-mail:Proton Mail:removed"
         "cask:proton-pass:Proton Pass:removed"
         "cask:proton-drive:Proton Drive:removed"
-        "cask:docker:Docker Desktop:removed:Docker"
         "cask:warp:Warp terminal:Kitty:Warp"
         "cask:iterm2:iTerm2:Kitty:iTerm"
         "cargo:croft:croft:micro"
@@ -1959,7 +1980,6 @@ if [[ "$CLEANUP" == "true" ]]; then
         "cask:topnotch:TopNotch:removed"
         "cask:syncthing:Syncthing:removed"
         "cask:arc:Arc:Google Chrome"
-        "cask:firefox:Firefox:removed"
         "cask:brave-browser:Brave Browser:removed:Brave Browser"
         "cask:postman:Postman:Bruno"
         "cask:daisydisk:DaisyDisk:dust + duf (CLI)"
@@ -2589,6 +2609,10 @@ if [[ "$VERIFY" == "true" ]]; then
         # Yazi has no headless validator or command that reports its config path.
         # Both TOML files carry official schema links for editor validation.
         "unchecked|yazi|$HOME/.config/yazi/theme.toml|"
+        "unchecked|eilmeldung|$HOME/.config/eilmeldung/config.toml|"
+        "validate|concord|$HOME/.config/concord/config.toml|concord --check-config"
+        "unchecked|spotatui|$HOME/.config/spotatui/config.yml|"
+        "unchecked|cfait|$HOME/.config/cfait/config.toml|"
         "validate|ngrok|$HOME/Library/Application Support/ngrok/ngrok.yml|ngrok config check"
         "template|borgmatic|$HOME/.config/borgmatic/config.yaml|borgmatic config validate"
         "path|k9s|$HOME/.config/k9s/config.yaml|k9s info 2>/dev/null | sed 's/\x1b\[[0-9;]*m//g' | sed -n 's/^Config: *//p'"
@@ -3210,6 +3234,9 @@ banner "Security & Secrets"
 # Secret management
 brew_install "age" "age (modern file encryption)"
 brew_install "sops" "sops (encrypt secrets in YAML/JSON, works with AWS KMS)"
+cargo_install "chamber-tui" chamber \
+    "chamber (local encrypted secrets manager and TUI)" --locked
+brew_cask_install "bitwarden" "Bitwarden (password manager)"
 
 # Code & dependency security
 brew_install "gitleaks" "gitleaks (fast git secret scanning — great for CI/pre-commit)"
@@ -3546,6 +3573,11 @@ brew_install "mprocs" "mprocs (TUI for running multiple dev processes)"
 brew_install "broot" "broot (directory tree and file-navigation TUI)"
 brew_install "lnav" "lnav (advanced log file viewer — auto-format, SQL queries on logs)"
 brew_install "progress" "progress (coreutils progress viewer — cp, mv, dd, tar)"
+trust_tap christo-auer/eilmeldung
+brew_install "christo-auer/eilmeldung/eilmeldung" "eilmeldung (TUI RSS reader)"
+brew_install "concord" "concord (Discord client for the terminal)"
+cargo_install "cfait" cfait \
+    "cfait (offline-first task manager TUI with optional CalDAV sync)" --locked
 
 # -- Additional TUI/CLI tools (homebrew-core) --
 brew_install "lazyssh" "lazyssh (SSH connection manager TUI)"
@@ -3615,6 +3647,7 @@ if should_run "containers"; then
 banner "Containers & Orchestration"
 
 brew_install "lazydocker" "lazydocker (terminal UI for Docker)"
+brew_cask_install "docker-desktop" "Docker Desktop"
 brew_install "dive" "dive (explore Docker image layers)"
 # Declared as kubernetes-cli, not kubectl. `kubectl` is a Homebrew ALIAS; the canonical
 # formula name is what `brew list --formula -1` prints, and that list is what
@@ -3932,6 +3965,7 @@ unset LLAMA_CPP_MODEL_NAME LLAMA_CPP_MODEL LLAMA_CPP_MODEL_SIZE LLAMA_CPP_MODEL_
 
 # LibreOffice is the headless office suite for local document validation and conversion.
 brew_cask_install "libreoffice" "LibreOffice (headless document validation and conversion)"
+brew_cask_install "obsidian" "Obsidian (local Markdown knowledge base)"
 # The cask ships only the app. Link `soffice` into the managed user binary directory.
 if [[ "$DRY_RUN" != "true" ]]; then
     _soffice="/Applications/LibreOffice.app/Contents/MacOS/soffice"
@@ -3953,6 +3987,7 @@ if should_run "mac-browsers"; then
 banner "Mac Apps — Browsers"
 
 brew_cask_install "google-chrome" "Google Chrome"
+brew_cask_install "firefox" "Firefox"
 
 npm_global_install "carbonyl" "Carbonyl (Chromium-based browser for the terminal)"
 brew_install "w3m" "w3m (text-based terminal browser and pager)"
@@ -3971,6 +4006,8 @@ brew_install "jpegoptim" "jpegoptim (lossless JPEG compression)"
 # (YouTube/SoundCloud/Spotify/radio), parametric EQ, 20+ visualizations. Replaced kew.
 trust_tap bjarneo/cliamp
 brew_install "bjarneo/cliamp/cliamp" "cliamp (terminal music player — Winamp-style, streaming, EQ, 20+ visualizers)"
+trust_tap LargeModGames/spotatui
+brew_install "LargeModGames/spotatui/spotatui" "spotatui (multi-source terminal music player)"
 
 fi  # mac-media
 
@@ -3984,6 +4021,9 @@ banner "Mac Apps — Cloud Storage"
 brew_install "rclone" "rclone (sync files to any cloud — Google Drive, S3, Dropbox, etc.)"
 brew_install "borgbackup" "borg (deduplicated encrypted backups — better than Time Machine for offsite)"
 brew_install "borgmatic" "borgmatic (automated borg backup scheduling and config)"
+cargo_install "borgtui" borgtui \
+    "borgtui (interactive Borg backup manager)" \
+    --git https://github.com/dpbriggs/borgtui.git --locked
 # borgmatic does nothing without a config. Scaffold a commented starter (only if none
 # exists, so user edits are never clobbered): source dirs, retention, and excludes for
 # churny/regenerable data (node_modules/caches/Downloads — same intent as the old Time
@@ -6226,6 +6266,201 @@ CURLRC="$HOME/.curlrc"
 --user-agent "curl/dev"
 CURLRC_CONF
     configured ".curlrc configured (follow redirects, retry, compression, timeouts)"
+
+# ---- eilmeldung ----
+# The reader supports a full RGB palette. Keep behavior close to upstream defaults,
+# while using the macOS URL opener and the shared Dracula-Sakura colors (#557).
+EILMELDUNG_CONFIG="$HOME/.config/eilmeldung/config.toml"
+info "Creating eilmeldung config..."
+write_managed "$EILMELDUNG_CONFIG" "#" <<'EILMELDUNG_CONF'
+mouse_support = true
+enclosure_command = "open {url}"
+auto_reload_config = true
+
+[border_theme]
+focused = "rounded"
+unfocused = "rounded"
+framing = "connected"
+
+[icon_set]
+preset = "nerd"
+
+[theme.color_palette]
+background = "#282a36"
+foreground = "#f8f8f2"
+muted = "#6272a4"
+highlight = "#ffb7c5"
+flagged = "#ff5555"
+accent_primary = "#ff79c6"
+accent_secondary = "#bd93f9"
+accent_tertiary = "#8be9fd"
+accent_quaternary = "#ffb86c"
+info = "#50fa7b"
+warning = "#f1fa8c"
+error = "#ff5555"
+EILMELDUNG_CONF
+configured "eilmeldung configured (Dracula-Sakura palette, rounded borders, macOS opener)"
+
+# ---- concord ----
+# Concord validates both files with `concord --check-config`. Force Keychain storage
+# instead of its plaintext fallback and keep microphone transmission opt-in (#557).
+CONCORD_CONFIG_DIR="$HOME/.config/concord"
+CONCORD_CONFIG="$CONCORD_CONFIG_DIR/config.toml"
+CONCORD_THEME="$CONCORD_CONFIG_DIR/theme.toml"
+info "Creating concord config..."
+write_managed "$CONCORD_CONFIG" "#" <<'CONCORD_CONF'
+[display]
+image_protocol = "kitty"
+show_avatars = true
+show_images = true
+media_playback = true
+image_preview_quality = "balanced"
+attachment_viewer_quality = "original"
+animate_previews = "selected"
+show_custom_emoji = true
+hour_format_24 = true
+
+[credentials]
+store = "keychain"
+
+[notifications]
+desktop_notifications = true
+
+[presence]
+share_rich_presence = false
+
+[voice]
+allow_microphone_transmit = false
+push_to_talk = true
+noise_suppression = true
+CONCORD_CONF
+configured "concord configured (Keychain credentials, Kitty images, opt-in microphone)"
+
+info "Creating concord Dracula-Sakura theme..."
+write_managed "$CONCORD_THEME" "#" <<'CONCORD_THEME_CONF'
+[highlight.Normal]
+foreground = "#f8f8f2"
+background = "#282a36"
+
+[highlight.Muted]
+foreground = "#6272a4"
+dim = true
+
+[highlight.Border]
+foreground = "#6272a4"
+
+[highlight.FocusBorder]
+foreground = "#ff79c6"
+
+[highlight.Selection]
+foreground = "#282a36"
+background = "#ffb7c5"
+bold = true
+
+[highlight.SelectionBorder]
+foreground = "#bd93f9"
+bold = true
+
+[highlight.ActiveField]
+foreground = "#8be9fd"
+bold = true
+
+[highlight.MessageLink]
+foreground = "#8be9fd"
+underline = true
+
+[highlight.InlineCode]
+foreground = "#ffb86c"
+
+[highlight.PresenceOnline]
+foreground = "#50fa7b"
+
+[highlight.PresenceIdle]
+foreground = "#f1fa8c"
+
+[highlight.PresenceDnd]
+foreground = "#ff5555"
+
+[highlight.Error]
+foreground = "#ff5555"
+
+[highlight.Warning]
+foreground = "#f1fa8c"
+
+[highlight.Success]
+foreground = "#50fa7b"
+
+[highlight.Info]
+foreground = "#8be9fd"
+
+[ui.border]
+default = "rounded"
+
+[ui.indicator]
+selection = "❯ "
+CONCORD_THEME_CONF
+configured "concord Dracula-Sakura theme configured"
+
+# ---- spotatui ----
+# The Settings screen rewrites behavior and theme data. Seed once so later in-app
+# changes survive, and disable its optional presence and counter network calls (#557).
+SPOTATUI_CONFIG="$HOME/.config/spotatui/config.yml"
+if write_seed_once "$SPOTATUI_CONFIG" "edit in spotatui with Alt-," <<'SPOTATUI_CONF'
+behavior:
+  startup_route: home
+  sidebar_position: left
+  playbar_position: bottom
+  banner_gradient: false
+  set_window_title: true
+  enable_discord_rpc: false
+  enable_global_song_count: false
+
+theme:
+  preset: "Dracula"
+  active: "80, 250, 123"
+  banner: "255, 183, 197"
+  error_border: "255, 85, 85"
+  error_text: "255, 85, 85"
+  hint: "241, 250, 140"
+  hovered: "189, 147, 249"
+  inactive: "98, 114, 164"
+  playbar_background: "40, 42, 54"
+  playbar_progress: "80, 250, 123"
+  playbar_progress_text: "248, 248, 242"
+  playbar_text: "248, 248, 242"
+  selected: "139, 233, 253"
+  text: "248, 248, 242"
+  background: "40, 42, 54"
+  header: "255, 121, 198"
+  highlighted_lyrics: "255, 183, 197"
+SPOTATUI_CONF
+then
+    configured "spotatui starter config seeded (Dracula-Sakura palette, private network defaults)"
+fi
+
+# ---- cfait ----
+# cfait writes its own config after UI changes. Seed only a local-first profile,
+# its built-in Dracula theme, and privacy-preserving display defaults (#557).
+CFAIT_CONFIG="$HOME/.config/cfait/config.toml"
+if write_seed_once "$CFAIT_CONFIG" "edit in cfait or open this self-documented TOML file" <<'CFAIT_CONF'
+default_calendar = "local://default"
+enable_local_mode = true
+hide_completed = true
+strikethrough_completed = true
+show_inline_descriptions = true
+theme = "Dracula"
+auto_reminders = true
+default_reminder_time = "09:00"
+auto_refresh_interval_mins = 30
+trash_retention_days = 14
+blur_when_unfocused = true
+description_editor = "micro"
+first_day_of_week = "monday"
+log_level = "Error"
+CFAIT_CONF
+then
+    configured "cfait starter config seeded (local-first, Dracula, privacy blur)"
+fi
 
 # ---- Docker daemon config ----
 DOCKER_CONFIG_DIR="$HOME/.docker"
@@ -11344,6 +11579,10 @@ echo "  [~/.omp/agent]          Oh My Pi settings, model routing, theme, protect
 echo "  [~/.agents/skills]      Curated skills Oh My Pi reads natively"
 echo "  [~/.config/zed]         Zed house fonts, Dracula-Sakura theme, and OMP ACP agent"
 echo "  [~/.herald]             Herald email/calendar config and Dracula-Sakura theme"
+echo "  [~/.config/eilmeldung] Dracula-Sakura RSS reader theme"
+echo "  [~/.config/concord]    Keychain credentials and Dracula-Sakura theme"
+echo "  [~/.config/spotatui]   User-owned Dracula-Sakura music player seed"
+echo "  [~/.config/cfait]      User-owned local-first task manager seed"
 echo "  [llama.cpp]             Vulkan local model server on 127.0.0.1:8081"
 echo "  [~/.local/share/llama.cpp]  Verified Qwen2.5 Coder GGUF model"
 echo "  [leaf]                  Terminal Markdown previewer (live watch, fuzzy picker, Mermaid)"
@@ -11424,6 +11663,16 @@ Complete the manual permissions, credentials, and account steps after the script
 - [ ] Run `herald --demo`, then run `herald` to configure email and calendar accounts.
 - [ ] Run `mullvad account login <ACCOUNT_NUMBER>`, then open `mullvad-tui`.
 - [ ] Open Zed's Agent Panel and select **Oh My Pi** to confirm the `omp acp` connection.
+- [ ] Sign in to Bitwarden.
+- [ ] Select the dark Bitwarden appearance.
+- [ ] Run `concord`.
+- [ ] Complete the Discord login.
+- [ ] Run `eilmeldung`.
+- [ ] Select an RSS provider.
+- [ ] Open the Firefox theme page at `https://draculatheme.com/firefox`.
+- [ ] Install the theme in the Firefox profile.
+- [ ] Open an Obsidian vault.
+- [ ] Install the theme from `https://draculatheme.com/obsidian`.
 
 ## Services and storage
 - [ ] Run `surge service install`, then pair the browser extension with `surge service token`.
@@ -11431,6 +11680,11 @@ Complete the manual permissions, credentials, and account steps after the script
 - [ ] Run `borgmatic create --dry-run` before you schedule automatic backups.
 - [ ] Run `chezmoi init <repository>` before you place generated configuration under version control.
 - [ ] Place music under `~/Media/music`, then run `cliamp ~/Media/music`.
+- [ ] Open Docker Desktop once to install its required privileged helper.
+- [ ] Run `borgtui` and add repositories through its Keychain-backed setup.
+- [ ] Run `chamber init` to create the first encrypted local vault.
+- [ ] Run `spotatui` and select a music source.
+- [ ] Run `cfait` to open its local task collection.
 
 ## Standard machine setup
 - [ ] Generate an SSH key with `ssh-keygen -t ed25519 -C "you@example.com"` if required.
@@ -11490,6 +11744,12 @@ Every binding is on screen: the **key menu** sits along the bottom, and there ar
 | `mullvad-tui` | Terminal controller for the Mullvad VPN app and daemon |
 | `cliamp` | Terminal music player (Winamp-style) — playback, EQ, cycle visualizers |
 | `atac` | API client TUI (or `atac request send <coll>/<req>` headless) |
+| `eilmeldung` | RSS reader with vim-style navigation |
+| `concord` | Discord client with Keychain token storage |
+| `cfait` | Local-first task manager |
+| `borgtui` | Interactive Borg backup manager |
+| `chamber ui` | Local encrypted secrets vault |
+| `spotatui` | Multi-source terminal music player |
 
 SHORTCUTS_EOF
 
@@ -11522,18 +11782,23 @@ The setup installs a Dracula-Sakura wallpaper at `~/Media/photos/dracula-sakura.
 - **d2** provides diagrams as code.
 - **LibreOffice** and **poppler** support visual checks of Office documents.
 - **Herald** provides terminal email and calendar access.
+- **eilmeldung** provides RSS reading with a managed Dracula-Sakura palette.
+- **concord** provides Discord access with Keychain token storage.
+- **cfait** provides local-first tasks with optional CalDAV synchronization.
 
 ## Data, media, and storage
 - **Yazi** provides file management, previews, and bulk tasks.
 - **eza**, **bat**, **fd**, **ripgrep**, **dust**, **duf**, and **sd** replace common file utilities.
-- **cliamp** provides music playback.
+- **cliamp** and **spotatui** provide music playback.
 - **surge** and **aria2** manage downloads.
-- **rclone** and **borg** provide synchronization and backups.
+- **rclone**, **borg**, and **borgtui** provide synchronization and backups.
 
 ## Infrastructure and security
 - **kubectl**, **k9s**, **stern**, and **dive** support container and cluster inspection.
+- **Docker Desktop** provides the macOS container runtime.
 - **awscli**, **granted**, **OpenTofu**, **checkov**, and **trivy** support cloud infrastructure.
 - **gitleaks**, **sops**, and **age** protect repository secrets.
+- **Bitwarden** and **chamber** provide encrypted secret storage.
 - **LuLu** provides the remaining graphical network security control.
 - **Mullvad VPN**, its bundled CLI, and **mullvad-tui** provide VPN control.
 
@@ -13529,6 +13794,58 @@ br
 br ~/Code
 ```
 
+### `eilmeldung`
+Eilmeldung provides a fast RSS reader with vim-style navigation.
+The managed config uses Dracula-Sakura colors and the macOS URL opener.
+
+```bash
+eilmeldung
+```
+
+### `concord`
+Concord provides Discord access in the terminal.
+It stores the token in Keychain and keeps microphone transmission disabled until enabled.
+
+```bash
+concord
+concord --check-config
+```
+
+### `cfait`
+Cfait provides offline-first tasks with optional CalDAV synchronization.
+The seed uses its Dracula theme and leaves credentials to the OS keyring.
+
+```bash
+cfait
+```
+
+### `borgtui`
+Borgtui manages Borg repositories and backup sources.
+Its profile files remain user-owned because they contain repository and encryption settings.
+
+```bash
+borgtui
+borgtui config-path
+```
+
+### `chamber`
+Chamber stores secrets in an encrypted local vault.
+The script installs the binary but never creates a vault or password.
+
+```bash
+chamber init
+chamber ui
+```
+
+### `spotatui`
+Spotatui plays Spotify, local files, radio, YouTube, Subsonic, and Qobuz sources.
+Its user-owned seed applies Dracula-Sakura colors and disables optional presence calls.
+
+```bash
+spotatui
+spotatui --help
+```
+
 ### `herald`
 Herald provides email and calendar workflows in the terminal.
 Its core features do not require an AI provider.
@@ -13574,6 +13891,23 @@ lives at `~/.config/kitty/kitty.conf`.
 ### Google Chrome — Primary Browser
 The primary GUI browser (Carbonyl and w3m cover terminal browsing). Kept for
 sites that need a full modern engine, extensions, and DevTools.
+
+### Firefox
+Firefox provides an independent browser engine for privacy and compatibility work.
+Theme installation stays profile-owned.
+
+### Obsidian
+Obsidian provides a local Markdown knowledge base.
+Themes remain scoped to each vault.
+
+### Docker Desktop
+Docker Desktop provides the macOS Docker engine, Compose, and Buildx.
+Docker Desktop owns its application settings.
+The script does not replace account, resource, or interface state.
+
+### Bitwarden
+Bitwarden provides encrypted native and browser credential access.
+The application owns its account, vault, and appearance state.
 
 ### Language servers
 OMP uses these servers for completion, diagnostics, and symbol navigation:

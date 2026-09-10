@@ -16,6 +16,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - Added an OMP provider-key template for Anthropic and Gemini credentials (#548).
 - Restored Herald, Broot, Mullvad VPN, `mullvad-tui`, and Zed with Dracula-Sakura styling where supported (#550).
 - Added Oh My Pi to Zed as an Agent Client Protocol server through `omp acp` (#550).
+- Added Firefox, Obsidian, Docker Desktop, and Bitwarden with supported application defaults (#557).
+- Added eilmeldung, borgtui, concord, chamber, spotatui, and cfait with Dracula-Sakura styling where supported (#557).
 
 ### Changed
 
