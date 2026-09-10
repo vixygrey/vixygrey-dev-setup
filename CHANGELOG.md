@@ -33,6 +33,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - Added a generated OMP instruction to complete each TODO item when its work finishes (#544).
 - Adopted OMP automatic reasoning, MiniMax disablement, usage-aware fallback, and provider cache retention settings (#548).
 - Replaced rovr and nnn with Yazi and added managed Dracula-Sakura configuration files (#546).
+- The terminal welcome now displays the managed Dracula-Sakura fastfetch dashboard and disables OMP word completion hints (#561).
 
 ### Removed
 
@@ -50,12 +51,14 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - Removed `llm`, `pgcli`, `mycli`, `lazysql`, `sq`, `git-cliff`, Mermaid CLI, Nushell, and their generated configuration (#555).
 - Removed Caddy and ClamAV automation. The cleanup command stops ClamAV before package removal (#555).
 - Removed four redundant font packages. JetBrains Mono, its Nerd Font variant, and Inter remain (#555).
+- The setup no longer generates Zellij layouts or prints the Quick flow line in new terminals (#561).
 
 ### Fixed
 
 - Managed writers now preserve files with malformed markers (#530).
 - ClamAV seed files now use the installed `clamscan` binary check (#536).
 - Existing JSON merges now preserve malformed files without mutation (#533).
+- Fastfetch managed markers now use valid JSONC comments, so fastfetch reads the generated dashboard configuration (#561).
 - Removed Anthropic models from every omp fallback chain (#538).
 - Removed stale completion notifier calls that failed after successful real runs (#551).
 - The llama.cpp model download now overrides the generated 30-second curl timeout (#553).
