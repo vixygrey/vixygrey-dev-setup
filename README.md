@@ -746,7 +746,7 @@ The script generates config files with sensible defaults:
 | `~/.omp/agent/extensions/protected-paths.ts` | omp | Blocks native file mutations to credentials, dependency trees, and repository metadata. Bash and Eval remain under native approval policies |
 | `~/.omp/agent/AGENTS.md` | omp | Global Oh My Pi instruction layer with house preferences and writing rules |
 | `~/.omp/agent/themes/dracula-sakura.json` | omp | Full Dracula-Sakura theme with all 66 required omp color tokens, including the thirteen status-line colors pi has no equivalent for |
-| `~/.omp/agent/config.yml` | omp | Merged because OMP also writes this file. Uses automatic reasoning, workload routing, usage-aware fallback, provider caching, disabled MiniMax, and local Qwen last |
+| `~/.omp/agent/config.yml` | omp | Merged because OMP also writes this file. Uses automatic reasoning, workload routing, usage-aware fallback, provider caching, disabled MiniMax, disabled macOS word completion hints, and local Qwen last |
 | `~/.omp/agent/.env` | omp | User-owned seed with blank `ANTHROPIC_API_KEY` and `GEMINI_API_KEY` entries. Later runs leave it unchanged |
 | `~/Library/LaunchAgents/dev.vixygrey.llama-cpp.plist` | llama.cpp | Runs Qwen2.5 Coder 14B on port 8081 with the Vulkan backend |
 | `~/.config/kitty/kitty.conf` | Kitty | JetBrainsMono Nerd Font, Dracula-Sakura palette, compact padding, integrated titlebar |
@@ -892,7 +892,7 @@ All aliases are auto-written to `~/.zshrc`:
 | **vivid LS_COLORS** | Dracula-themed file type coloring via `vivid generate dracula` |
 | **fzf config** | Dracula colors, fd for file finding, bat for preview, eza tree for directory preview, keybindings (ctrl-/ toggle preview, ctrl-y copy) |
 | **Plugin guards** | Zsh plugin sources have defensive `[[ -f ]]` guards |
-| **Terminal welcome** | fastfetch + date + random dev tip on new terminal sessions |
+| **Terminal welcome** | Dracula-Sakura fastfetch system dashboard, with a themed identity and workspace fallback |
 
 ---
 

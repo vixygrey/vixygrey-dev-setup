@@ -1011,7 +1011,7 @@ _managed_marker_state() {
     echo invalid
 }
 
-# remove_superseded_managed <file> <explanation> [issue-ref]
+# remove_superseded_managed <file> <explanation> [issue-ref] [comment-prefix]
 # Delete a config file THIS SCRIPT wrote that has since moved to a new path. Only
 # when it is provably ours: our markers present AND nothing outside them — the same
 # test write_managed applies before it deletes an outside region (#259), and for the
@@ -1023,10 +1023,10 @@ _managed_marker_state() {
 # every case so far it kept costing something — asciinema printed a banner on each
 # invocation (#329), nushell prints one too (#333).
 remove_superseded_managed() {
-    local file="$1" what="$2" ref="${3:-}"
+    local file="$1" what="$2" ref="${3:-}" cp="${4:-#}"
     [[ -f "$file" ]] || return 0
-    local mb="# >>> dev-setup managed block (do not edit between the markers) >>>"
-    local me="# <<< dev-setup managed block <<<"
+    local mb="$cp >>> dev-setup managed block (do not edit between the markers) >>>"
+    local me="$cp <<< dev-setup managed block <<<"
     local _state; _state="$(_managed_marker_state "$file" "$mb" "$me")"
     if [[ "$_state" == "unmarked" ]]; then
         warn "Left $file alone — this script did not write it. $what"
@@ -2604,6 +2604,9 @@ if [[ "$VERIFY" == "true" ]]; then
         # Reading theme.dark rather than a model role keeps it honest when no
         # GEMINI_API_KEY is set: the theme resolves with no provider reachable at all.
         "validate|omp|$HOME/.omp/agent/config.yml|_verify_output_has 'dracula-sakura' omp config get theme.dark"
+        # Parse the installed managed file through fastfetch itself. This catches
+        # invalid managed-marker comments that body-only JSON checks cannot see (#561).
+        "validate|fastfetch|$HOME/.config/fastfetch/config.jsonc|fastfetch --config '$HOME/.config/fastfetch/config.jsonc' --logo none --structure Title"
         # Asks lnav which theme it RESOLVED, not whether the file parses. A pass
         # means the fragment was found, loaded, and selected (#518).
         "validate|lnav|${XDG_CONFIG_HOME:-$HOME/.config}/lnav/configs/dev-setup/dracula-sakura.json|_verify_lnav"
@@ -5599,44 +5602,13 @@ copy_command "pbcopy"
 ZELLIJ_CONF
 configured "zellij configured (Dracula Sakura theme, status bar with mode keybindings, pane frames, mouse)"
 
-# Remove the retired editor and Claude Code layout only when the generator owns it.
+# Retire both generated layouts. Zellij's stock layouts cover these workflows,
+# and ownership-safe removal preserves any file with user content outside our block.
 ZELLIJ_LAYOUTS="$ZELLIJ_CONFIG_DIR/layouts"
 remove_superseded_managed "$ZELLIJ_LAYOUTS/dev.kdl" \
-    "Claude Code was removed from the setup" "(#542)"
-
-# 'home' layout: a personal dashboard for a full-screen terminal (#523).
-# Launch with:  zellij --layout home
-#
-#   +---------------------+----------------------+
-#   |                     |                      |
-#   |   plain terminal    |  btop  (system)      |
-#   |                     |                      |
-#   +---------------------+----------------------+
-info "Creating zellij 'home' layout..."
-write_managed "$ZELLIJ_LAYOUTS/home.kdl" "//" <<'ZELLIJ_HOME'
-// Personal dashboard. Run:  zellij --layout home
-//
-// The tab-bar and status-bar panes keep this custom layout as discoverable as
-// the built-in default layout.
-layout {
-    pane size=1 borderless=true {
-        plugin location="tab-bar"
-    }
-    pane split_direction="vertical" {
-        pane {
-            name "terminal"
-        }
-        pane {
-            name "system"
-            command "btop"
-        }
-    }
-    pane size=1 borderless=true {
-        plugin location="status-bar"
-    }
-}
-ZELLIJ_HOME
-configured "zellij 'home' layout created (terminal + system: zellij --layout home)"
+    "the generated Zellij layouts were retired" "(#561)" "//"
+remove_superseded_managed "$ZELLIJ_LAYOUTS/home.kdl" \
+    "the generated Zellij layouts were retired" "(#561)" "//"
 fi  # installed zellij
 
 # ---- Yazi config ------------------------------------------------------------
@@ -7177,7 +7149,7 @@ TOPGRADE_CONF
 # ---- fastfetch config ----
 FASTFETCH_CONFIG="$HOME/.config/fastfetch/config.jsonc"
     info "Creating fastfetch configuration..."
-    write_managed "$FASTFETCH_CONFIG" "#" <<'FASTFETCH_CONF'
+    write_managed "$FASTFETCH_CONFIG" "//" <<'FASTFETCH_CONF'
 {
     "$schema": "https://github.com/fastfetch-cli/fastfetch/raw/dev/doc/json_schema.json",
     "logo": {
@@ -11113,6 +11085,10 @@ symbolPreset: nerd
 composer:
   shape: box
 
+# Keep macOS dictionary completions out of the composer. Typo detection remains
+# active, but omp no longer inserts inline word suggestions while typing (#561).
+spelling:
+  autocomplete: false
 github:
   enabled: true
 
@@ -11652,17 +11628,20 @@ fi
 command -v mise &>/dev/null && eval "$(mise activate zsh)"
 
 # -- Terminal Welcome Screen --------------------------------------------------
-# Colorful greeting on new terminal sessions (skip inside editor-integrated terminals).
-# Also requires an interactive shell: sourcing this file from a script or an agent
-# should not emit a banner into captured output.
+# Show the managed Dracula-Sakura system dashboard in interactive terminals.
+# Editor-integrated terminals stay quiet. If fastfetch is unavailable, retain a
+# compact themed identity and workspace fallback instead of a date-only greeting.
 if [[ -o interactive ]] && [[ "$TERM_PROGRAM" != "vscode" ]] && [[ -z "$INSIDE_EMACS" ]]; then
     if command -v fastfetch &>/dev/null; then
-        fastfetch --logo small 2>/dev/null
+        fastfetch
+    else
+        printf "\n\033[38;2;255;121;198m  ✦ %s@%s\033[0m\n" \
+            "${USER:-developer}" "${HOST%%.*}"
+        printf "\033[38;2;189;147;249m  workspace\033[0m  \033[38;2;248;248;242m%s\033[0m\n" \
+            "${PWD/#$HOME/~}"
+        printf "\033[38;2;139;233;253m  shell\033[0m      \033[38;2;248;248;242mzsh %s\033[0m\n\n" \
+            "$ZSH_VERSION"
     fi
-    echo ""
-    printf "\033[38;2;189;147;249m  %s\033[0m\n" "$(date '+%A, %B %d %Y  •  %H:%M')"
-    printf "\033[38;2;98;114;164m  quick flow:\033[0m \033[38;2;255;121;198ma\033[0m apps  \033[38;2;139;233;253mff\033[0m files  \033[38;2;80;250;123mrgf\033[0m code  \033[38;2;255;184;108mzellij --layout dev\033[0m pair\n"
-    echo ""
 fi
 
 MANAGED_ZSHRC

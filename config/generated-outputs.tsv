@@ -19,8 +19,6 @@ trippy-config|$TRIPPY_CONFIG|managed|text|configs|none|none
 gh-dash-config|$GH_DASH_CONFIG|managed|shell|configs|bash|none
 stern-config|$STERN_CONFIG|managed|text|configs|none|stern
 zellij-config|$ZELLIJ_CONFIG|managed|text|configs|none|zellij
-zellij-layouts-dev-kdl|$ZELLIJ_LAYOUTS/dev.kdl|managed|kdl|configs|zellij|none
-zellij-layouts-home-kdl|$ZELLIJ_LAYOUTS/home.kdl|managed|kdl|configs|zellij|none
 yazi-config|$YAZI_CONFIG|managed|toml|configs|taplo|none
 yazi-theme|$YAZI_THEME|managed|toml|configs|taplo|yazi
 mpv-config|$MPV_CONFIG|managed|text|configs|none|none
@@ -40,7 +38,7 @@ vimrc|$VIMRC|managed|text|configs|none|none
 nanorc|$NANORC|managed|text|configs|none|none
 mise-config|$MISE_CONFIG|managed|text|configs|none|mise
 topgrade-config|$TOPGRADE_CONFIG|managed|text|configs|none|topgrade
-fastfetch-config|$FASTFETCH_CONFIG|managed|text|configs|none|none
+fastfetch-config|$FASTFETCH_CONFIG|managed|text|configs|none|fastfetch
 mprocs-config|$MPROCS_CONFIG|managed|text|configs|none|none
 broot-config|$BROOT_CONF|managed|text|configs|none|none
 broot-skin|$BROOT_SKIN|managed|text|configs|none|none
@@ -110,6 +108,7 @@ retired-newsboat-config|$HOME/.newsboat/config|superseded|text|configs|none|none
 retired-newsboat-urls|$HOME/.newsboat/urls|superseded|text|configs|none|none
 retired-git-lfs-helper|$HOME/Scripts/bin/git-lfs-enable-repo|superseded|shell|configs|bash|none
 retired-zellij-dev-layout|$ZELLIJ_LAYOUTS/dev.kdl|superseded|kdl|configs|zellij|none
+retired-zellij-home-layout|$ZELLIJ_LAYOUTS/home.kdl|superseded|kdl|configs|zellij|none
 retired-miller-config|$HOME/.mlrrc|superseded|text|configs|none|none
 retired-nushell-env|$HOME/.config/nushell/env.nu|superseded|shell|configs|bash|none
 retired-nushell-config|$HOME/.config/nushell/config.nu|superseded|shell|configs|bash|none

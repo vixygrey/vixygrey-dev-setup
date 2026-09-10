@@ -185,6 +185,20 @@ OUR
     [[ "$output" == *"GONE"* ]]
 }
 
+@test "remove_superseded_managed: honors the configured comment prefix (#561)" {
+    run run_with_helpers '
+        cat > "$HOME/old" <<OUR
+// >>> dev-setup managed block (do not edit between the markers) >>>
+body
+// <<< dev-setup managed block <<<
+OUR
+        remove_superseded_managed "$HOME/old" "test reason" "#561" "//"
+        test -e "$HOME/old" && echo STILL_THERE || echo GONE
+    '
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"GONE"* ]]
+}
+
 @test "remove_superseded_managed: no-op when the file is already absent" {
     run run_with_helpers '
         remove_superseded_managed "$HOME/never-was" "test reason" "#259"
