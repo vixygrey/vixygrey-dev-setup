@@ -2,4 +2,19 @@
 #
 # GitHub issues remain the system of record for this repo. An entry here is the
 # working note for an investigation in progress, not a replacement for the issue.
-bugs: []
+bugs:
+  - bug_id: BUG-2026-09-10T183556Z
+    date: 2026-09-10
+    severity: medium
+    priority: high
+    scope: omp
+    summary: Bigpowers MCP server cannot start because OMP cannot resolve its working directory.
+    file: specs/bugs/BUG-2026-09-10T183556Z-bigpowers-mcp-startup.md
+    status: fixed
+    files_changed:
+      - scripts/setup-dev-tools-mac.sh
+      - tests/helpers.bats
+      - CHANGELOG.md
+    approach: Disable the redundant server through the generated OMP user denylist.
+    risk_level: low
+    commit_message: "fix(omp): disable redundant broken Bigpowers MCP"

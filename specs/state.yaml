@@ -7,6 +7,20 @@
 workflow_mode: team-pr
 
 active_phase: discover
+active_flow: fix_bug
+
+bug_cycle:
+  current_step: 5
+  completed_steps:
+    - 1
+    - 2
+    - 3
+    - 4
+  bug_id: BUG-2026-09-10T183556Z
+
+metrics:
+  story_start: "2026-09-10T18:35:56Z"
+
 
 project:
   name: vixygrey-dev-setup
@@ -16,9 +30,8 @@ project:
 
 status:
   summary: >-
-    specs/ adopted from the machine's new-project template (#493). Planning
-    artifacts are stubs awaiting their owning skills; tech-stack.md and adr/ are
-    populated.
+    Issue #580 is fixed and verified. OMP disables the broken duplicate MCP
+    server while the native Bigpowers extension remains active.
 
 handoff:
-  next_skill: survey-context
+  next_skill: release-branch
