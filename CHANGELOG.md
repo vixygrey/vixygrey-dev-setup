@@ -21,12 +21,17 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - Corrected CI, verification, and pre-commit coverage claims (#535).
 - Routed omp by workload and made local Qwen the final fallback (#538).
 - Narrowed omp's shared skills to `api-testing`, `d2-diagrams`, and `office-layout-check` (#540).
+- Replaced Ollama with source-built llama.cpp configured for Vulkan only, Qwen2.5 Coder 14B, and a login service (#542).
 
 ### Removed
 
 - Removed Tiki installation, configuration, notebook scaffolding, and six skills. Existing files under `~/Documents/notes` remain untouched (#540).
 - Removed the dbmate skill while retaining the dbmate CLI (#540).
 - Removed `turn-counter.ts`, `permission-gate.ts`, `confirm-destructive.ts`, `git-checkpoint.ts`, `dirty-repo-guard.ts`, and `notify.ts` from omp (#540).
+- Removed vhs, Claude Desktop, Claude Code, wiper, glab, doxx, Mullvad, Bun, bmm, manly, Git LFS, and GitKraken CLI (#542).
+- Removed act3, ni, broot, asciinema, jolt, Visual Studio Code, GitHub Copilot CLI, aichat, Turborepo, and Lighthouse (#542).
+- Removed Pearcleaner, dockutil, terminal-notifier, herald, Shottr, Skim, office-py, p7zip, newsboat, and Google Workspace CLI (#542).
+- Removed OrbStack, SketchyBar, croft, reminders-cli, apw, and the exclusive artifacts owned by all retired tools (#542).
 
 ### Fixed
 

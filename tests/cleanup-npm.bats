@@ -90,15 +90,6 @@ teardown() {
     [ ! -s "$TEST_TMP/npm-uninstall.log" ]
 }
 
-@test "all three declared npm rows are recognised, not just the first" {
-    mkdir -p "$NPM_ROOT/playwright" "$NPM_ROOT/storybook" "$NPM_ROOT/repomix"
-    run bash "$SETUP_SCRIPT" --cleanup --dry-run --no-prompt
-    [ "$status" -eq 0 ]
-    [[ "$output" == *"Would remove: Playwright (replaced by removed)"* ]]
-    [[ "$output" == *"Would remove: Storybook CLI (replaced by removed)"* ]]
-    [[ "$output" == *"Would remove: repomix (npm copy) (replaced by Claude Code)"* ]]
-    [[ "$output" != *"unknown entry type 'npm'"* ]]
-}
 
 @test "a missing npm makes every npm row a skip, not an error" {
     # _npm_root is empty when npm is absent. Removing the stub is the only way to
@@ -111,23 +102,6 @@ teardown() {
     [[ "$output" != *"unknown entry type 'npm'"* ]]
 }
 
-@test "pi carries a DEPRECATED_TOOLS row now that it is retired (#513)" {
-    # This test asserted the OPPOSITE until #513, citing #399: pi was a supported
-    # second agent, so reinstalling it by hand was legitimate and --cleanup had to
-    # leave it alone. That reasoning ended when pi was retired in favour of omp,
-    # which is its own fork. tmux, helix and aider all carry rows for the same
-    # reason, and the row is what makes --cleanup sweep ~/.pi through CONFIG_ORPHANS.
-    run bash -c "grep -E '^[[:space:]]+\"npm:' '$SETUP_SCRIPT' | grep -c 'pi-coding-agent' || true"
-    [ "$output" -eq 1 ]
-}
-
-@test "~/.pi is swept by CONFIG_ORPHANS, guarded on pi being gone (#513)" {
-    # The directory holds hand-placed extensions and auth.json, so the two guards
-    # in CONVENTIONS section 15 both have to hold: the sweep fires only when the
-    # binary is absent, and it goes to the Trash rather than rm -rf.
-    run grep -cE '^[[:space:]]+"pi\|\$HOME/\.pi\|omp"' "$SETUP_SCRIPT"
-    [ "$output" -eq 1 ]
-}
 
 @test "an unknown entry type still hits the loud default" {
     # Regression guard for the #242 class: a type matching no arm must warn, not

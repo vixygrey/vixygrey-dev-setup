@@ -96,12 +96,8 @@ success() {
 # configured() — configuration was applied. Counts into `Configured:`, separately from
 # installs, and is SILENT under --dry-run.
 #
-# "Configuration", not "a config file was written": the macos-defaults segments apply
-# system settings through `defaults write`, `networksetup` and `dockutil` rather than
-# by writing a file we own, and they belong in this bucket for the same reason a
-# config file does (#500). They reported through success() until then, so a run that
-# installed nothing announced `Installed: 29` — the #381 defect surviving in a section
-# that fix did not reach. A fourth counter would split a distinction nobody needs.
+# "Configuration" includes generated files and macOS defaults. These actions use
+# `defaults write` and `networksetup`, but still belong in the Configured count (#500).
 #
 # Silent rather than reworded: these messages are past-tense summaries ("delta
 # configured as git pager"), and no prefix makes a past-tense sentence honest about
@@ -152,18 +148,6 @@ banner() {
     log "=== $title ==="
 }
 
-# macOS notification helpers — silently no-op if terminal-notifier isn't installed yet
-notify_success() {
-    local message="$1"
-    command -v terminal-notifier >/dev/null 2>&1 || return 0
-    terminal-notifier -title "Dev Setup" -subtitle "Completed" -message "$message" -sound Glass -group vixygrey-dev-setup >/dev/null 2>&1 || true
-}
-
-notify_failure() {
-    local message="$1"
-    command -v terminal-notifier >/dev/null 2>&1 || return 0
-    terminal-notifier -title "Dev Setup" -subtitle "Failed" -message "$message" -sound Basso -group vixygrey-dev-setup >/dev/null 2>&1 || true
-}
 
 # -- Counters -----------------------------------------------------------------
 INSTALL_SUCCESS=0
@@ -185,14 +169,14 @@ managed_note() { printf '%s\t%s\n' "$1" "$2" >> "$MANAGED_STATE"; }
 managed_list() { [[ -s "$MANAGED_STATE" ]] && awk -F'\t' -v k="$1" '$1 == k { print $2 }' "$MANAGED_STATE" | sort -u; }
 
 # Dynamic total — count all install calls in this script so the progress bar stays accurate
-# when tools are added or removed. Counts brew_install, brew_cask_install, npm_global_install,
-# go_install, uv_tool_install and vscode_ext_install, including those inside conditionals.
+# when tools are added or removed. Counts brew_install, brew_cask_install,
+# npm_global_install, go_install, and uv_tool_install, including conditionals.
 # A new install helper MUST be added to this pattern or its calls run un-counted and the
 # bar overshoots 100%.
 # Count all install calls + standalone progress calls for accurate progress bar
 # Note: `grep -c` prints "0" AND exits 1 on zero matches, so `|| echo 0` would append
 # a SECOND "0" ("0\n0") and break the arithmetic. Use `|| true` + a default instead.
-_INSTALL_CALLS=$(grep -cE '^\s*(brew_install|brew_cask_install|npm_global_install|go_install|uv_tool_install|vscode_ext_install) ' "$0" 2>/dev/null || true)
+_INSTALL_CALLS=$(grep -cE '^\s*(brew_install|brew_cask_install|npm_global_install|go_install|uv_tool_install) ' "$0" 2>/dev/null || true)
 _PROGRESS_CALLS=$(grep -cE '^\s*progress\s*$' "$0" 2>/dev/null || true)
 INSTALL_TOTAL=$(( ${_INSTALL_CALLS:-0} + ${_PROGRESS_CALLS:-0} ))
 [[ "$INSTALL_TOTAL" -eq 0 ]] && INSTALL_TOTAL=200
@@ -350,14 +334,12 @@ ALL_CATEGORIES=(
     api
     networking
     dx
-    ux
     docs
     mac-system
     mac-productivity
     mac-browsers
     mac-media
     mac-cloud
-    mac-focus
     dracula
     configs
     filesystem
@@ -368,35 +350,33 @@ ALL_CATEGORIES=(
 # Category descriptions for interactive picker (must match ALL_CATEGORIES order)
 declare -A CATEGORY_DESC=(
     [prerequisites]="Xcode CLI Tools, Homebrew, GNU coreutils"
-    [core]="mise (Node, Python), Go, Rust, OrbStack, bun, uv, pnpm, PyYAML helper venv"
-    [git]="Git, GitHub CLI, glab, delta, lazygit, gk, pre-commit framework (hooks + config: configs)"
+    [core]="mise (Node, Python), Go, Rust, uv, pnpm, PyYAML helper venv"
+    [git]="Git, GitHub CLI, delta, lazygit, pre-commit framework (hooks + config: configs)"
     [aws]="AWS CLI, CDK, SAM, Granted, cfn-lint, e1s/e2c/stu/claws (TUIs), s5cmd, steampipe, dynein, iamlive"
     [iac]="OpenTofu (Terraform), tflint, terraform-docs, checkov, infracost"
     [security]="detect-secrets, gitleaks, trivy, semgrep, ClamAV, Objective-See"
     [replacements]="eza, bat, fd, ripgrep, zoxide, btop, sd, dust, just, rovr, fx, etc."
     [data-processing]="yq, miller, csvkit, jc, jqp, pandoc, ffmpeg, ImageMagick"
-    [code-quality]="shellcheck, shfmt, actionlint, act, act3, hadolint, ruff, prettier, commitizen, ni"
+    [code-quality]="shellcheck, shfmt, actionlint, act, hadolint, ruff, prettier, commitizen"
     [perf-testing]="hyperfine, oha"
     [dev-servers]="ngrok, miniserve, caddy"
-    [terminal-productivity]="leaf, watchexec, gum, nushell, topgrade, fastfetch, mprocs, broot, nnn, doxx, taproom, qalc, vhs, lazyssh/rsync/npm, lazyenv, keyward, bmm, manly, cheznav, apw, has, jolt, wiper, starlit, kondo"
+    [terminal-productivity]="leaf, watchexec, gum, nushell, topgrade, fastfetch, mprocs, nnn, taproom, qalc, lazyssh/rsync/npm, lazyenv, keyward, cheznav, has, starlit, kondo"
     [k8s-github]="stern, gh-dash"
     [database]="duckdb, pgcli, mycli, lazysql, harlequin, usql, sq"
     [containers]="lazydocker, dive, kubectl, k9s"
     [api]="ATAC, grpcurl"
     [networking]="mtr, bandwhich, nmap"
-    [dx]="fzf, starship, atuin, croft, micro, VS Code (+ extensions), Ghostty, zellij, llm, aichat, omp"
-    [ux]="Lighthouse"
+    [dx]="fzf, starship, atuin, micro, Ghostty, zellij, llm, omp"
     [docs]="d2, Mermaid CLI"
-    [mac-system]="Pearcleaner, dockutil, terminal-notifier"
-    [mac-productivity]="reminders-cli, Skim, LibreOffice"
+    [mac-system]="LuLu"
+    [mac-productivity]="LibreOffice, Vulkan llama.cpp"
     [mac-browsers]="Carbonyl, w3m, monolith"
-    [mac-media]="mpv, oxipng, jpegoptim, 7zip, cliamp"
+    [mac-media]="mpv, oxipng, jpegoptim, cliamp"
     [mac-cloud]="rclone, borg"
-    [mac-focus]="newsboat"
     [dracula]="Dracula-Sakura theme pass for terminal, editor, and TUI surfaces"
-    [configs]="EVERY tool's generated config + git hooks + Claude setup (not in the tool's own category)"
+    [configs]="Every tool's generated config, git hooks, and omp setup"
     [filesystem]="Directory structure, helper scripts, git identity"
-    [macos-defaults]="Dock, Finder, keyboard, screenshots, Touch ID, DNS"
+    [macos-defaults]="Finder, keyboard, screenshots, Touch ID, DNS"
     [shell]="\$HOME/.zshrc, Brewfile export"
 )
 
@@ -418,16 +398,15 @@ declare -A CONFIG_LIVES_IN_CONFIGS=(
     [code-quality]="shellcheck, act, prettier, editorconfig"
     [replacements]="btop, ripgreprc, fdignore, aria2"
     [data-processing]="yt-dlp, miller, jqp"
-    [terminal-productivity]="leaf, nushell, topgrade, fastfetch, asciinema, mprocs, broot"
+    [terminal-productivity]="leaf, nushell, topgrade, fastfetch, mprocs"
     [k8s-github]="stern, gh-dash"
     [database]="pgcli, mycli, harlequin"
     [containers]="lazydocker, k9s (config + Dracula skin)"
     [networking]="trippy"
-    [dx]="atuin, croft config/theme, zellij, Ghostty, VS Code settings, aichat, omp (~/.omp/agent + shared ~/.agents/skills links) — and starship, which is in the \`dracula\` category"
-    [mac-productivity]="herald theme asset + theme-name merge"
-    [mac-focus]="newsboat"
+    [dx]="atuin, zellij, Ghostty, omp (~/.omp/agent + ~/.agents/skills) — and starship, which is in the \`dracula\` category"
     [mac-media]="mpv"
     [mac-browsers]="w3m"
+    [mac-productivity]="llama.cpp service"
 )
 
 # Loud default: a key here that is not a real category is a notice that can never
@@ -1221,10 +1200,9 @@ write_managed_script() {
 }
 
 # write_generated <file>   (content on stdin)
-# For script-owned files that CANNOT carry managed-block markers:
-#   - Claude agents start with YAML frontmatter, which must be on line 1
-#   - Claude slash commands are prompts — the whole file is fed to the model, so a
-#     marker line would end up as part of the instruction
+# For script-owned files that cannot carry managed-block markers. Examples
+# include prompt files with required frontmatter and machine-read data formats.
+# The function keeps marker text out of content that a consumer parses verbatim.
 # Refreshes only when the content differs, and backs up whatever it replaces, so an
 # edit made on the machine is recoverable. The alternative in use before this was a
 # create-once guard ("directory already has agents"), under which one pre-existing
@@ -1509,68 +1487,6 @@ npm_global_install() {
     fi
 }
 
-# vscode_ext_install <publisher.extension-id> <description>
-# Installs a VS Code extension via the `code` CLI. The visual-studio-code cask ships
-# `code` as a Binary artifact, so it lands on PATH with the app — no in-app "Shell
-# Command: Install 'code' command" step needed.
-#
-# Two details worth keeping:
-#   - The installed-extension list is read ONCE into _VSCODE_EXTS (see the dx section)
-#     rather than shelling out per extension. `code --list-extensions` boots Electron
-#     and takes ~1s; at 27 extensions that is ~27s of nothing on an already-provisioned
-#     machine. The cached list is compared case-insensitively because the marketplace
-#     is case-preserving but `code` matches IDs case-insensitively.
-#   - Extension IDs must be verified against the marketplace before being added here.
-#     A wrong ID is not a loud failure — `code` prints "not found" and exits non-zero,
-#     which lands as one red line in a 300-line run. See CONTRIBUTING/AGENTS on naming
-#     the real thing rather than the plausible thing.
-vscode_ext_install() {
-    local ext="$1"
-    local name="${2:-$1}"
-    progress
-    is_done "vscode-ext:$ext" && { warn "$name already completed (resume)"; return 0; }
-    # DRY_RUN is checked BEFORE the `code` guard on purpose. A dry run reports what a real
-    # run would do, and a real run installs the cask (which provides `code`) a few lines
-    # above this. Guarding first made a fresh-machine dry run say it would install VS Code
-    # and then refuse to preview a single extension — the preview was useless exactly where
-    # it matters most.
-    #
-    # But that is the FRESH-machine case, and the same branch was being taken on a machine
-    # where `code` exists and can answer the question — so a dry run printed 26 "Would
-    # install" lines for 26 extensions that were all already present, and counted none of
-    # them as skipped (#372). Ask when we can, fall back to the unconditional preview when
-    # we cannot; the brew helpers already resolve already-installed inside their dry-run
-    # branch this way.
-    if [[ "$DRY_RUN" == "true" ]]; then
-        if installed code; then
-            [[ -z "${_VSCODE_EXTS+x}" ]] && _VSCODE_EXTS=$(code --list-extensions 2>/dev/null || true)
-            if printf '%s\n' "$_VSCODE_EXTS" | grep -qix -- "$ext"; then
-                warn "[DRY RUN] $name — already installed"
-                return 0
-            fi
-        fi
-        info "[DRY RUN] Would install VS Code extension: $name ($ext)"
-        return 0
-    fi
-    if ! installed code; then
-        warn "Skipping $name — the 'code' CLI is not available (cask install failed?)"
-        return 0
-    fi
-    # Cached list from the dx section; falls back to a live query if unset.
-    [[ -z "${_VSCODE_EXTS+x}" ]] && _VSCODE_EXTS=$(code --list-extensions 2>/dev/null || true)
-    if printf '%s\n' "$_VSCODE_EXTS" | grep -qix -- "$ext"; then
-        warn "$name already installed"
-        mark_done "vscode-ext:$ext"
-    else
-        info "Installing VS Code extension: $name..."
-        if code --install-extension "$ext" --force >> "$LOG_FILE" 2>&1; then
-            success "$name installed"
-            mark_done "vscode-ext:$ext"
-        else
-            error "Failed to install VS Code extension: $name ($ext)"
-        fi
-    fi
-}
 
 # go_install <import-path@ver> <cmd-name> <description>
 # Installs a Go tool into $GOBIN (the dir the login shell puts on PATH), so it's
@@ -1702,9 +1618,9 @@ trust_tap() {
     brew tap "$tap" >> "$LOG_FILE" 2>&1 || true
     # brew reads its trust from $XDG_CONFIG_HOME/homebrew/trust.json when XDG_CONFIG_HOME
     # is set (interactive shells — we export it) but from ~/.homebrew/trust.json when it
-    # isn't (launchd / `brew services` at login). Write BOTH, so tapped-formula SERVICES
-    # (e.g. sketchybar via `brew services`) auto-start at login — not just interactive
-    # installs. Writing to one location only leaves the other context refusing the tap.
+    # isn't (launchd / `brew services` at login). Write BOTH, so tapped-formula
+    # services auto-start at login, not only after an interactive install.
+    # Writing one location leaves the other context refusing the tap.
     XDG_CONFIG_HOME="$HOME/.config" brew trust --tap "$tap" >> "$LOG_FILE" 2>&1 \
         || warn "Could not trust tap $tap — installs from it may be refused by Homebrew"
     env -u XDG_CONFIG_HOME brew trust --tap "$tap" >> "$LOG_FILE" 2>&1 || true
@@ -1856,7 +1772,7 @@ echo -e "${BOLD}${MAGENTA}"
 echo "  ╔══════════════════════════════════════════════════════════════╗"
 echo "  ║           macOS Dev Environment Setup v${SCRIPT_VERSION}              ║"
 echo "  ║                                                              ║"
-echo "  ║  200+ tools · 50+ configs · Dracula-Sakura terminal-first Mac  ║"
+echo "  ║  Curated tools · managed configs · Dracula-Sakura terminal Mac  ║"
 echo "  ╚══════════════════════════════════════════════════════════════╝"
 echo -e "${NC}"
 
@@ -1890,25 +1806,15 @@ if [[ "$UNINSTALL" == "true" ]]; then
     echo "# Remove Rust (installed via rustup):"
     echo "  rustup self uninstall"
     echo ""
-    echo "# Remove tools not managed by brew (--cleanup can't reach these):"
-    echo "  npm uninstall -g @github/copilot         # GitHub Copilot CLI"
-    echo "  gh extension remove github/gh-copilot   # the RETIRED gh-extension Copilot CLI, if still present"
-    echo "  rm -f ~/.local/share/go/bin/helix-assist  # dropped Claude LSP for Helix"
-    echo "  cargo uninstall croft                    # the terminal IDE (if you want it gone)"
+    echo "# Remove tools not managed by Homebrew:"
+    echo "  rm -f ~/.local/bin/llama-cli ~/.local/bin/llama-server"
+    echo "  rm -rf ~/.local/share/llama.cpp-vulkan ~/.local/share/llama.cpp"
+    echo "  launchctl bootout gui/\$(id -u) ~/Library/LaunchAgents/dev.vixygrey.llama-cpp.plist 2>/dev/null || true"
+    echo "  rm -f ~/Library/LaunchAgents/dev.vixygrey.llama-cpp.plist"
     echo ""
-    echo "# Remove VS Code's per-user trees (the cask uninstall leaves these behind):"
-    echo "  rm -rf ~/.vscode                          # installed extensions"
-    echo "  rm -rf \"\$HOME/Library/Application Support/Code\"   # settings, state, workspace storage"
-    echo ""
-    echo "# Remove Claude Code config (CAREFUL — contains your custom rules):"
-    echo "  rm -rf ~/.claude/settings.json ~/.claude/CLAUDE.md ~/.claude/rules ~/.claude/hooks ~/.claude/commands ~/.claude/agents ~/.claude/statusline.sh"
-    echo ""
-    echo "# Remove bigpowers and the shared-skill links omp reads:"
-    echo "  npm uninstall -g bigpowers"
-    echo "  rm -f ~/.agents/skills/api-testing ~/.agents/skills/d2-diagrams ~/.agents/skills/office-layout-check"
-    echo ""
-    echo "# Remove omp config and sessions (the formula goes with the brew bundle cleanup above):"
+    echo "# Remove OMP config, sessions, and generated shared skills:"
     echo "  rm -rf ~/.omp"
+    echo "  rm -rf ~/.agents/skills/api-testing ~/.agents/skills/d2-diagrams ~/.agents/skills/office-layout-check"
     echo "  brew untap can1357/tap"
     echo ""
     echo "# Remove Helix config:"
@@ -1942,18 +1848,17 @@ if [[ "$CLEANUP" == "true" ]]; then
     # appname (optional, 5th field) = actual .app name when it differs from display-name.
     # Used as fallback to find apps in /Applications that weren't installed via Homebrew.
     #
-    # type is one of: formula (alias: brew), cask, mas, npm. `npm` is the canonical
-    # spelling for a package this script once installed with `npm_global_install`
-    # (#399) — deliberately NOT given an alias, because the brew/formula pair is the
-    # one #242 had to clean up after. Anything else hits the loud `*)` default below.
+    # type is one of: formula (alias: brew), cask, mas, npm, uv, cargo.
+    # Package types identify tools that this script installed through matching helpers.
+    # Anything else hits the loud `*)` default below.
     DEPRECATED_TOOLS=(
         "brew:tmux:tmux:zellij"
         "brew:helix:Helix (hx):micro"
-        "brew:aider:aider:Claude Code"
-        "brew:repomix:repomix:Claude Code"
-        "brew:aerc:aerc:herald"
-        "brew:khal:khal:herald"
-        "brew:vdirsyncer:vdirsyncer:herald"
+        "brew:aider:aider:omp"
+        "brew:repomix:repomix:omp"
+        "brew:aerc:aerc:removed"
+        "brew:khal:khal:removed"
+        "brew:vdirsyncer:vdirsyncer:removed"
         "brew:tldr:tldr (unmaintained, disabled upstream):tlrc"
         # npm globals this script installed and later dropped. Until #399 there was no
         # way to express these at all, so they stayed on every machine that had them.
@@ -1961,34 +1866,75 @@ if [[ "$CLEANUP" == "true" ]]; then
         # formula never touched an npm copy.
         "npm:playwright:Playwright:removed"
         "npm:storybook:Storybook CLI:removed"
-        "npm:repomix:repomix (npm copy):Claude Code"
+        "npm:repomix:repomix (npm copy):omp"
         # Retired in #513: omp replaced pi. ~/.pi goes with it through
         # CONFIG_ORPHANS below.
         "npm:@earendil-works/pi-coding-agent:pi (superseded by omp):omp"
         # Retired in #540. Personal notes under ~/Documents/notes stay untouched.
         "brew:boolean-maybe/tap/tiki:tiki:plain Markdown + reminders"
+        # Retired in #542. Cleanup removes the packages first, then removes
+        # exclusive per-user data only after the owning command or app is absent.
+        "formula:vhs:vhs:removed"
+        "cask:claude:Claude:removed:Claude"
+        "formula:ollama:Ollama:llama.cpp"
+        "formula:bendews/tap/apw:apw:removed"
+        "formula:keith/formulae/reminders-cli:reminders-cli:removed"
+        "npm:@anthropic-ai/claude-code:Claude Code CLI:omp"
+        "npm:bigpowers:bigpowers:removed"
+        "formula:ikebastuz/wiper/wiper:wiper:removed"
+        "formula:glab:glab:removed"
+        "formula:doxx:doxx:removed"
+        "cask:mullvad-vpn:Mullvad VPN:removed:Mullvad VPN"
+        "formula:oven-sh/bun/bun:bun:removed"
+        "formula:dhth/tap/bmm:bmm:removed"
+        "uv:manly:manly:removed"
+        "formula:git-lfs:Git LFS:removed"
+        "cask:gitkraken-cli:GitKraken CLI:removed"
+        "formula:dhth/tap/act3:act3:removed"
+        "npm:@antfu/ni:ni:removed"
+        "formula:broot:broot:removed"
+        "formula:asciinema:asciinema:removed"
+        "formula:jordond/tap/jolt:jolt:removed"
+        "cask:visual-studio-code:Visual Studio Code:micro:Visual Studio Code"
+        "npm:@github/copilot:GitHub Copilot CLI:omp"
+        "formula:aichat:aichat:removed"
+        "npm:turbo:Turborepo:removed"
+        "npm:lighthouse:Lighthouse CLI:removed"
+        "cask:pearcleaner:Pearcleaner:removed:Pearcleaner"
+        "formula:dockutil:dockutil:removed"
+        "formula:terminal-notifier:terminal-notifier:removed"
+        "formula:herald-email/herald/herald:herald:removed"
+        "cask:shottr:Shottr:removed:Shottr"
+        "cask:skim:Skim:removed:Skim"
+        "formula:p7zip:p7zip:removed"
+        "formula:newsboat:newsboat:removed"
+        "formula:googleworkspace-cli:Google Workspace CLI:removed"
+        "formula:gws:gws (git-workspace):removed"
+        "cask:gcloud-cli:Google Cloud CLI:removed"
+        "cask:google-cloud-sdk:Google Cloud SDK:removed"
+        "cask:orbstack:OrbStack:removed:OrbStack"
         "cask:qlmarkdown:QLMarkdown (Quick Look):removed"
         "cask:qlstephen:QLStephen (Quick Look):removed"
-        "cask:protonvpn:Proton VPN:Mullvad VPN"
+        "cask:protonvpn:Proton VPN:removed"
         "cask:proton-mail:Proton Mail:removed"
         "cask:proton-pass:Proton Pass:removed"
         "cask:proton-drive:Proton Drive:removed"
-        "cask:docker:Docker Desktop:OrbStack:Docker"
+        "cask:docker:Docker Desktop:removed:Docker"
         "cask:warp:Warp terminal:Ghostty:Warp"
         "cask:iterm2:iTerm2:Ghostty:iTerm"
-        "cask:cursor:Cursor (AI editor):croft + Claude Code:Cursor"
-        "cask:kiro:Kiro:croft + Claude Code:Kiro"
-        # NOTE: visual-studio-code is deliberately NOT here. It was retired in favour of
-        # croft and reinstated as the GUI editor alongside it (#303) — croft is still
-        # primary. Cursor and Kiro stay retired; the objection was to three overlapping
-        # Electron editors, not to having one.
+        "cargo:croft:croft:micro"
+        "formula:FelixKratz/formulae/sketchybar:SketchyBar:removed"
+        "cask:font-sketchybar-app-font:SketchyBar app font:removed"
+        "formula:blueutil:blueutil:removed"
+        "cask:cursor:Cursor (AI editor):micro + omp:Cursor"
+        "cask:kiro:Kiro:micro + omp:Kiro"
         "cask:bruno:Bruno:ATAC:Bruno"
         "cask:dbeaver-community:DBeaver Community:harlequin + lazysql:DBeaver"
         "cask:cyberduck:Cyberduck:rclone:Cyberduck"
         "cask:google-drive:Google Drive:rclone:Google Drive"
         "cask:drawio:draw.io:d2 + mermaid-cli:draw.io"
         "cask:notion:Notion:plain Markdown + reminders:Notion"
-        "cask:notion-calendar:Notion Calendar:herald:Notion Calendar"
+        "cask:notion-calendar:Notion Calendar:removed:Notion Calendar"
         "brew:yazi:yazi:rovr"
         "brew:cmus:cmus:cliamp"
         "brew:kew:kew:cliamp"
@@ -2012,7 +1958,7 @@ if [[ "$CLEANUP" == "true" ]]; then
         "cask:postman:Postman:Bruno"
         "cask:daisydisk:DaisyDisk:dust + duf (CLI)"
         "cask:proxyman:Proxyman:mitmproxy"
-        "cask:appcleaner:AppCleaner:Pearcleaner"
+        "cask:appcleaner:AppCleaner:removed"
         "cask:bartender:Bartender:removed:Bartender 4"
         "cask:jordanbaird-ice:Ice:removed"
         "mas:1502839586:Hand Mirror:removed"
@@ -2036,9 +1982,9 @@ if [[ "$CLEANUP" == "true" ]]; then
         "formula:httpie:HTTPie:xh"
         "formula:git-secrets:git-secrets:gitleaks + detect-secrets"
         "formula:trufflehog:trufflehog:gitleaks + detect-secrets"
-        "cask:the-unarchiver:The Unarchiver:p7zip (CLI)"
-        "cask:transmit:Transmit:Cyberduck:Transmit"
-        "cask:colima:colima:OrbStack"
+        "cask:the-unarchiver:The Unarchiver:ouch"
+        "cask:transmit:Transmit:rclone:Transmit"
+        "cask:colima:colima:removed"
         "cask:blockblock:BlockBlock:removed"
         "cask:oversight:OverSight:removed"
         "cask:knockknock:KnockKnock:removed"
@@ -2047,17 +1993,17 @@ if [[ "$CLEANUP" == "true" ]]; then
         "mas:937984704:Amphetamine:removed"
         "cask:stats:Stats:removed"
         "cask:rectangle:Rectangle:removed"
-        "cask:snagit:Snagit:Shottr:Snagit"
+        "cask:snagit:Snagit:removed:Snagit"
         "cask:signal:Signal:removed"
         "formula:gifski:gifski:removed"
-        "mas:6475002485:Reeder:newsboat"
+        "mas:6475002485:Reeder:removed"
         "formula:mas:mas:removed"
         "cask:tableplus:TablePlus:DBeaver:TablePlus"
         "cask:iina:IINA:mpv (CLI)"
         "cask:imageoptim:ImageOptim:oxipng + jpegoptim (CLI)"
-        "cask:keka:Keka:p7zip (CLI)"
+        "cask:keka:Keka:ouch"
         "formula:entr:entr:watchexec"
-        "cask:zed:Zed:croft:Zed"
+        "cask:zed:Zed:micro:Zed"
         "cask:slack:Slack:removed"
         "cask:telegram:Telegram:removed"
         "cask:notion-mail:Notion Mail:removed (retired by Notion):Notion Mail"
@@ -2071,6 +2017,10 @@ if [[ "$CLEANUP" == "true" ]]; then
     # which makes every npm row a skip instead of an error.
     _npm_root=""
     if installed npm; then _npm_root="$(npm root -g 2>/dev/null || true)"; fi
+    _uv_tools=""
+    if installed uv; then _uv_tools="$(uv tool list 2>/dev/null || true)"; fi
+    _cargo_tools=""
+    if installed cargo; then _cargo_tools="$(cargo install --list 2>/dev/null || true)"; fi
 
     for entry in "${DEPRECATED_TOOLS[@]}"; do
         IFS=':' read -r type name display replacement appname <<< "$entry"
@@ -2084,6 +2034,12 @@ if [[ "$CLEANUP" == "true" ]]; then
                         info "[DRY RUN] Would remove: $display (replaced by $replacement)"
                     else
                         info "Removing $display (replaced by $replacement)..."
+                        if [[ "$name" == "ollama" || "$name" == "bendews/tap/apw" || "$name" == "FelixKratz/formulae/sketchybar" ]]; then
+                            brew services stop "$name" >> "$LOG_FILE" 2>&1 || true
+                        fi
+                        if [[ "$name" == "git-lfs" ]]; then
+                            git lfs uninstall --skip-repo >> "$LOG_FILE" 2>&1 || true
+                        fi
                         if brew uninstall "$name" >> "$LOG_FILE" 2>&1; then success "$display removed"; else error "Failed to remove $display"; fi
                         ((CLEANUP_COUNT++))
                     fi
@@ -2097,7 +2053,16 @@ if [[ "$CLEANUP" == "true" ]]; then
                         info "[DRY RUN] Would remove: $display (replaced by $replacement)"
                     else
                         info "Removing $display (replaced by $replacement)..."
-                        if brew uninstall --cask "$name" >> "$LOG_FILE" 2>&1; then success "$display removed"; else error "Failed to remove $display"; fi
+                        case "$name" in
+                            claude|mullvad-vpn|gitkraken-cli|visual-studio-code|pearcleaner|shottr|skim|orbstack)
+                                _cask_remove=(brew uninstall --cask --zap "$name")
+                                ;;
+                            *)
+                                _cask_remove=(brew uninstall --cask "$name")
+                                ;;
+                        esac
+                        if "${_cask_remove[@]}" >> "$LOG_FILE" 2>&1; then success "$display removed"; else error "Failed to remove $display"; fi
+                        unset _cask_remove
                         ((CLEANUP_COUNT++))
                     fi
                 elif [[ -d "/Applications/$appname.app" ]]; then
@@ -2157,6 +2122,32 @@ if [[ "$CLEANUP" == "true" ]]; then
                     ((CLEANUP_SKIPPED++))
                 fi
                 ;;
+            uv)
+                if printf '%s\n' "$_uv_tools" | grep -qE "^${name} "; then
+                    if [[ "$DRY_RUN" == "true" ]]; then
+                        info "[DRY RUN] Would remove: $display (replaced by $replacement)"
+                    else
+                        info "Removing $display (replaced by $replacement)..."
+                        if uv tool uninstall "$name" >> "$LOG_FILE" 2>&1; then success "$display removed"; else error "Failed to remove $display"; fi
+                        ((CLEANUP_COUNT++))
+                    fi
+                else
+                    ((CLEANUP_SKIPPED++))
+                fi
+                ;;
+            cargo)
+                if printf '%s\n' "$_cargo_tools" | grep -qE "^${name} v"; then
+                    if [[ "$DRY_RUN" == "true" ]]; then
+                        info "[DRY RUN] Would remove: $display (replaced by $replacement)"
+                    else
+                        info "Removing $display (replaced by $replacement)..."
+                        if cargo uninstall "$name" >> "$LOG_FILE" 2>&1; then success "$display removed"; else error "Failed to remove $display"; fi
+                        ((CLEANUP_COUNT++))
+                    fi
+                else
+                    ((CLEANUP_SKIPPED++))
+                fi
+                ;;
             *)
                 # A deprecated-tool entry whose type field matches no branch would
                 # otherwise be a silent no-op (the tool never gets removed and the
@@ -2168,27 +2159,26 @@ if [[ "$CLEANUP" == "true" ]]; then
                 ;;
         esac
     done
+    unset _uv_tools _cargo_tools
 
-    # -- Orphaned editor support trees ----------------------------------------
-    # Uninstalling the VS Code / Kiro / Cursor casks above removes the .app, but
-    # Homebrew never owned their per-user trees — the extension folders and the
-    # Application Support state stay behind indefinitely. On the maintainer's
-    # machine that was ~1.5 GB across 73 extension folders for three editors that
-    # had already been replaced by croft + Claude Code.
-    #
-    # Guarded two ways: only touch a tree whose .app is genuinely absent (so a
-    # manual reinstall is never gutted), and prefer `trash` over `rm -rf` so a
-    # mistake is recoverable from the Finder Trash rather than final.
-    # VS Code is absent from this list by design: the script now installs it
-    # (#303), so `~/.vscode` holds extensions we put there and Application Support holds
-    # settings we merge into. The `.app`-present guard below would spare them on a normal
-    # machine, but a failed cask install or an app moved out of /Applications would make
-    # cleanup eat a managed tree. Only genuinely retired editors belong here.
+    # -- Orphaned application support trees ----------------------------------
+    # Homebrew removes an app bundle but does not remove its per-user data.
+    # Remove only paths for retired apps after the matching app bundle is absent.
+    # Prefer Trash so each removal stays recoverable.
     ORPHANED_EDITOR_DIRS=(
         "Kiro|$HOME/.kiro"
         "Kiro|$HOME/Library/Application Support/Kiro"
         "Cursor|$HOME/.cursor"
         "Cursor|$HOME/Library/Application Support/Cursor"
+        "Visual Studio Code|$HOME/.vscode"
+        "Visual Studio Code|$HOME/Library/Application Support/Code"
+        "Claude|$HOME/Library/Application Support/Claude"
+        "Mullvad VPN|$HOME/Library/Application Support/Mullvad VPN"
+        "Pearcleaner|$HOME/Library/Application Support/Pearcleaner"
+        "Shottr|$HOME/Library/Application Support/Shottr"
+        "Skim|$HOME/Library/Application Support/Skim"
+        "OrbStack|$HOME/.orbstack"
+        "OrbStack|$HOME/Library/Application Support/OrbStack"
     )
     for entry in "${ORPHANED_EDITOR_DIRS[@]}"; do
         _app="${entry%%|*}"
@@ -2222,30 +2212,44 @@ if [[ "$CLEANUP" == "true" ]]; then
     done
     unset _app _dir _pretty
 
-    # -- Orphaned config dirs -------------------------------------------------
-    # Uninstalling a tool above removes the binary, never its ~/.config tree, so
-    # replaced tools leave a working config behind forever — the aerc/khal/
-    # vdirsyncer trio is an entire stale mail+calendar setup for tools herald
-    # replaced in 7.3.0.
+    # office-py was a generator-owned link into a generator-owned virtual environment.
+    # Remove only the exact link target, then remove the isolated environment.
+    _office_venv="$HOME/.local/share/dev-setup/office-venv"
+    _office_link="$HOME/.local/bin/office-py"
+    if [[ -L "$_office_link" && "$(readlink "$_office_link")" == "$_office_venv/bin/python" ]]; then
+        if [[ "$DRY_RUN" == "true" ]]; then
+            info "[DRY RUN] Would remove $_office_link"
+        elif rm -f "$_office_link"; then
+            ((CLEANUP_COUNT++)); success "$HOME/.local/bin/office-py removed"
+        else
+            error "Failed to remove $_office_link"
+        fi
+    fi
+    if [[ -d "$_office_venv" ]]; then
+        if [[ "$DRY_RUN" == "true" ]]; then
+            info "[DRY RUN] Would remove $_office_venv"
+        elif installed trash && trash "$_office_venv" >> "$LOG_FILE" 2>&1; then
+            ((CLEANUP_COUNT++)); success "office-py environment moved to Trash"
+        elif rm -rf "$_office_venv"; then
+            ((CLEANUP_COUNT++)); success "office-py environment removed"
+        else
+            error "Failed to remove $_office_venv"
+        fi
+    fi
+    unset _office_venv _office_link
+
+    # -- Orphaned config and data paths --------------------------------------
+    # Uninstalling a CLI removes its binary, not its per-user data. This sweep
+    # runs after package removal and requires the owning command to be absent.
     #
-    # The guard is binary PRESENCE, not a static list of what is retired. That
-    # matters twice: a tool still installed keeps its config (you may be using
-    # it), and because this sweep runs AFTER the uninstall loop above, anything
-    # retired earlier in this same invocation is already gone from PATH and gets
-    # swept in the same pass. hash -r first, or bash serves a cached path for a
-    # binary that was deleted moments ago.
-    #
-    # ~/.docker is deliberately ABSENT from this list even though Docker Desktop
-    # is in DEPRECATED_TOOLS. OrbStack took over that directory: config.json
-    # holds `currentContext: orbstack` and the registry `auths`, with daemon.json
-    # beside it. Removing it would break the docker CLI and destroy stored
-    # credentials. The presence guard already saves us (OrbStack provides
-    # `docker`), but do not "fix" this omission by adding the path.
+    # ~/.docker is deliberately absent. Docker clients and container runtimes
+    # share its contexts and registry credentials. Removing OrbStack does not
+    # prove ownership of that shared directory.
     hash -r 2>/dev/null || true
     CONFIG_ORPHANS=(
-        "aerc|$HOME/.config/aerc|herald"
-        "khal|$HOME/.config/khal|herald"
-        "vdirsyncer|$HOME/.config/vdirsyncer|herald"
+        "aerc|$HOME/.config/aerc|removed"
+        "khal|$HOME/.config/khal|removed"
+        "vdirsyncer|$HOME/.config/vdirsyncer|removed"
         "hx|$HOME/.config/helix|micro"
         "cmus|$HOME/.config/cmus|cliamp"
         "kew|$HOME/.config/kew|cliamp"
@@ -2262,6 +2266,39 @@ if [[ "$CLEANUP" == "true" ]]; then
         # than deleting it, so it stays recoverable from Finder until emptied.
         "pi|$HOME/.pi|omp"
         "tiki|$HOME/.config/tiki|plain Markdown + reminders"
+        "ollama|$HOME/.ollama|llama.cpp"
+        "vhs|$HOME/.config/vhs|removed"
+        "wiper|$HOME/.config/wiper|removed"
+        "doxx|$HOME/.config/doxx|removed"
+        "apw|$HOME/.config/apw|removed"
+        "act3|$HOME/.config/act3|removed"
+        "manly|$HOME/.config/manly|removed"
+        "bun|$HOME/.bun|removed"
+        "bmm|$HOME/.local/share/bmm|removed"
+        "bmm|$HOME/.config/bmm|removed"
+        "glab|$HOME/.config/glab-cli|removed"
+        "gk|$HOME/.local/share/GitKrakenCLI|removed"
+        "gk|$HOME/.local/share/gk|removed"
+        "gk|$HOME/.gitkraken|removed"
+        "broot|$HOME/.config/broot|removed"
+        "asciinema|$HOME/.config/asciinema|removed"
+        "jolt|$HOME/.config/jolt|removed"
+        "copilot|$HOME/.copilot|omp"
+        "turbo|$HOME/.cache/turbo|removed"
+        "aichat|$HOME/.config/aichat|removed"
+        "lighthouse|$HOME/.cache/lighthouse|removed"
+        "herald|$HOME/.herald|removed"
+        "newsboat|$HOME/.newsboat|removed"
+        "gws|$HOME/.config/gws|removed"
+        "gcloud|$HOME/.config/gcloud|removed"
+        # CAUTION: These paths can contain credentials and session history that
+        # the generator did not write. Removal is explicit under --cleanup and
+        # uses Trash after both Claude command providers are absent.
+        "claude|$HOME/.claude|removed"
+        "claude|$HOME/.claude.json|removed"
+        "croft|$HOME/.config/croft|micro"
+        "croft|$HOME/.cache/croft-build.noindex|micro"
+        "sketchybar|$HOME/.config/sketchybar|removed"
     )
     for entry in "${CONFIG_ORPHANS[@]}"; do
         _tool="${entry%%|*}"
@@ -2361,6 +2398,14 @@ if [[ "$CLEANUP" == "true" ]]; then
         "nikitabobko/tap|AeroSpace"
         "snyk/tap|snyk"
         "boolean-maybe/tap|tiki"
+        "oven-sh/bun|bun"
+        "dhth/tap|act3 and bmm"
+        "jordond/tap|jolt"
+        "ikebastuz/wiper|wiper"
+        "herald-email/herald|herald"
+        "FelixKratz/formulae|SketchyBar"
+        "bendews/tap|apw"
+        "keith/formulae|reminders-cli"
     )
     for entry in "${DEPRECATED_TAPS[@]}"; do
         _tap="${entry%%|*}"
@@ -2451,9 +2496,6 @@ if [[ "$VERIFY" == "true" ]]; then
     echo -e "${BOLD}${CYAN}Verifying generated config against the installed tools${NC}"
     echo ""
 
-    # asciinema has no `config check`. It does fail loudly on a config it cannot
-    # read, so drive its cheapest subcommand and look for a CONFIG complaint —
-    # not the unrelated "Device not configured" that a non-tty play always emits.
     _verify_lnav() {
         # lnav refuses /dev/null ("unable to open file ... Invalid argument"), so
         # it needs a real file to open before it will answer anything (#518).
@@ -2463,21 +2505,10 @@ if [[ "$VERIFY" == "true" ]]; then
         rm -f "$probe"
         grep -qE '^/ui/theme = "dracula-sakura"' <<<"$out"
     }
-    _verify_asciinema() {
-        local out cast; cast="$(mktemp)"
-        printf '{"version":2,"width":80,"height":24}\n' > "$cast"
-        out="$(asciinema play "$cast" 2>&1)"
-        rm -f "$cast"
-        ! grep -qiE 'TOML parse error|asciinema 2\.x|invalid type' <<<"$out"
-    }
 
-    # topgrade and starship both lie in their exit codes, so both need the asciinema
-    # treatment: capture the output, then judge it. Critically, the check must NOT be
-    # written inline as `! cmd | grep -q ...` — this script runs under `set -o pipefail`
-    # (line ~1289), `topgrade --dry-run` exits 1 even on a perfectly good config, so the
-    # pipeline would return topgrade's 1, the `!` would flip it to 0, and the row would
-    # report OK for a config topgrade had just rejected. A check that cannot fail is worse
-    # than no check, because the summary counts it as verified.
+    # topgrade and starship can return misleading exit codes. Capture their output
+    # and judge the reported parse result. A check that cannot fail is worse than
+    # no check because the summary counts it as verified.
     _verify_topgrade() {
         # `--dry-run` executes nothing; it prints the steps. On a config it cannot accept it
         # prints "Failed to deserialize <path>" and does no work at all. ~3s.
@@ -2512,7 +2543,6 @@ if [[ "$VERIFY" == "true" ]]; then
         "validate|ghostty|$HOME/.config/ghostty/config|ghostty +validate-config"
         "validate|zellij|$HOME/.config/zellij/config.kdl|_verify_output_has 'Well defined' zellij setup --check"
         "validate|ngrok|$HOME/Library/Application Support/ngrok/ngrok.yml|ngrok config check"
-        "validate|asciinema|$HOME/.config/asciinema/config.toml|_verify_asciinema"
         "template|borgmatic|$HOME/.config/borgmatic/config.yaml|borgmatic config validate"
         "path|k9s|$HOME/.config/k9s/config.yaml|k9s info 2>/dev/null | sed 's/\x1b\[[0-9;]*m//g' | sed -n 's/^Config: *//p'"
         "path|mise|$HOME/.config/mise/config.toml|mise config ls 2>/dev/null | awk 'NR==1 {print \$1}' | sed \"s|^~|\$HOME|\""
@@ -2889,9 +2919,9 @@ if installed mise; then
     # above registers a PROMPT_COMMAND hook, and PROMPT_COMMAND never fires in a
     # non-interactive script — so PATH does not pick up node until the next shell. Without
     # this, `installed npm` is false for the rest of the run whenever the invoking shell
-    # did not already have mise's node in front, and every npm_global_install below (Claude
-    # Code, prettier, commitizen, copilot, …) silently no-ops while the run still reports
-    # "Failed: 0". `mise which` resolves the real binary without needing the hook.
+    # did not already have mise's node in front, and every later npm_global_install
+    # silently no-ops while the run still reports "Failed: 0". `mise which` resolves
+    # the real binary without needing the hook.
     if [[ "$DRY_RUN" != "true" ]]; then
         _mise_node="$(mise which node 2>/dev/null || true)"
         if [[ -n "$_mise_node" ]]; then
@@ -2982,18 +3012,6 @@ fi
 mark_done "install:rust"
 fi
 
-# Docker (OrbStack is faster alternative — both installed, pick your preference)
-brew_cask_install "orbstack" "OrbStack (Docker runtime — faster, 2-5x less memory than Docker Desktop)"
-
-# bun (fast JS runtime, bundler, test runner — alternative to Node for scripts)
-# Trust the tap explicitly. A fully-qualified `user/tap/formula` install auto-taps,
-# but Homebrew 6's trust gate is separate from tapping — every other tapped formula
-# here is preceded by trust_tap, and these two were the only ones relying on the
-# fully-qualified form instead. Already-provisioned machines have the trust recorded
-# from earlier runs, so the gap only bites a FRESH install. Redundant if brew treats
-# the qualified form as consent; correct either way.
-trust_tap oven-sh/bun
-brew_install "oven-sh/bun/bun" "bun (fast JS runtime/bundler/test runner)"
 
 # pnpm
 progress
@@ -3033,12 +3051,8 @@ fi
 if ! installed pnpm && [[ -d "$HOME/.local/share/pnpm" ]]; then
     export PATH="$HOME/.local/share/pnpm:$PATH"
 fi
-# bun
-if ! installed bun && [[ -d "$HOME/.bun/bin" ]]; then
-    export PATH="$HOME/.bun/bin:$PATH"
-fi
 # Report what's available
-for tool in node npm go cargo rustc bun pnpm uv; do
+for tool in node npm go cargo rustc pnpm uv; do
     if installed "$tool"; then
         log "RUNTIME: $tool found at $(which "$tool")"
     else
@@ -3054,22 +3068,12 @@ banner "Git & GitHub"
 
 brew_install "git" "Git"
 brew_install "gh" "GitHub CLI"
-# GitHub stays primary; glab is the GitLab CLI for client repos hosted on GitLab.
-brew_install "glab" "glab (GitLab CLI — mirrors gh conveniences for GitLab repos)"
 brew_install "git-delta" "delta (better git diffs)"
-brew_install "git-lfs" "Git LFS"
 brew_install "gnupg" "GnuPG (commit signing)"
 brew_install "pinentry-mac" "pinentry-mac (GPG passphrase)"
 brew_install "lazygit" "lazygit (terminal UI for git)"
 brew_install "git-absorb" "git-absorb (auto-fixup commits)"
 brew_install "git-cliff" "git-cliff (generate changelogs from conventional commits)"
-# gk — GitKraken's CLI, installed for exactly one reason: it serves the GitKraken MCP
-# server registered with Claude Code further down. It used to arrive as a 19 MB binary
-# that the GitLens VS Code extension downloaded into its own globalStorage, which meant
-# an MCP server this setup depends on lived inside an extension no generator step owned
-# and that uninstalling the extension silently killed 31 agent tools (#362). The cask
-# ships `gk` as a Binary artifact, so it is on PATH straight after install.
-brew_cask_install "gitkraken-cli" "GitKraken CLI (gk — serves the GitKraken MCP server)"
 
 # pre-commit
 brew_install "pre-commit" "pre-commit (git hook framework)"
@@ -3392,7 +3396,7 @@ brew_install "vivid" "vivid (LS_COLORS generator — colorize file listings by t
 # make -> just: modern command runner, simpler syntax, no tab weirdness
 brew_install "just" "just (replaces make — simpler task runner, no tab issues)"
 
-# file manager -> rovr: mouse-first, VS Code-Explorer-style TUI file manager (Textual).
+# file manager -> rovr: mouse-first project-tree TUI file manager (Textual).
 # nnn is kept (below) as a fast, minimal fallback. rovr is not on Homebrew — install
 # via uv (needs Python 3.13, which uv fetches automatically).
 uv_tool_install rovr rovr "rovr (mouse-first TUI file manager; uv fetches Python 3.13)" \
@@ -3435,8 +3439,8 @@ brew_install "tectonic" "tectonic (self-contained LaTeX/PDF engine for pandoc �
 # imagemagick: image manipulation CLI
 brew_install "imagemagick" "ImageMagick (image resize, convert, composite)"
 
-# poppler: PDF utilities — pdftoppm (PDF->PNG), pdftotext, pdfinfo. Lets Claude
-# rasterize the PDFs LibreOffice produces so it can visually inspect slides/pages.
+# poppler: PDF utilities — pdftoppm (PDF->PNG), pdftotext, pdfinfo. These tools
+# rasterize the PDFs LibreOffice produces for visual inspection.
 brew_install "poppler" "poppler (PDF tools — pdftoppm, pdftotext, pdfinfo)"
 
 # ffmpeg: video/audio processing
@@ -3455,15 +3459,13 @@ brew_install "shellcheck" "shellcheck (shell script linter)"
 brew_install "shfmt" "shfmt (shell script formatter)"
 brew_install "actionlint" "actionlint (GitHub Actions workflow linter)"
 brew_install "act" "act (run GitHub Actions locally)"
-trust_tap dhth/tap
-brew_install "dhth/tap/act3" "act3 (glance at last 3 GitHub Actions runs — dhth tap, not homebrew-core)"
 brew_install "hadolint" "hadolint (Dockerfile linter — catches bad practices)"
 
 # Python linting (ruff — extremely fast, replaces flake8+black+isort)
 brew_install "ruff" "ruff (fast Python linter+formatter — replaces flake8+black+isort)"
-# prettier — the JS/TS/CSS/MD formatter the generated CLAUDE.md mandates and the
-# pre-push checklist runs. It was documented but never installed, so the Claude
-# format-on-edit hook found nothing on PATH and silently no-opped.
+# prettier — the JS/TS/CSS/MD formatter the generated agent context requires and the
+# pre-push checklist runs. It was documented but never installed, so the format-on-edit
+# hook found nothing on PATH and silently no-opped.
 #
 # Installed from npm, NOT brew (#343). The Homebrew formula depends on `node`, so
 # `brew install prettier` silently pulled in a second Node — 26.8.1 — alongside the
@@ -3543,9 +3545,8 @@ if installed npm; then
     # config-conventional as per-project devDeps (e.g. via pre-commit/husky); no global
     # config is shipped here — it wouldn't resolve.
     npm_global_install "@commitlint/cli" "commitlint (conventional-commit linter — wire per-project)"
-    npm_global_install "@antfu/ni" "ni (universal package runner — auto-detects npm/yarn/pnpm/bun)"
 else
-    progress; progress; progress; progress; progress  # keep progress bar accurate when npm unavailable
+    progress; progress; progress; progress  # keep progress bar accurate when npm unavailable
 fi
 
 # commitizen adapter config — JSON, so written directly (write_managed would inject
@@ -3598,39 +3599,29 @@ fi
 brew_install "watchexec" "watchexec (run commands on file changes — better entr)"
 brew_install "pv" "pv (pipe viewer — progress bars for pipes)"
 brew_install "parallel" "parallel (GNU parallel — run commands in parallel)"
-brew_install "asciinema" "asciinema (record & share terminal sessions)"
 brew_install "gum" "gum (shell script UI toolkit — prompts, spinners, confirmations)"
 brew_install "nushell" "nushell (structured data shell — pipelines output tables)"
 brew_install "topgrade" "topgrade (update everything — brew, npm, pip, macOS, all at once)"
 brew_install "fastfetch" "fastfetch (quick system info display — faster neofetch)"
 brew_install "mprocs" "mprocs (TUI for running multiple dev processes)"
-brew_install "broot" "broot (directory tree/file navigation TUI)"
 brew_install "nano" "nano (latest — better than macOS built-in)"
 brew_install "lnav" "lnav (advanced log file viewer — auto-format, SQL queries on logs)"
 brew_install "nnn" "nnn (tiny, fast terminal file manager)"
 brew_install "progress" "progress (coreutils progress viewer — cp, mv, dd, tar)"
 
 # -- Additional TUI/CLI tools (homebrew-core) --
-brew_install "doxx" "doxx (.docx viewer in the terminal)"
 brew_install "taproom" "taproom (interactive Homebrew TUI — browse formulae & casks)"
 brew_install "lazyssh" "lazyssh (SSH connection manager TUI)"
 brew_install "lazyrsync" "lazyrsync (rsync TUI with reusable profiles)"
 brew_install "libqalculate" "qalc (powerful CLI calculator — units, live currency, variables)"
-brew_install "vhs" "vhs (scripted terminal GIF/MP4 recorder — pairs with asciinema)"
 
 # -- Additional TUI/CLI tools (third-party taps) --
 trust_tap jesseduffield/lazynpm
 brew_install "jesseduffield/lazynpm/lazynpm" "lazynpm (npm TUI — joins lazygit/lazydocker/lazysql)"
 trust_tap djetelina/tap
 brew_install "djetelina/tap/cheznav" "cheznav (chezmoi dotfiles TUI — dual-pane add/apply/diff)"
-trust_tap bendews/tap
-brew_install "bendews/tap/apw" "apw (Apple Passwords + OTP from the CLI)"
 trust_tap kdabir/tap
 brew_install "has" "has (checks presence & versions of CLI tools)"
-trust_tap jordond/tap
-brew_install "jordond/tap/jolt" "jolt (battery / energy monitor TUI)"
-trust_tap ikebastuz/wiper
-brew_install "ikebastuz/wiper/wiper" "wiper (interactive disk usage + cleanup — Trash-safe, ncdu-like)"
 
 # lazyenv — TUI for managing .env files across projects (diff/sync, secret masking,
 # .gitignore checks). Complements direnv (direnv loads; lazyenv edits/compares).
@@ -3639,10 +3630,6 @@ brew_install "lazynop/tap/lazyenv" "lazyenv (TUI for .env files — diff/sync ac
 # keyward — TUI SSH-key manager + A–F security audit + encrypted key backups.
 trust_tap gateway-of-last-resort/tap
 brew_cask_install "gateway-of-last-resort/tap/keyward" "keyward (SSH-key manager + security audit — offline, single binary)"
-# bmm — CLI/TUI bookmark manager (local, fzf-friendly). dhth/tap already trusted above.
-brew_install "dhth/tap/bmm" "bmm (bookmark manager — CLI + TUI, local, import HTML/JSON/TXT)"
-# manly — explains the flags in a command by pulling the relevant man-page lines.
-uv_tool_install manly manly "manly (man-page explainer — 'manly tar -xzf')" "manly installed"
 
 # starlit (weather CLI) — PyPI package 'starlit-cli', installed via uv.
 uv_tool_install starlit-cli starlit "starlit (weather CLI)" \
@@ -3699,8 +3686,8 @@ uv_tool_install 'harlequin[postgres,mysql,s3]' harlequin \
 # usql — not in Homebrew, install via Go (@latest intentionally unpinned).
 # go_install is DRY_RUN-aware and lands the binary in GOBIN (on PATH).
 go_install github.com/xo/usql@latest usql "usql (universal SQL CLI)"
-# Trust the tap explicitly — see the bun install for why the fully-qualified
-# formula name is not sufficient on a fresh machine.
+# Trust the tap explicitly. A fully qualified formula name is not sufficient on
+# a fresh machine when Homebrew requires trust for third-party taps.
 trust_tap neilotoole/sq
 brew_install "neilotoole/sq/sq" "sq (jq for databases — query SQLite, Postgres, CSV from one tool)"
 brew_install "dbmate" "dbmate (lightweight DB migrations)"
@@ -3763,233 +3750,52 @@ brew_install "atuin" "atuin (replaces shell history — SQLite-backed, searchabl
 # mise (single tool version manager — can replace nvm + pyenv)
 # mise already installed in core section
 
-# Editors & terminals
-# micro is the $EDITOR for git/gh/lazygit commit messages and quick edits (a full IDE is
-# clunky for those); croft (below) is the primary IDE. It replaced Helix in 7.6.0: modal
-# editing was friction rather than help here, and micro is the opposite trade — non-modal
-# (Ctrl+S/Ctrl+Q/Ctrl+C-V, nothing to learn) with a `keymenu` strip that keeps the
-# bindings on screen. Ships dracula-tc as a built-in colorscheme, so there is no theme
-# file to maintain.
+# Editors and terminals. micro is the editor for git messages, quick edits, and
+# full project work. It is nonmodal and keeps its key menu visible.
 brew_install "micro" "micro (non-modal terminal editor — \$EDITOR for git; on-screen key menu)"
-# croft — VS Code-style terminal IDE (primary editor). Rust, not on Homebrew; installed
-# from git main via cargo. Build in a .noindex dir so macOS Spotlight doesn't churn/heat
-# during the compile. AI pairing via `croft pair` rides the existing `claude` CLI
-# auth by default (--provider claude); no separate ANTHROPIC_API_KEY needed.
-if command -v croft &>/dev/null; then
-    warn "croft already installed"
-    progress
-elif installed cargo; then
-    info "Installing croft (primary terminal IDE) via cargo — compiles from source, may take a few minutes..."
-    if [[ "$DRY_RUN" == "true" ]]; then
-        info "[DRY RUN] Would: cargo install --git https://github.com/vitali87/croft.git --locked"
-    else
-        _croft_target="$HOME/.cache/croft-build.noindex"
-        mkdir -p "$_croft_target"
-        if CARGO_TARGET_DIR="$_croft_target" cargo install --git https://github.com/vitali87/croft.git --locked >> "$LOG_FILE" 2>&1; then
-            success "croft installed (primary IDE — run 'croft' to open, 'croft pair' for the AI navigator)"
-        else
-            error "Failed to install croft via cargo"
-        fi
-        unset _croft_target
-    fi
-    progress
-else
-    warn "Skipping croft — Rust/cargo not installed (rustup provides it)"
-    progress
-fi
-# Visual Studio Code — the GUI editor, secondary to croft (#303). croft covers the
-# terminal case and stays primary; this is the escape hatch for the things a TUI still
-# loses at (long refactors across many tabs, graphical diffs, extension-backed previews)
-# and for .editorconfig repos, which croft does not read at all. Reinstated after the 7.x
-# declutter removed all three Electron editors: the objection was to running VS Code *and*
-# Cursor *and* Kiro, not to having one.
-#
-# The cask ships `code` as a Binary artifact, so the CLI is on PATH straight after
-# install — the extension loop below depends on that.
-brew_cask_install "visual-studio-code" "Visual Studio Code (GUI editor — croft stays primary)"
-
-# Extensions. Every entry mirrors a CLI this script already installs, so the GUI editor
-# enforces the same rules as the terminal: ruff not black, taplo for TOML, shellcheck +
-# shfmt for shell, d2 for diagrams, EditorConfig honoured (which croft itself does not
-# support). Verified against the marketplace before landing — a wrong ID is a single red
-# line in a long run, not a loud failure.
-#
-# Read the installed list ONCE: `code --list-extensions` boots Electron (~1s), so the
-# per-extension check inside vscode_ext_install reads this cache instead of shelling out
-# 27 times on an already-provisioned machine.
-if installed code && [[ "$DRY_RUN" != "true" ]]; then
-    _VSCODE_EXTS=$(code --list-extensions 2>/dev/null || true)
-fi
-# Core — the ones that apply regardless of language
-vscode_ext_install "anthropic.claude-code" "Claude Code for VS Code"
-vscode_ext_install "dracula-theme.theme-dracula" "Dracula Official (theme — matches every other tool here)"
-vscode_ext_install "editorconfig.editorconfig" "EditorConfig (per-repo indent rules)"
-vscode_ext_install "esbenp.prettier-vscode" "Prettier (JS/TS/CSS/MD formatter)"
-vscode_ext_install "dbaeumer.vscode-eslint" "ESLint"
-vscode_ext_install "github.vscode-pull-request-github" "GitHub Pull Requests (matches the gh PR workflow)"
-vscode_ext_install "github.vscode-github-actions" "GitHub Actions (workflow syntax + run status)"
-vscode_ext_install "usernamehw.errorlens" "Error Lens (inline diagnostics)"
-vscode_ext_install "streetsidesoftware.code-spell-checker" "Code Spell Checker (GUI counterpart to typos)"
-vscode_ext_install "mikestead.dotenv" ".env syntax highlighting"
-# Languages — pairs with the language servers installed above for croft
-vscode_ext_install "ms-python.python" "Python"
-vscode_ext_install "detachhead.basedpyright" "basedpyright (Python type server — the same one croft uses)"
-vscode_ext_install "charliermarsh.ruff" "Ruff (Astral — the linter/formatter this setup mandates)"
-vscode_ext_install "rust-lang.rust-analyzer" "rust-analyzer (Rust)"
-vscode_ext_install "golang.go" "Go"
-vscode_ext_install "tamasfe.even-better-toml" "Even Better TOML (taplo-backed)"
-vscode_ext_install "redhat.vscode-yaml" "YAML"
-vscode_ext_install "bradlc.vscode-tailwindcss" "Tailwind CSS IntelliSense"
-# Infrastructure
-vscode_ext_install "ms-azuretools.vscode-docker" "Docker"
-vscode_ext_install "hashicorp.terraform" "HashiCorp Terraform (reads OpenTofu .tf files)"
-vscode_ext_install "ms-vscode-remote.remote-containers" "Dev Containers (OrbStack provides the runtime)"
-# Shell — the editors' half of shellcheck + shfmt
-vscode_ext_install "timonwong.shellcheck" "ShellCheck"
-vscode_ext_install "foxundermoon.shell-format" "shell-format (shfmt-backed)"
-# Docs & tasks
-vscode_ext_install "terrastruct.d2" "D2 (diagram syntax + preview)"
-vscode_ext_install "bierner.markdown-mermaid" "Mermaid in Markdown preview"
-vscode_ext_install "nefrob.vscode-just-syntax" "just (Justfile syntax)"
-
-# GitLens is NOT installed here, deliberately (#362). It was, for a long time, described in
-# this list as "blame, history, authorship" — three things lazygit, delta, difft and
-# git-cliff already do, in the terminal, which is where the work happens. GitLens 19 is a
-# much bigger freemium product than that description admits (Launchpad, Cloud Patches, Code
-# Suggest, workspaces, AI commit messages), most of it Pro-gated or duplicating a CLI above,
-# on an editor that is the escape hatch rather than the daily driver. 34 MB and an account
-# nag for a feature surface that went unused, which is the opposite of the rule stated at the
-# top of this list: every entry mirrors a CLI this script already installs.
-#
-# It was NOT a clean removal, and that is the part worth remembering. GitLens had
-# auto-registered the GitKraken MCP server into ~/.claude.json pointing at a `gk` binary
-# inside its own globalStorage — so 31 Claude Code tools depended on an extension no step in
-# this script owned, and uninstalling it would have killed them silently. `gitkraken-cli` is
-# now installed in the git section above and the MCP server is registered from here, so the
-# generator owns both ends. The standalone `gk mcp` serves the same 31 tools and reads the
-# same auth store; verified at tool-list and tool-call parity before the extension went.
-#
-# The one feature with no CLI equivalent is the inline blame annotation on the current line.
-# If it is ever missed, waderyan.gitblame is ~200 KB for that single behaviour.
-
-# GitHub Copilot is NOT installed here, deliberately (#356). Current VS Code ships it
-# BUILT IN — 1.136.1 carries copilot-chat 0.64.1 inside the app bundle
-# (Contents/Resources/app/extensions/copilot). `code --install-extension github.copilot`
-# pulls github.copilot-chat as a dependency and then fails:
-#
-#   Extension 'github.copilot-chat' is a built-in extension with version '0.64.1'
-#   and cannot be downgraded to version '0.48.1'.
-#
-# So adding it to this list buys nothing and prints a red "Failed" on every run — the kind
-# of routine noise that trains you to skim past real failures (the #327 lesson). Sign in to
-# the bundled extension instead; nothing needs installing. The CLI is a separate package and
-# IS managed, in the dx section.
-
-# Pylance — remove it (#308). `ms-python.python` declares an `extensionPack` of
-# [vscode-pylance, debugpy, vscode-python-envs], so installing Python silently also
-# installs Microsoft's *proprietary* type server. That contradicts the decision made in
-# #296, which chose basedpyright for croft precisely because it is the same server with
-# the closed-source parts restored as open source. Worse, it is not inert: with Pylance
-# installed, `python.languageServer: "Default"` resolves TO Pylance, so it — not
-# basedpyright — is what actually analyses Python in VS Code. The settings block pins
-# `python.languageServer: "None"` so ms-python starts no server of its own.
-#
-# Done HERE rather than in DEPRECATED_TOOLS, following the tlrc precedent from 7.11.0: a
-# swap left to `--cleanup` only ever reaches fresh machines. Pylance ships as a pack
-# member to every machine that installs ms-python.python, so the removal has to run where
-# the install runs, on every run, idempotently.
-#
-# debugpy and vscode-python-envs are kept — both MIT, and genuinely useful.
-if installed code && [[ "$DRY_RUN" != "true" ]]; then
-    if printf '%s\n' "$_VSCODE_EXTS" | grep -qix -- "ms-python.vscode-pylance" \
-       || code --list-extensions 2>/dev/null | grep -qix -- "ms-python.vscode-pylance"; then
-        info "Removing Pylance (proprietary — basedpyright is the type server here)..."
-        if code --uninstall-extension ms-python.vscode-pylance >> "$LOG_FILE" 2>&1; then
-            success "Pylance removed (VS Code now uses basedpyright, same as croft)"
-        else
-            warn "Could not remove Pylance — uninstall it manually from the Extensions pane"
-        fi
-    fi
-elif [[ "$DRY_RUN" == "true" ]]; then
-    info "[DRY RUN] Would remove Pylance if present (proprietary; basedpyright replaces it)"
-fi
-unset _VSCODE_EXTS
 
 brew_cask_install "ghostty" "Ghostty (fast GPU-accelerated terminal)"
 brew_install "zellij" "zellij (modern terminal multiplexer — discoverable UI, layouts)"
 
-# Language servers for croft (LSP for the main languages out of the box). These outlived
-# the Helix removal in 7.6.0 — croft consumes them too, so retiring Helix orphaned nothing.
-# Python uses ruff's built-in server (already installed). TOML/Markdown via brew:
-brew_install "taplo" "taplo (TOML language server + formatter — used by croft)"
-brew_install "marksman" "marksman (Markdown language server — used by croft)"
+# Language servers for OMP and other editor clients.
+brew_install "taplo" "taplo (TOML language server and formatter)"
+brew_install "marksman" "marksman (Markdown language server)"
 if installed npm; then
-    npm_global_install "typescript-language-server" "TypeScript/JavaScript language server (croft LSP)"
-    npm_global_install "vscode-langservers-extracted" "HTML/CSS/JSON/ESLint language servers (croft LSP)"
-    npm_global_install "bash-language-server" "Bash language server (croft LSP)"
-    npm_global_install "yaml-language-server" "YAML language server (croft LSP)"
+    npm_global_install "typescript-language-server" "TypeScript and JavaScript language server"
+    npm_global_install "vscode-langservers-extracted" "HTML, CSS, JSON, and ESLint language servers"
+    npm_global_install "bash-language-server" "Bash language server"
+    npm_global_install "yaml-language-server" "YAML language server"
 else
     progress; progress; progress; progress  # keep progress bar accurate when npm unavailable
 fi
 
-# Python language servers. croft ships a built-in manifest — "Python (ty +
-# basedpyright + ruff)" — that expects these by exact command name, with `ty` at
-# priority 0 ("wins every capability it advertises"), basedpyright as the fallback
-# for what ty does not yet cover, and ruff for lint. Without them croft falls
-# through to ruff alone: lint and format, no type checking or go-to-definition,
-# which left Python the one language here without full coverage (#288). PyPI, so
-# uv rather than npm — and basedpyright rather than Microsoft's pyright, which is
-# the same server with the closed-source parts removed.
-uv_tool_install ty ty "ty (Astral Python type server — croft LSP, priority 0)" \
-    "ty installed (Python type checking in croft)"
+# Python language servers for OMP and other editor clients.
+uv_tool_install ty ty "ty (Astral Python type server)" \
+    "ty installed"
 uv_tool_install basedpyright basedpyright-langserver \
-    "basedpyright (open-source pyright fork — croft LSP fallback)" \
-    "basedpyright installed (Python completion + go-to-definition)"
+    "basedpyright (open-source pyright fork)" \
+    "basedpyright installed"
 if [[ "$DRY_RUN" != "true" ]]; then
-    # rust-analyzer (Rust LSP) via rustup component; gopls (Go LSP) via go install.
+    # Add the Rust and Go language servers when their toolchains are available.
     if installed rustup; then
-        rustup component add rust-analyzer >> "$LOG_FILE" 2>&1 || warn "Could not add rust-analyzer component (Rust LSP for croft)"
+        rustup component add rust-analyzer >> "$LOG_FILE" 2>&1 || warn "Could not add rust-analyzer"
     fi
     if installed go; then
-        info "Installing gopls (Go LSP for croft) — compiles, may take a moment..."
-        go install golang.org/x/tools/gopls@latest >> "$LOG_FILE" 2>&1 || warn "Could not install gopls (Go LSP for croft)"
+        info "Installing gopls..."
+        go install golang.org/x/tools/gopls@latest >> "$LOG_FILE" 2>&1 || warn "Could not install gopls"
     fi
 fi
 
-# AI tools
-brew_install "aichat" "aichat (all-in-one AI CLI chat / shell copilot)"
 # pi was retired in #513. omp replaces its agent runtime, web search, local model
-# discovery, and approval policies. `--cleanup` uninstalls pi and sweeps ~/.pi.
-# Oh My Pi (omp) — the maximalist fork of Pi: 32 tools, LSP, DAP, subagents, and nine
-# workload-routed model roles. Claude Code keeps MCP and the broad automation.
-#
-# From the TAP, not npm, for two reasons. The npm package declares `engines.bun >=
-# 1.3.14` (it is a Bun program, not a Node one), so `npm_global_install` is the wrong
-# helper and there is no bun equivalent. And the tap ships a prebuilt native binary
-# into $HOMEBREW_PREFIX/bin, which is on the PATH of `sh`, git hooks and launchd —
-# a mise/npm-managed copy is not (#345). `brew_install` strips the tap prefix for its
-# installed-state snapshot, so the tapped name is safe to pass straight through.
+# discovery, and approval policies.
+# Oh My Pi (omp) is a prebuilt native binary with LSP, DAP, subagents, and
+# workload-routed model roles. The Homebrew tap keeps it available to shells, hooks,
+# and launchd without a separate JavaScript runtime.
 trust_tap can1357/tap
 brew_install "can1357/tap/omp" "omp (Oh My Pi — workload-routed agent harness)"
-# Claude Code (installed via npm, not brew). bigpowers is installed globally too so its
-# own Claude-side helper can link skills/hooks from the package tree in the configs pass.
-if installed npm; then
-    npm_global_install "bigpowers@2.88.1" "bigpowers (third-party skill pack for Claude Code)"
-    npm_global_install "@anthropic-ai/claude-code" "Claude Code (AI-assisted coding in terminal)"
-    # GitHub Copilot CLI (#356). A STANDALONE npm package now — `gh extension install
-    # github/gh-copilot` is the retired path, and the uninstall notes still pointed at it.
-    # Requires Node 22+; mise pins 24.18.1. Installing it here rather than via Homebrew keeps
-    # it in the one npm tree (#343) and gets it a mise shim, so #353 links it into
-    # ~/.local/bin and `copilot` resolves from git hooks and GUI editors, not just zsh.
-    npm_global_install "@github/copilot" "GitHub Copilot CLI (\`copilot\`)"
-else
-    progress  # keep progress bar accurate when npm unavailable
-fi
-# Additional LLM CLIs that pair with Claude Code.
-# Install llm as an isolated uv tool WITH the Anthropic plugin bundled. Homebrew's
-# llm is externally-managed, so `llm install llm-anthropic` can't upgrade llm to the
-# version the plugin needs and fails — `llm` then has no Anthropic backend at all.
-# The uv venv also makes `llm models default` stick. (uv bin ~/.local/bin is on PATH.)
+# Install llm as an isolated uv tool with the Anthropic plugin bundled. Homebrew's
+# llm is externally managed, so `llm install llm-anthropic` cannot upgrade llm to the
+# version the plugin needs. The uv environment also makes `llm models default` persist.
 uv_tool_install llm llm "llm (Simon Willison's CLI — one-shot prompts, plugins, embeddings) + Anthropic plugin" "llm installed via uv (Anthropic plugin bundled)" --with llm-anthropic
 
 # Point `llm` at Claude — its built-in default is OpenAI gpt-4o-mini,
@@ -4001,12 +3807,7 @@ if [[ "$DRY_RUN" != "true" ]] && installed llm; then
         || warn "Could not set llm default model (run: llm models default anthropic/claude-sonnet-4-5)"
 fi
 
-# Window management, status bar & clipboard (replaces Raycast + Spotlight)
-# SketchyBar — status bar / menu-bar replacement (Dracula), + app-icon font + bluetooth helper.
-trust_tap FelixKratz/formulae
-brew_install "FelixKratz/formulae/sketchybar" "SketchyBar (customizable macOS status bar)"
-brew_cask_install "font-sketchybar-app-font" "sketchybar-app-font (app glyphs for SketchyBar)"
-brew_install "blueutil" "blueutil (Bluetooth control from CLI — SketchyBar widget)"
+# Clipboard history
 # clipse — TUI clipboard manager (replaces Raycast clipboard history). Not on Homebrew.
 go_install github.com/savedra1/clipse@latest clipse "clipse (TUI clipboard manager)"
 
@@ -4021,9 +3822,8 @@ brew_cask_install "mitmproxy" "mitmproxy (HTTP/HTTPS debugging proxy — free Pr
 if installed npm; then
     npm_global_install "typescript" "TypeScript"
     npm_global_install "tsx" "tsx (TS execute)"
-    npm_global_install "turbo" "Turborepo"
 else
-    progress; progress; progress  # keep progress bar accurate when npm unavailable
+    progress; progress  # keep progress bar accurate when npm unavailable
 fi
 
 # fzf key bindings
@@ -4044,18 +3844,6 @@ fi
 
 fi  # dx
 
-# =============================================================================
-if should_run "ux"; then
-banner "UX & Design"
-
-# Lighthouse (via npm)
-if installed npm; then
-    npm_global_install "lighthouse" "Lighthouse CLI"
-else
-    progress  # keep progress bar accurate when npm unavailable
-fi
-
-fi  # ux
 
 # =============================================================================
 if should_run "docs"; then
@@ -4079,15 +3867,6 @@ banner "Mac Apps — System & Utilities"
 
 # UniFi Identity Endpoint removed (dropped from setup).
 brew_cask_install "lulu" "LuLu (outbound firewall)"
-# Bundles the `mullvad` CLI at /usr/local/bin/mullvad (no separate install needed).
-brew_cask_install "mullvad-vpn" "Mullvad VPN (privacy-focused; bundles the mullvad CLI)"
-
-# Utilities
-brew_cask_install "pearcleaner" "Pearcleaner (open-source deep app uninstaller)"
-
-# macOS scripting helpers — used by this script (Dock pins, notifications)
-brew_install "dockutil" "dockutil (manage Dock pins programmatically)"
-brew_install "terminal-notifier" "terminal-notifier (send macOS notifications from shell scripts)"
 
 # No Quick Look plugins. QLMarkdown and QLStephen were dropped in 7.11.0 — Finder
 # preview is not part of this workflow (files get read in the terminal), qlstephen was
@@ -4101,182 +3880,106 @@ fi  # mac-system
 if should_run "mac-productivity"; then
 banner "Mac Apps — Productivity"
 
-brew_cask_install "claude" "Claude (AI assistant)"
+# llama.cpp replaces Ollama as the local OMP provider. Homebrew's llama.cpp bottle
+# enables Metal on macOS, so build the pinned release from source with Vulkan only.
+# MoltenVK translates Vulkan to Metal while preserving the requested backend.
+brew_install "ninja" "Ninja (llama.cpp build runner)"
+brew_install "vulkan-loader" "Vulkan loader (llama.cpp backend)"
+brew_install "molten-vk" "MoltenVK (Vulkan on macOS)"
+brew_install "shaderc" "shaderc (Vulkan shader compiler)"
+brew_install "spirv-headers" "SPIR-V headers (llama.cpp Vulkan backend)"
+brew_install "openssl@3" "OpenSSL (llama.cpp server transport)"
 
-# Terminal email + calendar → herald: one app for email AND calendar (Gmail work +
-# iCloud personal, IMAP/SMTP + CalDAV), with built-in AI triage/summaries and an MCP
-# server for Claude. Replaced aerc + khal + vdirsyncer (three tools → one). Herald
-# self-configures via its own onboarding (no hand-written config); see the checklist.
-trust_tap herald-email/herald
-brew_install "herald-email/herald/herald" "herald (terminal email + calendar — Gmail + iCloud, AI triage, MCP server)"
-# Ollama — local LLM runtime that backs herald's built-in AI (triage, summaries, compose
-# styler) and `croft pair --provider ollama`. Both default to a local Ollama server on
-# 127.0.0.1:11434, so without it that "local, no-key" AI path is dead. The formula (not the
-# GUI cask) gives the `ollama` CLI + server; it stores models under ~/.ollama and needs no
-# config file of its own. We run it as a login service so herald's default endpoint is always
-# live, then seed the local model inventory this machine wants available. Two are
-# load-bearing for existing features here — gemma3:4b for herald text tasks + croft pair,
-# and nomic-embed-text-v2-moe for herald semantic search — and the additional chat/coding
-# models are restored so omp can reach the same local model set. Every step is
-# idempotent and honors --dry-run.
-brew_install "ollama" "ollama (local LLM runtime — backs herald AI + croft pair --provider ollama)"
-# Default model set, pulled on every run (skipped if already present). Keep the general
-# chat/coding models before the embedding model so docs and first-run guidance can name the
-# human-usable ones first.
-OLLAMA_DEFAULT_MODELS=(
-    "qwen2.5-coder:14b"         # local coding model for omp / Ollama-heavy loops (~9.0 GB)
-    "llama3.1:8b"              # general local assistant (~4.9 GB)
-    "gemma3:4b"                # herald triage/summaries/compose + croft pair (~3.3 GB)
-    "llama3.2:latest"          # smaller local general model (~2.0 GB)
-    "nomic-embed-text-v2-moe"  # embeddings: herald semantic search (~0.96 GB)
-)
-# A model is "present" if its name matches an `ollama list` row exactly — either as given
-# (an explicit tag like gemma3:4b) or with the implicit :latest tag Ollama adds to untagged
-# pulls (nomic-embed-text-v2-moe -> nomic-embed-text-v2-moe:latest).
-ollama_model_present() {
-    local model="$1" installed="$2"
-    printf '%s\n' "$installed" | grep -Fxq "$model" && return 0
-    printf '%s\n' "$installed" | grep -Fxq "${model}:latest"
-}
-if installed ollama; then
-    if [[ "$DRY_RUN" == "true" ]]; then
-        if brew services list 2>/dev/null | awk '$1=="ollama"{print $2}' | grep -qx started; then
-            warn "[DRY RUN] ollama service — already running"
-        else
-            info "[DRY RUN] Would run ollama as a login service (brew services start ollama)"
-        fi
-        _installed_models="$(ollama list 2>/dev/null | awk 'NR>1{print $1}')"
-        for _model in "${OLLAMA_DEFAULT_MODELS[@]}"; do
-            if ollama_model_present "$_model" "$_installed_models"; then
-                warn "[DRY RUN] ollama model $_model — already pulled"
-            else
-                info "[DRY RUN] Would pull ollama model $_model (one-time download)"
-            fi
-        done
-    else
-        if brew services list 2>/dev/null | awk '$1=="ollama"{print $2}' | grep -qx started; then
-            warn "ollama service already running"
-        else
-            info "Starting ollama as a login service..."
-            if brew services start ollama >> "$LOG_FILE" 2>&1; then
-                success "ollama service started (127.0.0.1:11434)"
-            else
-                warn "Could not start ollama service — start it later with 'brew services start ollama'"
-            fi
-        fi
-        # Wait for the server to accept connections before pulling a model.
-        for _ in {1..15}; do
-            curl -fsS http://127.0.0.1:11434/api/tags >/dev/null 2>&1 && break
-            sleep 1
-        done
-        _installed_models="$(ollama list 2>/dev/null | awk 'NR>1{print $1}')"
-        for _model in "${OLLAMA_DEFAULT_MODELS[@]}"; do
-            if ollama_model_present "$_model" "$_installed_models"; then
-                warn "ollama model $_model already pulled"
-            else
-                info "Pulling ollama model $_model (one-time download)..."
-                if ollama pull "$_model" >> "$LOG_FILE" 2>&1; then
-                    success "ollama model $_model pulled"
-                else
-                    warn "Could not pull $_model — pull it later with 'ollama pull $_model'"
-                fi
-            fi
-        done
-    fi
-fi
-# reminders-cli — Apple Reminders (EventKit) from the terminal, so time/location alerts
-# that should reach iPhone/Watch via iCloud have a home. Herald owns mail and
-# calendar events. Plain notes stay ordinary files.
-# First invocation triggers a macOS TCC consent prompt for Reminders access — a GUI
-# dialog this script cannot pre-grant, so the checklist covers it as a first-run step.
-trust_tap keith/formulae
-brew_install "keith/formulae/reminders-cli" "reminders-cli (Apple Reminders from the terminal — 'reminders')"
-# google-workspace-cli (gws) — one CLI for Drive/Gmail/Docs/Sheets/Calendar/Chat with
-# structured JSON output, built for humans + AI agents (ships 95 Claude Code skills).
-# All company work is on Google Workspace, so this is Claude's read/query surface there.
-# NOTE: the Homebrew core formula literally named `gws` is a DIFFERENT tool
-# (git-workspace — "manage workspaces of git repositories"). The Google Workspace
-# CLI is the `googleworkspace-cli` formula; both ship a `gws` binary and therefore
-# conflict, so remove the wrong one if an earlier run (which installed plain `gws`)
-# left it behind, then install the right formula.
-if [[ "$DRY_RUN" != "true" ]] && brew list --formula gws >/dev/null 2>&1; then
-    info "Removing conflicting 'gws' formula (git-workspace) so googleworkspace-cli can install..."
-    brew uninstall gws >> "$LOG_FILE" 2>&1 || warn "Could not remove git-workspace 'gws' (continuing)"
-fi
-brew_install "googleworkspace-cli" "google-workspace-cli (Drive/Gmail/Docs/Sheets/Calendar — JSON output, AI-agent-friendly)"
-# gcloud CLI — a hard prerequisite for `gws auth setup`, which shells out to gcloud to
-# bootstrap the OAuth project/credentials. Without it that first auth step dies with
-# "gcloud CLI not found" and gws is unusable. The Homebrew cask was renamed from
-# google-cloud-sdk to `gcloud-cli`, so install by the current name.
-brew_cask_install "gcloud-cli" "Google Cloud CLI (gcloud — required by 'gws auth setup')"
-# gws Claude skills — SCOPED to Drive / Docs / Slides / Sheets / Forms ONLY. Upstream
-# ships ~95 skills spanning Gmail, Calendar, Chat, Meet, Tasks, Contacts, admin, etc.;
-# we deliberately install just the file/document surface so Claude gets the recipes for
-# those services and nothing that would drive your inbox, calendar, or chats. Refreshed
-# each run to track upstream. IMPORTANT: skills are convenience recipes — they do NOT
-# gate access. The real boundary is the OAuth scopes granted at `gws auth setup/login`
-# (called out in the post-setup checklist). recipe-create-feedback-form is intentionally
-# omitted: it depends on gws-gmail for its email-the-link step (outside the fence).
-GWS_SKILLS=(
-    # core service skills (gws-shared is the required base the others build on)
-    gws-shared
-    gws-drive gws-drive-upload
-    gws-docs gws-docs-write
-    gws-sheets gws-sheets-read gws-sheets-append
-    gws-slides
-    gws-forms
-    # recipes — Drive
-    recipe-bulk-download-folder recipe-find-large-files recipe-organize-drive-folder
-    recipe-create-shared-drive recipe-share-folder-with-team
-    # recipes — Docs
-    recipe-create-doc-from-template
-    # recipes — Slides
-    recipe-create-presentation
-    # recipes — Sheets
-    recipe-backup-sheet-as-csv recipe-compare-sheet-tabs recipe-copy-sheet-for-new-month
-    recipe-create-expense-tracker recipe-generate-report-from-sheet recipe-log-deal-update
-    # recipes — Forms
-    recipe-collect-form-responses
-)
+LLAMA_CPP_VERSION="v0.4.0"
+LLAMA_CPP_PREFIX="$HOME/.local/share/llama.cpp-vulkan"
+LLAMA_CPP_BUILD_ID="${LLAMA_CPP_VERSION}-vulkan"
+LLAMA_CPP_MODEL_DIR="$HOME/.local/share/llama.cpp/models"
+LLAMA_CPP_MODEL_NAME="qwen2.5-coder-14b-instruct-q4_k_m.gguf"
+LLAMA_CPP_MODEL="$LLAMA_CPP_MODEL_DIR/$LLAMA_CPP_MODEL_NAME"
+LLAMA_CPP_MODEL_SIZE="8988110272"
+LLAMA_CPP_MODEL_SHA256="c1e659736d89ac1065fb495330fb824d94001974a4bfa78e7270e43476a8d940"
+LLAMA_CPP_MODEL_URL="https://huggingface.co/Qwen/Qwen2.5-Coder-14B-Instruct-GGUF/resolve/main/$LLAMA_CPP_MODEL_NAME"
+
 if [[ "$DRY_RUN" == "true" ]]; then
-    info "[DRY RUN] Would install ${#GWS_SKILLS[@]} scoped Google Workspace Claude skills (Drive/Docs/Slides/Sheets/Forms) -> ~/.claude/skills/"
-elif ! installed git; then
-    warn "Skipping Google Workspace Claude skills — git not available"
-else
-    info "Installing ${#GWS_SKILLS[@]} scoped Google Workspace Claude skills (Drive/Docs/Slides/Sheets/Forms)..."
-    _gws_tmp="$(mktemp -d)"
-    if git clone --depth 1 --filter=blob:none --sparse \
-        https://github.com/googleworkspace/cli "$_gws_tmp" >> "$LOG_FILE" 2>&1 \
-        && git -C "$_gws_tmp" sparse-checkout set skills >> "$LOG_FILE" 2>&1; then
-        mkdir -p "$HOME/.claude/skills"
-        _gws_ok=0; _gws_miss=0
-        for _skill in "${GWS_SKILLS[@]}"; do
-            if [[ -d "$_gws_tmp/skills/$_skill" ]]; then
-                rm -rf "$HOME/.claude/skills/$_skill"
-                cp -R "$_gws_tmp/skills/$_skill" "$HOME/.claude/skills/" && _gws_ok=$((_gws_ok + 1))
-            else
-                warn "  gws skill not found upstream (skipped): $_skill"
-                _gws_miss=$((_gws_miss + 1))
-            fi
-        done
-        success "Google Workspace skills installed: $_gws_ok in ~/.claude/skills/ ($_gws_miss missing upstream)"
+    if [[ -x "$LLAMA_CPP_PREFIX/bin/llama-server" ]] &&
+       [[ "$(/bin/cat "$LLAMA_CPP_PREFIX/.dev-setup-build" 2>/dev/null || true)" == "$LLAMA_CPP_BUILD_ID" ]]; then
+        warn "[DRY RUN] llama.cpp $LLAMA_CPP_VERSION Vulkan build — already installed"
     else
-        warn "Could not fetch Google Workspace skills — clone manually from github.com/googleworkspace/cli (skills/)"
+        info "[DRY RUN] Would build llama.cpp $LLAMA_CPP_VERSION with Vulkan and Metal disabled"
     fi
-    rm -rf "$_gws_tmp"
-    unset _gws_tmp _skill _gws_ok _gws_miss
+    if [[ -f "$LLAMA_CPP_MODEL" ]] &&
+       [[ "$(stat -f '%z' "$LLAMA_CPP_MODEL" 2>/dev/null || true)" == "$LLAMA_CPP_MODEL_SIZE" ]] &&
+       [[ "$(/bin/cat "$LLAMA_CPP_MODEL.sha256" 2>/dev/null || true)" == "$LLAMA_CPP_MODEL_SHA256" ]]; then
+        warn "[DRY RUN] llama.cpp model $LLAMA_CPP_MODEL_NAME — already downloaded"
+    else
+        info "[DRY RUN] Would download $LLAMA_CPP_MODEL_NAME (8.4 GiB)"
+    fi
+else
+    if [[ ! -x "$LLAMA_CPP_PREFIX/bin/llama-server" ]] ||
+       [[ "$(/bin/cat "$LLAMA_CPP_PREFIX/.dev-setup-build" 2>/dev/null || true)" != "$LLAMA_CPP_BUILD_ID" ]]; then
+        _llama_build="$(mktemp -d "${TMPDIR:-/tmp}/dev-setup-llama.XXXXXX")"
+        _llama_stage="${LLAMA_CPP_PREFIX}.new"
+        rm -rf "$_llama_stage"
+        info "Building llama.cpp $LLAMA_CPP_VERSION with the Vulkan backend..."
+        if git clone --quiet --depth 1 --branch "$LLAMA_CPP_VERSION" \
+                https://github.com/ggml-org/llama.cpp.git "$_llama_build/src" >> "$LOG_FILE" 2>&1 &&
+           PATH="$(brew --prefix shaderc)/bin:$PATH" cmake -S "$_llama_build/src" -B "$_llama_build/build" \
+                -G Ninja \
+                -DCMAKE_BUILD_TYPE=Release \
+                -DCMAKE_PREFIX_PATH="$(brew --prefix vulkan-loader);$(brew --prefix molten-vk);$(brew --prefix shaderc);$(brew --prefix spirv-headers);$(brew --prefix openssl@3)" \
+                -DGGML_VULKAN=ON \
+                -DGGML_METAL=OFF \
+                -DBUILD_SHARED_LIBS=OFF \
+                -DLLAMA_BUILD_TESTS=OFF \
+                -DLLAMA_USE_PREBUILT_UI=OFF \
+                -DLLAMA_BUILD_EXAMPLES=OFF >> "$LOG_FILE" 2>&1 &&
+           cmake --build "$_llama_build/build" --target llama-cli llama-server >> "$LOG_FILE" 2>&1 &&
+           mkdir -p "$_llama_stage/bin" &&
+           install -m 0755 "$_llama_build/build/bin/llama-cli" "$_llama_stage/bin/llama-cli" &&
+           install -m 0755 "$_llama_build/build/bin/llama-server" "$_llama_stage/bin/llama-server"; then
+            printf '%s\n' "$LLAMA_CPP_BUILD_ID" > "$_llama_stage/.dev-setup-build"
+            rm -rf "$LLAMA_CPP_PREFIX"
+            mv "$_llama_stage" "$LLAMA_CPP_PREFIX"
+            mkdir -p "$HOME/.local/bin"
+            ln -sf "$LLAMA_CPP_PREFIX/bin/llama-cli" "$HOME/.local/bin/llama-cli"
+            ln -sf "$LLAMA_CPP_PREFIX/bin/llama-server" "$HOME/.local/bin/llama-server"
+            success "llama.cpp $LLAMA_CPP_VERSION installed with Vulkan"
+        else
+            rm -rf "$_llama_stage"
+            error "Failed to build llama.cpp with Vulkan — see $LOG_FILE"
+        fi
+        rm -rf "$_llama_build"
+        unset _llama_build _llama_stage
+    else
+        warn "llama.cpp $LLAMA_CPP_VERSION Vulkan build already installed"
+    fi
+
+    mkdir -p "$LLAMA_CPP_MODEL_DIR"
+    if [[ -f "$LLAMA_CPP_MODEL" ]] &&
+       [[ "$(stat -f '%z' "$LLAMA_CPP_MODEL" 2>/dev/null || true)" == "$LLAMA_CPP_MODEL_SIZE" ]] &&
+       [[ "$(/bin/cat "$LLAMA_CPP_MODEL.sha256" 2>/dev/null || true)" == "$LLAMA_CPP_MODEL_SHA256" ]]; then
+        warn "llama.cpp model $LLAMA_CPP_MODEL_NAME already downloaded"
+    else
+        info "Downloading $LLAMA_CPP_MODEL_NAME (8.4 GiB, resumable)..."
+        if curl --fail --location --continue-at - \
+                --output "$LLAMA_CPP_MODEL.part" "$LLAMA_CPP_MODEL_URL" >> "$LOG_FILE" 2>&1 &&
+           [[ "$(stat -f '%z' "$LLAMA_CPP_MODEL.part" 2>/dev/null || true)" == "$LLAMA_CPP_MODEL_SIZE" ]] &&
+           printf '%s  %s\n' "$LLAMA_CPP_MODEL_SHA256" "$LLAMA_CPP_MODEL.part" | shasum -a 256 -c - >> "$LOG_FILE" 2>&1; then
+            mv "$LLAMA_CPP_MODEL.part" "$LLAMA_CPP_MODEL"
+            printf '%s\n' "$LLAMA_CPP_MODEL_SHA256" > "$LLAMA_CPP_MODEL.sha256"
+            success "$LLAMA_CPP_MODEL_NAME downloaded and verified"
+        else
+            error "Failed to download or verify $LLAMA_CPP_MODEL_NAME — resume by re-running setup"
+        fi
+    fi
 fi
-brew_cask_install "shottr" "Shottr (fast native screenshots — scrolling capture, OCR, annotations)"
+progress
+unset LLAMA_CPP_VERSION LLAMA_CPP_PREFIX LLAMA_CPP_BUILD_ID LLAMA_CPP_MODEL_DIR
+unset LLAMA_CPP_MODEL_NAME LLAMA_CPP_MODEL LLAMA_CPP_MODEL_SIZE LLAMA_CPP_MODEL_SHA256 LLAMA_CPP_MODEL_URL
 
-# PDF & documents
-brew_cask_install "skim" "Skim (lightweight PDF reader with annotations — faster than Preview)"
-
-# LibreOffice — headless office suite so Claude can validate & convert presentations,
-# spreadsheets, and documents (soffice --headless --convert-to ...). Authoring still
-# happens in Google Workspace; this is for local file validation/conversion only.
-brew_cask_install "libreoffice" "LibreOffice (headless doc/sheet/slide validation + conversion)"
-# The cask ships only the .app, so put `soffice` on PATH (~/.local/bin is on PATH)
-# — that's what Claude invokes for headless validation.
+# LibreOffice is the headless office suite for local document validation and conversion.
+brew_cask_install "libreoffice" "LibreOffice (headless document validation and conversion)"
+# The cask ships only the app. Link `soffice` into the managed user binary directory.
 if [[ "$DRY_RUN" != "true" ]]; then
     _soffice="/Applications/LibreOffice.app/Contents/MacOS/soffice"
     if [[ -x "$_soffice" ]]; then
@@ -4287,31 +3990,6 @@ if [[ "$DRY_RUN" != "true" ]]; then
     unset _soffice
 fi
 
-# Office-file structural validation for Claude: an isolated uv venv with the
-# python trio (python-docx / openpyxl / python-pptx), exposed as `office-py` on
-# PATH. Lets Claude assert on document/sheet/slide CONTENT (soffice renders;
-# office-py inspects), e.g. office-py -c 'from pptx import Presentation; Presentation("deck.pptx")'.
-if ! installed uv; then
-    warn "Skipping office-validation venv — uv not installed"
-else
-    OFFICE_VENV="$HOME/.local/share/dev-setup/office-venv"
-    if [[ "$DRY_RUN" == "true" ]]; then
-        info "[DRY RUN] Would create office-validation venv (python-docx, openpyxl, python-pptx) -> office-py"
-    elif [[ -x "$OFFICE_VENV/bin/python" ]] && "$OFFICE_VENV/bin/python" -c 'import docx, openpyxl, pptx' 2>/dev/null; then
-        warn "office-py venv already present"
-    else
-        info "Creating office-validation venv (python-docx, openpyxl, python-pptx)..."
-        if uv venv --python 3.13 "$OFFICE_VENV" >> "$LOG_FILE" 2>&1 \
-            && uv pip install --python "$OFFICE_VENV/bin/python" python-docx openpyxl python-pptx >> "$LOG_FILE" 2>&1; then
-            mkdir -p "$HOME/.local/bin"
-            ln -sf "$OFFICE_VENV/bin/python" "$HOME/.local/bin/office-py"
-            success "office-py ready (structural checks for .docx/.xlsx/.pptx)"
-        else
-            warn "Could not create office-validation venv"
-        fi
-    fi
-fi
-progress
 
 # File transfer — Cyberduck (GUI) removed; rclone (installed below) covers SFTP/S3/cloud.
 
@@ -4336,7 +4014,6 @@ banner "Mac Apps — Media"
 brew_install "mpv" "mpv (terminal video player)"
 brew_install "oxipng" "oxipng (lossless PNG compression)"
 brew_install "jpegoptim" "jpegoptim (lossless JPEG compression)"
-brew_install "p7zip" "7zip (archive tool — zip, 7z, rar, tar)"
 # cliamp — Winamp-inspired terminal music player (MIT): many formats, streaming
 # (YouTube/SoundCloud/Spotify/radio), parametric EQ, 20+ visualizations. Replaced kew.
 trust_tap bjarneo/cliamp
@@ -4398,13 +4075,6 @@ fi
 
 fi  # mac-cloud
 
-# =============================================================================
-if should_run "mac-focus"; then
-banner "Mac Apps — Focus & Learning"
-
-brew_install "newsboat" "newsboat (terminal RSS/Atom reader)"
-
-fi  # mac-focus
 
 # mac-disk: Disk analysis handled by dust and duf (installed in "replacements" section)
 # No additional tools needed — section removed to avoid empty banner
@@ -5072,7 +4742,7 @@ git:
   autoRefresh: true
   branchLogCmd: "git log --graph --color=always --abbrev-commit --decorate --date=relative --pretty=medium {{branchName}} --"
 os:
-  edit: 'croft --open-file {{filename}} .'
+  edit: 'micro {{filename}}'
   editAtLine: 'micro {{filename}} +{{line}}'
   editAtLineAndWait: 'micro {{filename}} +{{line}}'
   editInTerminal: true
@@ -5083,7 +4753,7 @@ promptToReturnFromSubprocess: false
 LAZYGIT_CONF
     remove_superseded_managed "$LAZYGIT_SUPERSEDED" \
         "lazygit reads $LAZYGIT_CONFIG" "(#333)"
-    configured "lazygit configured (Dracula Sakura theme, delta pager, croft open-file)"
+    configured "lazygit configured (Dracula Sakura theme, delta pager, micro editor)"
 fi  # installed lazygit
 
 
@@ -5239,8 +4909,8 @@ K9S_CFG
 
 # ---- micro editor config ----
 # micro is the $EDITOR: git/gh/lazygit commit messages, leaf's Ctrl+E, quick file edits.
-# Non-modal by design, so the settings below lean on discoverability and on matching the
-# code standards in the generated CLAUDE.md rather than on remapping keys.
+# Non-modal by design, so the settings below favor discoverability and match the
+# code standards in the generated OMP AGENTS.md.
 #   keymenu    - persistent key-binding strip along the bottom (the whole point)
 #   dracula-tc - built into micro; needs truecolor, which Ghostty advertises via COLORTERM
 #   rmtrailingws/eofnewline - match what prettier and ruff would do on save anyway
@@ -5299,326 +4969,9 @@ else
 fi
 unset MICRO_DEFAULTS
 
-# ---- Croft ----
-# Croft keeps its user config under ~/.config/croft and its themes as extension manifests.
-# The JSON config is merged with the on-disk file winning, same rationale as micro/VS Code:
-# user tweaks survive re-runs, while the generator keeps the house theme and chosen layout.
-CROFT_CONFIG_DIR="$HOME/.config/croft"
-CROFT_CONFIG="$CROFT_CONFIG_DIR/config.json"
-CROFT_THEME_DIR="$CROFT_CONFIG_DIR/extensions/dracula-sakura"
-CROFT_THEME_EXT="$CROFT_THEME_DIR/extension.toml"
-CROFT_DEFAULTS=$(cat <<'CROFT_CONF'
-{
-    "theme": "dracula-sakura",
-    "layout": {
-        "activity_bar": true,
-        "status_bar": true,
-        "side_bar_position": "left",
-        "secondary_side_bar": false,
-        "panel_alignment": "center",
-        "quick_input_position": "center"
-    },
-    "explorer_views": {
-        "open_editors": false,
-        "folders": true,
-        "outline": true,
-        "timeline": true,
-        "dependencies": true
-    },
-    "format_on_save": true,
-    "auto_save": false,
-    "copy_on_select": true,
-    "terminal_scrollback": 10000,
-    "disable_inline_blame": false,
-    "disable_inlay_hints": false
-}
-CROFT_CONF
-)
-if merge_json_defaults "$CROFT_CONFIG" '.theme = "dracula-sakura"' <<< "$CROFT_DEFAULTS"; then
-    [[ "$DRY_RUN" == "true" ]] \
-        || success "croft settings merged (your changes kept; Dracula-Sakura stays active)"
-else
-    _croft_merge_status=$?
-    if [[ "$_croft_merge_status" -eq 2 ]]; then
-        warn "croft config exists but jq is missing — not merging new defaults"
-    else
-        warn "Could not merge croft config — left as-is: $CROFT_CONFIG"
-    fi
-    unset _croft_merge_status
-fi
-unset CROFT_DEFAULTS
+# Croft was retired in #542. Its merged user config can contain personal edits,
+# so only the explicit --cleanup path moves ~/.config/croft to the Trash.
 
-    info "Writing croft Dracula-Sakura theme extension..."
-    write_generated "$CROFT_THEME_EXT" <<'CROFT_THEME_CONF'
-id = "dracula-sakura"
-name = "Dracula Sakura Theme"
-description = "A soft pink-lilac Dracula variant with airy cyan and mint accents."
-
-[[themes]]
-id = "dracula-sakura"
-label = "Dracula Sakura"
-background = "#282a36"
-accent = "#ff9fe3"
-selection = "#6a5d86"
-search = "#2f3144"
-button = "#d4b2ff"
-gradient = false
-osk_key = "#4b4963"
-osk_special = "#2f3144"
-osk_armed = "#ff9fe3"
-tab_strip = "#2b2d3a"
-tab_inactive = "#323448"
-tab_active = "#3a3d52"
-tab_hover = "#454862"
-tab_close_pill = "#ff9fe3"
-syn_comment = "#8a88c7"
-syn_keyword = "#ff9fe3"
-syn_string = "#fff0a8"
-syn_constant = "#d4b2ff"
-syn_function = "#8af7cf"
-syn_type = "#9be7ff"
-syn_tag = "#ffcf93"
-syn_fg = "#f8f8f2"
-ansi = ["#21222c", "#ff7aa8", "#8af7cf", "#fff0a8", "#d4b2ff", "#ff9fe3", "#9be7ff", "#f8f8f2", "#8a88c7", "#ff9fbe", "#b4ffe1", "#fff6c7", "#e4ccff", "#ffc2ec", "#c7f3ff", "#ffffff"]
-CROFT_THEME_CONF
-    configured "croft theme extension written (Dracula-Sakura)"
-
-# ---- Visual Studio Code ----
-# Same shape as the micro block above, and for the same reasons: NOT write_managed,
-# because JSON has no comment syntax for the managed markers and VS Code rewrites this
-# file itself every time a setting is changed from the UI or the Settings editor. So
-# merge with the ON-DISK FILE WINNING (`.[0] * .[1]` — defaults first, yours second):
-# your hand edits and anything Settings Sync pulls down survive a re-run, while options
-# added in later releases still land on an existing machine.
-#
-# One VS Code-specific trap: settings.json is JSONC, so a file with `//` comments or a
-# trailing comma is valid to VS Code and INVALID to jq. That merge fails, and the right
-# response is to warn and leave the file completely alone — never to overwrite, which
-# would silently eat a config the user considers valid.
-#
-# Every default here is one the terminal side already enforces, so the GUI editor cannot
-# disagree with the CLI: ruff for Python (not black), prettier for web, shfmt for shell,
-# tabs for Go, LF endings, trailing whitespace stripped. The EditorConfig extension is
-# installed too and outranks all of it per-repo, which is the intended precedence.
-VSCODE_USER_DIR="$HOME/Library/Application Support/Code/User"
-VSCODE_SETTINGS="$VSCODE_USER_DIR/settings.json"
-# "Dracula Theme" is the exact `contributes.themes[].label` from the extension manifest —
-# not "Dracula", which silently does nothing (an unknown theme name leaves the default).
-VSCODE_DEFAULTS=$(cat <<'VSCODE_CONF'
-{
-    "workbench.colorTheme": "Dracula Theme",
-    "workbench.colorCustomizations": {
-        "activityBar.activeBorder": "#ff9fe3",
-        "activityBarBadge.background": "#9be7ff",
-        "activityBarBadge.foreground": "#282a36",
-        "button.background": "#ff9fe3",
-        "button.foreground": "#282a36",
-        "button.hoverBackground": "#ffc2ec",
-        "commandCenter.activeBackground": "#323448",
-        "editor.selectionBackground": "#6a5d86",
-        "focusBorder": "#d4b2ff",
-        "inputOption.activeBorder": "#d4b2ff",
-        "list.activeSelectionBackground": "#6a5d86",
-        "list.activeSelectionForeground": "#f8f8f2",
-        "list.highlightForeground": "#9be7ff",
-        "list.hoverBackground": "#323448",
-        "quickInputList.focusBackground": "#6a5d86",
-        "quickInputList.focusForeground": "#f8f8f2",
-        "tab.activeBorderTop": "#ff9fe3",
-        "tab.selectedBorderTop": "#d4b2ff",
-        "terminal.selectionBackground": "#6a5d86",
-        "terminalCursor.background": "#282a36",
-        "terminalCursor.foreground": "#ff9fe3",
-        "titleBar.activeBackground": "#282a36",
-        "titleBar.inactiveBackground": "#323448"
-    },
-    "workbench.startupEditor": "none",
-    "editor.fontFamily": "'JetBrains Mono', Menlo, monospace",
-    "editor.fontLigatures": true,
-    "editor.fontSize": 13,
-    "editor.formatOnSave": true,
-    "editor.tabSize": 2,
-    "editor.insertSpaces": true,
-    "editor.rulers": [100],
-    "editor.renderWhitespace": "boundary",
-    "editor.bracketPairColorization.enabled": true,
-    "editor.linkedEditing": true,
-    "editor.inlineSuggest.enabled": true,
-    "editor.tokenColorCustomizations": {
-        "textMateRules": [
-            {
-                "scope": ["comment", "punctuation.definition.comment"],
-                "settings": { "foreground": "#8a88c7" }
-            },
-            {
-                "scope": ["keyword", "storage", "keyword.operator"],
-                "settings": { "foreground": "#ff9fe3" }
-            },
-            {
-                "scope": ["string", "string.quoted"],
-                "settings": { "foreground": "#fff0a8" }
-            },
-            {
-                "scope": ["entity.name.function", "support.function", "meta.function-call"],
-                "settings": { "foreground": "#8af7cf" }
-            },
-            {
-                "scope": ["constant.numeric", "constant.language.boolean"],
-                "settings": { "foreground": "#d4b2ff" }
-            },
-            {
-                "scope": ["entity.name.type", "support.type", "storage.type"],
-                "settings": { "foreground": "#9be7ff" }
-            }
-        ]
-    },
-    "files.trimTrailingWhitespace": true,
-    "files.insertFinalNewline": true,
-    "files.trimFinalNewlines": true,
-    "files.eol": "\n",
-    "terminal.integrated.fontFamily": "JetBrainsMono Nerd Font",
-    "terminal.integrated.defaultProfile.osx": "zsh",
-    "terminal.integrated.minimumContrastRatio": 1,
-    "terminal.integrated.ansiBlack": "#2f3144",
-    "terminal.integrated.ansiRed": "#ff7aa8",
-    "terminal.integrated.ansiGreen": "#8af7cf",
-    "terminal.integrated.ansiYellow": "#fff0a8",
-    "terminal.integrated.ansiBlue": "#9be7ff",
-    "terminal.integrated.ansiMagenta": "#ff9fe3",
-    "terminal.integrated.ansiCyan": "#9be7ff",
-    "terminal.integrated.ansiWhite": "#f8f8f2",
-    "terminal.integrated.ansiBrightBlack": "#8a88c7",
-    "terminal.integrated.ansiBrightRed": "#ff7aa8",
-    "terminal.integrated.ansiBrightGreen": "#8af7cf",
-    "terminal.integrated.ansiBrightYellow": "#fff0a8",
-    "terminal.integrated.ansiBrightBlue": "#d4b2ff",
-    "terminal.integrated.ansiBrightMagenta": "#ffc2ec",
-    "terminal.integrated.ansiBrightCyan": "#9be7ff",
-    "terminal.integrated.ansiBrightWhite": "#ffffff",
-    "git.autofetch": true,
-    "git.confirmSync": false,
-    "explorer.confirmDragAndDrop": false,
-    "telemetry.telemetryLevel": "off",
-    "python.languageServer": "None",
-    "basedpyright.importStrategy": "fromEnvironment",
-    "[python]": {
-        "editor.defaultFormatter": "charliermarsh.ruff",
-        "editor.tabSize": 4,
-        "editor.codeActionsOnSave": {
-            "source.fixAll": "explicit",
-            "source.organizeImports": "explicit"
-        }
-    },
-    "[javascript]": { "editor.defaultFormatter": "esbenp.prettier-vscode" },
-    "[javascriptreact]": { "editor.defaultFormatter": "esbenp.prettier-vscode" },
-    "[typescript]": { "editor.defaultFormatter": "esbenp.prettier-vscode" },
-    "[typescriptreact]": { "editor.defaultFormatter": "esbenp.prettier-vscode" },
-    "[json]": { "editor.defaultFormatter": "esbenp.prettier-vscode" },
-    "[jsonc]": { "editor.defaultFormatter": "esbenp.prettier-vscode" },
-    "[css]": { "editor.defaultFormatter": "esbenp.prettier-vscode" },
-    "[html]": { "editor.defaultFormatter": "esbenp.prettier-vscode" },
-    "[markdown]": { "editor.defaultFormatter": "esbenp.prettier-vscode" },
-    "[yaml]": { "editor.defaultFormatter": "esbenp.prettier-vscode" },
-    "[go]": { "editor.defaultFormatter": "golang.go", "editor.insertSpaces": false, "editor.tabSize": 4 },
-    "[rust]": { "editor.defaultFormatter": "rust-lang.rust-analyzer" },
-    "[shellscript]": { "editor.defaultFormatter": "foxundermoon.shell-format" },
-    "[terraform]": { "editor.defaultFormatter": "hashicorp.terraform" },
-    "[toml]": { "editor.defaultFormatter": "tamasfe.even-better-toml" }
-}
-VSCODE_CONF
-)
-if merge_json_defaults "$VSCODE_SETTINGS" <<< "$VSCODE_DEFAULTS"; then
-    [[ "$DRY_RUN" == "true" ]] \
-        || success "VS Code settings merged (your changes kept; new defaults added)"
-else
-    _vscode_merge_status=$?
-    if [[ "$_vscode_merge_status" -eq 2 ]]; then
-        warn "VS Code settings exist but jq is missing — not merging new defaults"
-    else
-        # Almost always JSONC: comments or a trailing comma, which VS Code accepts and
-        # jq does not. The helper leaves the file byte-for-byte unchanged.
-        warn "Could not merge VS Code settings (comments or trailing commas?) — left as-is: $VSCODE_SETTINGS"
-    fi
-    unset _vscode_merge_status
-fi
-unset VSCODE_DEFAULTS
-
-# ---- MCP servers -> Claude Code (migrated from Kiro) ----
-# Claude Code stores user-scoped MCP servers in ~/.claude.json. We use the
-# `claude mcp add` CLI (never hand-edit that live state file) to register the
-# everyday servers at user scope. `claude mcp add` is NOT idempotent, so we
-# remove-then-add. Heavier/opt-in servers are intentionally NOT added globally --
-# add them per project with `claude mcp add --scope project <name> ...`.
-# The Notion server is dropped (Notion is no longer part of this setup).
-if ! is_done "config:claude-mcp"; then
-if installed claude; then
-    if [[ "$DRY_RUN" == "true" ]]; then
-        info "[DRY RUN] Would configure Claude Code MCP servers (user scope, minus Notion)"
-    else
-        info "Configuring Claude Code MCP servers (user scope)..."
-        # add_mcp <name-for-removal> <full args to `claude mcp add` incl. name> -- <command...>
-        add_mcp() {
-            local name="$1"; shift
-            claude mcp remove --scope user "$name" >> "$LOG_FILE" 2>&1 || true
-            if claude mcp add --scope user "$@" >> "$LOG_FILE" 2>&1; then
-                success "MCP: $name"
-            else
-                warn "MCP: failed to add $name (see $LOG_FILE)"
-            fi
-        }
-
-        add_mcp filesystem --transport stdio filesystem -- npx -y @modelcontextprotocol/server-filesystem "$HOME/Code"
-        # `claude mcp add`'s -e/--env is variadic and greedily eats the following
-        # positional, so the server NAME must come first and each -e must sit right
-        # before `--` (env servers only — see #-note). Literal ${VAR} is expanded by
-        # Claude Code at server-launch time from the user's environment.
-        add_mcp github github --transport stdio -e "GITHUB_PERSONAL_ACCESS_TOKEN=\${GITHUB_TOKEN}" -- npx -y @modelcontextprotocol/server-github
-        add_mcp git --transport stdio git -- uvx mcp-server-git
-        add_mcp fetch --transport stdio fetch -- uvx mcp-server-fetch
-        add_mcp context7 --transport stdio context7 -- npx -y @upstash/context7-mcp
-        add_mcp aws-docs --transport stdio aws-docs -- uvx awslabs.aws-documentation-mcp-server
-        add_mcp aws-pricing --transport stdio aws-pricing -- uvx awslabs.aws-pricing-mcp-server@latest
-        add_mcp aws-iac --transport stdio aws-iac -- uvx awslabs.aws-iac-mcp-server@latest
-        # aws-knowledge is REMOTE — a fully managed HTTP endpoint, not a local stdio server,
-        # and the only one here that is (#364). No auth, no AWS account, rate-limited. This
-        # was registered as `uvx awslabs.aws-knowledge-mcp-server@latest` and had therefore
-        # never once connected: there is no legitimate PyPI distribution, and the name that
-        # was on PyPI (single 0.1.0, 2025-10-15) is YANKED with the reason "Not ours" — it
-        # was not published by AWS Labs despite claiming their repo as its homepage. uv
-        # refuses a yanked-only resolution rather than falling back to it, so the package was
-        # never fetched or executed here; ~/.cache/uv has no trace of it. Failing closed is
-        # the only reason a wrong `uvx` line pointed at a squatted name stayed harmless.
-        add_mcp aws-knowledge --transport http aws-knowledge https://knowledge-mcp.global.api.aws
-        add_mcp cloudwatch cloudwatch --transport stdio -e "AWS_REGION=\${AWS_REGION}" -e "AWS_PROFILE=\${AWS_PROFILE}" -- uvx awslabs.cloudwatch-mcp-server@latest
-        add_mcp iam iam --transport stdio -e "AWS_REGION=\${AWS_REGION}" -e "AWS_PROFILE=\${AWS_PROFILE}" -- uvx awslabs.iam-mcp-server@latest
-        # herald (email + calendar) — read-only after initial sync; mutations need `herald serve`.
-        # Inert until herald accounts are configured (see the POST_SETUP checklist).
-        add_mcp herald --transport stdio herald -- herald mcp -config "$HOME/.herald/conf.yaml"
-        # GitKraken (31 tools: git_*, pull_request_*, issues_*, gitlens_launchpad). Served by
-        # the standalone `gk` from the gitkraken-cli cask. Registered here because it used to
-        # register ITSELF: the GitLens extension wrote this server into ~/.claude.json pointing
-        # at a gk binary inside its own VS Code globalStorage, so removing the extension would
-        # have taken the server with it (#362). Name kept capitalised — it is the name GitLens
-        # used and the one already in every transcript. `--no-telemetry` suppresses gk's OTel
-        # spans and Sentry reporting, matching "telemetry.telemetryLevel": "off" above.
-        add_mcp GitKraken --transport stdio GitKraken -- gk mcp --host=claude-cli --no-telemetry
-        unset -f add_mcp
-
-        success "Claude Code MCP servers configured (user scope)"
-        info "  Added: filesystem, github, git, fetch, context7, aws-docs, aws-pricing,"
-        info "         aws-iac, aws-knowledge, cloudwatch, iam, herald, GitKraken"
-        info "  Opt-in per project (claude mcp add --scope project <name> ...):"
-        info "         playwright, postgres, aws-ccapi, aws-serverless, aws-lambda-tool,"
-        info "         aws-eks, aws-ecs, aws-dynamodb"
-        info "  github: export GITHUB_TOKEN=...   AWS servers use the standard AWS"
-        info "          credential chain (AWS_REGION / AWS_PROFILE / 'assume <profile>')."
-    fi
-else
-    warn "Claude Code CLI not found -- skipping MCP server setup"
-    info "  After installing Claude Code + 'claude auth login', re-run:  $0 --only dracula"
-fi
-mark_done "config:claude-mcp"
-fi
 
 # ---- Fonts (required for icons in eza, starship, lazygit, etc.) ----
 info "Installing development fonts..."
@@ -5885,31 +5238,11 @@ MLR_CONFIG="$HOME/.mlrrc"
 MLR_CONF
     configured "miller configured (CSV input, pretty table output)"
 
-# ---- asciinema config ----
-ASCIINEMA_CONFIG_DIR="$HOME/.config/asciinema"
-ASCIINEMA_CONFIG="$ASCIINEMA_CONFIG_DIR/config.toml"
-ASCIINEMA_LEGACY_CONFIG="$ASCIINEMA_CONFIG_DIR/config"
-    info "Creating asciinema configuration..."
-    # asciinema 3.x moved the config to config.toml and switched INI -> TOML, so the
-    # 2.x file this script used to write is not read at all — and asciinema prints a
-    # three-line banner about it on every invocation for as long as it sits there.
-    remove_superseded_managed "$ASCIINEMA_LEGACY_CONFIG" \
-        "asciinema 3.x reads $ASCIINEMA_CONFIG and warns on every run while this exists" "(#329)"
-    write_managed "$ASCIINEMA_CONFIG" "#" <<'ASCIINEMA_CONF'
-# asciinema 3.x configuration. Keys live under [session]; the 2.x [record] section at
-# ~/.config/asciinema/config is a different file in a different format and is ignored.
-
-[session]
-# Idle time limit (seconds) — trims long pauses
-idle_time_limit = 2
-
-# Input recording (disable for security — don't record keystrokes)
-capture_input = false
-
-# Default command to record
-command = "/bin/zsh -l"
-ASCIINEMA_CONF
-    configured "asciinema configured (2s idle limit, no keystroke recording)"
+# ---- retired asciinema config ----
+remove_superseded_managed "$HOME/.config/asciinema/config.toml" \
+    "asciinema was removed from the setup" "(#542)"
+remove_superseded_managed "$HOME/.config/asciinema/config" \
+    "asciinema was removed from the setup" "(#542)"
 
 # ---- gh-dash config ----
 GH_DASH_CONFIG_DIR="$HOME/.config/gh-dash"
@@ -6043,43 +5376,10 @@ copy_command "pbcopy"
 ZELLIJ_CONF
 configured "zellij configured (Dracula Sakura theme, status bar with mode keybindings, pane frames, mouse)"
 
-# 'dev' layout: editor pane + a Claude Code pane side-by-side (AI integration tier 1).
-# Launch with:  zellij --layout dev
+# Remove the retired editor and Claude Code layout only when the generator owns it.
 ZELLIJ_LAYOUTS="$ZELLIJ_CONFIG_DIR/layouts"
-info "Creating zellij 'dev' layout..."
-write_managed "$ZELLIJ_LAYOUTS/dev.kdl" "//" <<'ZELLIJ_DEV'
-// Editor + Claude Code side-by-side. Run:  zellij --layout dev
-//
-// The tab-bar and status-bar panes are declared explicitly (#481). A custom
-// layout replaces the default one wholesale, and `zellij setup --dump-layout
-// default` shows those bars are ordinary plugin panes rather than implicit
-// chrome — so without these two lines this layout renders with no mode line at
-// all, which is worse than the compact bar it was inheriting nothing from.
-//
-// The bare `location="tab-bar"` form is used deliberately, copied verbatim from
-// `zellij setup --dump-layout default`. The `zellij:tab-bar` scheme form is also
-// valid, but this is zellij's own output for its own built-in layout, so it
-// cannot be wrong for this version.
-layout {
-    pane size=1 borderless=true {
-        plugin location="tab-bar"
-    }
-    pane split_direction="vertical" {
-        pane {
-            name "editor"
-            command "micro"
-        }
-        pane size="38%" {
-            name "claude"
-            command "claude"
-        }
-    }
-    pane size=1 borderless=true {
-        plugin location="status-bar"
-    }
-}
-ZELLIJ_DEV
-configured "zellij 'dev' layout created (editor + Claude pane: zellij --layout dev)"
+remove_superseded_managed "$ZELLIJ_LAYOUTS/dev.kdl" \
+    "Claude Code was removed from the setup" "(#542)"
 
 # 'home' layout: a personal dashboard for a full-screen terminal (#523).
 # Launch with:  zellij --layout home
@@ -6095,9 +5395,8 @@ info "Creating zellij 'home' layout..."
 write_managed "$ZELLIJ_LAYOUTS/home.kdl" "//" <<'ZELLIJ_HOME'
 // Personal dashboard. Run:  zellij --layout home
 //
-// The tab-bar and status-bar panes are declared explicitly for the same reason
-// as the dev layout (#481): a custom layout replaces the default wholesale, and
-// those bars are ordinary plugin panes rather than implicit chrome.
+// The tab-bar and status-bar panes keep this custom layout as discoverable as
+// the built-in default layout.
 //
 // `starlit --interactive` is the persistent mode. Bare `starlit` prints one
 // forecast and exits, which leaves a dead pane behind.
@@ -6129,59 +5428,11 @@ ZELLIJ_HOME
 configured "zellij 'home' layout created (terminal + weather/system: zellij --layout home)"
 fi  # installed zellij
 
-# ---- newsboat config ----
-NEWSBOAT_DIR="$HOME/.newsboat"
-NEWSBOAT_CONFIG="$NEWSBOAT_DIR/config"
-NEWSBOAT_URLS="$NEWSBOAT_DIR/urls"
-    info "Creating newsboat config (vim keys, Dracula-Sakura colors)..."
-    write_managed "$NEWSBOAT_CONFIG" "#" <<'NEWSBOAT_CONF'
-# Newsboat configuration — vim keys, Dracula-Sakura colors
-
-# General
-auto-reload yes
-reload-time 30
-reload-threads 4
-show-read-feeds no
-show-read-articles no
-
-# Vim-like navigation
-bind-key j down
-bind-key k up
-bind-key j next articlelist
-bind-key k prev articlelist
-bind-key J next-feed articlelist
-bind-key K prev-feed articlelist
-bind-key G end
-bind-key g home
-bind-key l open
-bind-key h quit
-
-# Dracula-Sakura colors
-color background          color253  color236
-color listnormal          color253  color236
-color listfocus           color236  color183  bold
-color listnormal_unread   color219  color236
-color listfocus_unread    color236  color219  bold
-color info                color236  color153
-color article             color253  color236
-
-# Browser
-browser "open %u"
-
-# Date format
-datetime-format "%Y-%m-%d"
-NEWSBOAT_CONF
-
-    # Starter URLs file
-    write_managed "$NEWSBOAT_URLS" "#" <<'NEWSBOAT_URLS_CONF'
-# Dev blogs and release feeds — add your own below
-https://github.com/anthropics/claude-code/releases.atom "~Claude Code Releases"
-https://nodejs.org/en/feed/blog.xml "~Node.js Blog"
-https://blog.rust-lang.org/feed.xml "~Rust Blog"
-https://github.blog/feed/ "~GitHub Blog"
-NEWSBOAT_URLS_CONF
-    configured "newsboat configured (vim keys, Dracula-Sakura colors, starter URLs)"
-
+# ---- retired newsboat config ----
+remove_superseded_managed "$HOME/.newsboat/config" \
+    "newsboat was removed from the setup" "(#542)"
+remove_superseded_managed "$HOME/.newsboat/urls" \
+    "newsboat was removed from the setup" "(#542)"
 # ---- mpv config ----
 MPV_CONFIG_DIR="$HOME/.config/mpv"
 MPV_CONFIG="$MPV_CONFIG_DIR/mpv.conf"
@@ -6760,11 +6011,10 @@ GLOBAL_GITIGNORE="$HOME/.gitignore_global"
 Icon?
 
 # -- Editors ------------------------------------------------------------------
-# VS Code layout (still common in shared repos even though the local editor is croft/micro)
+# Editor workspace metadata can be regenerated by each editor.
 .vscode/settings.json
 .vscode/launch.json
 *.code-workspace
-# croft and micro keep no per-repo state (config lives in ~/.config).
 
 # JetBrains
 .idea/
@@ -7020,10 +6270,9 @@ info "Configuring macOS system defaults..."
 if [[ "$DRY_RUN" != "true" ]]; then
 
 # -- Menu bar --
-# Auto-hide the native macOS menu bar so SketchyBar owns the top strip (the system
-# bar slides down only when you push the cursor to the very top). Without this,
-# SketchyBar renders *under* the native bar. Takes effect after logout/restart.
-defaults write NSGlobalDomain _HIHideMenuBar -bool true
+# Keep the native macOS menu bar visible now that SketchyBar is retired.
+# The change takes effect after logout or restart.
+defaults write NSGlobalDomain _HIHideMenuBar -bool false
 
 # -- Dock --
 # Auto-hide the Dock
@@ -7036,12 +6285,7 @@ defaults write com.apple.dock show-recents -bool false
 defaults write com.apple.dock mineffect -string "scale"
 # Minimize windows into their application icon
 defaults write com.apple.dock minimize-to-application -bool true
-# Clear all pinned apps from the Dock (Finder + Trash are permanent fixtures and remain).
-if [[ "$DRY_RUN" != "true" ]] && installed dockutil; then
-    dockutil --remove all --no-restart >> "$LOG_FILE" 2>&1 || true
-    killall Dock >/dev/null 2>&1 || true
-fi
-configured "Dock configured (cleared to Finder + Trash, small icons, auto-hide, scale effect)"
+configured "Dock configured (small icons, auto-hide, scale effect)"
 
 # -- Screenshots --
 # Save screenshots as PNG
@@ -7234,11 +6478,6 @@ if [[ -f "$HOME/.cargo/env" ]]; then
     source "$HOME/.cargo/env"
 fi
 
-# bun
-if [[ -d "$HOME/.bun" ]]; then
-    export BUN_INSTALL="$HOME/.bun"
-    export PATH="$BUN_INSTALL/bin:$PATH"
-fi
 
 # .NET global tools — `dotnet tool install -g` puts binaries here (ilspycmd and
 # friends). The .NET installer does ship a PATH entry for this, and it does not
@@ -7295,20 +6534,15 @@ unset _pkg _gnubin
 # Deduplicate PATH
 typeset -U PATH path
 
-# Added by OrbStack: command-line tools and integration
-# This won't be added again if you remove it.
-source ~/.orbstack/shell/init.zsh 2>/dev/null || :
 ZPROFILE_CONF
-    configured "$HOME/.zprofile created (editor, pager, XDG, Go, Rust, bun, pnpm, mise, direnv, OrbStack)"
+    configured "$HOME/.zprofile created (editor, pager, XDG, Go, Rust, pnpm, mise, direnv)"
 
 # ---- ~/.zshenv (every zsh invocation — interactive or not) ----
 ZSHENV="$HOME/.zshenv"
     info "Creating ~/.zshenv..."
     write_managed "$ZSHENV" "#" <<'ZSHENV_CONF'
-# mise (version manager) — sourced by every zsh invocation (interactive,
-# non-interactive, login or not). This ensures tools like node/npx are
-# available in Claude Code, IDE terminals, and scripted shells.
-command -v mise &>/dev/null && eval "$(mise activate zsh)"
+# mise (version manager) is sourced by every zsh invocation. This makes managed
+# runtimes available in interactive shells, IDE terminals, and scripts.
 ZSHENV_CONF
     configured "$HOME/.zshenv created (mise activation for all shell types)"
 
@@ -7658,104 +6892,11 @@ proc_log:
 MPROCS_CONF
     configured "mprocs configured (scrollback, pane width, per-proc logs)"
 
-# ---- broot config + Dracula-Sakura skin ----
-BROOT_CONFIG_DIR="$HOME/.config/broot"
-BROOT_CONF="$BROOT_CONFIG_DIR/conf.hjson"
-BROOT_SKIN="$BROOT_CONFIG_DIR/skins/dracula-sakura.hjson"
-    info "Creating broot configuration..."
-    write_managed "$BROOT_CONF" "#" <<'BROOT_CONF_HJSON'
-imports: [
-  "skins/dracula-sakura.hjson"
-]
-
-default_flags: "-g"
-BROOT_CONF_HJSON
-    write_managed "$BROOT_SKIN" "#" <<'BROOT_SKIN_HJSON'
-syntax_theme: MochaDark
-
-skin: {
-    default: rgb(248, 248, 242) none / rgb(221, 210, 247) rgb(40, 42, 54)
-    tree: rgb(138, 136, 199) none / rgb(98, 114, 164) none
-    parent: rgb(155, 231, 255) none bold / rgb(155, 231, 255) rgb(40, 42, 54) italic
-    file: none none / none none
-    directory: rgb(212, 178, 255) none bold / rgb(212, 178, 255) none
-    exe: rgb(138, 247, 207) none
-    link: rgb(255, 207, 147) none
-    pruning: rgb(162, 151, 203) none italic
-    perm__: rgb(162, 151, 203) none
-    perm_r: rgb(255, 207, 147) none
-    perm_w: rgb(255, 122, 168) none
-    perm_x: rgb(138, 247, 207) none
-    owner: rgb(155, 231, 255) none
-    group: rgb(212, 178, 255) none
-    count: rgb(255, 159, 227) rgb(50, 52, 72)
-    dates: rgb(162, 151, 203) none
-    sparse: rgb(255, 122, 168) none
-    content_extract: rgb(255, 122, 168) none italic
-    content_match: rgb(255, 240, 168) rgb(75, 73, 99) bold
-    git_branch: rgb(255, 159, 227) none
-    git_insertions: rgb(138, 247, 207) none
-    git_deletions: rgb(255, 122, 168) none
-    git_status_current: rgb(162, 151, 203) none
-    git_status_modified: rgb(255, 207, 147) none
-    git_status_staged: rgb(138, 247, 207) none
-    git_status_new: rgb(155, 231, 255) none bold
-    git_status_ignored: rgb(98, 114, 164) none
-    git_status_conflicted: rgb(255, 122, 168) none
-    git_status_other: rgb(255, 122, 168) none
-    selected_line: none rgb(75, 73, 99) / none rgb(50, 52, 72)
-    char_match: rgb(255, 240, 168) none bold
-    file_error: rgb(255, 122, 168) none
-    flag_label: rgb(162, 151, 203) none
-    flag_value: rgb(255, 159, 227) none bold
-    input: rgb(248, 248, 242) rgb(47, 49, 68) / rgb(221, 210, 247) rgb(47, 49, 68)
-    status_error: rgb(248, 248, 242) rgb(74, 48, 64)
-    status_job: rgb(40, 42, 54) rgb(255, 207, 147)
-    status_normal: rgb(162, 151, 203) rgb(47, 49, 68) / none none
-    status_italic: rgb(212, 178, 255) rgb(47, 49, 68) italic / none none
-    status_bold: rgb(255, 159, 227) rgb(47, 49, 68) bold / none none
-    status_code: rgb(248, 248, 242) rgb(47, 49, 68) / none none
-    status_ellipsis: rgb(248, 248, 242) rgb(47, 49, 68) bold / none none
-    purpose_normal: none none
-    purpose_italic: rgb(155, 231, 255) none italic
-    purpose_bold: rgb(155, 231, 255) none bold
-    purpose_ellipsis: none none
-    scrollbar_track: rgb(50, 52, 72) none / rgb(50, 52, 72) none
-    scrollbar_thumb: rgb(106, 93, 134) none / rgb(106, 93, 134) none
-    help_paragraph: none none
-    help_bold: rgb(255, 207, 147) none bold
-    help_italic: rgb(212, 178, 255) none italic
-    help_code: rgb(138, 247, 207) rgb(50, 52, 72)
-    help_headers: rgb(255, 194, 236) none bold
-    help_table_border: rgb(98, 114, 164) none
-    preview_title: rgb(248, 248, 242) rgb(40, 42, 54) / rgb(221, 210, 247) rgb(40, 42, 54)
-    preview: rgb(248, 248, 242) none / rgb(221, 210, 247) none
-    preview_line_number: rgb(138, 136, 199) rgb(40, 42, 54) / rgb(138, 136, 199) none
-    preview_separator: rgb(98, 114, 164) none / rgb(98, 114, 164) none
-    preview_match: none rgb(255, 240, 168) bold
-    diff_line_number: rgb(138, 136, 199) rgb(50, 52, 72)
-    diff_added: rgb(248, 248, 242) rgb(35, 59, 54)
-    diff_removed: rgb(248, 248, 242) rgb(74, 48, 64)
-    hex_null: rgb(138, 136, 199) none
-    hex_ascii_graphic: rgb(255, 207, 147) none
-    hex_ascii_whitespace: rgb(138, 247, 207) none
-    hex_ascii_other: rgb(155, 231, 255) none
-    hex_non_ascii: rgb(255, 122, 168) none
-    staging_area_title: rgb(248, 248, 242) rgb(40, 42, 54) / rgb(221, 210, 247) rgb(40, 42, 54)
-    mode_command_mark: rgb(40, 42, 54) rgb(255, 159, 227) bold
-    good_to_bad_0: rgb(138, 247, 207)
-    good_to_bad_1: rgb(138, 247, 207)
-    good_to_bad_2: rgb(155, 231, 255)
-    good_to_bad_3: rgb(212, 178, 255)
-    good_to_bad_4: rgb(255, 207, 147)
-    good_to_bad_5: rgb(255, 207, 147)
-    good_to_bad_6: rgb(255, 159, 227)
-    good_to_bad_7: rgb(255, 159, 227)
-    good_to_bad_8: rgb(255, 122, 168)
-    good_to_bad_9: rgb(255, 122, 168)
-}
-BROOT_SKIN_HJSON
-    configured "broot configured (Dracula-Sakura skin, git-aware defaults)"
+# ---- retired broot config ----
+remove_superseded_managed "$HOME/.config/broot/conf.hjson" \
+    "broot was removed from the setup" "(#542)"
+remove_superseded_managed "$HOME/.config/broot/skins/dracula-sakura.hjson" \
+    "broot was removed from the setup" "(#542)"
 
 # ---- jqp config ----
 JQP_CONFIG="$HOME/.jqp.yaml"
@@ -7778,127 +6919,9 @@ theme:
 JQP_CONF
     configured "jqp configured (Dracula-Sakura theme overrides)"
 
-# ---- aichat config + Dracula-Sakura dark theme ----
-AICHAT_CONFIG_DIR="$HOME/.config/aichat"
-AICHAT_CONFIG="$AICHAT_CONFIG_DIR/config.yaml"
-AICHAT_DARK_THEME="$AICHAT_CONFIG_DIR/dark.tmTheme"
-    info "Creating aichat configuration..."
-    write_managed "$AICHAT_CONFIG" "#" <<'AICHAT_CONF'
-model: "ollama:gemma3:4b"
-stream: true
-save: true
-keybindings: emacs
-editor: micro
-wrap: auto
-wrap_code: false
-save_session: null
-compress_threshold: 4000
-function_calling: true
-light_theme: false
-left_prompt:
-  '{color.purple}{?session {?agent {agent}>}{session}{?role /}}{!session {?agent {agent}>}}{role}{?rag @{rag}}{color.cyan}{?session )}{!session >}{color.reset} '
-right_prompt:
-  '{color.magenta}{?session {?consume_tokens {consume_tokens}({consume_percent}%)}{!consume_tokens {consume_tokens}}}{color.reset}'
-document_loaders:
-  pdf: 'pdftotext $1 -'
-  docx: 'pandoc --to plain $1'
-clients:
-  - type: openai-compatible
-    name: ollama
-    api_base: "http://127.0.0.1:11434/v1"
-    models:
-      - name: "gemma3:4b"
-        max_input_tokens: 32768
-      - name: "nomic-embed-text-v2-moe:latest"
-        type: embedding
-        default_chunk_size: 1000
-        max_batch_size: 32
-AICHAT_CONF
-    write_generated "$AICHAT_DARK_THEME" <<'AICHAT_THEME'
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0">
-<dict>
-  <key>name</key>
-  <string>Dracula Sakura</string>
-  <key>settings</key>
-  <array>
-    <dict>
-      <key>settings</key>
-      <dict>
-        <key>background</key>
-        <string>#282A36</string>
-        <key>foreground</key>
-        <string>#F8F8F2</string>
-        <key>caret</key>
-        <string>#FF9FE3</string>
-        <key>selection</key>
-        <string>#4B4963</string>
-        <key>lineHighlight</key>
-        <string>#323448</string>
-      </dict>
-    </dict>
-    <dict>
-      <key>name</key>
-      <string>Comment</string>
-      <key>scope</key>
-      <string>comment</string>
-      <key>settings</key>
-      <dict><key>foreground</key><string>#8A88C7</string></dict>
-    </dict>
-    <dict>
-      <key>name</key>
-      <string>Keyword</string>
-      <key>scope</key>
-      <string>keyword, storage</string>
-      <key>settings</key>
-      <dict><key>foreground</key><string>#FF9FE3</string></dict>
-    </dict>
-    <dict>
-      <key>name</key>
-      <string>String</string>
-      <key>scope</key>
-      <string>string</string>
-      <key>settings</key>
-      <dict><key>foreground</key><string>#FFF0A8</string></dict>
-    </dict>
-    <dict>
-      <key>name</key>
-      <string>Function</string>
-      <key>scope</key>
-      <string>entity.name.function, support.function</string>
-      <key>settings</key>
-      <dict><key>foreground</key><string>#8AF7CF</string></dict>
-    </dict>
-    <dict>
-      <key>name</key>
-      <string>Variable</string>
-      <key>scope</key>
-      <string>variable, entity.name.variable</string>
-      <key>settings</key>
-      <dict><key>foreground</key><string>#FFCF93</string></dict>
-    </dict>
-    <dict>
-      <key>name</key>
-      <string>Type</string>
-      <key>scope</key>
-      <string>entity.name.type, support.type</string>
-      <key>settings</key>
-      <dict><key>foreground</key><string>#9BE7FF</string></dict>
-    </dict>
-    <dict>
-      <key>name</key>
-      <string>Number</string>
-      <key>scope</key>
-      <string>constant.numeric</string>
-      <key>settings</key>
-      <dict><key>foreground</key><string>#D4B2FF</string></dict>
-    </dict>
-  </array>
-</dict>
-</plist>
-AICHAT_THEME
-    configured "aichat configured (local Ollama defaults, Dracula-Sakura dark theme)"
+# ---- retired aichat config ----
+remove_superseded_managed "$HOME/.config/aichat/config.yaml" \
+    "aichat was removed from the setup" "(#542)"
 
 # ---- ripgrep config ----
 RIPGREPRC="$HOME/.ripgreprc"
@@ -8110,17 +7133,6 @@ info "Configuring global git hooks..."
 # third-party tools write into this same directory, so a delegator that only ran the
 # per-repo hook would silently disable them instead.
 #
-# git-lfs is the exception, and is deliberately NOT chained (#311). It is
-# core.hooksPath aware, so `git lfs install` writes its four hooks here from any
-# repo — which made `git lfs pre-push` run on EVERY push on the machine, including
-# in repositories that have never held an LFS object. That is normally just a wasted
-# lock-verification round-trip, but against a GitHub wiki remote the lock API cannot
-# authorise a wiki push at all, so it fails, and the chain aborts on the first
-# non-zero status: every wiki push blocked, with an error naming authentication
-# rather than LFS. A global hook cannot know which repositories use LFS, so LFS is
-# opted into per repository instead — see `git-lfs-enable-repo`, which writes the
-# hooks to .git/hooks, where the chain runs them as the repo's own hook.
-#
 # Deliberately not covered: the server-side hooks (pre-receive, update, post-update,
 # proc-receive), and the hot-path ones where a wrapper costs more than it delivers
 # (reference-transaction, post-index-change, fsmonitor-watchman).
@@ -8135,10 +7147,8 @@ GIT_HOOK_TYPES=(
 # ignores it; keeping it in one file means the chain semantics can't drift per type.
 write_managed_script "$GIT_HOOKS_DIR/dev-setup-chain.sh" <<'HOOK_CHAIN_LIB'
 #!/usr/bin/env bash
-# Sourced by every hook in this directory. Runs, in order:
-#   1. the repository's own hook (.git/hooks/<type>)
-#   2. any third-party hook preserved in <type>.d/ (e.g. git-lfs)
-# aborting on the first non-zero status, which is the hook contract.
+# Sourced by every hook in this directory. Runs the repository's own hook, then
+# each preserved third-party hook. It stops on the first nonzero status.
 
 run_hook_chain() {
     local hook="$1"; shift
@@ -8146,9 +7156,7 @@ run_hook_chain() {
     hooks_dir="$(dirname "${BASH_SOURCE[0]}")"
     DEV_SETUP_REPO_HOOK_RAN=0
 
-    # These hook types are fed data on stdin. Buffer it once, then hand every link in
-    # the chain its own copy — stdin can only be consumed by the first reader, so
-    # without this a chained git-lfs pre-push would see an empty ref list.
+    # Buffer stdin once, then give each chained hook its own copy.
     case "$hook" in
         pre-push|post-rewrite|push-to-checkout)
             stdin_file="$(mktemp)"
@@ -8185,33 +7193,6 @@ run_hook_chain() {
             repo_hook="$common/hooks/$hook"
         fi
     fi
-    # 1a. Git LFS is not chained globally (#311), so it is possible to have a repo
-    #     that tracks paths through the lfs filter but has no LFS pre-push hook. That
-    #     pushes the POINTER FILES WITHOUT THE OBJECTS behind them, and the push
-    #     SUCCEEDS — the breakage lands on whoever clones next. It is the one failure
-    #     this arrangement can produce silently, so it is refused here rather than
-    #     discovered later (#313).
-    #
-    #     Aborting rather than warning is deliberate: a warning scrolls past in push
-    #     output and would not stop the bad push, which is the entire point. Unlike
-    #     the wiki case in #311 this cannot misfire on a healthy repo — LFS-tracked
-    #     paths with no LFS hook is always wrong. `--no-verify` still bypasses it,
-    #     and `dev-setup.lfsguard false` disables it for a repo that pushes its LFS
-    #     objects some other way (CI, a mirror).
-    if [ "$hook" = "pre-push" ] && command -v git-lfs >/dev/null 2>&1 &&
-       [ -n "$(git ls-files ':(attr:filter=lfs)' 2>/dev/null | head -n 1)" ] &&
-       ! grep -qs 'git lfs pre-push' "$common/hooks/pre-push" &&
-       [ "$(git config --bool --get dev-setup.lfsguard 2>/dev/null)" != "false" ]; then
-        echo "ERROR: this repository tracks files with Git LFS, but has no LFS pre-push hook." >&2
-        echo "       Pushing now would upload the pointer files WITHOUT the objects behind" >&2
-        echo "       them, and the push would succeed — leaving the remote broken." >&2
-        echo "" >&2
-        echo "  Fix:      git-lfs-enable-repo" >&2
-        echo "  Bypass:   git push --no-verify" >&2
-        echo "  Disable:  git config dev-setup.lfsguard false" >&2
-        [ -n "$stdin_file" ] && rm -f "$stdin_file"
-        return 1
-    fi
 
     if [ -n "$repo_hook" ] && [ -x "$repo_hook" ]; then
         DEV_SETUP_REPO_HOOK_RAN=1
@@ -8222,8 +7203,7 @@ run_hook_chain() {
         fi
     fi
 
-    # 2. Third-party hooks that were already installed in this directory and moved
-    #    aside so a delegator could take the name (git-lfs, most likely).
+    # 2. Third-party hooks preserved when a delegator took their name.
     if [ -d "$hooks_dir/$hook.d" ]; then
         for f in "$hooks_dir/$hook.d"/*; do
             [ -x "$f" ] || continue
@@ -8244,37 +7224,33 @@ HOOK_CHAIN_LIB
 # name, preserving it in <type>.d/ where the chain will still run it. Idempotent: a
 # tool that re-creates its hooks on every invocation would otherwise stack up
 # identical copies, so one that is already preserved is dropped rather than added.
-#
-# git-lfs is the exception — its hooks are DISCARDED rather than preserved (#311).
-# Nothing is lost by deleting them: `git lfs install` re-creates them on demand, and
-# a repository that actually uses LFS opts in with `git-lfs-enable-repo`, which
-# installs them where the chain runs them as the repo's own hook. Copies preserved
-# by earlier versions are purged too, so a machine provisioned while LFS was still
-# chained is repaired on the next run rather than keeping the hook forever.
 preserve_foreign_hook() {
     local type="$1"
     local path="$GIT_HOOKS_DIR/$type" dest_dir="$GIT_HOOKS_DIR/$type.d" name f
 
-    for f in "$dest_dir"/10-git-lfs*; do
+    # Remove Git LFS hooks left by earlier releases. The package is retired, so
+    # these hooks can only fail after its binary disappears.
+    for f in "$dest_dir"/*; do
         [[ -f "$f" ]] || continue
+        grep -qE 'git[- ]lfs' "$f" 2>/dev/null || continue
         if [[ "$DRY_RUN" == "true" ]]; then
-            info "[DRY RUN] Would unchain preserved git-lfs hook $type.d/${f##*/} (#311)"
+            info "[DRY RUN] Would remove retired Git LFS hook $type.d/${f##*/}"
         else
             rm -f "$f"
-            info "Unchained preserved git-lfs $type hook — LFS is per-repo now (#311)"
+            info "Removed retired Git LFS hook $type.d/${f##*/}"
         fi
     done
-    rmdir "$dest_dir" 2>/dev/null || true   # tidy up if that was the only link
+    rmdir "$dest_dir" 2>/dev/null || true
 
     [[ -f "$path" ]] || return 0
-    grep -qF "dev-setup managed block" "$path" 2>/dev/null && return 0   # already ours
+    grep -qF "dev-setup managed block" "$path" 2>/dev/null && return 0
 
     if grep -qE 'git[- ]lfs' "$path" 2>/dev/null; then
         if [[ "$DRY_RUN" == "true" ]]; then
-            info "[DRY RUN] Would remove global git-lfs $type hook (LFS is per-repo, #311)"
+            info "[DRY RUN] Would remove retired global Git LFS $type hook"
         else
             rm -f "$path"
-            info "Removed global git-lfs $type hook — enable LFS per repo with git-lfs-enable-repo (#311)"
+            info "Removed retired global Git LFS $type hook"
         fi
         return 0
     fi
@@ -8287,7 +7263,7 @@ preserve_foreign_hook() {
     mkdir -p "$dest_dir"
     for f in "$dest_dir"/*; do
         [[ -f "$f" ]] || continue
-        if cmp -s "$path" "$f"; then rm -f "$path"; return 0; fi   # already preserved
+        if cmp -s "$path" "$f"; then rm -f "$path"; return 0; fi
     done
     [[ -e "$dest_dir/$name" ]] && name="${name}.$(date +%Y%m%d%H%M%S)"
     mv "$path" "$dest_dir/$name"
@@ -8369,7 +7345,7 @@ if [[ -n "$large_files" ]]; then
     echo "ERROR: Large files detected (>5MB):"
     echo "$large_files"
     echo ""
-    echo "Consider using git-lfs or commit with --no-verify to bypass."
+    echo "Reduce the file size or commit with --no-verify to bypass."
     exit 1
 fi
 
@@ -8465,54 +7441,6 @@ aliases:
 GH_CONF
     configured "GitHub CLI configured (SSH protocol, micro editor, delta pager, aliases)"
 
-# ---- glab (GitLab CLI) config — mirror the gh conveniences ----
-# GitLab uses merge requests, so the pr* aliases point at `mr` (same alias NAMES as
-# gh, so muscle memory carries over). glab owns its config schema, so drive it via
-# `glab config set` / `glab alias set` rather than hand-writing YAML.
-if [[ "$DRY_RUN" != "true" ]] && installed glab && ! is_done "config:glab"; then
-    info "Configuring glab (SSH, micro, gh-style aliases → merge requests)..."
-    _glab_failed=0
-    glab config set git_protocol ssh >> "$LOG_FILE" 2>&1 || _glab_failed=$((_glab_failed + 1))
-    glab config set editor micro >> "$LOG_FILE" 2>&1 || _glab_failed=$((_glab_failed + 1))
-    # No pager is set here. `glab config set glab_pager delta` is REJECTED by glab
-    # 1.113.0 ("not a recognized glab config key") even though `glab config` help
-    # documents the key, and plain `pager` is refused too — so the call could only ever
-    # print an error and configure nothing (#285). The binary does carry a GLAB_PAGER
-    # env var; it is exported from ~/.zshrc instead, where a failure costs nothing.
-    # NOTE: the heredoc below is a DATA table — every line is parsed as
-    # "<alias>|<command>", so it cannot carry comments. gh's `rc` (repo clone) is not
-    # mirrored because `glab rc` is a real command (runner controllers); `rcl` is the
-    # nearest free name (#285).
-    while IFS='|' read -r _glab_alias _glab_cmd; do
-        [[ -z "$_glab_alias" ]] && continue
-        glab alias set "$_glab_alias" "$_glab_cmd" >> "$LOG_FILE" 2>&1 \
-            || { warn "glab alias '$_glab_alias' not set (name taken by a glab command?)"; _glab_failed=$((_glab_failed + 1)); }
-    done <<'GLAB_ALIASES'
-co|mr checkout
-pv|mr view --web
-pc|mr create --web
-pl|mr list
-pm|mr merge --squash --remove-source-branch
-il|issue list
-iv|issue view --web
-ic|issue create --web
-rv|repo view --web
-rcl|repo clone
-rl|repo list
-runs|ci list
-watch|ci view
-rerun|ci retry
-rel|release create
-GLAB_ALIASES
-    unset _glab_alias _glab_cmd
-    mark_done "config:glab"
-    if [[ "$_glab_failed" -eq 0 ]]; then
-        success "glab configured (SSH, micro; gh-style aliases mapped to GitLab MRs/CI)"
-    else
-        warn "glab configured with $_glab_failed problem(s) — see $LOG_FILE"
-    fi
-    unset _glab_failed
-fi
 
 # ---- pip config ----
 # This looks like dead weight now that uv is the package manager and there is no
@@ -8826,10 +7754,9 @@ write_managed "$GHOSTTY_CONFIG" "#" <<'GHOSTTY_CONF'
 # Ghostty configuration
 # Docs: https://ghostty.org/docs/config
 
-# Font — the Nerd Font variant so glyph icons (eza, starship, lazygit, Claude
-# Code, etc.) render natively in the terminal instead of relying on font
-# fallback. Same family SketchyBar uses. If any double-width nerd glyphs
-# misalign, switch to "JetBrainsMono Nerd Font Mono" (forces single-width).
+# Font — the Nerd Font variant so glyph icons from eza, starship, lazygit, and
+# other terminal tools render natively instead of relying on font fallback.
+# If double-width glyphs misalign, use "JetBrainsMono Nerd Font Mono".
 font-family = "JetBrainsMono Nerd Font"
 font-size = 14
 
@@ -8936,276 +7863,33 @@ GHOSTTY_PLIST_EOF
     fi
 fi
 
-# ---- SketchyBar config (Dracula status bar) ----
-# Shell-based config (no SbarLua build step). Items show a Nerd Font glyph icon
-# (icons.sh) + a value label; the plugins swap the glyph by state (battery level,
-# wifi/bt/vpn on-off, volume level). Glyphs need JetBrainsMono Nerd Font (installed).
-SBAR_DIR="$HOME/.config/sketchybar"
-SBAR_PLUGINS="$SBAR_DIR/plugins"
-    info "Creating SketchyBar configuration (Dracula-Sakura, system widgets)..."
-
-    # Shared Dracula-Sakura palette (sourced by plugins)
-    write_managed_script "$SBAR_DIR/colors.sh" <<'SBAR_COLORS'
-#!/usr/bin/env bash
-export BG=0xff282a36
-export PANEL=0xff323448
-export PANEL_SOFT=0xff2f3144
-export CURRENT=0xff4b4963
-export SELECTION=0xff6a5d86
-export FG=0xfff8f8f2
-export MUTED=0xffddd2f7
-export DIM=0xffa297cb
-export COMMENT=0xff8a88c7
-export CYAN=0xff9be7ff
-export MINT=0xff8af7cf
-export PEACH=0xffffcf93
-export ROSE=0xffff9fe3
-export BLUSH=0xffffc2ec
-export LILAC=0xffd4b2ff
-export RED=0xffff7aa8
-export YELLOW=0xfffff0a8
-# Back-compat aliases for older plugin snippets.
-export LINE=$CURRENT
-export GREEN=$MINT
-export ORANGE=$PEACH
-export PINK=$ROSE
-export PURPLE=$LILAC
-# Nerd Font glyphs (sourced here so every plugin + the rc get them via colors.sh).
-[ -r "$HOME/.config/sketchybar/icons.sh" ] && source "$HOME/.config/sketchybar/icons.sh"
-SBAR_COLORS
-
-    # Shared Nerd Font glyphs (JetBrainsMono Nerd Font). Bash $'\U...' escapes expand
-    # to the glyph at source time. Codepoints: nf-fa/nf-oct/nf-md sets.
-    write_managed_script "$SBAR_DIR/icons.sh" <<'SBAR_ICONS'
-#!/usr/bin/env bash
-export ICON_CLOCK=$'\uf017'             # nf-fa-clock
-export ICON_CPU=$'\uf4bc'               # nf-oct-cpu
-export ICON_MEM=$'\U000F035B'          # nf-md-memory
-export ICON_BATT=$'\U000F0079'         # nf-md-battery
-export ICON_BATT_CHARGE=$'\U000F0084'  # nf-md-battery-charging
-export ICON_BATT_LOW=$'\U000F0083'     # nf-md-battery-alert
-export ICON_BT_ON=$'\U000F00AF'        # nf-md-bluetooth
-export ICON_BT_OFF=$'\U000F00B2'       # nf-md-bluetooth-off
-export ICON_WIFI=$'\U000F05A9'         # nf-md-wifi
-export ICON_WIFI_OFF=$'\U000F05AA'     # nf-md-wifi-off
-export ICON_VOL=$'\U000F057E'          # nf-md-volume-high
-export ICON_VOL_MUTE=$'\U000F0581'     # nf-md-volume-off
-export ICON_VPN_ON=$'\U000F0565'       # nf-md-shield-check
-export ICON_VPN_OFF=$'\U000F099D'      # nf-md-shield-off-outline
-export ICON_SHOT=$'\U000F0100'         # nf-md-camera (Shottr capture menu)
-export ICON_SHOT_AREA=$'\U000F0126'    # nf-md-crop (area selection)
-export ICON_SHOT_WINDOW=$'\U000F0379'  # nf-md-window-maximize (window capture)
-export ICON_SHOT_FULL=$'\U000F0293'    # nf-md-fullscreen (fullscreen capture)
-export ICON_SHOT_SCROLL=$'\U000F0619'  # nf-md-arrow-expand-vertical (scrolling capture)
-SBAR_ICONS
-
-    write_managed_script "$SBAR_DIR/sketchybarrc" <<'SBAR_RC'
-#!/usr/bin/env bash
-# SketchyBar — Dracula-Sakura. Docs: https://felixkratz.github.io/SketchyBar
-source "$HOME/.config/sketchybar/colors.sh"
-PLUGIN_DIR="$HOME/.config/sketchybar/plugins"
-FONT="JetBrainsMono Nerd Font"
-
-sketchybar --bar height=32 position=top blur_radius=30 color=$BG \
-                 padding_left=8 padding_right=8 sticky=on
-
-sketchybar --default updates=when_shown \
-                     icon.font="$FONT:Bold:13.0" icon.color=$FG \
-                     icon.padding_left=6 icon.padding_right=3 \
-                     label.font="$FONT:Semibold:13.0" label.color=$MUTED \
-                     label.padding_left=3 label.padding_right=8 \
-                     padding_left=8 padding_right=8 \
-                     background.color=$PANEL background.border_color=$CURRENT \
-                     background.border_width=1 background.corner_radius=8 background.height=22
-
-# --- Left: date/time (far left), then focused app ---
-# Click the clock to open herald's calendar in a Ghostty quick terminal.
-sketchybar --add item clock left \
-           --set clock update_freq=10 icon="$ICON_CLOCK" icon.color=$BLUSH label.color=$DIM \
-                 label.padding_left=6 \
-                 click_script="open -a Ghostty; sleep 0.2; osascript -e 'tell application \"System Events\" to keystroke \"herald\" & return' >/dev/null 2>&1" \
-                 script="$PLUGIN_DIR/clock.sh"
-
-sketchybar --add item front_app left \
-           --subscribe front_app front_app_switched \
-           --set front_app icon.drawing=off label.color=$ROSE label.font="$FONT:Bold:13.0" \
-                 label.padding_left=6 \
-                 script="$PLUGIN_DIR/front_app.sh"
-
-# --- Right (added right-to-left visually) ---
-sketchybar --add item battery right \
-           --subscribe battery system_woke power_source_change \
-           --set battery update_freq=120 script="$PLUGIN_DIR/battery.sh"
-
-sketchybar --add item bluetooth right \
-           --set bluetooth update_freq=30 label.drawing=off icon.padding_right=6 \
-                 click_script="blueutil --power toggle" \
-                 script="$PLUGIN_DIR/bluetooth.sh"
-
-sketchybar --add item wifi right \
-           --set wifi update_freq=30 label.color=$CYAN \
-                 script="$PLUGIN_DIR/wifi.sh"
-
-sketchybar --add item volume right \
-           --subscribe volume volume_change \
-           --set volume script="$PLUGIN_DIR/volume.sh"
-
-sketchybar --add item cpu right \
-           --set cpu update_freq=5 icon="$ICON_CPU" icon.color=$PEACH label.color=$PEACH \
-                 script="$PLUGIN_DIR/cpu.sh"
-
-sketchybar --add item mem right \
-           --set mem update_freq=10 icon="$ICON_MEM" icon.color=$LILAC label.color=$LILAC \
-                 script="$PLUGIN_DIR/mem.sh"
-
-sketchybar --add item vpn right \
-           --set vpn update_freq=15 \
-                 click_script="$PLUGIN_DIR/vpn_toggle.sh" \
-                 script="$PLUGIN_DIR/vpn.sh"
-
-# --- Right: Shottr capture menu (camera glyph -> click-to-open popup) ---
-# Native menu bar is auto-hidden, so this stands in for Shottr's own menu-bar icon.
-# Left-click toggles a capture menu; right-click is a quick area grab. Each entry
-# drives Shottr via its shottr:// URL scheme. Auto-closes on mouse.exited.global.
-sketchybar --add item shottr right \
-           --set shottr icon="$ICON_SHOT" icon.color=$CYAN icon.font="$FONT:Bold:14.0" \
-                 label.drawing=off background.color=$PANEL_SOFT background.border_color=$LILAC \
-                 background.border_width=1 \
-                 popup.horizontal=off popup.background.color=$PANEL \
-                 popup.background.corner_radius=10 popup.background.border_width=1 \
-                 popup.background.border_color=$LILAC popup.background.shadow.drawing=on \
-                 click_script="$PLUGIN_DIR/shottr_click.sh" \
-                 script="$PLUGIN_DIR/shottr.sh" \
-           --subscribe shottr mouse.exited.global
-
-sketchybar --add item shottr.area popup.shottr \
-           --set shottr.area icon="$ICON_SHOT_AREA" icon.color=$CYAN label="Area" label.color=$FG \
-                 background.drawing=off label.padding_right=14 \
-                 click_script="open 'shottr://grab/area'; sketchybar --set shottr popup.drawing=off"
-sketchybar --add item shottr.window popup.shottr \
-           --set shottr.window icon="$ICON_SHOT_WINDOW" icon.color=$CYAN label="Window" label.color=$FG \
-                 background.drawing=off label.padding_right=14 \
-                 click_script="open 'shottr://grab/window'; sketchybar --set shottr popup.drawing=off"
-sketchybar --add item shottr.full popup.shottr \
-           --set shottr.full icon="$ICON_SHOT_FULL" icon.color=$CYAN label="Fullscreen" label.color=$FG \
-                 background.drawing=off label.padding_right=14 \
-                 click_script="open 'shottr://grab/fullscreen'; sketchybar --set shottr popup.drawing=off"
-sketchybar --add item shottr.scroll popup.shottr \
-           --set shottr.scroll icon="$ICON_SHOT_SCROLL" icon.color=$CYAN label="Scrolling" label.color=$FG \
-                 background.drawing=off label.padding_right=14 \
-                 click_script="open 'shottr://grab/scrolling'; sketchybar --set shottr popup.drawing=off"
-
-sketchybar --update
-SBAR_RC
-
-    # -- plugins --
-    write_managed_script "$SBAR_PLUGINS/front_app.sh" <<'P_FRONT'
-#!/usr/bin/env bash
-[ "$SENDER" = "front_app_switched" ] && sketchybar --set "$NAME" label="$INFO"
-P_FRONT
-
-    write_managed_script "$SBAR_PLUGINS/clock.sh" <<'P_CLOCK'
-#!/usr/bin/env bash
-sketchybar --set "$NAME" label="$(date '+%a %d %b  %H:%M')"
-P_CLOCK
-
-    write_managed_script "$SBAR_PLUGINS/battery.sh" <<'P_BATT'
-#!/usr/bin/env bash
-source "$HOME/.config/sketchybar/colors.sh"
-PCT=$(pmset -g batt | grep -Eo '[0-9]+%' | head -1 | tr -d '%')
-# Mac mini / no battery: hide the item entirely.
-if [ -z "$PCT" ]; then sketchybar --set "$NAME" drawing=off; exit 0; fi
-CHARGING=$(pmset -g batt | grep -c 'AC Power')
-COLOR=$MINT
-[ "$PCT" -lt 40 ] && COLOR=$PEACH
-[ "$PCT" -lt 20 ] && COLOR=$RED
-ICON="$ICON_BATT"
-[ "$PCT" -lt 20 ] && ICON="$ICON_BATT_LOW"
-[ "$CHARGING" -gt 0 ] && ICON="$ICON_BATT_CHARGE"
-sketchybar --set "$NAME" drawing=on icon="$ICON" icon.color=$COLOR label="${PCT}%" label.color=$COLOR
-P_BATT
-
-    write_managed_script "$SBAR_PLUGINS/bluetooth.sh" <<'P_BT'
-#!/usr/bin/env bash
-source "$HOME/.config/sketchybar/colors.sh"
-if command -v blueutil >/dev/null 2>&1 && [ "$(blueutil --power)" = "1" ]; then
-    sketchybar --set "$NAME" icon="$ICON_BT_ON" icon.color=$LILAC
-else
-    sketchybar --set "$NAME" icon="$ICON_BT_OFF" icon.color=$COMMENT
+# ---- Retired SketchyBar config ----
+# Remove only generator-owned files during normal config refreshes. The broader
+# --cleanup path removes the directory after the sketchybar command is absent.
+for _sketchybar_file in \
+    "$HOME/.config/sketchybar/colors.sh" \
+    "$HOME/.config/sketchybar/icons.sh" \
+    "$HOME/.config/sketchybar/sketchybarrc" \
+    "$HOME/.config/sketchybar/plugins/front_app.sh" \
+    "$HOME/.config/sketchybar/plugins/clock.sh" \
+    "$HOME/.config/sketchybar/plugins/battery.sh" \
+    "$HOME/.config/sketchybar/plugins/bluetooth.sh" \
+    "$HOME/.config/sketchybar/plugins/wifi.sh" \
+    "$HOME/.config/sketchybar/plugins/volume.sh" \
+    "$HOME/.config/sketchybar/plugins/cpu.sh" \
+    "$HOME/.config/sketchybar/plugins/mem.sh" \
+    "$HOME/.config/sketchybar/plugins/vpn.sh" \
+    "$HOME/.config/sketchybar/plugins/vpn_toggle.sh" \
+    "$HOME/.config/sketchybar/plugins/shottr_click.sh" \
+    "$HOME/.config/sketchybar/plugins/shottr.sh"; do
+    remove_superseded_managed "$_sketchybar_file" \
+        "SketchyBar was removed from the setup" "(#542)"
+done
+if [[ "$DRY_RUN" != "true" ]]; then
+    rmdir "$HOME/.config/sketchybar/plugins" 2>/dev/null || true
+    rmdir "$HOME/.config/sketchybar" 2>/dev/null || true
 fi
-P_BT
-
-    write_managed_script "$SBAR_PLUGINS/wifi.sh" <<'P_WIFI'
-#!/usr/bin/env bash
-source "$HOME/.config/sketchybar/colors.sh"
-SSID=$(ipconfig getsummary en0 2>/dev/null | awk -F ' SSID : ' '/ SSID : / {print $2; exit}')
-if [ -n "$SSID" ]; then
-    sketchybar --set "$NAME" icon="$ICON_WIFI" icon.color=$CYAN label.drawing=off
-else
-    sketchybar --set "$NAME" icon="$ICON_WIFI_OFF" icon.color=$COMMENT label.drawing=off
-fi
-P_WIFI
-
-    write_managed_script "$SBAR_PLUGINS/volume.sh" <<'P_VOL'
-#!/usr/bin/env bash
-source "$HOME/.config/sketchybar/colors.sh"
-VOL="${INFO:-$(osascript -e 'output volume of (get volume settings)')}"
-ICON="$ICON_VOL"; [ "${VOL:-0}" -eq 0 ] 2>/dev/null && ICON="$ICON_VOL_MUTE"
-sketchybar --set "$NAME" icon="$ICON" icon.color=$CYAN label="${VOL}%" label.color=$CYAN
-P_VOL
-
-    write_managed_script "$SBAR_PLUGINS/cpu.sh" <<'P_CPU'
-#!/usr/bin/env bash
-source "$HOME/.config/sketchybar/colors.sh"
-CPU=$(ps -A -o %cpu | awk '{s+=$1} END {printf "%d", s/'"$(sysctl -n hw.ncpu)"'}')
-sketchybar --set "$NAME" label="${CPU}%" label.color=$PEACH
-P_CPU
-
-    write_managed_script "$SBAR_PLUGINS/mem.sh" <<'P_MEM'
-#!/usr/bin/env bash
-source "$HOME/.config/sketchybar/colors.sh"
-USED=$(memory_pressure 2>/dev/null | awk -F ': ' '/System-wide memory free percentage/ {print 100-$2}' | tr -d '%')
-[ -z "$USED" ] && USED="?"
-sketchybar --set "$NAME" label="${USED}%" label.color=$LILAC
-P_MEM
-
-    write_managed_script "$SBAR_PLUGINS/vpn.sh" <<'P_VPN'
-#!/usr/bin/env bash
-source "$HOME/.config/sketchybar/colors.sh"
-if command -v mullvad >/dev/null 2>&1 && mullvad status 2>/dev/null | grep -qi 'Connected'; then
-    sketchybar --set "$NAME" icon="$ICON_VPN_ON" icon.color=$MINT label="VPN" label.color=$MINT
-else
-    sketchybar --set "$NAME" icon="$ICON_VPN_OFF" icon.color=$RED label="VPN" label.color=$RED
-fi
-P_VPN
-
-    write_managed_script "$SBAR_PLUGINS/vpn_toggle.sh" <<'P_VPNT'
-#!/usr/bin/env bash
-command -v mullvad >/dev/null 2>&1 || exit 0
-if mullvad status 2>/dev/null | grep -qi 'Connected'; then mullvad disconnect; else mullvad connect; fi
-P_VPNT
-
-    write_managed_script "$SBAR_PLUGINS/shottr_click.sh" <<'P_SHOTC'
-#!/usr/bin/env bash
-# Left-click toggles the capture menu; right-click is a quick area grab.
-if [ "$BUTTON" = "right" ]; then
-    open "shottr://grab/area"
-    sketchybar --set shottr popup.drawing=off
-else
-    sketchybar --set shottr popup.drawing=toggle
-fi
-P_SHOTC
-
-    write_managed_script "$SBAR_PLUGINS/shottr.sh" <<'P_SHOT'
-#!/usr/bin/env bash
-# Close the capture menu when the pointer leaves the item and its popup.
-[ "$SENDER" = "mouse.exited.global" ] && sketchybar --set shottr popup.drawing=off
-P_SHOT
-
-    if [[ "$DRY_RUN" != "true" ]] && installed sketchybar; then
-        brew services restart sketchybar >> "$LOG_FILE" 2>&1 || warn "Could not start sketchybar service (grant it Accessibility if needed)"
-    fi
-    configured "SketchyBar configured (Dracula-Sakura, system widgets)"
+unset _sketchybar_file
 
 # ---- clipse clipboard listener (launchd agent) ----
 # clipse runs a background listener to capture clipboard history. Register a
@@ -9266,142 +7950,6 @@ CLIPSE_PLIST_EOF
 fi
 mark_done "config:clipse"
 
-# ---- email + calendar (herald) ----
-# Herald owns its account/server/credential config, so the setup script only manages the
-# theme surface: a local Dracula-Sakura theme asset plus a narrow update of theme.name in
-# ~/.herald/conf.yaml. The rest of the file stays user-owned. If the config file doesn't
-# exist yet, seed only the theme block; herald's own onboarding fills in accounts later.
-HERALD_CONFIG_DIR="$HOME/.herald"
-HERALD_CONFIG="$HERALD_CONFIG_DIR/conf.yaml"
-HERALD_THEME_DIR="$HERALD_CONFIG_DIR/themes"
-HERALD_THEME_FILE="$HERALD_THEME_DIR/dracula-sakura.yaml"
-    info "Writing herald Dracula-Sakura theme..."
-    write_generated "$HERALD_THEME_FILE" <<'HERALD_THEME_CONF'
-version: 1
-name: dracula-sakura
-display_name: Dracula Sakura
-inherits: herald-dark
-roles:
-  text.primary:
-    fg: "#f8f8f2"
-  text.muted:
-    fg: "#ddd2f7"
-  text.dim:
-    fg: "#a297cb"
-  chrome.title_bar:
-    fg: "#ffc2ec"
-    bg: "#282a36"
-    bold: true
-  chrome.tab_active:
-    fg: "#282a36"
-    bg: "#ff9fe3"
-    bold: true
-  chrome.tab_inactive:
-    fg: "#ddd2f7"
-    bg: "#323448"
-  chrome.status_bar:
-    fg: "#f8f8f2"
-    bg: "#2f3144"
-  chrome.hint_bar:
-    fg: "#ddd2f7"
-    bg: "#323448"
-  chrome.table_header:
-    fg: "#9be7ff"
-    bg: "#2f3144"
-    bold: true
-  focus.panel_border:
-    fg: "#4b4963"
-  focus.panel_border_focused:
-    fg: "#d4b2ff"
-  focus.selection_active:
-    fg: "#282a36"
-    bg: "#ff9fe3"
-    bold: true
-  focus.selection_inactive:
-    fg: "#f8f8f2"
-    bg: "#4b4963"
-  focus.visual_selection:
-    fg: "#282a36"
-    bg: "#d4b2ff"
-  metadata.label:
-    fg: "#a297cb"
-  metadata.sender:
-    fg: "#8af7cf"
-    bold: true
-  metadata.date:
-    fg: "#ddd2f7"
-  metadata.subject:
-    fg: "#fff0a8"
-    bold: true
-  metadata.tag:
-    fg: "#9be7ff"
-    bold: true
-  severity.info:
-    fg: "#9be7ff"
-  severity.success:
-    fg: "#8af7cf"
-  severity.warning:
-    fg: "#ffcf93"
-  severity.error:
-    fg: "#ff7aa8"
-  severity.destructive:
-    fg: "#fff5f5"
-    bg: "#7a2844"
-    bold: true
-  compose.accent:
-    fg: "#ff9fe3"
-  compose.attachment:
-    fg: "#9be7ff"
-  contacts.keyword_search:
-    fg: "#ff9fe3"
-  contacts.company:
-    fg: "#ddd2f7"
-  rules.title:
-    fg: "#ffc2ec"
-    bold: true
-  rules.selected:
-    fg: "#282a36"
-    bg: "#ff9fe3"
-HERALD_THEME_CONF
-    configured "herald theme asset written (Dracula-Sakura)"
-
-if [[ "$DRY_RUN" == "true" ]]; then
-    if [[ -f "$HERALD_CONFIG" ]]; then
-        info "[DRY RUN] Would set herald theme.name -> dracula-sakura in $HERALD_CONFIG"
-    else
-        info "[DRY RUN] Would seed $HERALD_CONFIG with theme.name = dracula-sakura"
-    fi
-else
-    mkdir -p "$HERALD_CONFIG_DIR"
-    if [[ ! -f "$HERALD_CONFIG" ]]; then
-        printf 'theme:\n  name: dracula-sakura\n' > "$HERALD_CONFIG"
-        configured "herald config seeded (theme only; accounts still self-configure on first run)"
-    else
-        _herald_mode="$(stat -f '%Lp' "$HERALD_CONFIG" 2>/dev/null || true)"
-        _herald_tmp=$(mktemp)
-        if ruby -e '
-require "yaml"
-path = ARGV[0]
-out = ARGV[1]
-cfg = File.exist?(path) ? (YAML.load_file(path) || {}) : {}
-cfg["theme"] ||= {}
-cfg["theme"]["name"] = "dracula-sakura"
-File.write(out, cfg.to_yaml(line_width: -1))
-' "$HERALD_CONFIG" "$_herald_tmp" 2>/dev/null; then
-            mv "$_herald_tmp" "$HERALD_CONFIG"
-            [[ -n "$_herald_mode" ]] && chmod "$_herald_mode" "$HERALD_CONFIG" 2>/dev/null || true
-            configured "herald config merged (theme.name -> dracula-sakura; accounts left untouched)"
-        else
-            rm -f "$_herald_tmp"
-            warn "Could not merge herald config theme name — left as-is: $HERALD_CONFIG"
-        fi
-        unset _herald_mode _herald_tmp
-    fi
-fi
-# Complete setup from the POST_SETUP checklist:
-#   herald                                      # first run: add Gmail + iCloud, CalDAV
-#   herald serve -config ~/.herald/conf.yaml    # background server (MCP mutations need it)
-# The herald MCP server is registered for Claude in the MCP section below.
 
 # ---- direnv config ----
 DIRENV_CONFIG_DIR="$HOME/.config/direnv"
@@ -9642,9 +8190,8 @@ git init -b main
 # Shell and bats get 4 spaces, not the 2-space default (#494). The file carved
 # out Makefile, Go and Python and left shell on the default, which is the wrong
 # way round on a machine whose own flagship project is 18k lines of 4-space bash.
-# It also mattered beyond taste: croft does not read EditorConfig at all and
-# defaults shell to 4, VS Code does read it, so without this rule the two editors
-# reformat each other's work.
+# The explicit shell rule prevents editors and formatters from applying the
+# generic 2-space default to the repository's 4-space shell style.
 cat > .editorconfig <<'EDITORCONFIG'
 root = true
 
@@ -10700,51 +9247,12 @@ echo "Restore on a new machine:"
 echo "  brew bundle install --file=$BREWFILE"
 SCRIPT
 
-# -- git-lfs-enable-repo: opt one repository into Git LFS hooks --
-write_managed_script "$HOME/Scripts/bin/git-lfs-enable-repo" <<'SCRIPT'
-#!/usr/bin/env bash
-# Enable Git LFS hooks for THIS repository only.
-# Usage: git-lfs-enable-repo [path-to-repo]
-#
-# `git lfs install` cannot do this job on a machine with core.hooksPath set: git-lfs
-# is core.hooksPath aware, so it writes its hooks to the GLOBAL directory even when
-# asked for --local, which would put them back on every push in every repo (#311).
-# This writes them to .git/hooks instead, where the global delegator runs them as the
-# repository's own hook.
-set -euo pipefail
+# Remove the retired repository helper only when the generator still owns it.
+remove_superseded_managed "$HOME/Scripts/bin/git-lfs-enable-repo" \
+    "Git LFS was removed from the setup" "(#542)"
 
-cd "${1:-.}"
-command -v git-lfs >/dev/null 2>&1 || { echo "git-lfs is not installed." >&2; exit 1; }
-
-GIT_DIR="$(git rev-parse --path-format=absolute --git-common-dir)"
-HOOKS="$GIT_DIR/hooks"
-mkdir -p "$HOOKS"
-
-for hook in pre-push post-checkout post-commit post-merge; do
-    target="$HOOKS/$hook"
-    if [ -e "$target" ] && ! grep -q "git lfs $hook" "$target" 2>/dev/null; then
-        echo "Refusing to overwrite existing hook: $target" >&2
-        echo "Merge 'git lfs $hook \"\$@\"' into it by hand." >&2
-        continue
-    fi
-    cat > "$target" <<HOOK
-#!/bin/sh
-command -v git-lfs >/dev/null 2>&1 || {
-    printf >&2 '\n%s\n\n' "This repository is configured for Git LFS but 'git-lfs' was not found on your path."
-    exit 2
-}
-git lfs $hook "\$@"
-HOOK
-    chmod +x "$target"
-done
-
-git lfs install --local --skip-repo >/dev/null 2>&1 || true
-echo "Git LFS hooks enabled for $(basename "$PWD") (.git/hooks)."
-echo "Track files with: git lfs track '*.psd'"
-SCRIPT
-
-# (write_managed_script sets +x on each script; no blanket chmod needed.)
-success "Helper scripts written (clean-downloads, new-project, clone-work, clone-personal, backup-dotfiles, project-stats, health-check, setup-ssh, export-brewfile, git-lfs-enable-repo — merged, edits outside the markers are kept)"
+# write_managed_script sets each script executable.
+success "Helper scripts written (clean-downloads, new-project, clone-work, clone-personal, backup-dotfiles, project-stats, health-check, setup-ssh, export-brewfile — merged, edits outside the markers are kept)"
 
 # ---- Per-directory Git Config (work vs personal identity) ----
 info "Setting up per-directory git config..."
@@ -11188,584 +9696,28 @@ fi  # macos-defaults (Finder, Touch ID, DNS, Spotlight, TM, Siri, app defaults)
 
 # =============================================================================
 if should_run "configs"; then
-# CLAUDE CODE CONFIGURATION
+# OMP CONFIGURATION
 # =============================================================================
-banner "Claude Code Configuration"
+banner "Oh My Pi Configuration"
 
-# ---- Claude Code global settings ----
-CLAUDE_SETTINGS="$HOME/.claude/settings.json"
-if [[ -f "$CLAUDE_SETTINGS" ]]; then
-    # MERGE into an existing settings.json (preserves your own keys), and SECURITY-HARDEN
-    # the allowlist: add safe read-only entries + scoped git reads, and STRIP the
-    # dangerous auto-approvals (interpreters, package installs, network / remote-model
-    # fetch, trust-store mutation, cloud/infra mutation, secret reveal, broad git/gh,
-    # file destruction, unrestricted Write) so old machines get cleaned too. Note:
-    # re-runs re-strip these — re-add any you truly want by editing the
-    # CLAUDE_DENY_ALLOW list below, not settings.json.
-    #
-    # This branch also MIGRATES three defects written by older versions of this script
-    # (see #206), since machines provisioned before the fix never re-run the create
-    # heredoc below:
-    #   1. PostToolUse entries shaped {matcher, command} — schema-invalid, so the hooks
-    #      silently never ran. Normalized to {matcher, hooks:[{type,command}]}.
-    #   2. A "fileSuggestionSettings" key that Claude Code does not implement (ignored
-    #      outright) — dropped; ~/.ignore below replaces it.
-    #   3. A Linux-flavoured deny list (/dev/sda, mkfs) on a macOS-only target.
-    CLAUDE_ADD_ALLOW='["Bash(qalc *)","Bash(has *)","Bash(doxx *)","Bash(mdfind *)","Bash(atac *)","Bash(leaf *)","Bash(manly *)","Bash(soffice *)","Bash(office-py *)","Bash(pdftoppm *)","Bash(pdftotext *)","Bash(pdfinfo *)","Bash(reminders show*)","Bash(git status *)","Bash(git diff *)","Bash(git log *)","Bash(git show *)","Bash(git branch *)","Bash(git remote -v)","Bash(git stash list)"]'
-    CLAUDE_DENY_ALLOW='["Bash(npm *)","Bash(npm install *)","Bash(npx *)","Bash(pnpm *)","Bash(bun *)","Bash(node *)","Bash(tsx *)","Bash(ts-node *)","Bash(python3 *)","Bash(pip *)","Bash(uv *)","Bash(uvx *)","Bash(cargo *)","Bash(go *)","Bash(just *)","Bash(make *)","Bash(nu *)","Bash(nushell *)","Bash(topgrade *)","Bash(watchexec *)","Bash(viddy *)","Bash(parallel *)","Bash(act *)","Bash(curl *)","Bash(xh *)","Bash(wget *)","Bash(curlie *)","Bash(aria2c *)","Bash(grpcurl *)","Bash(yt-dlp *)","Bash(llm *)","WebFetch","Bash(aws *)","Bash(cdk *)","Bash(sam *)","Bash(docker *)","Bash(docker-compose *)","Bash(docker compose *)","Bash(kubectl *)","Bash(tofu *)","Bash(s5cmd *)","Bash(dynein *)","Bash(steampipe *)","Bash(iamlive *)","Bash(granted *)","Bash(assume *)","Bash(mitmproxy *)","Bash(mitmdump *)","Bash(nmap *)","Bash(chezmoi *)","Bash(dbmate *)","Bash(env *)","Bash(export *)","Bash(git *)","Bash(git-*)","Bash(gh *)","Bash(glab *)","Bash(cp *)","Bash(mv *)","Bash(trash *)","Bash(sd *)","Bash(sed *)","Bash(awk *)","Bash(find *)","Bash(npkill *)","Bash(ouch *)","Bash(7z *)","Bash(mkcert *)","Write"]'
-    # Allowlist entries that are dead rather than dangerous: renamed binaries or rules
-    # already covered by a broader prefix. Stripped on re-run so they don't accumulate.
-    CLAUDE_STALE_ALLOW='["Bash(trippy *)","Bash(wc -l *)","Bash(tiki exec *)"]'
-    # Deny rules retargeted from Linux to macOS, plus the common rm spellings the
-    # original literal-prefix rules missed. These are fat-finger guardrails, NOT a
-    # security boundary — permission rules match literally, so variants still pass.
-    CLAUDE_ADD_DENY='["Bash(rm -rf /)","Bash(rm -fr /)","Bash(rm -rf /*)","Bash(rm -fr /*)","Bash(rm -rf ~)","Bash(rm -fr ~)","Bash(rm -rf ~/*)","Bash(rm -fr ~/*)","Bash(sudo rm *)","Bash(chmod 777 *)","Bash(> /dev/disk*)","Bash(dd of=/dev/disk*)","Bash(diskutil erase*)","Bash(diskutil partitionDisk*)","Bash(newfs_*)"]'
-    CLAUDE_DROP_DENY='["Bash(> /dev/sda*)","Bash(mkfs *)"]'
-    if [[ "$DRY_RUN" == "true" ]]; then
-        info "[DRY RUN] Would merge settings.json: add safe allow entries + statusline, strip dangerous ones, migrate legacy hooks shape"
-    elif command -v jq &>/dev/null; then
-        info "Merging + hardening Claude settings.json permissions..."
-        CLAUDE_TMP=$(mktemp)
-        if jq --argjson add "$CLAUDE_ADD_ALLOW" --argjson deny "$CLAUDE_DENY_ALLOW" \
-               --argjson stale "$CLAUDE_STALE_ALLOW" \
-               --argjson adddeny "$CLAUDE_ADD_DENY" --argjson dropdeny "$CLAUDE_DROP_DENY" \
-            'def normalize_hook:
-               if (type == "object") and (has("hooks") | not) and has("command")
-               then {matcher: (.matcher // ""), hooks: [{type: "command", command: .command}]}
-               else . end;
-             .permissions.allow = (((.permissions.allow // []) + $add) - $deny - $stale | unique)
-             | .permissions.deny = (((.permissions.deny // []) + $adddeny) - $dropdeny | unique)
-             | .statusLine = (.statusLine // {"type":"command","command":"~/.claude/statusline.sh"})
-             | del(.fileSuggestionSettings)
-             | if (.hooks? | type) == "object"
-               then .hooks |= with_entries(.value |= (if type == "array" then map(normalize_hook) else . end))
-               else . end' \
-            "$CLAUDE_SETTINGS" > "$CLAUDE_TMP" 2>/dev/null; then
-            mv "$CLAUDE_TMP" "$CLAUDE_SETTINGS"
-            success "Claude settings.json hardened + migrated (allowlist, macOS deny rules, PostToolUse hooks shape)"
-        else
-            rm -f "$CLAUDE_TMP"
-            warn "Could not merge settings.json — add the new Bash(...) allow entries + statusLine manually"
-        fi
-    else
-        warn "Claude settings.json exists but jq is missing — can't auto-merge the new entries"
-    fi
-else
-    info "Creating Claude Code global settings..."
-    cat > "$CLAUDE_SETTINGS" <<'CLAUDE_SETTINGS_CONF'
-{
-  "permissions": {
-    "allow": [
-      "Bash(npm run *)",
-      "Bash(npm test *)",
-      "Bash(git status *)",
-      "Bash(git diff *)",
-      "Bash(git log *)",
-      "Bash(git show *)",
-      "Bash(git branch *)",
-      "Bash(git remote -v)",
-      "Bash(git stash list)",
-      "Bash(k9s *)",
-      "Bash(stern *)",
-      "Bash(cat *)",
-      "Bash(bat *)",
-      "Bash(ls *)",
-      "Bash(eza *)",
-      "Bash(grep *)",
-      "Bash(rg *)",
-      "Bash(fd *)",
-      "Bash(fzf *)",
-      "Bash(tree *)",
-      "Bash(head *)",
-      "Bash(tail *)",
-      "Bash(wc *)",
-      "Bash(sort *)",
-      "Bash(uniq *)",
-      "Bash(cut *)",
-      "Bash(jq *)",
-      "Bash(yq *)",
-      "Bash(fx *)",
-      "Bash(mlr *)",
-      "Bash(csvlook *)",
-      "Bash(which *)",
-      "Bash(type *)",
-      "Bash(echo *)",
-      "Bash(printf *)",
-      "Bash(cd *)",
-      "Bash(mkdir -p *)",
-      "Bash(touch *)",
-      "Bash(diff *)",
-      "Bash(difft *)",
-      "Bash(delta *)",
-      "Bash(scc *)",
-      "Bash(dust *)",
-      "Bash(du -sh *)",
-      "Bash(date *)",
-      "Bash(pwd)",
-      "Bash(shellcheck *)",
-      "Bash(shfmt *)",
-      "Bash(prettier *)",
-      "Bash(eslint *)",
-      "Bash(ruff *)",
-      "Bash(hadolint *)",
-      "Bash(tsc *)",
-      "Bash(jest *)",
-      "Bash(vitest *)",
-      "Bash(tflint *)",
-      "Bash(terraform-docs *)",
-      "Bash(checkov *)",
-      "Bash(infracost *)",
-      "Bash(trivy *)",
-      "Bash(semgrep *)",
-      "Bash(gitleaks *)",
-      "Bash(cosign *)",
-      "Bash(hyperfine *)",
-      "Bash(oha *)",
-      "Bash(pandoc *)",
-      "Bash(manly *)",
-      "Bash(soffice *)",
-      "Bash(office-py *)",
-      "Bash(reminders show*)",
-      "Bash(pdftoppm *)",
-      "Bash(pdftotext *)",
-      "Bash(pdfinfo *)",
-      "Bash(d2 *)",
-      "Bash(mmdc *)",
-      "Bash(ffmpeg *)",
-      "Bash(magick *)",
-      "Bash(lazygit *)",
-      "Bash(lazydocker *)",
-      "Bash(dive *)",
-      "Bash(pgcli *)",
-      "Bash(mycli *)",
-      "Bash(sq *)",
-      "Bash(commitizen *)",
-      "Bash(commitlint *)",
-      "Bash(typos *)",
-      "Bash(ast-grep *)",
-      "Bash(git-cliff *)",
-      "Bash(hurl *)",
-      "Bash(atac *)",
-      "Bash(jnv *)",
-      "Bash(lazysql *)",
-      "Bash(trip *)",
-      "Bash(oxipng *)",
-      "Bash(jpegoptim *)",
-      "Bash(mpv *)",
-      "Bash(newsboat *)",
-      "Bash(zellij *)",
-      "Bash(gum *)",
-      "Bash(dockutil *)",
-      "Bash(terminal-notifier *)",
-      "Bash(harlequin *)",
-      "Bash(hq *)",
-      "Bash(git-absorb *)",
-      "Bash(act3 *)",
-      "Bash(bandwhich *)",
-      "Bash(gping *)",
-      "Bash(doggo *)",
-      "Bash(procs *)",
-      "Bash(btop *)",
-      "Bash(lnav *)",
-      "Bash(leaf *)",
-      "Bash(fastfetch *)",
-      "Bash(qalc *)",
-      "Bash(has *)",
-      "Bash(doxx *)",
-      "Bash(mdfind *)",
-      "Read",
-      "Edit"
-    ],
-    "deny": [
-      "Bash(rm -rf /)",
-      "Bash(rm -fr /)",
-      "Bash(rm -rf /*)",
-      "Bash(rm -fr /*)",
-      "Bash(rm -rf ~)",
-      "Bash(rm -fr ~)",
-      "Bash(rm -rf ~/*)",
-      "Bash(rm -fr ~/*)",
-      "Bash(sudo rm *)",
-      "Bash(chmod 777 *)",
-      "Bash(> /dev/disk*)",
-      "Bash(dd of=/dev/disk*)",
-      "Bash(diskutil erase*)",
-      "Bash(diskutil partitionDisk*)",
-      "Bash(newfs_*)"
-    ]
-  },
-
-  "hooks": {
-    "PostToolUse": [
-      {
-        "matcher": "Edit|Write",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "~/.claude/hooks/format-on-edit.sh"
-          },
-          {
-            "type": "command",
-            "command": "~/.claude/hooks/lint-python.sh"
-          },
-          {
-            "type": "command",
-            "command": "~/.claude/hooks/lint-dockerfile.sh"
-          }
-        ]
-      }
-    ]
-  },
-
-  "env": {
-    "DISABLE_PROMPT_CACHING": "0"
-  },
-
-  "statusLine": {
-    "type": "command",
-    "command": "~/.claude/statusline.sh"
-  }
-}
-CLAUDE_SETTINGS_CONF
-    configured "Claude Code settings.json created (permissions, statusline)"
-fi
-
-# ---- Global ~/.ignore (replaces the non-existent fileSuggestionSettings key) ----
-# Claude Code honours .ignore files and, via respectGitignore (default true), each
-# repo's .gitignore. So build/dependency dirs — node_modules, dist, .venv, cdk.out —
-# are already filtered out of @ file-suggestions by .gitignore. What .gitignore can
-# never hide is the noise that is deliberately COMMITTED: lock files, minified
-# bundles, sourcemaps. Those go here. Note this also applies to ripgrep searches run
-# under $HOME, which is usually desirable but is a real side effect.
-CLAUDE_IGNORE="$HOME/.ignore"
-    info "Creating global .ignore (Claude Code @ suggestions + ripgrep)..."
-    write_managed "$CLAUDE_IGNORE" "#" <<'CLAUDE_IGNORE_CONF'
+# ---- Global ~/.ignore shared by ripgrep and compatible tools ----
+GLOBAL_IGNORE="$HOME/.ignore"
+info "Creating global .ignore..."
+write_managed "$GLOBAL_IGNORE" "#" <<'GLOBAL_IGNORE_CONF'
 package-lock.json
 pnpm-lock.yaml
 yarn.lock
-bun.lockb
-Cargo.lock
-go.sum
-uv.lock
-poetry.lock
 *.min.js
 *.min.css
+*.bundle.js
+*.bundle.css
 *.map
-CLAUDE_IGNORE_CONF
-    configured "Global .ignore created (lock files + minified bundles hidden from @ suggestions)"
-
-# ---- Claude Code global CLAUDE.md (memory/instructions) ----
-CLAUDE_MD="$HOME/.claude/CLAUDE.md"
-# REFRESHED on every run, not create-once. This file used to be written only when
-# absent, which meant a machine provisioned once never received another correction:
-# the maintainer's copy had drifted 33 lines and still named eight tools the script
-# had removed (aider, repomix, kew, aerc, khal, tmux, snyk, trippy). That drift is
-# actively harmful — it is what Claude reads as ground truth about this machine, and
-# it sent one audit chasing "stale" references that had already been fixed here.
-# write_managed refreshes the block in place and keeps anything outside the markers;
-# a pre-existing unmarked file is backed up to *.pre-managed.<timestamp> first.
-info "Writing Claude Code global CLAUDE.md..."
-write_managed "$CLAUDE_MD" "#" <<'CLAUDE_MD_CONF'
-# Global Development Standards
-
-## Workflow Philosophy
-- **Trunk based development**. Use short lived feature branches off main, then merge back fast.
-- **PRs over direct commits**. Every change goes through a pull request. No direct pushes to main.
-- **Issues for everything**. Create GitHub issues before starting work. Reference them in PRs.
-- **README driven development**. Every project and significant module gets a README.
-- **Industry best practices**. Follow established patterns, OWASP, 12 factor, SOLID, and DRY.
-
-## Dracula Sakura house voice
-- Sound calm, technically sharp, and warm.
-- Prefer clarity over flourish. Keep answers concise by default, then expand only when it helps.
-- Maintain a polished Dracula Sakura feel: dark plum foundations, rose and lilac accents, cyan and mint for information and healthy states, elegant and lightly feminine without becoming childish.
-- Explain what changed, where, and any follow up action when making edits.
-- Preserve the existing project style unless asked to redesign it.
-- For config, UX, and theme work, optimize for readability, coherence, and aesthetics together.
-- Recommend the smallest high leverage next step first.
-
-## Output preferences and anti trope writing
-- Do not use em dashes in user facing prose.
-- Limit hyphen heavy phrasing. Prefer cleaner sentences and simpler punctuation.
-- Avoid AI writing tropes such as chirpy filler, self congratulation, sales language, inflated certainty, and generic encouragement.
-- Do not say things like "great question", "absolutely", "certainly", "game changer", "seamless", or "hopefully that helps" unless the wording is genuinely necessary.
-- Do not narrate your intent at length. Act, then summarize results.
-- Do not roleplay, overuse emoji, or lean on cutesy filler.
-- Keep confidence proportional to evidence. State uncertainty plainly when it exists.
-- The full writing standard is `rules/writing.md`: the 53 rules of ASD-STE100 Simplified
-  Technical English, in two tiers by document type.
-  - **Strict** (every rule, both sentence limits, no contractions): commit messages, PR titles
-    and bodies, specs, technical documentation, changelogs, release notes, incident reports,
-    error messages and CLI output, UI copy, instructions for AI agents.
-  - **Loose** (mechanical subset only: no slop words, no filler adverbs, no Latin
-    abbreviations, no hedging, one term per concept): issues and their comments, wikis, chat.
-  - Note the asymmetry: an issue body is loose, its PR body is strict. One carve-out overrides
-    the tier, and it is safety. A warning about data loss or an irreversible action is
-    command-first, risk-second wherever it appears.
-  - omp follows the identical file at the tail of `~/.omp/agent/AGENTS.md`, from the
-    same generator, so the two agents cannot disagree about how to write.
-
-## Agent instructions in a repo: public `AGENTS.md`, private `CLAUDE.md`
-Two files, two audiences. Keep them separate in every repository.
-
-- **`AGENTS.md` — tracked, public, for anyone's agent.** Short. It points at the documents that
-  already exist (`CONTRIBUTING.md`, `docs/*`) rather than restating them, and names the traps
-  specific to that repo. Read it first in any repo that has one. Claude Code discovers it the
-  same way it discovers `CLAUDE.md`, and other agents read it too, so it is the file a
-  contributor's tooling will find.
-- **`CLAUDE.md` — untracked, private, mine.** Personal preferences, lessons, and anything not
-  relevant to the public. It is in the global gitignore, so it will not appear in `git status`.
-
-Rules that follow from this:
-
-- **Never commit `CLAUDE.md`.** If a repo needs it tracked (rare — this setup's own repo used to),
-  that is a deliberate `git add -f`, not an accident.
-- **Never put personal preferences in `AGENTS.md`.** It is written for someone else's contributor,
-  who has their own way of working. Describe the repo, not the maintainer.
-- When asked to "write the agent instructions" for a public repo, that means `AGENTS.md`. Offer a
-  private `CLAUDE.md` separately if there is anything personal to record.
-- `~/Code/personal/qud-mods/qud-expanded/AGENTS.md` is the reference for the shape: purpose line,
-  a table of *file → what it settles*, a short list of traps, the pre-commit command.
-
-## Preference durability and context hygiene
-- Prefer durable preferences over session only ones when the user clearly wants persistence.
-- Keep stable instructions in agent context files. Keep volatile project state in project local status, planning, or changelog files instead.
-- Before compaction, or when context grows large, persist important project state to the repo's existing status, planning, or memory files when that workflow exists.
-- Never write secrets into agent instruction files, memory files, or committed project docs.
-
-## Token discipline and recovery
-- Use targeted file reads and concise summaries to protect context.
-- Prefer staged exploration over broad repeated reads.
-- If an approach fails twice, stop, summarize what was tried and what remains unknown, then ask for the smallest missing input.
-- Treat warnings as real signals. Investigate and resolve them rather than dismissing them.
-
-## This machine's config is GENERATED. Edit the generator, not the output
-- `~/.zshrc`, `~/.claude/` (this file, `rules/`, `agents/`, `commands/`, `hooks/`, `settings.json`), `~/.config/*`, `~/.omp/agent/AGENTS.md`, and the Desktop docs are all written by **`~/Code/personal/vixygrey-dev-setup-main/scripts/setup-dev-tools-mac.sh`**, and refreshed on every run.
-- **Never hand edit those files to make a change stick**. Anything between the `>>> dev-setup managed block` markers is overwritten on the next run. Edit the matching heredoc in that script instead, then re run it. A direct edit is fine as a temporary local patch, but say so explicitly, because it will be reverted.
-- Edits *outside* the markers survive, as does `settings.json` (merged with `jq`, not replaced, so your own permission rules are kept).
-- The script is the source of truth for what is installed. Before recommending a tool, check it is actually present (`command -v <tool>`). Also note that the binary name often differs from the package name (`trippy`→`trip`, `nushell`→`nu`, `dynein`→`dy`, `imagemagick`→`magick`, `aws-sam-cli`→`sam`, `csvkit`→`csvlook`/`in2csv`).
-
-## Environment
-- Shell: zsh with starship prompt, atuin history, fzf fuzzy finder, zsh-autosuggestions, zsh-syntax-highlighting
-- Editor / IDE: **croft** is the primary editor (VS Code-style terminal IDE — `croft` to open a workspace, `croft pair` for the AI navigator). **Visual Studio Code** is installed as the **GUI** editor for when a TUI is the wrong tool (`code .`) — secondary to croft, not a replacement; it carries the same rules via extensions (Dracula, ruff, **basedpyright** — the same Python type server croft uses, never Microsoft's proprietary Pylance, which the setup removes — prettier, ESLint, shellcheck/shfmt, EditorConfig) so it cannot disagree with the CLI. **micro** is the `EDITOR` for git/gh/lazygit commit messages and quick edits — non-modal, Dracula, with an on-screen key menu (`Ctrl+G` for full help). Helix was retired in 7.6.0. Agentic coding via Claude Code (`claude`) — see **AI / agentic** below.
-- **croft does not support EditorConfig** (verified in croft 0.1.700 — no reference anywhere in its source). Its indentation is a language default (2 spaces for YAML, 4 otherwise) plus a per-buffer status-bar override that does not persist. VS Code *does* honour `.editorconfig`, so on a repo with one, the two editors will disagree unless you flip croft's status-bar pill. Croft's extensions are declarative `extension.toml` manifests (languages, LSP servers, themes, debug adapters, test runners, MCP sidecars) under `~/.config/croft/extensions/` — pure data, no code, no marketplace, so an EditorConfig reader cannot be added as one.
-- Terminal: Ghostty (Dracula-Sakura palette)
-- Package managers: pnpm (preferred), npm, bun
-- Python: uv for packages (not pip), ruff for linting (not flake8/black)
-- JS/TS runtimes: Node (via mise), Bun, Deno
-- Version manager: mise (Node, Python, Go, Ruby — all in one)
-- Container runtime: OrbStack (provides docker + kubectl)
-- Task runner: just (prefer over make for project-level tasks)
-- Shell note: `bat` is aliased to `cat`; use `/bin/cat` only inside heredoc subshells where bat breaks syntax
-- Dotfiles: chezmoi
-- Launcher: Ghostty quick terminal (global cmd+space) + shell functions `a` (app launcher), `ff`/`rgf`/`s` (file/content/Spotlight search). Window mgmt: native macOS Spaces + built-in window tiling (no tiling WM). Bar: SketchyBar. Clipboard: clipse (`clip`)
-- API testing: use `xh` for one-off HTTP requests, Hurl for repeatable assertions, and `grpcurl` for gRPC. Use ATAC only for interactive saved collections.
-- Database: pgcli, mycli, lazysql, harlequin (SQL IDE TUI), usql, sq; migrations via dbmate
-- Diagrams: d2 / Mermaid (code-based, in the terminal)
-- Screenshots → Shottr saves them to **~/Screenshots**. When the user mentions "a screenshot" without a path, read the newest file in ~/Screenshots (`ls -t ~/Screenshots | head`) rather than asking where it is
-- File transfer: rclone (CLI — SFTP/S3/cloud)
-- Proxy/debugger: mitmproxy
-- Tunneling: ngrok
-- Email & calendar: **herald** (one terminal app for both — Gmail work + iCloud personal, unified CalDAV calendar, built-in AI triage/summaries). Herald exposes an **MCP server** (registered in Claude Code) — prefer its MCP tools for reading/searching mail and calendar. **Never send, reply, delete, archive, or modify mail or events without explicit user confirmation** (mutations also require `herald serve` running).
-- Reminders: use `reminders` for alerts that must sync to the user's iPhone or Watch through iCloud. Herald owns mail and calendar events. Plain notes stay ordinary files. Read freely with `reminders show-lists` or `reminders show <list>`. Creating, completing, or deleting a reminder changes every synced device. Do that only when the user asks, then report the change. Common forms: `reminders add <list> "<text>" --due-date "tomorrow 9am"`, `reminders complete <list> <id>`, `reminders delete <list> <id>`.
-- Cloud storage: rclone (Google Drive, S3, Dropbox, etc.); borg for versioned backups
-- Browser: Google Chrome (primary); Carbonyl / w3m in the terminal
-- Credentials → **never read, type, enter, or exfiltrate passwords, tokens, API keys, or secrets**, and never echo them into a terminal. Auth is handled by Apple Passwords (iCloud Keychain) and the OS credential tools; defer to the user for anything that needs a credential (no third-party password manager is installed)
-
-## Working Context
-- Independent **fractional CIO/CTO and consultant**; company is **VixenTec LLC**.
-- All company work runs on **Google Workspace** (Gmail, Docs/Sheets/Slides, Drive, Meet, Chat, Vids). Produce documents/deliverables in Google Workspace, not a local office suite — **author** in Workspace, not MS Office. LibreOffice is installed **only** for headless **validation/conversion** of office files (`soffice --headless --convert-to …`), e.g. checking a `.pptx`/`.xlsx`/`.docx` opens cleanly or rendering it to PDF — not for authoring. Use **Google Meet** for calls (no Zoom); **Google Chat** for messaging (no Slack).
-- To work with Workspace from the terminal, use **`gws`** (google-workspace-cli — Drive/Gmail/Docs/Sheets/Calendar/Chat with structured JSON output; run `gws auth login` first). **Read/list/search/get freely**; but **never send, reply, share, move, delete, or modify** mail, files, or events **without explicit user confirmation** — state exactly what will change first.
-- **gws Claude skills you have (pre-installed in `~/.claude/skills/`)** — a scoped set covering **Drive, Docs, Slides, Sheets, and Forms only**; Gmail/Calendar/Chat/Meet/Tasks/Contacts skills were deliberately left out. Prefer these skills over hand-rolling `gws` invocations:
-  - **Service skills**: `gws-shared` (auth/flags/output — the base), `gws-drive`, `gws-drive-upload`, `gws-docs`, `gws-docs-write`, `gws-sheets`, `gws-sheets-read`, `gws-sheets-append`, `gws-slides`, `gws-forms`.
-  - **Recipes** (canned multi-step workflows): Drive — `recipe-bulk-download-folder`, `recipe-find-large-files`, `recipe-organize-drive-folder`, `recipe-create-shared-drive`, `recipe-share-folder-with-team`; Docs — `recipe-create-doc-from-template`; Slides — `recipe-create-presentation`; Sheets — `recipe-backup-sheet-as-csv`, `recipe-compare-sheet-tabs`, `recipe-copy-sheet-for-new-month`, `recipe-create-expense-tracker`, `recipe-generate-report-from-sheet`, `recipe-log-deal-update`; Forms — `recipe-collect-form-responses`.
-  - Skills are recipes, **not** an access boundary: having only these does not stop `gws` from reaching Gmail/Calendar if those OAuth scopes were granted. The fence is the scopes chosen at `gws auth setup` — treat email/calendar/chat as out of scope unless the user says otherwise.
-- Tool philosophy: prefer **open-source, CLI-first, privacy-preserving, and minimal** options; declutter aggressively. When recommending tools, lead with one option that fits these and flag any that don't.
-- **ADD-friendly home layout** (low-decision, shallow): `~/Inbox` (dump zone — drop anything, sort later), `~/Code` (work/personal/oss/learning), `~/Documents` (finance, health, admin, receipts, travel), `~/Creative`, `~/Media`, `~/Archive`, `~/Screenshots`, `~/Scripts`. When in doubt where a file goes, suggest `~/Inbox` rather than a deep path.
-
-## Available CLI Tools (use these instead of manual approaches)
-- **Search**: `rg` (ripgrep) for content, `fd` for files, `fzf` for interactive, `mdfind` for Spotlight/metadata search (filename, tags, content across the disk)
-- **Data**: `jq` for JSON, `yq` for YAML, `mlr` for CSV, `fx`/`jnv` for interactive JSON, `csvlook`/`in2csv`/`csvjson` for CSV (the csvkit suite)
-- **Git**: `lazygit` for interactive UI, `delta` for diffs, `difft` for syntax-aware diffs, `git-cliff` for changelogs, `git-absorb` for auto fixup commits, `git-lfs` for large files
-- **Docker**: `lazydocker` for UI, `dive` to inspect layers, `hadolint` for Dockerfile linting
-- **Testing**: `hyperfine` to benchmark, `oha` for load testing, `hurl` for HTTP test files, `act` for local GitHub Actions
-- **Code quality**: `typos` for spell checking, `ast-grep` for structural search/replace, `shellcheck`/`shfmt` for shell, `scc` to count lines of code by language with complexity + COCOMO cost, `manly` to explain a command's flags from its man page
-- **Security**: `trivy` to scan containers/IaC, `gitleaks` for secrets, `semgrep` for static analysis, `detect-secrets` for pre-commit secret detection, `sops` for secrets encryption
-- **IaC**: `tofu` (Terraform), `tflint` for linting, `terraform-docs` for module READMEs, `checkov` for static analysis, `infracost` for cost estimation, `cfn-lint` for CloudFormation, `sam` for SAM (note: `tfsec` checks live in `trivy config`)
-- **AI / agentic**: `claude` (Claude Code) is the coding agent. `llm` handles one-shot prompts and embeddings. `copilot` provides the GitHub Copilot CLI. The secondary harness is **`omp`** (Oh My Pi), routed at Gemini and requiring `GEMINI_API_KEY`. It reads `~/.agents/skills/` and carries the same house preferences and writing rules. Native approval policies cover command execution. A scoped extension blocks native file mutations to credential stores, dependency trees, and repository metadata.
-- **HTTP**: `xh` for colorized requests, `curlie` for curl with httpie output, `grpcurl` for gRPC
-- **Network**: `trip` (trippy) for traceroute TUI, `sudo mtr` (requires root, lives in sbin), `bandwhich` for bandwidth, `nmap` for scanning, `mkcert` for local TLS certs
-- **Docs**: `d2` for diagrams, `pandoc` for conversion, `leaf` for Markdown preview, `doxx` to read/preview `.docx` files in the terminal
-- **Office files** (.pptx/.xlsx/.docx): the harness read tool handles text extraction and basic inspection. Use `office-layout-check` only for visual fidelity. It converts through LibreOffice, rasterizes the PDF with `pdftoppm`, and inspects each page image. Use `office-py` only for precise structural assertions. Author cloud files through the scoped `gws` skills.
-- **Database**: `pgcli`/`mycli` for auto-completing SQL, `lazysql` for TUI, `sq` for cross-database queries, `dbmate` for migrations
-- **File management**: `rovr` for the TUI file manager (`nnn` as a minimal fallback), `wiper` for interactive disk-usage cleanup (ncdu-like, Trash-safe), `watchexec` for running commands on file changes, `rclone` for cloud storage sync
-- **Kubernetes**: `k9s` for TUI, `stern` for log tailing (kubectl via OrbStack)
-- **AWS**: `granted`/`assume` for role switching; TUIs `e1s` (ECS), `stu` (S3), `e2c` (EC2), `claws` (broad, k9s-style); `steampipe` for SQL over AWS, `s5cmd` for fast S3 bulk ops, `dy` for DynamoDB (dynein), `iamlive` to generate least-privilege IAM from observed calls
-- **Shell scripting**: `gum` for interactive prompts/spinners, `nu` for structured data pipelines (nushell), `parallel` for parallel execution
-- **Terminal**: `zellij` for multiplexing (tmux is intentionally not installed), `mpv` for video playback, `cliamp` for a terminal music player, `asciinema` for recording
-- **Images/Media**: `magick` for image processing (ImageMagick), `oxipng` for PNG optimization, `yt-dlp` for video downloads
-- **Logs**: `lnav` for log file navigation
-- **Misc**: `qalc` for precise calculations + unit/currency conversions, `has` to check which tool versions are installed (e.g. `has node git jq`), `reminders` for Apple Reminders (see Environment above for when to use it)
-- **Modern replacements are interactive-only — in your shell, `du`, `df`, `ps`, `top`, `cat`, `ls`, `dig`, `ping`, `watch`, `hexdump` are the REAL POSIX tools.** The user's interactive shell aliases them to `dust`/`duf`/`procs`/`btop`/`bat`/`eza`/`doggo`/`gping`/`viddy`/`hexyl`, but those aliases are gated off for non-interactive and agent shells precisely because none of them accept the original's flags. So write ordinary POSIX commands (`du -sh`, `ps aux`, `dig +short`) and they will work — no `/bin/` prefixes or workarounds needed. The modern tools are still available **by their own names** (`dust`, `procs`, `rg`, `fd`, `sd`, …) when you actually want them; prefer those for search and structured output, and note `sd` and `rg` have their own syntax, unrelated to `sed`/`grep`. The one exception: `rm` still routes to Trash so deletions stay recoverable, but it accepts `-r`/`-f` normally.
-
-## Code Standards
-- Use TypeScript strict mode for all TS projects
-- Use ESLint + Prettier for formatting (2-space indent, single quotes, trailing commas)
-- Use ruff for Python linting and formatting (not flake8/black/isort)
-- Write tests alongside code (colocated, not in separate test dirs)
-- Use conventional commit messages: type(scope): description
-- Prefer named exports over default exports
-- Use path aliases (@/ for src/) in TypeScript projects
-- Lint Dockerfiles with hadolint before building
-
-## React / Next.js
-- Functional components only — no class components
-- React hooks for state and effects
-- Next.js App Router (not Pages Router) for new projects
-- Use server components by default, 'use client' only when needed
-- Tailwind CSS + shadcn/ui for styling
-
-## Python
-- Use uv for package management (not pip directly)
-- Use ruff for linting and formatting
-- Type hints on all public functions
-- Use pydantic or dataclasses for data structures
-
-## AWS / CDK / IaC
-- CDK stacks in infrastructure/ directory
-- Use L2/L3 constructs when available
-- Always tag resources with project, environment, owner
-- Use environment-specific config (dev/staging/prod)
-- Follow least-privilege IAM principles
-- Run `trivy config .` to scan IaC before deploying
-- Use `infracost` to estimate costs before applying changes
-
-## Git Workflow (Trunk-Based)
-- Default host is **GitHub** (`gh`). For a repo hosted on **GitLab**, use **`glab`** — it's configured with the same alias names (`co`, `pv`, `pc`, `pl`, `pm`, …) mapped to merge requests, so the flow below translates 1:1 (PR → MR).
-- **Never commit directly to main** — always use a feature branch + PR
-- Branch naming: feature/, fix/, chore/, docs/ (e.g., feature/add-auth)
-- Branches should be short-lived (< 2 days ideally)
-- Squash merge to main (use `gh pm` alias) — keeps history clean
-- Delete branch after merge (automatic with `gh pm`)
-- Keep PRs small and focused (< 400 lines)
-- Include tests with feature PRs
-- Reference GitHub issues in PR descriptions (Closes #123)
-- **Never auto-push** — always show a commit/diff summary and wait for explicit "push" approval
-- Always `git pull --rebase` on main before creating any new branch
-- Always `git checkout main` after submitting a PR — feature branches are ephemeral
-- Use `git standup` to see yesterday's work
-- Use `git cleanup` to prune finished branches: both those whose upstream is gone (what a squash merge leaves behind) and those merged into the default branch. It force-deletes with `-D`, because a squash-merged branch fails git's own ancestry check, and prints a `git branch <name> <sha>` line to restore anything it removed
-- Use `git recent` to see branches by last commit date
-
-## PR Workflow
-When asked to implement a feature or fix:
-1. Create a GitHub issue first: `gh issue create --title "..." --body "..."`
-2. Create a branch: `git switch -c feature/short-description`
-3. Implement with small, atomic commits (conventional commit format)
-4. Push and create PR: `gh pr create --title "..." --body "Closes #<issue>"`
-5. PR body should include: Summary, Changes (bullet list), Test plan
-6. Comment on the referenced issue linking to the PR
-7. Use `/bin/cat` (not `cat`) inside heredoc subshells for `gh pr create --body` and `gh issue create --body`
-8. After approval, merge with: `gh pm` (squash + delete branch)
-
-## Issue Tracking
-- Create issues for bugs, features, chores, and tech debt
-- Use labels: bug, feature, chore, docs, tech-debt, security
-- Reference issues in commits and PRs (Closes #N, Fixes #N)
-- Use `gh il` to list issues, `gh ic` to create via browser
-
-## README Standards
-Every project should have a README.md with:
-- Project name and one-line description
-- Getting started (prerequisites, install, run)
-- Architecture overview (for non-trivial projects)
-- Environment variables (with descriptions, not values)
-- Scripts/commands available (npm scripts, Justfile recipes)
-- Testing instructions
-- Deployment process
-- Contributing guidelines (for shared projects)
-
-## File Organization
-- Components: src/components/[Feature]/
-- Utilities: src/lib/ or src/utils/
-- Types: src/types/
-- API routes: src/app/api/ (Next.js) or src/api/
-- Tests: colocated with source (*.test.ts)
-- CDK: infrastructure/lib/
-- Justfile in project root for common tasks
-
-## When Writing Code
-- Prefer early returns over nested conditions
-- Use descriptive variable names (no single letters except loop counters)
-- Add JSDoc comments for public APIs and complex functions
-- Handle errors explicitly — no silent catches
-- Use async/await over .then() chains
-- Use zod for runtime validation at API boundaries
-- Always choose the architecturally correct solution — no quick hacks, no type casts to bypass issues, no eslint-disable comments
-- When multiple valid implementation approaches exist, present the options and let the user choose
-
-## Error Handling Patterns
-- **TypeScript**: Use Result types or discriminated unions for expected errors, throw for unexpected
-- **Python**: Use specific exception types, never bare `except:`, always log context
-- **API routes**: Return structured error responses `{ error: { code, message, details } }`
-- **Async**: Always handle promise rejections, use try/catch with async/await
-- **Never**: Swallow errors silently, use `console.log` for error handling, expose stack traces to users
-
-## API Design Standards
-- RESTful naming: plural nouns for collections (`/users`, `/posts`)
-- HTTP methods: GET (read), POST (create), PUT (replace), PATCH (update), DELETE (remove)
-- Response format: `{ data: T }` for success, `{ error: { code, message } }` for errors
-- Always paginate list endpoints: `?page=1&limit=20` or cursor-based
-- Use proper HTTP status codes: 200, 201, 204, 400, 401, 403, 404, 409, 422, 500
-- Version APIs: `/api/v1/...` or via headers
-- Validate all inputs at the boundary (zod for TS, pydantic for Python)
-
-## Database Conventions
-- Table names: plural, snake_case (`user_accounts`, `order_items`)
-- Column names: snake_case (`created_at`, `is_active`, `user_id`)
-- Always include: `id` (primary key), `created_at`, `updated_at`
-- Use migrations (dbmate) — never modify schema manually
-- Foreign keys: `<table_singular>_id` (e.g., `user_id`)
-- Index foreign keys and columns used in WHERE/ORDER BY
-
-## Testing Standards
-- Write tests alongside code (colocated: `foo.ts` + `foo.test.ts`)
-- Test behavior, not implementation (test what it does, not how)
-- Follow Arrange-Act-Assert (AAA) pattern
-- Unit tests: fast, isolated, no external dependencies
-- Integration tests: test real interactions (DB, API, services)
-- E2E tests: critical user flows only (login, checkout, etc.)
-- Minimum coverage: aim for 80% on business logic, don't test trivial code
-- Name tests clearly: "should return 404 when user not found"
-
-## Pre-Push Checklist (follow before every PR)
-1. All tests pass (`npm test` / `pytest` / `cargo test`)
-2. Linting passes (`eslint .` / `ruff check .`)
-3. Formatting applied (`prettier --write .` / `ruff format .`)
-4. Spell check passes (`typos .`)
-5. No secrets committed (`gitleaks detect`)
-6. Dependencies audited (`npm audit` / `uv pip audit`)
-7. README updated (if behavior changed)
-8. Types check (`tsc --noEmit` for TypeScript)
-9. Build succeeds (`npm run build`)
-
-## Security Checks (run before PRs)
-- `gitleaks detect` — check for leaked secrets
-- `trivy fs .` — scan for vulnerabilities
-- `npm audit` / `uv pip audit` — dependency audit
-- `semgrep --config auto .` — static analysis
-- `detect-secrets scan` — pre-commit secret detection
-CLAUDE_MD_CONF
-configured "Claude Code global CLAUDE.md written (refreshed each run; edits outside the markers are kept)"
+GLOBAL_IGNORE_CONF
+configured "Global .ignore created (lock files and minified bundles hidden)"
 
 # ---- Agent preferences (omp) ----
-# Written to ~/.omp/agent/AGENTS.md. This had two consumers until pi was retired
-# (#513); it stays a function because the body is 50 lines of prose and the heading
-# is the only part that varies, so a second harness costs one call rather than a
-# second copy that drifts (the #504 reasoning, still worth keeping).
-#
-# Claude Code deliberately does NOT consume this. Its equivalent lives in the managed
-# block of ~/.claude/CLAUDE.md, which carries repo-workflow rules these two do not get.
+# Written to ~/.omp/agent/AGENTS.md. The function keeps the generated passage
+# isolated from the surrounding shell logic.
 emit_agent_preferences() {
     local harness="$1"
     printf '# Global %s Preferences\n' "$harness"
@@ -11822,17 +9774,8 @@ AGENT_PREFS_BODY
 }
 
 # ---- Shared writing rules (Simplified Technical English) ----
-# ONE definition, TWO consumers: ~/.claude/rules/writing.md for Claude Code, and the
-# tail of ~/.omp/agent/AGENTS.md for omp. Both agents must follow provably identical
-# rules, which separate heredocs could not guarantee — the copies would drift the
-# first time one of them was edited alone. This function is the reason they cannot.
-#
-# The content is the 53 rules of ASD-STE100 Issue 9 as paraphrased by the
-# `simple-english` skill that ships with the pinned bigpowers package. That skill is
-# still installed and still useful for a formal audit of an existing document; what
-# it could not do is apply on its own, because a skill fires only when the prompt
-# matches its description. Everything written outside that trigger was ungoverned,
-# which is the gap this closes. See #491.
+# One definition feeds the generated OMP context. This keeps the long ruleset
+# separate from shell control flow and preserves byte-for-byte output.
 emit_writing_rules() {
     /bin/cat <<'WRITING_RULES_BODY'
 # Writing Rules (Simplified Technical English)
@@ -12127,827 +10070,25 @@ same catalog plus a deterministic lint script.
 WRITING_RULES_BODY
 }
 
-# ---- Claude Code rules directory ----
-CLAUDE_RULES_DIR="$HOME/.claude/rules"
-# Refreshed every run, same reasoning as the global CLAUDE.md above: these files are
-# what Claude treats as standing instructions, so a machine provisioned once must not
-# be stuck with the rules as they were that day. write_managed replaces the block in
-# place and keeps anything outside the markers.
-info "Writing Claude Code rules..."
-ensure_dir "$CLAUDE_RULES_DIR"
-
-    # Workflow rules (trunk-based, PR-first)
-    write_managed "$CLAUDE_RULES_DIR/workflow.md" "#" <<'WORKFLOW_RULES'
-# Workflow Rules (Trunk-Based Development)
-
-## PR-First Approach
-- NEVER commit directly to main — always create a feature branch and PR
-- When implementing a feature or fix, follow this order:
-  1. Create a GitHub issue (`gh issue create`) to track the work
-  2. Create a short-lived branch (`git switch -c feature/description`)
-  3. Implement with small, atomic conventional commits
-  4. Create a PR referencing the issue (`gh pr create`, body includes "Closes #N")
-  5. Merge via squash (`gh pm`)
-
-## Issues
-- Create an issue BEFORE starting implementation work
-- Use clear titles: "Add user authentication" not "auth stuff"
-- Label appropriately: bug, feature, chore, docs, tech-debt, security
-- Reference issues in all commits and PRs
-
-## PRs
-- PR title: concise, imperative mood (< 70 chars)
-- PR body: Summary (what/why), Changes (bullet list), Test Plan (checklist)
-- Keep PRs small (< 400 lines changed)
-- Include tests with feature PRs
-- One concern per PR — don't mix features with refactoring
-
-## READMEs
-- Every new project MUST have a README.md
-- Update README when adding significant features or changing setup steps
-- README should cover: purpose, setup, usage, architecture, environment variables
-WORKFLOW_RULES
-
-    # Git rules
-    write_managed "$CLAUDE_RULES_DIR/git.md" "#" <<'GIT_RULES'
-# Git Rules
-
-- Never force-push to main or master
-- Never commit directly to main — use feature branches + PRs
-- Never commit .env files, secrets, or credentials
-- Use conventional commit format: type(scope): description
-  - Types: feat, fix, docs, style, refactor, perf, test, build, ci, chore
-- Keep commits atomic — one logical change per commit
-- Run tests before committing
-- Reference GitHub issues in commits: "feat(auth): add login page (closes #42)"
-- Branch names: feature/, fix/, chore/, docs/ (e.g., feature/add-oauth)
-- Delete branches after merging (automatic with `gh pm`)
-GIT_RULES
-
-    # Security rules
-    write_managed "$CLAUDE_RULES_DIR/security.md" "#" <<'SEC_RULES'
-# Security Rules
-
-- Never hardcode API keys, tokens, passwords, or secrets
-- Use environment variables or AWS Secrets Manager for sensitive values
-- Never log sensitive information (passwords, tokens, PII)
-- Always validate and sanitize user input
-- Use parameterized queries — never string-concatenate SQL
-- Check npm audit before adding new dependencies
-SEC_RULES
-
-    # TypeScript rules
-    write_managed "$CLAUDE_RULES_DIR/typescript.md" "#" <<'TS_RULES'
-# TypeScript Rules
-
-- Enable strict mode in tsconfig.json
-- No `any` types — use `unknown` if type is truly unknown
-- Use discriminated unions for complex state
-- Prefer interfaces for object shapes, types for unions/intersections
-- Use `as const` for literal types
-- Export types alongside their implementations
-- Use zod schemas that infer TypeScript types (z.infer<typeof schema>)
-TS_RULES
-
-    # Python rules
-    write_managed "$CLAUDE_RULES_DIR/python.md" "#" <<'PY_RULES'
-# Python Rules
-
-- Use uv for package management (not pip directly)
-- Use ruff for linting and formatting (not flake8, black, isort)
-- Type hints on all public functions and method signatures
-- Use pydantic for data validation, dataclasses for simple data structures
-- Virtual environments via `uv venv` — never install globally
-- Use `async def` for I/O-bound operations
-- Prefer pathlib over os.path
-PY_RULES
-
-    # Docker rules
-    write_managed "$CLAUDE_RULES_DIR/docker.md" "#" <<'DOCKER_RULES'
-# Docker Rules
-
-- Multi-stage builds for production images (builder + runtime)
-- Run as non-root user (add USER directive)
-- Use specific base image tags (not :latest)
-- Lint Dockerfiles with `hadolint` before building
-- Use .dockerignore to exclude node_modules, .git, etc.
-- Scan images with `trivy image <name>` before pushing
-- Use `dive <image>` to inspect and minimize layer sizes
-DOCKER_RULES
-
-    # IaC rules
-    write_managed "$CLAUDE_RULES_DIR/iac.md" "#" <<'IAC_RULES'
-# Infrastructure as Code Rules
-
-- Use OpenTofu/Terraform with state stored remotely (S3 + DynamoDB)
-- Lint with `tflint` before applying
-- Document modules with `terraform-docs` (auto-generate variable/output sections)
-- Run `checkov -d .` for IaC static analysis (Terraform, CloudFormation, Kubernetes, Dockerfile)
-- Scan with `trivy config .` for misconfigurations (covers what tfsec used to)
-- Estimate costs with `infracost` before applying changes
-- Use modules for reusable infrastructure patterns
-- Tag all resources: project, environment, owner, managed-by
-- Use workspaces or separate state files per environment
-IAC_RULES
-
-    # Style rules
-    write_managed "$CLAUDE_RULES_DIR/style.md" "#" <<'STYLE_RULES'
-# Style Rules
-
-- Sound calm, technically sharp, and warm.
-- Be concise by default; expand when detail improves the result.
-- Explain changes with clear file paths and concrete follow-up when relevant.
-- Preserve the project's existing style unless the user asks for a redesign.
-- For UI, config, or theme work, prioritize readability, contrast, and cohesion.
-- When stylistic latitude exists, prefer a subtle Dracula-Sakura sensibility: dark bases, rose/lilac accents, cyan or mint for informative and healthy states, polished and feminine-leaning without becoming childish.
-- Use flourish sparingly — avoid roleplay, emoji clutter, and overdone exclamation.
-- If the user explicitly wants something cute, cozy, stylish, or anime-inspired, lean that way tastefully while keeping the result refined and useful.
-- Recommend the smallest high-leverage next step first when offering options.
-STYLE_RULES
-
-    # Writing rules (Simplified Technical English). The body is emit_writing_rules
-    # rather than a heredoc, because pi's AGENTS.md gets the identical text and two
-    # copies would drift. See the function definition above.
-    emit_writing_rules | write_managed "$CLAUDE_RULES_DIR/writing.md" "#"
-
-configured "Claude Code rules written (workflow, git, security, typescript, python, docker, iac, style, writing — refreshed each run)"
-
-# ---- Claude Code hooks ----
-CLAUDE_HOOKS_DIR="$HOME/.claude/hooks"
-    info "Creating Claude Code hooks..."
-
-    # Post-edit hook: auto-format with prettier
-    write_managed_script "$CLAUDE_HOOKS_DIR/format-on-edit.sh" <<'HOOK_FORMAT'
-#!/usr/bin/env bash
-# Auto-format TypeScript/JavaScript files after Claude edits them
-# Used by PostToolUse hook
-
-INPUT=$(cat)
-FILE=$(echo "$INPUT" | jq -r '.tool_input.file_path // empty' 2>/dev/null)
-
-if [[ -n "$FILE" ]] && [[ "$FILE" =~ \.(ts|tsx|js|jsx|css|scss|json|md)$ ]]; then
-    if [[ -f "$FILE" ]]; then
-        # Only format if a prettier config exists in the project.
-        #
-        # The walk stops BEFORE $HOME. It used to run all the way to /, which meant
-        # it passed through $HOME — where this same setup installs a global
-        # ~/.prettierrc. Every path under $HOME therefore looked like "a project that
-        # uses prettier", so the guard was unconditionally true and this hook
-        # reformatted repos that had never opted in. It went unnoticed because a
-        # duplicated ~/.prettierrc made prettier fail on every file (failures are
-        # swallowed below); repairing that config in 7.8.2 brought the hook to life
-        # and the behaviour with it (#268).
-        #
-        # A file directly in $HOME is not a project, so it is left alone too.
-        PROJECT_DIR=$(dirname "$FILE")
-        while [[ "$PROJECT_DIR" != "/" && "$PROJECT_DIR" != "$HOME" ]]; do
-            if [[ -f "$PROJECT_DIR/.prettierrc" ]] || [[ -f "$PROJECT_DIR/.prettierrc.json" ]] \
-               || [[ -f "$PROJECT_DIR/.prettierrc.yaml" ]] || [[ -f "$PROJECT_DIR/.prettierrc.yml" ]] \
-               || [[ -f "$PROJECT_DIR/.prettierrc.js" ]] || [[ -f "$PROJECT_DIR/.prettierrc.mjs" ]] \
-               || [[ -f "$PROJECT_DIR/prettier.config.js" ]] || [[ -f "$PROJECT_DIR/prettier.config.mjs" ]]; then
-                # Prefer the PROJECT's own prettier over the global one: a repo that
-                # pins prettier 2.x must not be reformatted by the global 3.x (major
-                # versions disagree on trailing commas, etc., producing diff churn
-                # nobody asked for). --no-install keeps npx offline — it resolves
-                # node_modules/.bin or fails, never downloads. Global is the fallback
-                # for projects with a prettier config but no local install.
-                if command -v npx &>/dev/null && npx --no-install prettier --write "$FILE" 2>/dev/null; then
-                    :
-                elif command -v prettier &>/dev/null; then
-                    prettier --write "$FILE" 2>/dev/null || true
-                fi
-                break
+# ---- OMP shared skills ----
+# ~/.agents/skills is omp's canonical shared skill directory. Replace only stale
+# links that point into the retired Claude skill tree.
+AGENTS_SKILLS="$HOME/.agents/skills"
+for _stale in "$AGENTS_SKILLS"/*; do
+    [[ -L "$_stale" ]] || continue
+    case "$(readlink "$_stale")" in
+        "$HOME/.claude/skills/"*)
+            if [[ "$DRY_RUN" == "true" ]]; then
+                info "[DRY RUN] Would replace stale Claude skill link: $_stale"
+            else
+                rm -f "$_stale"
             fi
-            PROJECT_DIR=$(dirname "$PROJECT_DIR")
-        done
-    fi
-fi
-
-exit 0
-HOOK_FORMAT
-
-    # Post-edit hook: auto-lint Python files with ruff
-    write_managed_script "$CLAUDE_HOOKS_DIR/lint-python.sh" <<'HOOK_RUFF'
-#!/usr/bin/env bash
-# Auto-lint and fix Python files after Claude edits them
-
-INPUT=$(cat)
-FILE=$(echo "$INPUT" | jq -r '.tool_input.file_path // empty' 2>/dev/null)
-
-if [[ -n "$FILE" ]] && [[ "$FILE" =~ \.py$ ]]; then
-    if [[ -f "$FILE" ]] && command -v ruff &>/dev/null; then
-        # Only touch a project that opted into ruff.
-        #
-        # `ruff check --fix` REWRITES code — it deletes imports it judges unused, so an
-        # import kept for its side effects (plugin/codec registration, `matplotlib.use`,
-        # Django signals, `import readline`) is removed and the program breaks at runtime.
-        # In a repo that never chose ruff that is not a formatting convenience, it is an
-        # unrequested edit — and with output swallowed below, an invisible one. A repo
-        # that DID configure ruff has asked for exactly this behaviour.
-        #
-        # The walk stops before $HOME for the same reason as format-on-edit: a config
-        # sitting in $HOME is not a project opting in, and treating it as one is what
-        # made that hook reformat every repo on the machine (#268, #276).
-        PROJECT_DIR=$(dirname "$FILE")
-        while [[ "$PROJECT_DIR" != "/" && "$PROJECT_DIR" != "$HOME" ]]; do
-            if [[ -f "$PROJECT_DIR/ruff.toml" ]] || [[ -f "$PROJECT_DIR/.ruff.toml" ]] \
-               || { [[ -f "$PROJECT_DIR/pyproject.toml" ]] \
-                    && grep -q '^\[tool\.ruff' "$PROJECT_DIR/pyproject.toml" 2>/dev/null; }; then
-                ruff check --fix "$FILE" 2>/dev/null || true
-                ruff format "$FILE" 2>/dev/null || true
-                break
-            fi
-            PROJECT_DIR=$(dirname "$PROJECT_DIR")
-        done
-    fi
-fi
-
-exit 0
-HOOK_RUFF
-
-    # Post-edit hook: lint Dockerfiles with hadolint
-    write_managed_script "$CLAUDE_HOOKS_DIR/lint-dockerfile.sh" <<'HOOK_HADOLINT'
-#!/usr/bin/env bash
-# Lint Dockerfiles after Claude edits them
-
-INPUT=$(cat)
-FILE=$(echo "$INPUT" | jq -r '.tool_input.file_path // empty' 2>/dev/null)
-
-if [[ -n "$FILE" ]] && [[ "$(basename "$FILE")" =~ ^Dockerfile ]]; then
-    if [[ -f "$FILE" ]] && command -v hadolint &>/dev/null; then
-        ISSUES=$(hadolint "$FILE" 2>/dev/null)
-        if [[ -n "$ISSUES" ]]; then
-            echo "$ISSUES" >&2
-        fi
-    fi
-fi
-
-exit 0
-HOOK_HADOLINT
-
-    configured "Claude Code hooks created (auto-format JS/TS, auto-lint Python, lint Dockerfiles)"
-
-# ---- Claude Code statusline (Dracula) ----
-CLAUDE_STATUSLINE="$HOME/.claude/statusline.sh"
-info "Configuring Claude Code Dracula statusline..."
-write_managed_script "$CLAUDE_STATUSLINE" <<'STATUSLINE'
-#!/usr/bin/env bash
-# Claude Code statusline — Dracula-Sakura. Reads session JSON on stdin.
-input=$(/bin/cat)
-model=$(printf '%s' "$input" | jq -r '.model.display_name // "Claude"' 2>/dev/null)
-cwd=$(printf '%s' "$input" | jq -r '.workspace.current_dir // .cwd // "."' 2>/dev/null)
-if [[ "$cwd" == "$HOME" ]]; then
-    dir='~'
-else
-    dir=$(basename "$cwd")
-fi
-branch=$(git -C "$cwd" branch --show-current 2>/dev/null)
-ROSE='\033[38;2;255;121;198m'
-CYAN='\033[38;2;139;233;253m'
-MINT='\033[38;2;80;250;123m'
-MUTED='\033[38;2;98;114;164m'
-R='\033[0m'
-out="${ROSE}${model}${R} ${MUTED}•${R} ${CYAN}${dir}${R}"
-[ -n "$branch" ] && out="${out} ${MUTED}•${R} ${MINT}${branch}${R}"
-printf '%b' "$out"
-STATUSLINE
-configured "Claude Code Dracula-Sakura statusline created (model, dir, git branch)"
-
-# ---- Claude Code subagents ----
-CLAUDE_AGENTS_DIR="$HOME/.claude/agents"
-# Refreshed every run via write_generated. This used to be gated on "directory
-# already has agents", so a single pre-existing file froze the whole set and no
-# later edit or addition ever reached a provisioned machine (#277).
-info "Writing Claude Code subagents (code-reviewer, aws-helper)..."
-ensure_dir "$CLAUDE_AGENTS_DIR"
-write_generated "$CLAUDE_AGENTS_DIR/code-reviewer.md" <<'AGENT_REVIEWER'
----
-name: code-reviewer
-description: Reviews changed code for bugs, security issues, and adherence to this setup's conventions (ruff, strict TypeScript, conventional commits, parameterized SQL, no hardcoded secrets). Use after writing or modifying code, or when asked for a review.
-tools: Read, Grep, Glob, Bash
----
-You are a precise, senior code reviewer for this developer's projects.
-
-Review priorities (most important first):
-1. Correctness — logic bugs, edge cases, error handling, race conditions.
-2. Security — no hardcoded secrets/keys/tokens; validate & sanitize input; parameterized queries (never string-concatenated SQL); never log PII/secrets.
-3. Conventions:
-   - Python: ruff for lint/format; type hints on public functions; pydantic for validation, dataclasses for simple data; pathlib over os.path; async for I/O.
-   - TypeScript: strict mode; no `any` (use `unknown`); zod schemas; interfaces for object shapes.
-   - Git: conventional commits (type(scope): description); atomic commits; never commit .env/secrets.
-4. Simplicity — dead code, needless complexity, duplication.
-
-Method: read the diff/files, then report findings ranked most-severe first. For each: file:line, the concrete problem, and a specific fix. Cite exact lines. If unsure a finding is real, say so. End with a one-line verdict. Point precisely; don't rewrite large sections unasked.
-AGENT_REVIEWER
-write_generated "$CLAUDE_AGENTS_DIR/aws-helper.md" <<'AGENT_AWS'
----
-name: aws-helper
-description: AWS specialist for this setup — knows the installed AWS tooling and prefers read-only, least-privilege, cost-aware operations. Use for AWS resource inspection, IaC (CDK/SAM/Terraform), IAM, and cost questions.
-tools: Read, Grep, Glob, Bash, WebFetch
----
-You are an AWS specialist working in this developer's terminal-first setup.
-
-Credentials: this machine uses `granted` — assume a profile with `assume <profile>` (exports AWS_PROFILE), or rely on AWS_REGION/AWS_PROFILE in the environment. Never print or store credentials.
-
-Installed tooling to prefer (don't reinvent):
-- Inspect (interactive TUIs): e1s (ECS), e2c (EC2), stu (S3), claws (broad), k9s (EKS).
-- Query/inventory: `steampipe query` (SQL over AWS), `aws` CLI, `aws logs tail --follow`.
-- S3 bulk: `s5cmd`. DynamoDB: `dynein`. IAM least-privilege: `iamlive`.
-- IaC: CDK (+ cdk-nag), SAM, OpenTofu/Terraform (+ tflint, checkov, `trivy config`, infracost).
-
-Operating rules:
-1. Default to READ-ONLY (describe/list/get/query). Before any mutating or costly action, state exactly what will change and its blast radius, then ask for confirmation.
-2. Right-size IAM — least privilege; suggest `iamlive` to generate policies from observed calls.
-3. Be cost-aware — mention `infracost` for IaC changes and pricing implications for new resources.
-4. Prefer the installed TUIs/CLIs over manual console steps; give exact commands.
-AGENT_AWS
-configured "Claude Code subagents created (code-reviewer, aws-helper)"
-
-# ---- Claude Code custom slash commands ----
-CLAUDE_COMMANDS_DIR="$HOME/.claude/commands"
-# Refreshed every run via write_generated — same reasoning as the agents block (#277).
-info "Writing Claude Code custom slash commands..."
-ensure_dir "$CLAUDE_COMMANDS_DIR"
-
-# /pr-review — review the current branch's changes
-write_generated "$CLAUDE_COMMANDS_DIR/pr-review.md" <<'CMD_PR_REVIEW'
-Review the changes on the current branch compared to main. For each file changed:
-1. Summarize what changed and why
-2. Flag any security issues, bugs, or performance concerns
-3. Check for missing error handling or edge cases
-4. Note any style inconsistencies
-
-Use `git diff main...HEAD` to see all changes. Be concise — focus on issues, not praise.
-CMD_PR_REVIEW
-
-# /test-plan — generate a test plan for recent changes
-write_generated "$CLAUDE_COMMANDS_DIR/test-plan.md" <<'CMD_TEST_PLAN'
-Look at the recent changes in this repo (use git diff or git log) and generate a test plan:
-1. List what should be tested (unit, integration, e2e)
-2. Identify edge cases and error scenarios
-3. Suggest specific test cases with expected inputs/outputs
-4. Note any areas that are hard to test and why
-
-Output as a Markdown checklist.
-CMD_TEST_PLAN
-
-# /dep-audit — audit dependencies
-write_generated "$CLAUDE_COMMANDS_DIR/dep-audit.md" <<'CMD_DEP_AUDIT'
-Audit the project dependencies:
-1. Check for known vulnerabilities (run npm audit or uv pip audit)
-2. Identify outdated packages (run npm outdated or uv pip list --outdated)
-3. Flag any packages with no recent maintenance (>2 years)
-4. Check for duplicate/redundant dependencies
-5. Estimate total bundle size impact of each dependency if this is a frontend project
-
-Summarize findings with severity (critical/high/medium/low) and recommended actions.
-CMD_DEP_AUDIT
-
-# /quick-doc — generate docs for a file or function
-write_generated "$CLAUDE_COMMANDS_DIR/quick-doc.md" <<'CMD_QUICK_DOC'
-Generate documentation for the file or function I specify: $ARGUMENTS
-
-Include:
-1. A brief description of what it does
-2. Parameters/props with types and descriptions
-3. Return value
-4. Usage example
-5. Any gotchas or important notes
-
-Format as JSDoc/docstring appropriate for the language.
-CMD_QUICK_DOC
-
-# /cleanup — find dead code, unused imports, etc.
-write_generated "$CLAUDE_COMMANDS_DIR/cleanup.md" <<'CMD_CLEANUP'
-Scan the project for cleanup opportunities:
-1. Unused imports and variables
-2. Dead code (unreachable functions, unused exports)
-3. Console.log / debug statements left in
-4. TODO/FIXME comments that should be addressed
-5. Empty catch blocks or swallowed errors
-
-List each finding with file path and line number. Don't fix anything — just report.
-CMD_CLEANUP
-
-# /security-scan — run all security tools
-write_generated "$CLAUDE_COMMANDS_DIR/security-scan.md" <<'CMD_SECURITY'
-Run a comprehensive security scan of this project using the available tools:
-
-1. **Secrets**: Run `gitleaks detect --source .` to check for leaked credentials
-2. **Dependencies**: Run `npm audit` (Node) or `uv pip audit` (Python) for known vulnerabilities
-3. **Static analysis**: Run `semgrep --config auto .` for security anti-patterns
-4. **Container scan**: If there's a Dockerfile, run `trivy fs .` to scan for vulnerabilities
-5. **IaC scan**: If there are Terraform/CDK files, run `trivy config .` for misconfigurations
-
-For each finding, report: severity, file, line, description, and recommended fix.
-Prioritize: critical > high > medium > low. Skip informational findings.
-CMD_SECURITY
-
-# /perf-check — benchmark and profile
-write_generated "$CLAUDE_COMMANDS_DIR/perf-check.md" <<'CMD_PERF'
-Analyze the performance of this project: $ARGUMENTS
-
-1. If a command/script is given, benchmark it with `hyperfine`
-2. If a URL is given, load test with `oha -n 500 -c 10 <url>`
-3. If no argument, look at package.json scripts and suggest which to benchmark
-4. Check for common performance anti-patterns in the code (N+1 queries, missing indexes, unbounded loops, sync I/O in async code)
-5. Check bundle size if this is a frontend project (`npx @next/bundle-analyzer` or similar)
-
-Report findings with concrete numbers and suggested optimizations.
-CMD_PERF
-
-# /docker-lint — lint and optimize Docker setup
-write_generated "$CLAUDE_COMMANDS_DIR/docker-lint.md" <<'CMD_DOCKER'
-Analyze the Docker setup in this project:
-
-1. Lint all Dockerfiles with `hadolint`
-2. If images are built, analyze with `dive` for layer optimization opportunities
-3. Check docker-compose.yml for best practices (health checks, resource limits, named volumes)
-4. Verify .dockerignore exists and excludes node_modules, .git, etc.
-5. Check for security issues: running as root, secrets in build args, latest tags
-
-Fix any issues found and explain the changes.
-CMD_DOCKER
-
-# /iac-review — review infrastructure code
-write_generated "$CLAUDE_COMMANDS_DIR/iac-review.md" <<'CMD_IAC'
-Review the infrastructure-as-code in this project:
-
-1. Run `tflint` on any Terraform/OpenTofu files
-2. Run `trivy config .` to scan for misconfigurations (broad surface — IaC + Dockerfile + K8s)
-3. Run `checkov -d .` for IaC-focused static analysis (different rule set than trivy — they're complementary)
-4. Run `infracost breakdown --path .` to estimate costs (if infracost is configured)
-5. If Terraform modules are present, run `terraform-docs markdown table .` and verify the README's variable/output sections are up to date
-6. Check for: missing tags, overly permissive IAM, unencrypted resources, missing backups
-7. Check CDK code for L1 constructs that should be L2/L3
-
-Report findings with severity and recommended fixes.
-CMD_IAC
-
-# /convert — convert between formats using pandoc
-write_generated "$CLAUDE_COMMANDS_DIR/convert.md" <<'CMD_CONVERT'
-Convert files between formats: $ARGUMENTS
-
-Use the available tools:
-- `pandoc` for document conversion (md, html, pdf, docx, rst)
-- `d2` for diagram generation from text
-- `mmdc` (mermaid) for flowcharts, sequence diagrams, ERDs
-- `ffmpeg` for audio/video conversion
-- `magick` for image conversion and manipulation
-
-Parse the user's intent from the arguments and run the appropriate conversion command.
-Examples: "convert README.md to pdf", "resize logo.png to 200x200", "diagram from architecture.d2"
-CMD_CONVERT
-
-# /new-feature — full trunk-based feature workflow
-write_generated "$CLAUDE_COMMANDS_DIR/new-feature.md" <<'CMD_NEW_FEATURE'
-Implement a new feature following trunk-based development: $ARGUMENTS
-
-Follow this workflow in order:
-1. **Create issue**: Run `gh issue create --title "<feature title>" --body "<description>" --label "feature"` and note the issue number
-2. **Create branch**: Run `git switch -c feature/<short-kebab-name>`
-3. **Implement**: Write the code with tests. Use conventional commits (feat, test, docs).
-4. **Create/update README**: If this adds a new capability, update the project README
-5. **Push and PR**: Run `git push -u origin HEAD` then `gh pr create --title "feat: <title>" --body "## Summary\n<what and why>\n\n## Changes\n- <bullet list>\n\n## Test Plan\n- [ ] <test items>\n\nCloses #<issue-number>"`
-
-Make each commit small and atomic. Write tests alongside the implementation, not after.
-CMD_NEW_FEATURE
-
-# /fix-bug — full trunk-based bug fix workflow
-write_generated "$CLAUDE_COMMANDS_DIR/fix-bug.md" <<'CMD_FIX_BUG'
-Fix a bug following trunk-based development: $ARGUMENTS
-
-Follow this workflow in order:
-1. **Create issue**: Run `gh issue create --title "fix: <bug title>" --body "<description of bug, steps to reproduce, expected vs actual>" --label "bug"` and note the issue number
-2. **Create branch**: Run `git switch -c fix/<short-kebab-name>`
-3. **Write failing test first**: Write a test that reproduces the bug (should fail)
-4. **Fix**: Implement the fix so the test passes
-5. **Verify**: Run the full test suite to confirm no regressions
-6. **Push and PR**: Run `git push -u origin HEAD` then `gh pr create --title "fix: <title>" --body "## Bug\n<what was broken>\n\n## Root Cause\n<why it happened>\n\n## Fix\n<what changed>\n\n## Test Plan\n- [ ] Repro test passes\n- [ ] No regressions\n\nFixes #<issue-number>"`
-CMD_FIX_BUG
-
-# /create-readme — generate a comprehensive README
-write_generated "$CLAUDE_COMMANDS_DIR/create-readme.md" <<'CMD_README'
-Generate a comprehensive README.md for this project.
-
-Analyze the codebase to determine:
-1. **Project name and description** — from package.json, Cargo.toml, go.mod, or directory name
-2. **Tech stack** — languages, frameworks, key dependencies
-3. **Prerequisites** — runtime versions, required tools, env vars
-4. **Getting started** — install deps, run dev server, build, test
-5. **Project structure** — key directories and what they contain
-6. **Available scripts/commands** — from package.json scripts, Justfile, Makefile
-7. **Environment variables** — list all referenced env vars with descriptions (NOT values)
-8. **Architecture** — high-level overview if the project has multiple services/modules
-9. **API documentation** — if there are API routes, list endpoints with methods
-10. **Deployment** — if there are Docker/CI/CD files, document the process
-11. **Contributing** — branch naming, commit format, PR process
-
-Use clean Markdown formatting. Be concise but complete. If information isn't available, leave a placeholder with a TODO comment.
-CMD_README
-
-# /init-project — set up a new project with all best practices
-write_generated "$CLAUDE_COMMANDS_DIR/init-project.md" <<'CMD_INIT'
-Initialize a new project with industry best practices: $ARGUMENTS
-
-Set up the following in order:
-
-## 1. Git
-- Initialize repo with `git init -b main`
-- Create comprehensive .gitignore (language-appropriate)
-
-## 2. README.md
-- Project name, one-line description, tech stack
-- Getting started (prerequisites, install, run, test)
-- Available scripts/commands
-- Project structure overview
-- Environment variables (with descriptions, not values)
-
-## 3. Project scaffold
-Create a Bigpowers aligned project skeleton with these files and directories:
-
-- `AGENTS.md` — tracked, public, procedural agent instructions
-- `CONVENTIONS.md` — tracked, normative rules for code, tests, docs, and line endings
-- `README.md` — concise human overview and setup
-- `CHANGELOG.md` — Keep a Changelog format with SemVer declared, an `[Unreleased]` section, the six standard groups, entries citing the issue number rather than the PR, and a note to add compare-link definitions at the first release
-- `.editorconfig` — UTF-8, LF, final newline, trim trailing whitespace, 2-space default indent
-- `.gitattributes` — `* text=auto eol=lf`
-- `.gitignore` — a language-neutral core (env, secrets, build output, editors, OS, logs, `CLAUDE.md`) plus labelled per-ecosystem blocks a project can delete as a unit. `.env*` is negated with `!.env.example` so a committed template stays visible
-- `specs/` — all planning, scope, release, and verification artifacts. Every placeholder carries a heading and a one-line brief naming which skill fills it; none are empty, because an empty file reads as "done" to anything checking existence
-
-For an **open source** project, also create `LICENSE` (MIT by default), `CONTRIBUTING.md` pointing at `AGENTS.md` and `CONVENTIONS.md` rather than restating them, `SECURITY.md` routing reports through GitHub's private advisory flow, and `CODE_OF_CONDUCT.md`. Without a LICENSE the code is under exclusive copyright by default, which is the opposite of the intent. Do not write a placeholder LICENSE: a stub looks like a license to a scanner and grants nothing.
-
-Recommended `specs/` shape:
-```text
-specs/
-├── README.md
-├── state.yaml
-├── planning-status.yaml
-├── execution-status.yaml
-├── release-plan.yaml
-├── product/
-│   ├── SCOPE_LATEST.yaml
-│   ├── VISION_LATEST.yaml
-│   ├── GLOSSARY_LATEST.yaml
-│   └── snapshots/
-├── tech-architecture/
-│   ├── tech-stack.md
-│   ├── SECURITY_PLAN_LATEST.md
-│   ├── TEST_PLAN_LATEST.md
-│   ├── DESIGN_PLAN_LATEST.md
-│   ├── REFACTOR_LATEST.md
-│   └── IMPACT_LATEST.md
-├── adr/
-├── verifications/
-├── epics/
-│   └── archive/
-├── bugs/
-│   └── registry.yaml
-└── metrics/
-```
-
-## 4. AGENTS.md
-Create a tracked `AGENTS.md` that stays short and public. It should:
-- point contributors at `CONVENTIONS.md` and `README.md`
-- list install, dev, test, build, lint, and preflight commands
-- explain that all planning and release state lives in `specs/`
-- tell agents to use Bigpowers skills when available
-- list a few hard stops such as no secrets and no bypassing failing checks casually
-
-Do not create a tracked project `CLAUDE.md`. That file is private and should stay in `.gitignore`.
-
-## 5. CONVENTIONS.md
-Create `CONVENTIONS.md` with normative rules for:
-- planning artifacts live in `specs/`
-- `AGENTS.md` is procedural and public
-- `CONVENTIONS.md` is normative
-- warnings are treated as errors
-- line endings are always LF
-- `.editorconfig` and `.gitattributes` are the source of truth for line ending policy
-- run lint, test, and build before merging
-
-## 6. Code quality and line endings
-- Enforce LF always through both `.editorconfig` and `.gitattributes`
-- Keep files UTF-8 with a final newline
-- Prefer project specific config only when it improves on the scaffold
-
-## 7. GitHub templates
-Create `.github/ISSUE_TEMPLATE/bug_report.md` and `.github/ISSUE_TEMPLATE/feature_request.md`,
-both following the Problem / Proposed fix / Verification shape with no narrative padding, plus
-`.github/ISSUE_TEMPLATE/config.yml` with `blank_issues_enabled: true`. Reference only labels a
-fresh repo actually has: `bug` and `enhancement` are GitHub defaults, `feature` is not.
-
-Create `.github/PULL_REQUEST_TEMPLATE.md`:
-```markdown
-## Summary
-<!-- What does this PR do and why? -->
-
-## Changes
--
-
-## Test Plan
-- [ ]
-
-Closes #
-```
-
-## 8. Initial commit and push
-- `git add -A && git commit -m "feat: initial project scaffold"`
-- Create GitHub repo if needed: `gh repo create <name> --private --source=.`
-- Push: `git push -u origin main`
-CMD_INIT
-
-# /refactor — refactor code with tests preserved
-write_generated "$CLAUDE_COMMANDS_DIR/refactor.md" <<'CMD_REFACTOR'
-Refactor the specified code: $ARGUMENTS
-
-Follow this process:
-1. **Understand**: Read the code and its tests. Identify what the code does and its public API.
-2. **Plan**: Describe the refactoring approach before changing anything.
-3. **Preserve tests**: Ensure all existing tests still pass after refactoring. Do NOT modify test assertions.
-4. **Refactor**: Apply the changes. Focus on:
-   - Reducing complexity (extract functions, simplify conditions)
-   - Improving naming (descriptive, consistent)
-   - Removing duplication (DRY, extract shared logic)
-   - Applying SOLID principles
-   - Improving type safety
-5. **Verify**: Run tests to confirm nothing broke.
-6. **Commit**: Use `refactor(scope): description` commit format.
-
-If tests don't exist, write them FIRST before refactoring.
-CMD_REFACTOR
-
-# /add-endpoint — add an API endpoint with full stack
-write_generated "$CLAUDE_COMMANDS_DIR/add-endpoint.md" <<'CMD_ENDPOINT'
-Add a new API endpoint: $ARGUMENTS
-
-Implement the full vertical slice:
-1. **Types**: Define request/response types (zod schema for TS, pydantic for Python)
-2. **Route handler**: Implement the endpoint with proper HTTP method and status codes
-3. **Validation**: Validate all inputs at the boundary
-4. **Error handling**: Return structured errors with appropriate status codes
-5. **Tests**: Write unit tests for the handler and integration tests for the route
-6. **Documentation**: Add JSDoc/docstring, update API docs or README if they exist
-
-Follow REST conventions:
-- GET for retrieval (200), POST for creation (201), PUT/PATCH for updates (200), DELETE for removal (204)
-- Response format: `{ data: T }` for success, `{ error: { code, message } }` for errors
-- Always paginate list endpoints
-
-Commit with: `feat(api): add <METHOD> <path> endpoint`
-CMD_ENDPOINT
-
-# /add-component — add a React component with tests and stories
-write_generated "$CLAUDE_COMMANDS_DIR/add-component.md" <<'CMD_COMPONENT'
-Add a new React component: $ARGUMENTS
-
-Create the full component package:
-1. **Component file**: `ComponentName.tsx` — functional component with TypeScript props interface
-2. **Tests**: `ComponentName.test.tsx` — test rendering, user interactions, edge cases
-3. **Types**: Export the props interface for consumers
-5. **Index**: Add to barrel export (`index.ts`) if the directory uses one
-
-Follow these patterns:
-- Functional components only, use hooks for state/effects
-- Props interface named `ComponentNameProps`, exported
-- Use `forwardRef` if the component wraps a native element
-- Tailwind CSS for styling (or whatever the project uses)
-- Handle loading, error, and empty states
-- Accessibility: proper ARIA attributes, keyboard navigation, semantic HTML
-
-Place in: `src/components/ComponentName/` (colocated structure)
-Commit with: `feat(ui): add <ComponentName> component`
-CMD_COMPONENT
-
-# /ci-fix — diagnose and fix CI failures
-write_generated "$CLAUDE_COMMANDS_DIR/ci-fix.md" <<'CMD_CIFIX'
-Diagnose and fix the CI/CD pipeline failure.
-
-Steps:
-1. **Check CI status**: Run `gh run list --limit 5` to see recent runs
-2. **Get failure details**: Run `gh run view <run-id> --log-failed` to see the error
-3. **Diagnose**: Identify the root cause (test failure, lint error, build error, dependency issue, flaky test)
-4. **Fix**: Apply the fix
-5. **Verify locally**: Run the same checks locally (`act` for GitHub Actions, or the individual commands)
-6. **Push**: Commit with `ci: fix <description of what broke>`
-
-Common CI issues to check:
-- Node/Python version mismatch between local and CI
-- Missing environment variables in CI
-- Dependency resolution differences (lockfile out of date)
-- Flaky tests (timing-dependent, order-dependent)
-- ESLint/Prettier formatting differences
-CMD_CIFIX
-
-# /changelog — generate changelog from git history
-write_generated "$CLAUDE_COMMANDS_DIR/changelog.md" <<'CMD_CHANGELOG'
-Generate a changelog from git history: $ARGUMENTS
-
-Use `git-cliff` if available (preferred — uses ~/.config/git-cliff/cliff.toml config).
-Fall back to manual parsing if git-cliff is not installed.
-
-**With git-cliff:**
-1. If no range specified: `git-cliff --unreleased`
-2. For a full changelog: `git-cliff -o CHANGELOG.md`
-3. For a specific range: `git-cliff v1.0.0..HEAD`
-
-**Without git-cliff (manual fallback):**
-1. Get commits: `git log <range> --oneline --format="%h %s"`
-2. Parse conventional commits and group by type:
-   - **Features** (feat:) — new functionality
-   - **Bug Fixes** (fix:) — bug fixes
-   - **Performance** (perf:) — performance improvements
-   - **Documentation** (docs:) — documentation changes
-   - **Other** (chore:, refactor:, style:, test:, build:, ci:)
-3. Format as Markdown with:
-   - Version header with date
-   - Grouped sections (only include sections that have entries)
-   - Each entry: short description with commit hash link
-   - Breaking changes highlighted at the top
-4. If a CHANGELOG.md exists, prepend the new entry. Otherwise create it.
-
-Format: Keep it concise — one line per change, no fluff.
-CMD_CHANGELOG
-
-# /commit-msg — generate commit message from staged changes
-write_generated "$CLAUDE_COMMANDS_DIR/commit-msg.md" <<'CMD_COMMIT'
-Generate a conventional commit message for the currently staged changes.
-
-1. Run `git diff --cached --stat` to see what files changed
-2. Run `git diff --cached` to see the actual changes
-3. Analyze the changes and determine:
-   - **Type**: feat, fix, docs, style, refactor, perf, test, build, ci, chore
-   - **Scope**: the module or area affected (optional but preferred)
-   - **Description**: concise summary in imperative mood
-   - **Body**: explain WHAT changed and WHY (not HOW) — only if non-obvious
-   - **Footer**: reference issues if applicable (Closes #N)
-4. Output the commit message in this format:
-   ```
-   type(scope): short description
-
-   Optional body explaining what and why.
-
-   Closes #N
-   ```
-5. Run the commit: `git commit -m "<message>"`
-
-Keep the first line under 72 characters. Use imperative mood ("add" not "added").
-CMD_COMMIT
-
-# /probe-assumptions — pressure test a document or plan's assumptions
-write_generated "$CLAUDE_COMMANDS_DIR/probe-assumptions.md" <<'CMD_PROBE_ASSUMPTIONS'
-Analyze the target document, plan, or proposal: $ARGUMENTS
-
-Produce a compact Socratic assumptions review with these sections:
-1. **Bottom line** — 2 or 3 sentences on how assumption-heavy the document is
-2. **Key assumptions** — list the hidden or weakly supported assumptions
-3. **Quoted evidence** — cite the lines or passages that reveal each assumption
-4. **Open risks** — explain what breaks if those assumptions are wrong
-5. **What to validate next** — the smallest checks that would reduce uncertainty
-
-Be direct. Prefer pressure testing over praise. Focus on what is being taken for granted.
-CMD_PROBE_ASSUMPTIONS
-
-# /probe-evidence — audit how well a document is supported
-write_generated "$CLAUDE_COMMANDS_DIR/probe-evidence.md" <<'CMD_PROBE_EVIDENCE'
-Analyze the target document, plan, or proposal: $ARGUMENTS
-
-Produce a compact evidence review with these sections:
-1. **Bottom line** — 2 or 3 sentences on evidence quality
-2. **Key findings** — what is well supported, weakly supported, or unsupported
-3. **Quoted evidence** — show the passages and cited sources that matter most
-4. **Open risks** — where the argument depends on thin, biased, or missing evidence
-5. **What to validate next** — the smallest checks, measurements, or sources that would firm this up
-
-Distinguish sourced facts from inference. Call out confidence plainly.
-CMD_PROBE_EVIDENCE
-
-# /probe-implications — trace downstream consequences of a decision
-write_generated "$CLAUDE_COMMANDS_DIR/probe-implications.md" <<'CMD_PROBE_IMPLICATIONS'
-Analyze the target document, plan, or proposal: $ARGUMENTS
-
-Produce a compact implications review with these sections:
-1. **Bottom line** — 2 or 3 sentences on the downstream impact
-2. **Key implications** — first order and second order consequences
-3. **Quoted evidence** — show the passages that imply those consequences
-4. **Open risks** — unintended costs, failure modes, lock-in, or operational burden
-5. **What to validate next** — the smallest checks that would reduce downstream surprise
-
-Focus on what follows if this plan is adopted, delayed, or wrong.
-CMD_PROBE_IMPLICATIONS
-
-configured "Claude Code commands created (23 commands: /pr-review, /test-plan, /dep-audit, /quick-doc, /cleanup, /security-scan, /perf-check, /docker-lint, /iac-review, /convert, /new-feature, /fix-bug, /create-readme, /init-project, /refactor, /add-endpoint, /add-component, /ci-fix, /changelog, /commit-msg, /probe-assumptions, /probe-evidence, /probe-implications)"
-
-# ---- Claude Code first-party skills (authored here) ----
-# Skills that teach Claude and omp to use tools this script installs. A SKILL.md
-# must start with YAML frontmatter, so these use plain heredocs.
-if [[ "$DRY_RUN" == "true" ]]; then
-    info "[DRY RUN] Would write three first-party skills -> ~/.claude/skills/"
-    info "[DRY RUN] Would retire the dbmate-migrations, office-docs, and tiki skills"
-else
-    info "Writing first-party Claude Code skills..."
-    mkdir -p "$HOME/.claude/skills/office-layout-check"
-    cat > "$HOME/.claude/skills/office-layout-check/SKILL.md" <<'SKILL_OFFICE_LAYOUT'
+            ;;
+    esac
+done
+unset _stale
+
+write_generated "$AGENTS_SKILLS/office-layout-check/SKILL.md" <<'SKILL_OFFICE_LAYOUT'
 ---
 name: office-layout-check
 description: Verify the visual layout of local Office and OpenDocument files. Use when exact page, slide, or sheet rendering matters.
@@ -12970,18 +10111,10 @@ soffice --headless --convert-to pdf --outdir /tmp/office-check "deck.pptx"
 pdftoppm -png -r 150 /tmp/office-check/deck.pdf /tmp/office-check/deck-page
 ```
 
-Use `office-py` only for precise structural assertions that the read tool cannot answer.
-
-```bash
-office-py -c 'from pptx import Presentation; print(len(Presentation("deck.pptx").slides))'
-office-py -c 'import openpyxl; print(openpyxl.load_workbook("data.xlsx").sheetnames)'
-```
-
 Keep scratch output outside the source directory. Do not edit or author documents unless the user asks.
 SKILL_OFFICE_LAYOUT
 
-    mkdir -p "$HOME/.claude/skills/d2-diagrams"
-    cat > "$HOME/.claude/skills/d2-diagrams/SKILL.md" <<'SKILL_D2'
+write_generated "$AGENTS_SKILLS/d2-diagrams/SKILL.md" <<'SKILL_D2'
 ---
 name: d2-diagrams
 description: Create reproducible diagram artifacts with D2. Use when the user requests a rendered diagram file or maintainable diagram source.
@@ -13006,8 +10139,7 @@ Use the default layout first. Use ELK only when the default layout tangles a den
 Use `mmdc` only when the user requests Mermaid source or Mermaid output.
 SKILL_D2
 
-    mkdir -p "$HOME/.claude/skills/api-testing"
-    cat > "$HOME/.claude/skills/api-testing/SKILL.md" <<'SKILL_API'
+write_generated "$AGENTS_SKILLS/api-testing/SKILL.md" <<'SKILL_API'
 ---
 name: api-testing
 description: Exercise HTTP and gRPC APIs from the terminal. Use for live requests, response diagnosis, or repeatable protocol assertions.
@@ -13041,58 +10173,18 @@ grpcurl -d '{"id":1}' localhost:50051 svc.Users/Get
 Reference secrets through environment variables. Do not store tokens in commands, fixtures, or checked-in files.
 SKILL_API
 
-    RETIRED_CLAUDE_SKILLS=(dbmate-migrations office-docs tiki)
-    for _skill in "${RETIRED_CLAUDE_SKILLS[@]}"; do
-        rm -f "$HOME/.claude/skills/$_skill/SKILL.md"
-        rmdir "$HOME/.claude/skills/$_skill" 2>/dev/null || true
-    done
-    unset RETIRED_CLAUDE_SKILLS _skill
-    success "First-party Claude skills written: office-layout-check, d2-diagrams, api-testing -> ~/.claude/skills/"
-fi
-
-# ---- Claude Code: bigpowers skills/hooks ----
-# This lived inside the pi block until #513, but has nothing to do with pi: it
-# runs bigpowers' own installGlobal helper against the "claude" target. pi's
-# "packages" pinning was the pi-coupled half, and that went with pi. This did not.
-if [[ "$DRY_RUN" == "true" ]]; then
-    info "[DRY RUN] Would link bigpowers into Claude Code (~/.claude/skills + hooks)"
-elif installed npm && _npm_has "bigpowers@2.88.1"; then
-    _bp_root="$(npm root -g 2>/dev/null)/bigpowers"
-    if [[ -d "$_bp_root" ]]; then
-        if node - <<'NODE' "$_bp_root" >> "$LOG_FILE" 2>&1
-const path = require('path');
-const root = process.argv[2];
-const { installGlobal } = require(path.join(root, 'scripts', 'lib', 'install-helpers.js'));
-installGlobal({ id: 'claude', name: 'Claude Code' }, root);
-NODE
-        then
-            success "bigpowers linked into Claude Code (~/.claude/skills + hooks)"
-        else
-            warn "bigpowers install helper failed for Claude Code — inspect the log"
-        fi
-    else
-        warn "bigpowers npm package not found under npm root — skipping Claude link"
-    fi
-    unset _bp_root
-else
-    warn "bigpowers not installed globally — skipping Claude link"
-fi
-
+configured "OMP shared skills written (api-testing, d2-diagrams, office-layout-check)"
 # ---- Oh My Pi (omp) coding agent (~/.omp/agent) ----
-# omp is the maximalist fork of pi, and since #513 the only agent here beside Claude
-# Code: 32 tools, LSP, DAP, subagents, nine model roles.
-# It ignores XDG_CONFIG_HOME the same way pi does, so ~/.omp/agent is the one path
-# family to manage — not ~/.config/omp. Credentials stay user-owned: the `google`
-# provider reads GEMINI_API_KEY from the environment and this script never reads,
-# writes, or echoes it (#504).
+# omp is the coding agent in this setup. It provides tools, LSP, DAP, subagents,
+# and workload-routed model roles. Credentials stay user-owned.
 #
 # Two vocabulary traps upstream, both worth naming here because the ids share one
 # namespace and the wrong one fails silently:
 #   * `google` is the MODEL provider (the Gemini API). `gemini` is a DISCOVERY
 #     provider — the source that reads GEMINI.md. Disabling or configuring the
 #     wrong one does nothing visible. Roles below are all `google/...`.
-#   * `~/.agents/skills` is omp's CANONICAL shared skills location, not a foreign
-#     import. The three skills linked there need no separate omp copies.
+#   * `~/.agents/skills` is omp's canonical shared skills location. The three
+#     generated skills need no copies under ~/.omp/agent/skills.
 OMP_DIR="$HOME/.omp/agent"
 OMP_THEME_DIR="$OMP_DIR/themes"
 OMP_THEME_FILE="$OMP_THEME_DIR/dracula-sakura.json"
@@ -13102,8 +10194,6 @@ OMP_THEME_FILE="$OMP_THEME_DIR/dracula-sakura.json"
 #   ~/.agents/skills     — the `agents` provider, priority 70.
 OMP_SKILLS_DIR="$OMP_DIR/skills"
 OMP_EXTENSIONS_DIR="$OMP_DIR/extensions"
-AGENTS_SKILLS="$HOME/.agents/skills"
-OMP_SHARED_SKILLS=(api-testing d2-diagrams office-layout-check)
 OMP_RETIRED_SKILLS=(tiki-capture tiki-review tiki-groom tiki-arc tiki-journal)
 OMP_RETIRED_EXTENSIONS=(
     turn-counter.ts
@@ -13121,7 +10211,6 @@ OMP_CONFIG_FILE="$OMP_DIR/config.yml"
 if [[ "$DRY_RUN" == "true" ]]; then
     info "[DRY RUN] Would write omp config -> $OMP_DIR (AGENTS.md, themes/dracula-sakura.json)"
     info "[DRY RUN] Would merge omp settings -> $OMP_CONFIG_FILE (theme, model roles, fallbacks)"
-    info "[DRY RUN] Would link ${#OMP_SHARED_SKILLS[@]} shared skills -> $AGENTS_SKILLS/"
     info "[DRY RUN] Would retire obsolete omp skills and extensions"
     info "[DRY RUN] Would write the protected-paths guard -> $OMP_EXTENSIONS_DIR/protected-paths.ts"
 else
@@ -13485,38 +10574,6 @@ export default function protectedPaths(pi: ExtensionAPI): void {
 OMP_PROTECTED_PATHS_EXT
     configured "omp protected-paths guard written (~/.omp/agent/extensions/protected-paths.ts)"
 
-    # -- Shared skills ------------------------------------------------------------
-    # ~/.agents/skills is omp's canonical shared skills location. The prune only
-    # removes links that point into this script's ~/.claude/skills directory.
-    _omp_linked=0 _omp_missing=0
-    for _skill in "${OMP_SHARED_SKILLS[@]}"; do
-        if [[ -d "$HOME/.claude/skills/$_skill" ]]; then
-            ln -sfn "$HOME/.claude/skills/$_skill" "$AGENTS_SKILLS/$_skill"
-            _omp_linked=$((_omp_linked + 1))
-        else
-            _omp_missing=$((_omp_missing + 1))
-        fi
-    done
-    for _stale in "$AGENTS_SKILLS"/*; do
-        [[ -L "$_stale" ]] || continue
-        case "$(readlink "$_stale")" in
-            "$HOME/.claude/skills/"*) ;;
-            *) continue ;;
-        esac
-        _name="$(basename "$_stale")"
-        _keep=false
-        for _skill in "${OMP_SHARED_SKILLS[@]}"; do
-            [[ "$_name" == "$_skill" ]] && _keep=true && break
-        done
-        [[ "$_keep" == "false" ]] && rm -f "$_stale"
-    done
-    unset _stale _name _keep _skill
-    if [[ "$_omp_missing" -gt 0 ]]; then
-        warn "omp: $_omp_linked shared skill(s) linked -> ~/.agents/skills/ ($_omp_missing missing from ~/.claude/skills)"
-    else
-        success "omp: $_omp_linked shared skills linked -> ~/.agents/skills/ (api-testing, d2-diagrams, office-layout-check)"
-    fi
-    unset _omp_linked _omp_missing
 
     # -- config.yml ---------------------------------------------------------------
     # MERGE, never write_managed. omp owns this file: `/settings`, `omp config set`
@@ -13579,29 +10636,29 @@ modelRoles:
   tiny: google/gemini-3.1-flash-lite:minimal
   commit: google/gemini-3.1-flash-lite:minimal
 # Anthropic never appears in a fallback chain. Gemini is the first hosted
-# fallback for ordinary work. The installed local Qwen coder is the final
-# fallback in every chain, so a second provider failure stays on this machine.
+# fallback for ordinary work. The Vulkan-backed local Qwen coder is final in
+# every chain, so a second provider failure stays on this machine.
 retry:
   modelFallback: true
   fallbackChains:
     openai-codex/gpt-5.6-sol:
       - google/gemini-3.8-flash:medium
-      - ollama/qwen2.5-coder:14b
+      - llama.cpp/qwen2.5-coder:14b
     anthropic/claude-sonnet-5:
       - google/gemini-3.1-pro-preview:high
-      - ollama/qwen2.5-coder:14b
+      - llama.cpp/qwen2.5-coder:14b
     google/gemini-3.1-pro-preview:
       - openai-codex/gpt-5.6-sol:high
-      - ollama/qwen2.5-coder:14b
+      - llama.cpp/qwen2.5-coder:14b
     google/gemini-3.1-flash-lite:
       - openai-codex/gpt-5.3-codex-spark:low
-      - ollama/qwen2.5-coder:14b
+      - llama.cpp/qwen2.5-coder:14b
     google/gemini-3.8-flash:
       - openai-codex/gpt-5.6-sol:medium
-      - ollama/qwen2.5-coder:14b
+      - llama.cpp/qwen2.5-coder:14b
     default:
       - google/gemini-3.8-flash:medium
-      - ollama/qwen2.5-coder:14b
+      - llama.cpp/qwen2.5-coder:14b
 # Local SearXNG, first in the web_search chain. This replaces the ~300-line
 # TypeScript extension the pi block generated (#513): omp carries `searxng` as
 # one of 23 built-in web_search backends, with site-aware extraction, so the
@@ -13639,11 +10696,71 @@ OMP_CONFIG_CONF
         info "omp: set GEMINI_API_KEY in your environment to reach the Gemini models above"
     fi
 fi
+
+# Run the Vulkan build as a login service. Port 8081 avoids the local SearXNG
+# endpoint on 8080. OMP reads LLAMA_CPP_BASE_URL from the managed shell block.
+LLAMA_SERVER="$HOME/.local/share/llama.cpp-vulkan/bin/llama-server"
+LLAMA_MODEL="$HOME/.local/share/llama.cpp/models/qwen2.5-coder-14b-instruct-q4_k_m.gguf"
+LLAMA_PLIST="$HOME/Library/LaunchAgents/dev.vixygrey.llama-cpp.plist"
+LLAMA_LOG="$HOME/Library/Logs/llama.cpp-server.log"
+if [[ "$DRY_RUN" == "true" ]]; then
+    info "[DRY RUN] Would write and load the llama.cpp Vulkan login service on 127.0.0.1:8081"
+elif [[ ! -x "$LLAMA_SERVER" || ! -f "$LLAMA_MODEL" ]]; then
+    warn "llama.cpp binary or model missing — skipping the login service"
+else
+    mkdir -p "$HOME/Library/LaunchAgents" "$HOME/Library/Logs"
+    _llama_plist_new="$(/bin/cat <<LLAMA_PLIST_EOF
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key><string>dev.vixygrey.llama-cpp</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>$LLAMA_SERVER</string>
+        <string>--model</string><string>$LLAMA_MODEL</string>
+        <string>--alias</string><string>qwen2.5-coder:14b</string>
+        <string>--host</string><string>127.0.0.1</string>
+        <string>--port</string><string>8081</string>
+        <string>--ctx-size</string><string>32768</string>
+        <string>--n-gpu-layers</string><string>99</string>
+        <string>--jinja</string>
+        <string>--sleep-idle-seconds</string><string>300</string>
+    </array>
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>VK_ICD_FILENAMES</key><string>$(brew --prefix molten-vk)/etc/vulkan/icd.d/MoltenVK_icd.json</string>
+        <key>VK_DRIVER_FILES</key><string>$(brew --prefix molten-vk)/etc/vulkan/icd.d/MoltenVK_icd.json</string>
+    </dict>
+    <key>RunAtLoad</key><true/>
+    <key>KeepAlive</key><true/>
+    <key>ThrottleInterval</key><integer>30</integer>
+    <key>StandardOutPath</key><string>$LLAMA_LOG</string>
+    <key>StandardErrorPath</key><string>$LLAMA_LOG</string>
+</dict>
+</plist>
+LLAMA_PLIST_EOF
+)"
+    if [[ ! -f "$LLAMA_PLIST" ]] || ! printf '%s\n' "$_llama_plist_new" | diff -q - "$LLAMA_PLIST" >/dev/null 2>&1; then
+        launchctl bootout "gui/$(id -u)" "$LLAMA_PLIST" >> "$LOG_FILE" 2>&1 || true
+        printf '%s\n' "$_llama_plist_new" > "$LLAMA_PLIST"
+        if launchctl bootstrap "gui/$(id -u)" "$LLAMA_PLIST" >> "$LOG_FILE" 2>&1; then
+            configured "llama.cpp Vulkan service loaded (127.0.0.1:8081)"
+        else
+            warn "Could not load the llama.cpp service — see $LOG_FILE"
+        fi
+    else
+        launchctl kickstart -k "gui/$(id -u)/dev.vixygrey.llama-cpp" >> "$LOG_FILE" 2>&1 || true
+        configured "llama.cpp Vulkan service already current (127.0.0.1:8081)"
+    fi
+    unset _llama_plist_new
+fi
+unset LLAMA_SERVER LLAMA_MODEL LLAMA_PLIST LLAMA_LOG
 unset OMP_DIR OMP_THEME_DIR OMP_THEME_FILE OMP_SKILLS_DIR OMP_EXTENSIONS_DIR
-unset AGENTS_SKILLS OMP_SHARED_SKILLS OMP_RETIRED_SKILLS OMP_RETIRED_EXTENSIONS OMP_CONFIG_FILE
+unset AGENTS_SKILLS OMP_RETIRED_SKILLS OMP_RETIRED_EXTENSIONS OMP_CONFIG_FILE
 
 
-fi  # configs (Claude Code)
+fi  # configs
 
 # =============================================================================
 if should_run "shell"; then
@@ -13693,6 +10810,9 @@ export PATH="$HOME/Scripts/bin:$PATH"
 
 # ripgrep config path
 export RIPGREP_CONFIG_PATH="$HOME/.ripgreprc"
+
+# OMP local provider. Port 8080 belongs to the managed SearXNG instance.
+export LLAMA_CPP_BASE_URL="http://127.0.0.1:8081"
 
 # GPG tty (required for commit signing to work)
 export GPG_TTY=$(tty)
@@ -13816,11 +10936,10 @@ unset _cachedir
 # agent parses the garbage. The TUI launchers (lg, lzd, hq, y, n, clip, claws) and
 # the fzf-backed a/ff/rgf simply block when no terminal is attached.
 #
-# Claude Code and similar agents run commands through a NON-interactive shell that
-# still sources this file, so they inherited all of it. Gate on interactivity (the
-# principled test — scripts should get real tools too), plus the agent env vars as
-# a backstop in case an agent ever runs `zsh -i`. Gating the whole section rather
-# than a hazard list means aliases added later are covered automatically.
+# Coding agents run commands through a non-interactive shell that still sources
+# this file, so they inherit these aliases without a guard. Gate on interactivity,
+# plus the agent variables as a backstop for an agent that invokes `zsh -i`.
+# Gating the section also covers aliases added later.
 if [[ -o interactive && -z "$CLAUDECODE" && -z "$AI_AGENT" ]]; then
     alias ls="eza --icons"
     alias ll="eza -la --icons --git"
@@ -13857,7 +10976,6 @@ alias lg="lazygit"
 alias ghd="gh dash"
 alias gdft="git dft"
 alias gha="act"
-alias gha3="act3"
 
 # -- Containers & Kubernetes --------------------------------------------------
 alias lzd="lazydocker"
@@ -13906,12 +11024,6 @@ alias clip="clipse"    # clipboard-history TUI (replaces Raycast clipboard)
 
 # -- Dracula theming for tools that theme via env/flags (config-file tools themed elsewhere) --
 alias claws="claws --theme dracula"    # claws AWS TUI — built-in Dracula theme
-# glab has no working pager CONFIG key — `glab config set glab_pager` is rejected by
-# 1.113.0 despite being documented — but the binary carries a GLAB_PAGER env var.
-# Best-effort: if glab ignores it nothing is lost, since no pager is set either way.
-# It must live HERE and not in the justfile heredoc — `export X="y"` is invalid just
-# syntax and breaks every recipe in ~/.justfile (#291).
-export GLAB_PAGER="delta"
 export D2_THEME=200                     # d2 diagrams — dark theme (d2 has no exact Dracula; 200 = Dark Mauve)
 export D2_DARK_THEME=200
 
@@ -13940,66 +11052,6 @@ rgf() {
 }
 # s: Spotlight-index search from the terminal
 s() { mdfind "$@"; }
-# br: broot's shell-integrated launcher (supports cd on Alt+Enter)
-br() {
-  local cmd cmd_file code
-  cmd_file=$(mktemp)
-  if broot --outcmd "$cmd_file" "$@"; then
-    cmd=$(<"$cmd_file")
-    command rm -f "$cmd_file"
-    eval "$cmd"
-  else
-    code=$?
-    command rm -f "$cmd_file"
-    return "$code"
-  fi
-}
-
-# -- Claude Code session auto-naming (#478) ----------------------------------
-# `claude -n <name>` sets the display name shown in the prompt box, the /resume
-# picker, and the terminal title. Unset, every session is untitled and /resume
-# becomes a wall of identical rows, so the name has to be typed by hand with
-# /rename. This fills it in.
-#
-# It lives in THIS block on purpose. The name only ever surfaces in interactive
-# UI, and a `claude` function defined unguarded in ~/.zshrc would be inherited by
-# every agent and script that sources it.
-_claude_session_name() {
-  local url label
-  # The REMOTE name, not the directory name. This checkout is
-  # "vixygrey-dev-setup-main" on disk but "vixygrey-dev-setup" on GitHub, and the
-  # remote is what the project is actually called. Falls back to the repo root
-  # directory, then to $PWD, so it always produces something.
-  url=$(git config --get remote.origin.url 2>/dev/null) || url=""
-  label=""
-  if [[ -n "$url" ]]; then
-    label=${url%/}          # tolerate a trailing slash
-    label=${label##*/}      # basename of the URL
-    label=${label%.git}     # SSH remotes keep the .git suffix
-  fi
-  if [[ -z "$label" ]]; then
-    label=$(git rev-parse --show-toplevel 2>/dev/null) || label=$PWD
-    label=${label:t}
-  fi
-  # Zero-padded deliberately: 2026-9-8 does not sort lexically, so an unpadded
-  # /resume list orders 10 September before 9 September.
-  print -r -- "$(date +%Y-%m-%d)-$label"
-}
-claude() {
-  local arg
-  # Pass through untouched when the name is already spoken for: the user set one
-  # explicitly, or the session is being RESUMED — stamping today's date over a
-  # session started last week would be wrong. --from-pr resumes too.
-  for arg in "$@"; do
-    case "$arg" in
-      -n|--name|--name=*|-r|--resume|--resume=*|-c|--continue|--from-pr|--from-pr=*)
-        command claude "$@"
-        return
-        ;;
-    esac
-  done
-  command claude --name "$(_claude_session_name)" "$@"
-}
 
 # -- Database -----------------------------------------------------------------
 alias hq="harlequin"
@@ -14022,7 +11074,6 @@ alias cleandl="clean-downloads"
 alias hc="health-check"
 alias sshsetup="setup-ssh"
 alias brewsnap="export-brewfile"
-alias lfsinit="git-lfs-enable-repo"
 
 # -- System -------------------------------------------------------------------
 alias update="topgrade"
@@ -14136,28 +11187,20 @@ echo "  [~/.aria2/aria2.conf]   16 connections, auto-resume"
 echo "  [~/.config/starship]    Dracula-Sakura prompt"
 echo "  [~/.config/atuin]       Fuzzy search, local-only"
 echo "  [~/.config/mprocs]      Multi-process TUI defaults + per-proc logs"
-echo "  [~/.config/broot]       File-navigation TUI config + Dracula-Sakura skin"
 echo "  [~/.jqp.yaml]           jq playground theme overrides"
-echo "  [~/.config/aichat]      Local AI chat config + Dracula-Sakura dark theme"
-echo "  [~/.config/croft]       Croft config + Dracula-Sakura theme extension"
-echo "  [~/.herald/themes]      Herald Dracula-Sakura theme asset + theme-name merge"
 echo "  [~/.omp/agent]          Oh My Pi settings, model routing, theme, protected-path guard"
 echo "  [~/.agents/skills]      Curated skills Oh My Pi reads natively"
+echo "  [llama.cpp]             Vulkan local model server on 127.0.0.1:8081"
+echo "  [~/.local/share/llama.cpp]  Verified Qwen2.5 Coder GGUF model"
 echo "  [leaf]                  Terminal Markdown previewer (live watch, fuzzy picker, Mermaid)"
 echo "  [~/.config/yt-dlp]      Best quality, aria2c downloader"
 echo "  [~/.config/gh-dash]     GitHub dashboard, Dracula-Sakura theme"
-echo "  [~/.config/glab-cli]    GitLab CLI (mirrors gh: SSH, micro, delta, aliases)"
 echo "  [~/.config/stern]       K8s log tailing"
 echo "  [~/.config/zellij]      Modern terminal multiplexer with Dracula-Sakura theme"
 echo "  [~/.config/mpv]         Video player (hardware accel, save position)"
 echo "  [~/Media/photos/dracula-sakura.jpg]  Dracula-Sakura wallpaper asset"
 echo "  [cliamp]                Music player (self-configured; point at ~/Media/music)"
 echo "  [~/.config/git-cliff]   Changelog generator (conventional commits)"
-echo "  [~/.newsboat]           RSS reader (vim keys, Dracula-Sakura colors, starter URLs)"
-echo "  [~/.config/ghostty]     GPU-accelerated terminal + quick-terminal launcher (cmd+space)"
-echo "  [~/.config/sketchybar]  Dracula-Sakura status bar (app, clock, battery/wifi/vpn/cpu/mem, Shottr menu)"
-echo "  [~/.herald]             herald email + calendar (self-configured on first run)"
-echo "  [~/.ollama]             Ollama local models (herald AI + croft pair --provider ollama)"
 echo "  [~/.justfile]           Global task runner recipes (run them with: gj --list)"
 echo "  [~/.config/brewfile]    Brewfile snapshot for reproducibility"
 echo "  [~/.config/micro]       micro — Dracula, on-screen key menu, house indent rules"
@@ -14165,12 +11208,10 @@ echo "  [lazygit]               Dracula-Sakura theme, delta pager"
 echo "  [k9s]                   Dracula-Sakura-colored skin"
 echo "  [Finder]                Hidden files, path bar, list view"
 echo "  [macOS]                 Dock, keyboard, screenshots, Spotlight hotkey, Stage Manager"
-echo "  [Claude Code]           Custom commands (/pr-review, /test-plan, /dep-audit, /quick-doc, /cleanup)"
 echo ""
 info "Optional Chrome extensions (manual install):"
 echo "  - axe DevTools (accessibility testing)"
 echo "  - React Developer Tools"
-echo "  - Lighthouse"
 echo "  - JSON Formatter"
 echo ""
 info "Terminal launcher & window management (keyboard-first, quick-terminal style):"
@@ -14207,60 +11248,38 @@ if [[ "$DRY_RUN" != "true" ]]; then
     cat > "$DESKTOP/POST_SETUP_CHECKLIST.md" <<'CHECKLIST_EOF'
 # Post-Setup Checklist
 
-Everything the setup script could **not** do on your behalf — credentials,
-external accounts, and macOS permissions that are (deliberately)
-unscriptable. Work through it once, then keep it only as long as it's useful.
+Complete the manual permissions, credentials, and account steps after the script finishes.
 
-## macOS permissions & settings
-- [ ] **Accessibility** — grant to **Ghostty** and **SketchyBar**: System Settings -> Privacy & Security -> Accessibility. (Ghostty: global launcher hotkey; SketchyBar: front-app observation + click actions.)
-- [ ] **Screen Recording** — grant to **Shottr**: System Settings -> Privacy & Security -> Screen Recording. Without it, screenshots capture only the desktop/menu bar, not app windows.
-- [ ] **Automation** — the first time you click the SketchyBar clock (it types `herald` into a Ghostty quick terminal), approve the prompt to let it control **System Events**. If the click does nothing, confirm SketchyBar also has Accessibility (above).
-- [ ] **Reminders** — run `reminders show-lists` once and approve the prompt. macOS gates Reminders behind a per-app consent dialog that only appears on first use, and it is granted to the **terminal** (Ghostty), not to `reminders` itself — so approve it from the terminal you actually use. Until then every `reminders` command returns an empty list rather than an error, which is easy to mistake for "no reminders". Claude uses this tool whenever you say "remind me".
-- [ ] **Spotlight's cmd+space** is disabled by the script (freed for the Ghostty quick terminal) — **log out/in** for it to take effect. To keep Spotlight on cmd+space instead, re-enable it (System Settings -> Keyboard -> Keyboard Shortcuts -> Spotlight) and change the Ghostty bind to `global:cmd+backquote` in `~/.config/ghostty/config`.
-- [ ] **Menu bar auto-hide** is set by the script (`_HIHideMenuBar`) so SketchyBar owns the top — **log out/in (or restart)** for it to take effect. If it doesn't stick, toggle System Settings -> Control Center -> "Automatically hide and show the menu bar" -> Always.
-- [ ] **Wallpaper (optional)** — the bundled Dracula-Sakura wallpaper is already installed at `~/Media/photos/dracula-sakura.jpg`. Setup does **not** auto-apply it; if you want it, choose that file in System Settings -> Wallpaper.
+## macOS permissions and settings
+- [ ] Grant Accessibility access to Ghostty for the global quick-terminal shortcut.
+- [ ] Log out, then log in to apply the Spotlight shortcut and visible menu bar.
+- [ ] Select `~/Media/photos/dracula-sakura.jpg` in System Settings if you want the bundled wallpaper.
 
-## Email + calendar — herald (one app, self-configured)
-- [ ] Run `herald` and follow its onboarding to add both accounts + their calendars:
-  - **iCloud (personal):** create an **app-specific password** at appleid.apple.com -> Sign-In & Security -> App-Specific Passwords; herald uses it for IMAP/SMTP + iCloud CalDAV.
-  - **Gmail (work):** add the Gmail account in herald (OAuth or an app password) and its Google CalDAV calendar.
-- [ ] Start the background server so the **Claude MCP** (and mutations) work: `herald serve -config ~/.herald/conf.yaml` (add it to a login item / launchd if you want it always on). Read-only MCP works after the first sync.
-- [ ] **No Anthropic API key is needed to use herald with Claude.** Reading or searching your mail/calendar from Claude Code goes through herald's MCP (set up above) and rides your existing `claude` login — no key. Separately, herald's *own* built-in AI (semantic search, triage, compose styler) is **optional** and runs on local **Ollama** models — setup installs Ollama, runs it as a login service on `127.0.0.1:11434`, and pulls `gemma3:4b` (chat/summaries) plus `nomic-embed-text-v2-moe` (the embedding model that powers semantic search), so it works offline with no key once you enable it in herald's onboarding (pick the **Ollama** provider + the `gemma3:4b` model, and `nomic-embed-text-v2-moe` for embeddings; `ollama pull <model>` adds others). Point it at an `ANTHROPIC_API_KEY` instead only if you'd rather that AI run on Claude.
+## Local inference
+- [ ] Run `curl -s http://127.0.0.1:8081/v1/models | jq` to confirm the llama.cpp service.
+- [ ] Run `llama-server --list-devices` and confirm that the output lists a Vulkan device.
+- [ ] Set `GEMINI_API_KEY` before you use OMP roles that route to Gemini.
+- [ ] Run `omp models llama.cpp` to confirm that OMP discovers Qwen2.5 Coder.
 
-## Google Workspace CLI — gws
-- [ ] Authorize `gws`: run `gws auth setup` (walks you through a Google Cloud OAuth project — setup installs the `gcloud` CLI it shells out to) then `gws auth login`. After that, Claude can work with your Workspace via `gws` (structured JSON) — it's instructed to confirm before sending/sharing/deleting/modifying anything.
-- [ ] **Scope the OAuth fence — this, not the skills, is what actually limits access.** The Claude skills installed below only give Claude *recipes* for Drive/Docs/Slides/Sheets/Forms; they do **not** restrict what `gws` can call. Any scope you grant during `gws auth setup` is reachable regardless of which skills exist. To keep Claude out of email/calendar/chat entirely, authorize **only** the Drive, Docs, Slides, Sheets, and Forms scopes there.
-- [ ] The Drive/Docs/Slides/Sheets/Forms **Claude skills are pre-installed** (`~/.claude/skills/gws-*` plus the matching `recipe-*`); Gmail/Calendar/Chat/Meet skills were deliberately left out. To add more later, copy them from github.com/googleworkspace/cli (`skills/`).
+## Accounts and keys
+- [ ] Run `gh auth login` to enable the GitHub issue and pull request workflow.
+- [ ] Run `aws configure sso` or `aws configure` before you use AWS tools.
+- [ ] Run `atuin register` to enable optional encrypted shell-history synchronization.
+- [ ] Run `infracost auth login` before you use infrastructure cost estimates.
+- [ ] Run `starlit --setup` and enter an OpenWeatherMap API key.
+- [ ] Run `ngrok config add-authtoken <TOKEN>` before you create public tunnels.
 
-## Accounts, keys & first-run
-- [ ] **Apple Passwords CLI (`apw`):** run `brew services start apw`, then `apw auth`, and install the **iCloud Passwords browser extension**.
-- [ ] **Mullvad:** `mullvad account login <ACCOUNT_NUMBER>` (CLI is bundled with the app at `/usr/local/bin/mullvad`).
-- [ ] **starlit** (weather): `starlit --setup` and paste a free OpenWeatherMap API key.
-- [ ] **surge** (download manager): the daemon service was installed by the script (if it didn't prompt, run `surge service install`). Install the browser extension so browser downloads route to surge: **Firefox** — one-click from the Mozilla Add-ons store; **Chrome** — download `extension-chrome.zip` from the [latest release](https://github.com/SurgeDM/Surge/releases) and load-unpacked at `chrome://extensions` (Developer mode). Then pair it with `surge service token` (or TUI → Settings → Extension).
-- [ ] **glab** (GitLab, only if you use it): `glab auth login` to authenticate against gitlab.com or a self-managed instance. Already configured with SSH + micro + delta and the same alias names as gh (mapped to merge requests).
-- [ ] **GitHub CLI (`gh`):** run `gh auth login` (pick SSH or HTTPS). The whole PR workflow (`gh pr`, `gh issue`, `gh pm`) and the `gh ssh-key add` step below all need it — fresh machines start logged out.
-- [ ] **AWS auth:** the CLIs and TUIs (`awscli`, `granted`/`assume`, `steampipe`, `stu`/`e1s`/`e2c`, `s5cmd`) plus the AWS MCP servers are installed but have no credentials yet. SSO: `aws configure sso` (or `granted sso populate` then `assume <profile>`). Static keys: `aws configure`. If you'll query with SQL: `steampipe plugin install aws`.
-- [ ] **atuin history sync** (optional — keeps shell history in sync across the MacBook + Mac mini): `atuin register` (or `atuin login` on the 2nd machine), then `atuin sync`. Local searchable history (`Ctrl+r`) works without an account.
-- [ ] **MCP servers:** export tokens your Claude Code MCP servers need, e.g. `export GITHUB_TOKEN=...` (and `AWS_REGION` / `AWS_PROFILE` for the AWS servers). Requires `claude auth login` at least once.
-- [ ] **infracost** (IaC cost estimates): run `infracost auth login` for a free API key — `infracost breakdown` errors with "No INFRACOST_API_KEY" until then.
-- [ ] **borgmatic backups:** the setup scaffolds `~/.config/borgmatic/config.yaml`. Set `repositories`, store the passphrase in Keychain (`security add-generic-password -a "$USER" -s borg-passphrase -w`), run `borgmatic init --encryption repokey-blake2`, check with `borgmatic create --dry-run`, then enable a daily run (e.g. a LaunchAgent calling `borgmatic --verbosity -1`). ClamAV's virus DB downloads itself in the background after setup.
-- [ ] **Claude AI in croft:** `croft pair` (the AI navigator in your primary IDE) defaults to `--provider claude`, which hands off to your existing `claude` CLI — so it just works on whatever auth that already has (a Claude Pro/Max subscription **or** an API key), no separate `ANTHROPIC_API_KEY` required. Want a fully local model with no key at all? Ollama is installed and running — use the `gemma3:4b` that setup already pulled (`croft pair --provider ollama --model gemma3:4b`) or the heavier `qwen2.5-coder:14b` that's also pre-pulled for coding-oriented local loops. An Anthropic API key is **optional** here — the only thing that uses one is the `llm` CLI, and `llm` itself is optional: if Claude Code and the Claude desktop app already cover you, you can skip it entirely. If you do want `llm` for one-off prompts (e.g. `> ! llm …` from micro's command bar) or shell scripting, run `llm keys set anthropic` — setup already installs the plugin (via uv) and sets the default model to `anthropic/claude-sonnet-4-5`. (Email/calendar AI is built into **herald** — configured separately above.)
-- [ ] **Oh My Pi** (workload-routed): `omp` is installed from the `can1357/tap` Homebrew tap with the Dracula-Sakura theme and shared `AGENTS.md` preferences. Codex handles default and task work. Gemini handles vision, advisor, and lightweight roles. Claude Sonnet 5 is primary only for `slow` and `plan`. Fallback chains never select Anthropic. Three scoped skills come from `~/.agents/skills/`. The `protected-paths.ts` extension guards native file mutations. Local SearXNG is first in the web-search chain.
-- [ ] **croft** (primary IDE): installed from git `main` via cargo — run `croft` in a project to open the workspace; re-run `cargo install --git https://github.com/vitali87/croft.git --locked` to upgrade.
-- [ ] **AI side-pane:** `zellij --layout dev` opens your editor + a Claude Code pane side by side (the strongest AI workflow).
-- [ ] **Home dashboard:** `zellij --layout home` opens a plain terminal on the left, with weather and `btop` stacked on the right. Run `starlit --setup`, then add your API key to its config. The setup never writes this key.
-- [ ] **chezmoi:** `chezmoi init <your-dotfiles-repo>` to bring these configs under version control across the MacBook + Mac mini.
-- [ ] **cliamp** (music): drop music into `~/Media/music`, then run `cliamp ~/Media/music` (or set the folder in its UI). Streaming (YouTube/SoundCloud/Spotify/radio) + EQ + 20+ visualizers are built in.
-- [ ] **leaf** (Markdown): if tab-completion isn't working, run `leaf --auto-complete` and restart your shell (the script attempts this automatically).
-
-## Worth knowing (nothing to do — 2 minutes)
-- [ ] **Global task recipes** — this setup wrote `~/.justfile` with machine-wide one-liners (`flush-dns`, `docker-clean`, `ports`, `standup`, `loc`, `ip`, `ds-clean`, …). Plain `just` will not find it: it searches upward from the current directory, so anywhere outside `$HOME` you get `error: no justfile found`. Use the **`gj`** alias: run **`gj --list`** once to see what is there, then e.g. `gj flush-dns`. Every recipe is listed in `docs/SHORTCUTS.md`.
+## Services and storage
+- [ ] Run `surge service install`, then pair the browser extension with `surge service token`.
+- [ ] Configure repositories and Keychain credentials in `~/.config/borgmatic/config.yaml`.
+- [ ] Run `borgmatic create --dry-run` before you schedule automatic backups.
+- [ ] Run `chezmoi init <repository>` before you place generated configuration under version control.
+- [ ] Place music under `~/Media/music`, then run `cliamp ~/Media/music`.
 
 ## Standard machine setup
-- [ ] Generate an SSH key if needed: `ssh-keygen -t ed25519 -C "you@example.com"` and `gh ssh-key add ~/.ssh/id_ed25519.pub`.
-- [ ] Enable **FileVault** and the **macOS Firewall** (System Settings -> Privacy & Security / Network).
-- [ ] Open **OrbStack** once to finish Docker setup.
-- [ ] `ngrok config add-authtoken <TOKEN>`.
+- [ ] Generate an SSH key with `ssh-keygen -t ed25519 -C "you@example.com"` if required.
+- [ ] Add the public key with `gh ssh-key add ~/.ssh/id_ed25519.pub`.
+- [ ] Enable FileVault and the macOS firewall in System Settings.
 CHECKLIST_EOF
 
     # ---- 2. KEYBOARD_SHORTCUTS.md ----
@@ -14270,12 +11289,8 @@ CHECKLIST_EOF
 A compact map of the highest-frequency keys, launchers, and click actions this
 setup wires in. This is the **quick card**, deliberately kept to one screen.
 
-> **The full reference is `docs/SHORTCUTS.md` in the dev-setup repo.** It carries
-> 400+ bindings, each traced to a named source: zellij mode by mode, the complete
-> lazygit and k9s tables, lazydocker per panel, plus micro, lnav, broot, mpv and
-> the rest. It also records which tools have **no** fixed keymap because theirs is
-> user-configurable (`trip`, `harlequin`, `clipse`), and which ones document
-> themselves only through an in-app help key. Reach for it when this card runs out.
+> The full reference is `docs/SHORTCUTS.md` in the dev-setup repository.
+> It includes zellij, lazygit, k9s, lazydocker, micro, lnav, and mpv.
 
 ## Launcher & search (Ghostty quick terminal)
 | Keys / command | Action |
@@ -14300,12 +11315,12 @@ Every binding is on screen: the **key menu** sits along the bottom, and there ar
 | `Ctrl + c/v/x` | Copy / paste / cut (system clipboard) |
 | `Alt + click` | Add a cursor · `Ctrl + d` select next occurrence |
 
-## Claude AI
-| Where | How |
-|-------|-----|
-| Side-pane (best) | `zellij --layout dev` — editor + Claude Code panes |
-| One-shot pipe | `llm 'explain this' < file` — or `> ! llm …` from micro's command bar |
-| herald | Built-in AI triage/summaries/compose styler + MCP server for Claude |
+## AI tools
+| Tool | Use |
+|------|-----|
+| `omp` | Primary coding agent with hosted roles and local Vulkan fallback |
+| `llm` | One-shot prompts and shell pipelines |
+| `llama-server` | Local Qwen2.5 Coder endpoint on `127.0.0.1:8081` |
 
 ## Terminal multiplexer & tools
 | Keys | Action |
@@ -14319,78 +11334,56 @@ Every binding is on screen: the **key menu** sits along the bottom, and there ar
 | `cliamp` | Terminal music player (Winamp-style) — playback, EQ, cycle visualizers |
 | `atac` | API client TUI (or `atac request send <coll>/<req>` headless) |
 
-## SketchyBar (click actions)
-| Item | Click |
-|------|-------|
-| Clock | Opens herald (email + calendar) in a Ghostty quick terminal |
-| VPN pill | Toggles `mullvad connect` / `disconnect` |
-| Bluetooth | Toggles Bluetooth power |
 SHORTCUTS_EOF
 
     # ---- 3. TOOLKIT_SUMMARY.md ----
     cat > "$DESKTOP/TOOLKIT_SUMMARY.md" <<'SUMMARY_EOF'
 # Toolkit Summary
 
-A terminal-first macOS setup, tuned to keep the keyboard path smooth without
-giving up real capability. This is the quick orientation pass: what each layer
-is for, then how the pieces fit together.
+This terminal-first macOS setup keeps development, automation, and local inference accessible from the keyboard.
 
-A bundled Dracula-Sakura wallpaper is also installed at
-`~/Media/photos/dracula-sakura.jpg`; the setup places the file, but leaves
-applying it to you.
+The setup installs a Dracula-Sakura wallpaper at `~/Media/photos/dracula-sakura.jpg`.
 
-## Editor & AI
-- **croft** — VS Code-style terminal IDE; the **primary editor** (`croft pair` for the AI navigator). **Visual Studio Code** (`code .`) is the GUI editor alongside it, preconfigured with Dracula Official plus a Dracula-Sakura accent layer and the same formatters. **micro** is the `EDITOR` for git/gh/lazygit commit messages and quick edits (non-modal, Dracula, on-screen key menu, trailing whitespace stripped on save).
-- **Claude Code (`claude`)** — agentic coding in the terminal; hosts the MCP servers. Best via `zellij --layout dev` (editor + Claude pane). New sessions are **auto-named `<YYYY-MM-DD>-<repo>`** (from the git remote, so this checkout reads `vixygrey-dev-setup`, not its `-main` folder), which is what the `/resume` picker and the terminal title show. Resuming (`-r`, `-c`, `--from-pr`) keeps the original name, and an explicit `-n/--name` always wins. Rename any session at any time with `/rename`.
-- **Claude in croft** — croft's `croft pair` AI navigator (primary IDE) defaults to `--provider claude`, riding your existing `claude` CLI auth (subscription or key, no separate `ANTHROPIC_API_KEY`); `--provider ollama` runs a local model with no key. The one path that uses an Anthropic key is the **`llm`** CLI (`llm-anthropic`) — and it's optional: reach for it only when you want Claude in a shell pipe or a `> ! llm …` one-off from micro's command bar, then run `llm keys set anthropic`. **herald** integrates with Claude two ways, neither needing a key: Claude Code reads and searches your mail/calendar through herald's **MCP** (it rides your `claude` login), and herald's *own* built-in AI (triage, summaries, compose styler, semantic search) is optional and runs on local **Ollama** models that setup installs, runs as a login service, and seeds with `gemma3:4b` (chat) + `nomic-embed-text-v2-moe` (embeddings).
-- **Oh My Pi (`omp`)** — the third agent and maximalist Pi fork: 32 tools, LSP, DAP, subagents, and workload-routed models. Codex handles normal work. Gemini handles vision and lightweight roles. Claude Sonnet 5 is primary only for `slow` and `plan`, never a fallback. Every fallback chain ends at local `ollama/qwen2.5-coder:14b`.
+## Editor and AI
+- **micro** is the primary editor for files and commit messages.
+- **OMP** provides coding-agent tools, hosted model roles, and a local fallback.
+- **llama.cpp** serves Qwen2.5 Coder 14B through Vulkan on `127.0.0.1:8081`.
+- **llm** provides one-shot prompts and shell pipelines through its Anthropic plugin.
 
-## Status bar & launcher
-- **SketchyBar** — Dracula-Sakura status bar: app, clock, battery, wifi, volume, cpu, mem, bluetooth, VPN.
-- **Ghostty quick terminal** — global cmd+space dropdown that acts as the machine's quick-launch shelf.
-- **Launcher functions** — `a` (apps), `ff` (files), `rgf` (live code/content search), `s` (Spotlight index), `clip` (clipboard via clipse).
-- **Wallpaper asset** — Dracula-Sakura wallpaper copied to `~/Media/photos/dracula-sakura.jpg`, ready for macOS Wallpaper settings and deliberately not auto-applied.
+## Terminal and launcher
+- **Ghostty** provides the global `cmd+space` quick terminal.
+- **zellij** provides panes, tabs, and persistent terminal sessions.
+- `a`, `ff`, `rgf`, `s`, and `clip` provide application, file, search, and clipboard access.
+- **atuin**, **starship**, **fzf**, and **zoxide** improve shell history, prompts, search, and navigation.
 
-## Files, data & shell
-- **rovr** (file manager, nnn fallback), **eza/bat/fd/ripgrep/zoxide/dust/duf/sd** (modern coreutils), **fzf** (fuzzy), **atuin** (history), **starship** (prompt), **zellij** (multiplexer), **yazi**->rovr.
-- **wiper** — interactive disk cleanup (Trash-safe). **taproom** — Homebrew TUI. **has** — tool/version checker.
+## Development workflow
+- **lazygit**, **gh**, **scc**, and **keyward** support GitHub workflows and repository maintenance.
+- **ATAC**, **xh**, **Hurl**, and **grpcurl** support API development.
+- **harlequin**, **pgcli**, **mycli**, **usql**, and **sq** provide database clients.
+- **d2** and **Mermaid** provide diagrams as code.
+- **LibreOffice** and **poppler** support visual checks of Office documents.
 
-## Dev workflow
-- **lazygit / lazydocker / lazysql / lazynpm / lazyssh / lazyrsync / lazyenv** — full-screen TUIs for git, containers, SQL, npm, SSH, rsync, `.env` files.
-- **gh** (GitHub) / **glab** (GitLab) — repo/PR/MR CLIs; glab mirrors gh's aliases (→ merge requests). **scc** — code counter (LOC + complexity + COCOMO). **keyward** — SSH-key manager + security audit.
-- **ATAC** provides an interactive API client with saved collections. Use **xh** for one-off HTTP requests, **Hurl** for repeatable assertions, and **grpcurl** for gRPC.
-- **harlequin / pgcli / mycli / usql / sq** provide database CLIs and TUIs.
-- **d2 / mermaid** provide diagrams as code. **office-layout-check** uses LibreOffice and poppler for visual checks of Office files.
+## Data, media, and storage
+- **rovr** and **nnn** provide file managers.
+- **eza**, **bat**, **fd**, **ripgrep**, **dust**, **duf**, and **sd** replace common file utilities.
+- **cliamp** provides music playback.
+- **starlit** provides weather data.
+- **surge** and **aria2** manage downloads.
+- **rclone** and **borg** provide synchronization and backups.
 
-## Communication & knowledge
-- **herald** — terminal email **+** calendar in one app (Gmail work + iCloud personal, unified CalDAV), with built-in AI triage/summaries and an MCP server for Claude.
-- **gws** (google-workspace-cli) — Drive/Gmail/Docs/Sheets/Calendar from the terminal (structured JSON; Claude's Workspace surface).
-- **newsboat** — RSS. **cliamp** — music. **starlit** — weather. **surge** — download manager (browser-download capture, alongside aria2). **bmm** — bookmarks.
+## Infrastructure and security
+- **kubectl**, **k9s**, **stern**, and **dive** support container and cluster inspection.
+- **awscli**, **granted**, **OpenTofu**, **checkov**, and **trivy** support cloud infrastructure.
+- **gitleaks**, **detect-secrets**, **sops**, and **age** protect repository secrets.
+- **LuLu** provides the remaining graphical network security control.
 
-## Infra, cloud & security
-- **rclone** — cloud sync (replaced Cyberduck + Google Drive). **borg** — backups.
-- **kubectl/k9s/stern/dive**, **awscli/granted**, **opentofu/terraform-docs/checkov/trivy**, **gitleaks/detect-secrets/sops/age**.
-- **apw** — Apple Passwords from the CLI. **mullvad** CLI. **LuLu** firewall (GUI).
-
-## How it fits together
-The whole thing is one keyboard-driven loop. **cmd+space** drops the Ghostty quick
-terminal from anywhere; `a`/`ff`/`rgf`/`s` make it a launcher and search bar, so
-Spotlight/Raycast aren't needed. **SketchyBar** shows
-state (VPN, battery) — the bar's clock even opens **herald**, and its VPN
-pill drives the **mullvad** CLI. Editing is **croft** (micro for quick edits); the agent is **Claude Code**,
-which reuses the same **MCP servers** the setup migrated over. The script writes
-these configs to `~/.config`; use **chezmoi** (`chezmoi add`, with **cheznav** as its
-TUI) to track them in git and keep the MacBook and Mac mini in sync — that step is
-yours, the script doesn't auto-add them. Because almost everything is a CLI/TUI, the same tools work
-locally, over SSH, and — where it matters — can be driven by Claude Code
-(`atac`, `hurl`, `xh` are on its allowlist). GUI survivors are only the irreducible
-ones: Ghostty, Chrome, the container runtime (OrbStack), security tools that need a
-GUI (LuLu, Mullvad), and inherently-visual apps (Shottr, Skim), plus the Claude app.
+## Configuration flow
+The script writes managed configuration under `~/.config` and tool-specific directories.
+Use **chezmoi** and **cheznav** to place selected files under version control.
+The CLI and TUI tools work locally and through SSH.
 
 ## Full tool reference
-This summary is a curated overview, not the whole toolbox. For every installed
-tool — a description of what it's for plus usage examples — see the companion
-**TOOL_REFERENCE.md** on your Desktop.
+See **TOOL_REFERENCE.md** for commands and examples for each installed tool.
 SUMMARY_EOF
 
     # ---- 4. TOOL_REFERENCE.md ----
@@ -14443,36 +11436,8 @@ section below.
 
 ## Editors, AI & the shell
 
-### `croft` — Croft
-A Rust-built, VS Code-style IDE that lives entirely in the terminal — panes for a file tree, editor, and terminal in one TUI. It's the primary editor in this setup, reached for over micro when you want a fuller IDE experience (multi-pane layout, mouse support) without leaving the terminal. Run it from inside a project directory so it picks up the right root; `croft pair` adds an AI navigator alongside your normal editing session for pair-programming style assistance.
-
-```bash
-# launch croft in the current project
-croft
-# launch with the AI pairing navigator active
-croft pair
-```
-
-Croft's extension system is declarative `extension.toml` manifests — languages, LSP servers, themes, debug adapters, test runners, and MCP sidecars — browsable at `Cmd+Shift+X` and installable by dropping a manifest in `~/.config/croft/extensions/<id>/`. This setup writes a Dracula-Sakura theme extension there and keeps `config.json` pointed at it. There is deliberately no marketplace; the MCP catalog is curated, signed, and hash-checked. Because manifests are pure data, croft has **no EditorConfig support** — indentation is a language default (2 spaces YAML, 4 otherwise) with a per-buffer status-bar override. Use VS Code below on repos where `.editorconfig` matters.
-
-### `code` — Visual Studio Code
-The GUI editor, secondary to croft. It exists for the cases a terminal IDE still loses at — long refactors across many tabs, graphical diffs and merge conflicts, extension-backed previews — and for `.editorconfig` repos, which croft ignores. It is preconfigured to agree with the terminal rather than fight it: Dracula theme, format-on-save, ruff for Python, prettier for web, shfmt for shell, tabs for Go, LF endings.
-
-Settings live at `~/Library/Application Support/Code/User/settings.json` and are **merged, not overwritten** — your own keys and anything Settings Sync pulls down win over the defaults, so re-running the setup script is safe.
-
-```bash
-# open the current directory
-code .
-# open a specific file at a line
-code -g src/main.ts:42
-# list what's installed
-code --list-extensions
-```
-
-> Tip: Start it from the project root, not a subdirectory — croft indexes the tree from wherever it's launched.
-
 ### `micro` — micro
-A non-modal terminal editor: it behaves the way a GUI editor does, so there are no modes to enter or leave. `Ctrl+S` saves, `Ctrl+Q` quits, `Ctrl+C`/`Ctrl+V` use the system clipboard. It is the `$EDITOR` for git, gh, lazygit and leaf, and the right tool for a quick edit; croft is the full IDE. The **key menu** along the bottom lists the bindings as you work, and `Ctrl+G` opens the complete reference — no cheatsheet needed.
+A non-modal terminal editor with familiar save, quit, copy, and paste keys. It is the primary editor for files and commit messages.
 
 ```bash
 # open a file
@@ -14483,18 +11448,6 @@ micro src/main.rs +42
 ```
 
 > Configured with the Dracula theme, the key menu on, 2-space indents (4 for Python, real tabs for Go and Makefiles), and trailing whitespace stripped on save. Change anything from inside the editor with `> set <option> <value>` — it persists to `~/.config/micro/settings.json`, and re-running the setup script merges new defaults without discarding your changes.
-
-### `claude` — Claude Code
-Anthropic's agentic coding CLI: it reads your codebase, edits files, runs commands, and can operate autonomously on multi-step tasks, all from the terminal. It's also the host for this machine's MCP servers (filesystem, GitHub, AWS, etc.), so it can reach beyond the local repo when needed. Run it inside a repo so it has real project context; it pairs well with `zellij --layout dev`, which opens it next to your editor.
-
-```bash
-# start an interactive session in the current repo
-claude
-# run a one-off prompt non-interactively
-claude -p "explain what this function does" < src/utils.ts
-```
-
-> Tip: Keep a `CLAUDE.md` in the repo root — Claude Code reads it automatically for project-specific conventions.
 
 ### `llm` — LLM CLI
 Simon Willison's command-line tool for one-shot LLM prompts, piping text through models, and generating embeddings, without opening a chat UI. The Anthropic plugin ships with this setup and defaults to `anthropic/claude-sonnet-4-5`, and its plugin ecosystem covers most other providers too. It shines in shell pipelines — summarizing command output, transforming file contents, or scripting small AI steps into a larger workflow.
@@ -14510,22 +11463,8 @@ llm chat
 
 > Tip: Set your key once with `llm keys set anthropic`; after that the model is available to every `llm` invocation without extra flags.
 
-### `aichat` — AIChat
-A shell-native chat/copilot CLI that sits between one-shot `llm` use and a full coding agent: interactive REPL, quick command-generation mode, sessions, and local-model support. In this setup it is wired to the existing local Ollama service with `gemma3:4b` as the default chat model, plus the document loaders already on the machine (`pdftotext`, `pandoc`) and a Dracula-Sakura dark theme.
-
-```bash
-# inspect the current config and providers
-aichat --info
-# start the interactive REPL
-aichat
-# ask for a shell command
-aichat --execute "find the 20 largest files in Downloads"
-```
-
-> Tip: because it already points at local Ollama here, `aichat` is a good low-friction AI surface when you want a conversational CLI without leaving the terminal or spending Claude-agent budget.
-
 ### `omp` — Oh My Pi
-The second agent beside Claude Code, and the maximalist fork of pi: 32 built-in tools, 13 LSP operations, a real debugger over DAP, subagents, a curated memory, and nine model roles that route by intent. Routed at Google Gemini here, so it is the one to reach for when the work wants a very large context window or a second opinion from a non-Anthropic model.
+The primary coding agent includes LSP, DAP, subagents, memory, and workload-routed models. Hosted providers fall back to the local Vulkan runtime.
 
 ```bash
 # start a session
@@ -14541,20 +11480,23 @@ omp -p "summarise the diff on this branch"
 > Tip: omp's config lives under `~/.omp/agent/`, not `~/.config`. It reads three scoped skills from `~/.agents/skills/`: `api-testing`, `d2-diagrams`, and `office-layout-check`. The `protected-paths.ts` extension guards native file mutations to sensitive paths. Its `AGENTS.md` outranks other user-level context files. Settings merge into `config.yml` because omp writes that file.
 >
 > Tip: `web_search` is built in with 23 backends, and this setup puts your local **SearXNG** instance at the head of the chain (`searxng.endpoint`). The keyless backends stay behind it, so search still works when the instance is down. It needs `GEMINI_API_KEY` in the environment to reach a model.
+>
+> The final fallback is `llama.cpp/qwen2.5-coder:14b`, served locally through Vulkan.
 
-### `ollama` — Local LLM Runtime
-Runs open-weight LLMs entirely on your Mac — no API key, no data leaving the machine. Setup installs it, runs it as a login service on `127.0.0.1:11434`, and seeds the local model set this machine wants ready: `qwen2.5-coder:14b`, `llama3.1:8b`, `gemma3:4b`, `llama3.2:latest`, plus `nomic-embed-text-v2-moe` for embeddings. It's the local backend for **herald**'s built-in AI, `croft pair --provider ollama`, `aichat`, and omp's local-model path.
+### `llama-server` — Vulkan Local LLM Runtime
+The setup builds llama.cpp v0.4.0 with Vulkan enabled and Metal disabled.
+MoltenVK translates Vulkan operations to Metal on macOS.
+The login service exposes Qwen2.5 Coder 14B on `127.0.0.1:8081`.
+OMP discovers the server through `LLAMA_CPP_BASE_URL`.
 
 ```bash
-# list installed models
-ollama list
-# quick local coding/chat session
-ollama run qwen2.5-coder:14b
-# quick one-off prompt against the lighter general model
-ollama run gemma3:4b "summarize this in one line: ..."
+# List the model that the local server exposes.
+curl -s http://127.0.0.1:8081/v1/models | jq
+# Send a direct completion request.
+curl -s http://127.0.0.1:8081/v1/chat/completions \
+  -H 'Content-Type: application/json' \
+  -d '{"model":"qwen2.5-coder:14b","messages":[{"role":"user","content":"Hello"}]}' | jq
 ```
-
-> Tip: The server runs as a login service. `brew services stop ollama` frees its RAM when you're not using local AI; `brew services start ollama` brings it back.
 
 ### `starship` — Starship Prompt
 A fast, cross-shell prompt written in Rust that shows contextual info — git branch/status, language versions, exit codes — without the lag some frameworks introduce. It replaces heavier prompt frameworks (like Powerlevel10k or Oh My Posh) with a single static binary and a TOML config. You mostly don't invoke it directly; it's wired into your shell init and just renders on every prompt.
@@ -14597,11 +11539,11 @@ zoxide query -l
 > Tip: Use plain `cd` for a path you'll only visit once — `z` learns from every jump, so one-off detours pollute its rankings.
 
 ### `zellij` — Zellij
-A terminal multiplexer (splitting one terminal into panes, tabs, and persistent sessions) that's more discoverable than tmux — it shows keybindings on-screen and ships with layout files instead of requiring a custom config to get useful pane arrangements. Reach for it whenever you want a session that survives disconnects, or a fixed layout for repeated work. The `dev` layout in this setup opens an editor pane and a Claude Code pane side by side.
+A terminal multiplexer that provides panes, tabs, and persistent sessions. It shows key bindings and supports project-specific layouts.
 
 ```bash
-# start with the pre-built dev layout (editor + Claude Code)
-zellij --layout dev
+# Start a session.
+zellij
 # list running sessions
 zellij list-sessions
 # reattach to a detached session
@@ -14623,20 +11565,6 @@ mprocs --npm
 ```
 
 > Tip: this setup writes a global `~/.config/mprocs/mprocs.yaml` with sane scrollback and per-process logging, while a project-local `mprocs.yaml` overrides it whenever you need a real stack definition.
-
-### `broot` — Broot
-A tree-oriented file navigator that doubles as a shell-aware launcher: fuzzy-search a directory tree, preview files, then jump back to the shell in the selected directory. In this setup the `br` shell function is available automatically, so `Alt+Enter` can actually `cd` your shell rather than just print a path.
-
-```bash
-# launch with shell integration
-br
-# open focused on a path
-br ~/Code
-# whale-spotting mode for large directories
-br -w
-```
-
-> Tip: broot is configured here with a custom Dracula-Sakura skin and git-aware defaults, so it feels like part of the same terminal surface rather than a stock file browser.
 
 ### `nu` — Nushell
 A shell where pipelines pass structured tables and typed data instead of raw text, so commands like filtering, sorting, and reformatting output work like a query language rather than a chain of `grep`/`awk`/`cut`. It's not the default login shell here — zsh still owns that — but it's the tool to reach for when you're wrangling CSV, JSON, or command output that plain text pipes make painful. Drop into it for a data-heavy task, then drop back out to zsh.
@@ -14731,20 +11659,6 @@ fastfetch --logo none
 ```
 
 > Tip: Piping `fastfetch --logo none` output into a bug report is a fast way to give someone your exact environment without typing it out by hand.
-
-### `terminal-notifier` — terminal-notifier
-Posts a native macOS notification (the same banners/alerts you get from any Mac app) from a shell command or script, so you can find out a long-running task finished without staring at the terminal. It replaces manually checking back on a build or leaving a terminal tab focused just to catch completion. Use it at the end of long commands — builds, deploys, test suites — so you get pulled back at the right moment.
-
-```bash
-# fire a notification with a title and message
-terminal-notifier -title "Build" -message "Build complete"
-# notify after a long-running command finishes
-npm run build; terminal-notifier -message "npm build finished"
-# include a sound
-terminal-notifier -message "Deploy done" -sound default
-```
-
-> Tip: Chain it with `;` (not `&&`) if you want the notification even when the preceding command fails — pair it with `$?` in the message to report success/failure.
 
 ### `vivid` — Vivid
 Generates `LS_COLORS` theme strings from named color schemes (including Dracula, matching this setup's theme), so directory listings from `ls` and `eza` color files consistently by type and extension. It replaces hand-writing or copy-pasting a `LS_COLORS` string, which is famously unreadable and tedious to customize by hand. You typically run it once during shell setup and export the result.
@@ -14960,20 +11874,8 @@ nnn
 nnn -e
 ```
 
-### `wiper` — wiper
-An interactive, ncdu-style disk-usage explorer that lets you drill into directories, see what's eating space, and delete the offenders — but unlike raw `rm`, everything it removes goes to the macOS Trash so it's recoverable. Use it when your disk is filling up and you need to visually hunt down large files or directories before nuking them.
-
-```bash
-# interactively explore disk usage from the current directory
-wiper
-# explore disk usage starting at a specific path
-wiper ~/Downloads
-```
-
-> Tip: because deletions go to Trash, `wiper` is safe to use aggressively — empty the Trash afterward once you're sure.
-
 ### `kondo` — Kondo
-A project-cleanup CLI that hunts down non-essential dependency/build directories — `node_modules`, `target`, `build`, cache-like output folders, and similar weight — across many language ecosystems. It's the blunt cleanup cousin to `wiper`: less about browsing the disk and more about safely identifying "this repo is huge because of generated cruft".
+A project cleanup CLI that finds generated dependency, build, and cache directories across many language ecosystems.
 
 ```bash
 # preview what would be cleaned under the current directory
@@ -15006,18 +11908,6 @@ ouch compress project/ project.zip
 ouch decompress project.zip
 # list the contents of an archive without extracting
 ouch list project.zip
-```
-
-### `7z` [p7zip] — 7-Zip CLI
-The command-line port of 7-Zip, capable of creating and extracting zip, 7z, tar, gzip, and many other archive formats with strong compression ratios. Reach for it when `ouch` doesn't cover a format, when you need 7z's especially tight compression, or when working with password-protected/encrypted archives.
-
-```bash
-# create a .7z archive from a folder
-7z a archive.7z folder/
-# extract an archive into the current directory
-7z x archive.zip
-# list the contents of an archive
-7z l archive.7z
 ```
 
 ### `rsync` — rsync
@@ -15112,18 +12002,6 @@ watchman watch ~/Code/my-app
 watchman watch-list
 # stop watching a directory
 watchman watch-del ~/Code/my-app
-```
-
-### `dockutil` — dockutil
-A command-line tool for adding, removing, and querying macOS Dock items, letting you script your Dock layout instead of dragging icons around by hand. Use it in a setup script to reproducibly pin the apps you want on a fresh machine, or to strip out Apple's default clutter.
-
-```bash
-# add an app to the Dock
-dockutil --add /Applications/Ghostty.app
-# remove an app from the Dock by name
-dockutil --remove 'Safari'
-# list current Dock items
-dockutil --list
 ```
 
 ### `trash` — trash
@@ -15316,18 +12194,6 @@ gh pr checkout 123
 gh pm
 ```
 
-### `glab` — GitLab CLI
-GitLab's equivalent of `gh`, mirroring its ergonomics and alias conventions but mapped onto merge requests instead of pull requests. Use it exactly like `gh` when a project lives on GitLab rather than GitHub, so the same trunk-based muscle memory applies. Handy for teams that split repos across both platforms.
-
-```bash
-# create a merge request referencing an issue
-glab mr create --title "fix(api): handle nulls" --description "Closes #12"
-# list open issues
-glab issue list
-# check out a merge request locally
-glab mr checkout 45
-```
-
 ### `lazygit` — Terminal UI for Git
 A full-screen terminal UI for git that turns staging, committing, branching, rebasing, and pushing into keyboard-driven panels instead of memorized flags. It's the fast path for everyday git work — interactive rebases and partial-file staging are far quicker here than in raw git. Launch it inside any repo when you want a visual overview of what's changed.
 
@@ -15382,22 +12248,6 @@ git absorb
 git absorb --dry-run
 # fold the fixup commits into their targets
 git rebase -i --autosquash main
-```
-
-### `git-lfs` [git lfs] — Large File Storage
-Git Large File Storage replaces large binaries (PSDs, datasets, video) in the repo with lightweight text pointers, storing the actual content separately so clones and fetches stay fast. Use it for any file type that's large and changes often enough that Git's normal delta compression doesn't help.
-
-**On this machine, LFS is enabled per repository — `git lfs install` is not enough.** This setup points `core.hooksPath` at a global hooks directory, and git-lfs is `core.hooksPath` aware: `git lfs install` writes its hooks *globally*, so `git lfs pre-push` would run on every push in every repo, including ones with no LFS objects. Against a GitHub wiki remote that fails outright and blocks the push, with an error that names authentication rather than LFS. So the global LFS hooks are removed, and each repo opts in instead (#311).
-
-**If you skip this step in a repo that uses LFS, `git push` would upload the pointer files without the objects behind them** — so the `pre-push` hook refuses the push and tells you to run this, rather than letting it succeed and leave the remote broken (#313). Run it once per LFS repo, right after `git lfs track`. To push LFS objects some other way (CI, a mirror), turn the check off with `git config dev-setup.lfsguard false`.
-
-```bash
-# enable LFS hooks for THIS repo (once per repo — do this first)
-git-lfs-enable-repo
-# track a file type
-git lfs track "*.psd"
-# check status of LFS-tracked files
-git lfs status
 ```
 
 ### `commitizen` [cz] — Conventional Commit Prompt
@@ -15756,23 +12606,6 @@ keyward list --json
 keyward backup --out ~/Archive/ssh-backup.tar.age
 ```
 
-### `blueutil` — CLI Bluetooth Control
-Controls macOS Bluetooth from the command line — power state, listing paired/connected devices, and connecting or disconnecting a specific device by address or name. It's what drives the Bluetooth toggle in the SketchyBar menu bar on this setup, but it's just as usable directly.
-
-```bash
-# turn Bluetooth on (or off / toggle)
-blueutil --power on
-# list currently paired devices
-blueutil --paired
-# list currently connected devices
-blueutil --connected
-# connect to a device by its MAC address
-blueutil --connect AA-BB-CC-DD-EE-FF
-```
-
-
-## Databases, containers & cloud
-
 ### `duckdb` — Local Analytics Database
 An in-process analytical SQL engine for local data work — query CSV, JSON, and Parquet directly with SQL, join files together, and run serious aggregations without provisioning a server. It fills the gap between text-first tools like `jq`/`mlr` and a full external database, and pairs especially well with `harlequin` for a richer interactive surface.
 
@@ -15863,19 +12696,6 @@ dbmate up
 dbmate rollback
 ```
 
-### `orbstack` — OrbStack
-A fast, low-memory replacement for Docker Desktop that transparently provides working `docker` and `kubectl` commands, plus lightweight Linux VMs, without the resource overhead. It's mostly a background macOS app — open it once to finish setup, and it keeps `docker`/`kubectl` working from any terminal afterward. Reach for its own `orb` CLI when you specifically need a general-purpose Linux VM rather than a container.
-
-```bash
-# first run: launches the app and finishes setup, then it sits in the background
-open -a OrbStack
-# once running, docker/kubectl "just work" against it
-docker ps
-kubectl get nodes
-# spin up a lightweight Linux VM
-orb create ubuntu dev
-```
-
 ### `lazydocker` — Lazy Docker TUI
 A full-screen terminal UI for Docker: browse containers, images, volumes, and Compose stacks, tail logs, and view live stats, all navigable with the keyboard. It's the Docker equivalent of `lazygit` — far faster than repeatedly typing `docker ps` / `docker logs` / `docker stats` by hand. Launch it from any project directory to manage whatever's running there.
 
@@ -15941,7 +12761,7 @@ cosign verify --key cosign.pub myimage:latest
 > Tip: `cosign sign myimage:latest` without `--key` does keyless signing via OIDC (e.g. GitHub Actions identity) — no key management needed.
 
 ### `kubectl` — Kubernetes CLI
-The standard command-line client for inspecting and managing Kubernetes resources — pods, deployments, services, and everything else in a cluster. OrbStack provides a working `kubectl` automatically once it's running. It's the baseline tool everything else in the Kubernetes toolchain (like `k9s` and `stern`) sits on top of.
+The standard command-line client for Kubernetes resources. It is the base client used by tools such as `k9s` and `stern`.
 
 ```bash
 # list pods in the current namespace
@@ -16297,20 +13117,6 @@ sops secrets.yaml
 
 > Tip: define your age recipient or KMS key once in a `.sops.yaml` at the repo root so `sops` picks it up automatically instead of passing `--age`/`--kms` every time.
 
-### `apw` — Apple Passwords CLI
-Gives shell access to Apple Passwords (iCloud Keychain) logins and TOTP codes without opening the Passwords app or a browser — handy for scripts, launcher integrations, or quickly grabbing a 2FA code in the terminal. It runs a small background daemon you authenticate against via a system prompt. Needs macOS 14+ and the daemon running before use.
-
-```bash
-# start the background daemon (once, or via `brew services start apw`)
-apw start
-# authenticate the CLI against the running daemon
-apw auth
-# look up a saved password for a domain
-apw pw list google.com
-# grab the current one-time (TOTP) code for a domain
-apw otp get google.com
-```
-
 ### `clamscan` — ClamAV
 An open-source antivirus engine for on-demand scanning of files and directories — not a real-time monitor, but useful for checking downloads, USB drives, or a suspicious folder against known malware signatures. Update the virus database with `freshclam` before scanning since ClamAV is only as good as its definitions. Reach for it for a quick, free malware check without a commercial AV subscription.
 
@@ -16327,20 +13133,6 @@ clamscan -r --move=~/quarantine ~/Downloads
 LuLu is a free, open-source macOS outbound firewall that watches for and blocks unexpected outbound network connections — the reverse of most firewalls, which focus on inbound traffic. It alerts the first time an app tries to phone home, letting you allow or block it, which is useful for catching malware, trackers, or apps being unexpectedly chatty. There's no CLI; everything happens through its menu-bar icon and the alert popups it shows when a new connection is attempted.
 
 *No CLI — manage via the menu-bar icon and its connection-alert popups.*
-
-### `mullvad` — Mullvad VPN
-Mullvad is a privacy-focused, no-logs VPN service; the GUI app bundles a `mullvad` CLI for scripting connections, checking status, and switching relays without opening the app window. This setup's SketchyBar VPN pill uses the CLI under the hood to toggle the connection and show status at a glance. Reach for the CLI when you want to connect/disconnect from a script or check state quickly.
-
-```bash
-# connect to the VPN
-mullvad connect
-# check current connection status
-mullvad status
-# disconnect
-mullvad disconnect
-# pick a specific relay location
-mullvad relay set location us
-```
 
 ### `just` — Just
 A command/task runner that reads recipes from a `Justfile` in your project root — a simpler `make`, without tab-vs-space pitfalls or file-target semantics getting in the way. Recipes are just named shell commands, so it's a natural home for `just build`, `just test`, `just deploy` style project shortcuts. Reach for it any time a project needs a handful of common one-liners that new contributors shouldn't have to memorize.
@@ -16382,18 +13174,6 @@ act pull_request
 act -l
 # run a specific job by name
 act -j build
-```
-
-### `act3` — act3
-A tiny terminal dashboard that fetches and displays the last three GitHub Actions runs for a repo (or several repos), so you can glance at CI health without opening a browser. It's unrelated to `act` (which runs workflows locally) — act3 only reports on runs that already happened on GitHub. Reach for it right after pushing, to confirm CI passed without leaving the terminal.
-
-```bash
-# check the current directory's repo
-act3
-# check specific repositories
-act3 -r owner/repo1,owner/repo2
-# render output as a table instead of the default view
-act3 -f table
 ```
 
 ### `actionlint` — GitHub Actions Workflow Linter
@@ -16456,18 +13236,6 @@ typos -w
 typos README.md
 ```
 
-### `lighthouse` — Lighthouse
-Google's automated web page auditor, scoring performance, accessibility, SEO, and best practices, available as a CLI so it can run outside Chrome DevTools and in CI. It's the standard way to get an objective, repeatable audit of a page rather than eyeballing load times. Run it against a local dev server or a deployed URL before shipping a page.
-
-```bash
-# audit a URL and open the HTML report
-lighthouse https://example.com --view
-# output raw JSON for scripting/CI thresholds
-lighthouse https://example.com --output json --output-path report.json
-# audit only performance and accessibility categories
-lighthouse https://example.com --only-categories=performance,accessibility
-```
-
 ### `mise` — mise
 A universal runtime/version manager for Node, Python, Go, Ruby, and more — one tool instead of nvm + pyenv + rbenv + gvm — plus a lightweight task runner. It reads a `.tool-versions` or `.mise.toml` file per project and switches versions automatically when you `cd` in. Reach for it any time a project needs a pinned language/runtime version or a simple project task.
 
@@ -16500,32 +13268,6 @@ A tiny dedicated Python interpreter with the `PyYAML` library preinstalled in it
 yaml-py -c 'import pathlib, yaml; print(yaml.safe_load(pathlib.Path("config.yml").read_text())["name"])'
 # turn stdin YAML into JSON-ish Python output quickly
 printf 'a: 1\nb: 2\n' | yaml-py -c 'import sys, yaml; print(yaml.safe_load(sys.stdin.read()))'
-```
-
-### `bun` — Bun
-An all-in-one JavaScript/TypeScript runtime, bundler, test runner, and package manager, aiming to be a faster drop-in for Node plus npm/webpack/jest. It runs TypeScript directly with no build step and installs packages significantly faster than npm/yarn. Reach for it on projects that want one fast toolchain instead of stitching several together.
-
-```bash
-# install dependencies
-bun install
-# run a script directly (TS/JS, no build step)
-bun run index.ts
-# run the project's test suite
-bun test
-# add a package
-bun add zod
-```
-
-### `ni` — ni
-A universal Node package-manager runner that detects which package manager a project uses (npm, yarn, pnpm, or bun) from its lockfile and runs the equivalent command, so you never have to remember which one a given repo wants. `ni` installs, `nr` runs a script, `nlx` executes a package binary. Reach for it when jumping between projects that use different package managers.
-
-```bash
-# install dependencies with whichever PM the lockfile implies
-ni
-# run the "build" script
-nr build
-# execute a package binary without installing it globally
-nlx eslint .
 ```
 
 ### `go` — Go
@@ -16562,18 +13304,6 @@ Runs TypeScript and ESM files directly with no separate build/compile step, powe
 tsx script.ts
 # watch mode: re-run on file changes
 tsx watch server.ts
-```
-
-### `turbo` — Turborepo
-A high-performance build system for JavaScript/TypeScript monorepos, providing task caching (local and remote) and dependency-aware task pipelines so you only rebuild/retest what actually changed. It dramatically speeds up `build`/`test`/`lint` across many packages compared to running each one naively. Reach for it once a repo has multiple interdependent packages and builds start feeling slow.
-
-```bash
-# run the "build" task across all packages in dependency order
-turbo run build
-# run multiple tasks, using the cache where possible
-turbo run lint test
-# force a clean run, bypassing the cache
-turbo run build --force
 ```
 
 ### `taproom` — Taproom
@@ -16757,18 +13487,6 @@ leaf --inline notes.md
 
 > Tip: leaf is a viewer, not an editor — Ctrl+E hands the open file to your configured editor (`-e/--editor`, not `$EDITOR`, which leaf ignores).
 
-### `doxx` — Terminal .docx Viewer
-Reads and renders Microsoft Word `.docx` files directly in the terminal, so you don't have to open Word or LibreOffice just to skim a document someone sent you. It can also export a docx's content to plain text, Markdown, or JSON for further processing.
-
-```bash
-# view a Word document in the terminal
-doxx report.docx
-# jump straight to the document outline view
-doxx report.docx --outline
-# export the content to Markdown
-doxx report.docx --export markdown
-```
-
 ### `pdftotext`/`pdftoppm`/`pdfinfo` — Poppler PDF Utilities
 A trio of small, fast utilities built on the Poppler PDF library: `pdftotext` pulls text out of a PDF, `pdftoppm` rasterizes pages to images, and `pdfinfo` prints metadata (page count, size, producer). Reach for these when you need to script something against a PDF rather than open it in a viewer.
 
@@ -16865,30 +13583,6 @@ mpv --no-video song.flac
 mpv --start=00:10:00 movie.mkv
 ```
 
-### `asciinema` — Terminal Session Recorder
-Records a terminal session as a lightweight, replayable text-based cast (not a video), which can be played back locally or uploaded and shared as a link. It's the right tool for documenting a CLI workflow in a README or ticket — far smaller and more copy-pasteable than a screen recording.
-
-```bash
-# start recording a session to a file
-asciinema rec demo.cast
-# play a recording back
-asciinema play demo.cast
-# upload a recording and get a shareable link
-asciinema upload demo.cast
-```
-
-### `vhs` — Scripted Terminal Recordings
-Turns a plain-text `.tape` script (a sequence of keystrokes and timings) into a reproducible GIF or MP4 of a terminal session. It replaces manually re-recording a screencast every time a demo needs updating — since the script is checked into the repo, the recording regenerates itself. Reach for it for docs and READMEs where you want a polished, repeatable demo rather than a one-off screen recording.
-
-```bash
-# scaffold a new .tape file with example content
-vhs new demo.tape
-# render a .tape script to its configured output(s)
-vhs demo.tape
-# render straight to a specific output file
-vhs demo.tape -o demo.gif
-```
-
 ### `qalc` — Terminal Calculator (libqalculate)
 A serious calculator for the command line: arbitrary math expressions, unit conversion, live currency exchange rates, variables, and symbolic computation, all from one line. It replaces reaching for a GUI calculator or a spreadsheet cell for anything beyond trivial arithmetic.
 
@@ -16902,16 +13596,6 @@ qalc -interactive
 ```
 
 > Tip: `qalc -exrates` refreshes currency exchange rates before a conversion.
-
-### `manly` — Command Flag Explainer
-Explains exactly what a command and the specific flags you passed it do, pulled straight from its man page — instead of you re-reading the whole page to find the three flags you care about. Reach for it right after pasting a command you don't fully trust.
-
-```bash
-# explain what these flags actually do
-manly rm --preserve-root -rf
-# explain a tar invocation
-manly tar -xzf archive.tar.gz
-```
 
 ### `tldr` — Community Cheat Sheets
 Installed as **tlrc**, the official Rust client; the command is still `tldr`. Pulls up short, example-first cheat sheets for a command instead of a full man page — a handful of the most common real-world invocations rather than an exhaustive flag reference. Use it when you just want to remember "how do I usually run this thing."
@@ -16949,61 +13633,6 @@ hexyl --length 64 file.bin
 hexyl --skip 512 file.bin
 ```
 
-### `herald` — Terminal Email + Calendar
-A unified terminal client for email and calendar — Gmail (work) and iCloud (personal) in one place — with AI-assisted triage and an MCP server so Claude can read (and, with confirmation, act on) your inbox and calendar. It replaces running separate mail and calendar apps. This setup adds a local Dracula-Sakura theme asset under `~/.herald/themes/` and only merges `theme.name` into `~/.herald/conf.yaml`, leaving account/server/credential fields user-owned.
-
-```bash
-# first run: interactive onboarding to add accounts
-herald
-# run the background daemon (needed for MCP mutations)
-herald serve -config ~/.herald/conf.yaml
-# check daemon status
-herald status
-```
-
-> Tip: herald is read-only for Claude until the daemon (`herald serve`) is running.
-
-### `gws` — Google Workspace CLI
-A single CLI for the whole of Google Workspace — Drive, Gmail, Calendar, Sheets, Docs, Chat — with structured JSON output designed for both humans and AI agents to consume. It replaces ad-hoc `curl` calls against Google's REST APIs; every subcommand mirrors a Workspace API resource and method.
-
-```bash
-# one-time setup, then log in
-gws auth setup
-gws auth login
-# list the 10 most recently modified Drive files
-gws drive files list --params '{"pageSize": 10}'
-# create a new spreadsheet
-gws sheets spreadsheets create --json '{"properties": {"title": "Q1 Budget"}}'
-```
-
-> Tip: add `--dry-run` to preview the request before it's sent — invaluable before anything that mutates data.
-
-
-### `reminders` — Apple Reminders CLI
-Reads and writes Apple Reminders through EventKit. New reminders sync to the user's iPhone and Watch through iCloud. Herald owns mail and calendar events. Plain notes stay ordinary files. The first command opens a macOS consent prompt for the terminal application.
-
-```bash
-# see which lists exist, then what's on one
-reminders show-lists
-reminders show Inbox
-# add a reminder, optionally with a natural-language due date
-reminders add Inbox "Renew domain" --due-date "friday 9am"
-# complete item 0 on a list
-reminders complete Inbox 0
-```
-
-### `newsboat` — Terminal RSS Reader
-A vim-keybinding RSS/Atom feed reader for the terminal, highly configurable via a plain-text config and URL file. Use it to follow blogs, changelogs, and news feeds without a browser tab (or a bloated GUI reader) always open.
-
-```bash
-# launch newsboat with the default feed list
-newsboat
-# refresh all feeds once on startup
-newsboat --refresh-on-start
-# use a specific URL file for feeds
-newsboat --url-file=~/.newsboat/work-urls
-```
-
 ### `cliamp` — Terminal Music Player
 A Winamp-inspired terminal music player with local playback, streaming provider integration (Spotify/Qobuz), an equalizer, and 20+ visualizers. Point it at a music folder and control playback, queueing, and shuffle entirely from the keyboard.
 
@@ -17030,20 +13659,6 @@ starlit
 starlit tokyo
 ```
 
-### `bmm` — Bookmark Manager
-A local bookmark manager with both a scriptable CLI and a TUI browser, storing bookmarks in a local database you can search and tag. It replaces a browser's built-in (and un-scriptable) bookmark bar — reach for it when you want bookmarks that work the same way across browsers and are easy to search from a terminal.
-
-```bash
-# save a new bookmark
-bmm save "https://example.com" --title "Example"
-# search bookmarks by term
-bmm search terraform
-# open the interactive TUI browser
-bmm tui
-```
-
-> Tip: `bmm import` pulls bookmarks in from an HTML, JSON, or plain-text export.
-
 ### `surge` — Download Manager (TUI)
 A TUI download manager that pairs with a browser extension: the extension intercepts downloads in Chrome and hands them to a local `surge` daemon, giving you a manageable, resumable download queue instead of the browser's own download tray. It complements `aria2` — `aria2` is for scripted/CLI downloads, `surge` is for downloads you start by clicking a link in the browser.
 
@@ -17064,18 +13679,6 @@ aria2c -x4 -s4 "https://example.com/large-file.zip"
 aria2c -c "https://example.com/large-file.zip"
 # download a list of URLs from a file
 aria2c -i urls.txt
-```
-
-### `jolt` — Battery/Energy Monitor
-A terminal battery and power monitor: charge level, health, power draw, and history, at a glance or as a live TUI. Use it to check battery health trends over time instead of digging through macOS's own battery settings.
-
-```bash
-# launch the live terminal UI
-jolt
-# print current battery/power metrics as JSON
-jolt pipe
-# view historical battery data
-jolt history
 ```
 
 ### `lazynpm` — TUI for npm
@@ -17143,44 +13746,21 @@ the launcher functions (`a`, `ff`, `rgf`, `s`, `clip`). Config lives at
 The primary GUI browser (Carbonyl and w3m cover terminal browsing). Kept for
 sites that need a full modern engine, extensions, and DevTools.
 
-### Shottr — Screenshots
-Fast native screenshot tool with scrolling capture, OCR, and annotation. Saves
-to `~/Screenshots`. Needs **Screen Recording** permission (see the checklist) or
-it captures only the desktop, not app windows.
-
-### Skim — PDF Reader
-A lightweight PDF reader/annotator, faster than Preview and good for reading
-papers and marking up documents.
-
-### SketchyBar — Status Bar
-The customizable macOS status bar (Dracula-Sakura-themed) shown at the top: front app,
-clock, battery, wifi, volume, cpu, mem, bluetooth, VPN. The clock opens herald;
-the VPN pill drives `mullvad`; the bluetooth pill drives `blueutil`. Needs
-**Accessibility** permission. Config: `~/.config/sketchybar/`.
-
-### Pearcleaner — App Uninstaller
-An open-source deep uninstaller that removes an app *and* its leftover support
-files, caches, and preferences — a free AppCleaner replacement.
-
-### Language servers (croft uses these automatically)
-Installed so the editors get completion, diagnostics, and go-to-definition with
-zero config — you never call them directly:
+### Language servers
+OMP uses these servers for completion, diagnostics, and symbol navigation:
 `bash-language-server`, `marksman` (Markdown), `taplo` (TOML + formatter),
 `yaml-language-server`, `typescript-language-server`,
 `vscode-langservers-extracted` (HTML/CSS/JSON/ESLint).
 
-### Build & runtime dependencies
-Pulled in so other tools compile and run; rarely invoked by hand:
-`cmake`, `pkgconf` (provides `pkg-config`), `coreutils`, `findutils`, `gawk`,
-`gnu-sed`, `gnu-tar` (GNU versions of core Unix utilities), `gnupg` +
-`pinentry-mac` (commit signing / passphrase entry), `watchman` (file-watching
-service used by some JS toolchains).
+### Build and runtime dependencies
+These packages support builds and local inference:
+`cmake`, `ninja`, `pkgconf`, `vulkan-loader`, `molten-vk`, `shaderc`,
+`coreutils`, `findutils`, `gawk`, `gnu-sed`, `gnu-tar`, `gnupg`,
+`pinentry-mac`, and `watchman`.
 
 ### Fonts
-Installed for the terminal, editors, and SketchyBar glyphs:
-JetBrains Mono (+ Nerd Font) — primary dev font; Fira Code (+ Nerd Font) —
-ligature font; Hack Nerd Font; MesloLGS Nerd Font; Inter — UI font;
-sketchybar-app-font — app glyphs for the status bar.
+The terminal and editors use JetBrains Mono, Fira Code, Hack Nerd Font,
+MesloLGS Nerd Font, Inter, and Atkinson Hyperlegible.
 
 ---
 
@@ -17193,13 +13773,11 @@ fi
 
 info "Next steps:"
 echo "  1. Restart your terminal or run: source ~/.zshrc"
-echo "  2. >>> Work through ~/Desktop/POST_SETUP_CHECKLIST.md <<< (email/calendar creds,"
-echo "        macOS permissions, apw/mullvad/starlit setup — the manual bits)."
-echo "        Also on the Desktop: KEYBOARD_SHORTCUTS.md, TOOLKIT_SUMMARY.md, and"
-echo "        TOOL_REFERENCE.md (every tool, with usage examples)."
-echo "  3. Log out/in once so the menu-bar and Spotlight hotkey settings take effect."
-echo "  4. Enable FileVault + macOS Firewall (System Settings > Privacy & Security / Network)."
-echo "  5. Open OrbStack and complete Docker setup."
+echo "  2. Work through ~/Desktop/POST_SETUP_CHECKLIST.md."
+echo "  3. Review KEYBOARD_SHORTCUTS.md, TOOLKIT_SUMMARY.md, and TOOL_REFERENCE.md."
+echo "  4. Log out, then log in to apply the Spotlight and menu bar settings."
+echo "  5. Enable FileVault and the macOS firewall."
+echo "  6. Confirm llama.cpp at http://127.0.0.1:8081/v1/models."
 
 # =============================================================================
 # FIRST-RUN SETUP (interactive — only runs if not already configured)
@@ -17334,7 +13912,7 @@ if installed mise; then
     # mise ships SHIMS for exactly this case: they resolve the active version with no shell
     # activation at all. The shims directory itself cannot go on a system-wide PATH without
     # sudo, but ~/.local/bin is already on PATH in that `sh` environment and this script
-    # already uses it this way (soffice, office-py, manly, starlit) — so link the shims in.
+    # already uses it for soffice, yaml-py, and starlit, so link the shims there.
     #
     # Two constraints, both verified rather than assumed:
     #   * The link NAME must match the shim name. mise dispatches on argv[0], so a link
@@ -17388,11 +13966,10 @@ if [[ "$DRY_RUN" == "false" ]]; then
         "python3:python3 --version"
         "go:go version"
         "rustc:rustc --version"
-        "bun:bun --version"
         "uv:uv --version"
         "brew:brew --version"
         "micro:micro -version"
-        "docker/orbstack:docker --version || orbstack version"
+        "llama.cpp Vulkan:llama-server --list-devices | grep -i vulkan"
         "starship:starship --version"
         "fzf:fzf --version"
         "eza:eza --version"

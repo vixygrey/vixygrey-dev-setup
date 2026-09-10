@@ -12,7 +12,7 @@ teardown() {
     rm -rf "$TEST_TMP"
 }
 
-@test "omp routing reserves Anthropic for slow and plan, with local Qwen fallback (#538)" {
+@test "omp routing reserves Anthropic for slow and plan, with Vulkan Qwen fallback (#538)" {
     run ruby -ryaml -e '
         config = YAML.safe_load(File.read(ARGV.fetch(0)))
         expected = {
@@ -31,7 +31,7 @@ teardown() {
         chains = config.fetch("retry").fetch("fallbackChains")
         fallbacks = chains.values.flatten
         abort "Anthropic entered a fallback chain" if fallbacks.any? { |model| model.start_with?("anthropic/") }
-        abort "a chain lost the local final fallback" unless chains.values.all? { |chain| chain.last == "ollama/qwen2.5-coder:14b" }
+        abort "a chain lost the local final fallback" unless chains.values.all? { |chain| chain.last == "llama.cpp/qwen2.5-coder:14b" }
         abort "Codex does not fall back to Gemini first" unless chains.fetch("openai-codex/gpt-5.6-sol").first == "google/gemini-3.8-flash:medium"
     ' "$GENERATED_CONFIG"
 

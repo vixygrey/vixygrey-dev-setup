@@ -39,10 +39,8 @@ cat package.json | jqp
 actionlint          # lint GitHub Actions workflows
 duckdb              # local SQL shell for CSV/JSON/Parquet
 yaml-py -c 'import yaml; print(yaml.safe_load("a: 1"))'
-br                  # broot (tree/navigation TUI)
-mprocs "npm run dev" "npm test -- --watch"
-aichat --info       # inspect local AI chat config/providers
-pi --list-models    # see the local Ollama models wired into Pi
+omp
+curl -s http://127.0.0.1:8081/v1/models | jq
 kondo --dry-run ~/Code
 
 # Update everything at once
@@ -362,14 +360,6 @@ pre-commit autoupdate        # update hook versions
 
 ## Docker & Kubernetes
 
-### OrbStack (Docker runtime)
-
-OrbStack is a faster, lighter alternative to Docker Desktop on macOS (2-5x less memory). Both are installed by the setup script -- pick your preference.
-
-1. **First launch:** Open OrbStack, it will set up Docker automatically
-2. **Resource limits:** OrbStack > Settings > Resources > set memory limit (e.g. 8GB)
-3. **Default builder:** OrbStack > Settings > Docker > Enable BuildKit (already the default)
-
 ### lazydocker (Docker TUI)
 
 ```bash
@@ -532,7 +522,7 @@ semgrep --config p/typescript .      # TypeScript-specific rules
 
 ```bash
 bench 'fd -e ts' 'find . -name "*.ts"'   # alias: compare two commands
-hyperfine 'npm run build' 'bun run build' # compare build tools
+hyperfine 'npm run build' 'pnpm run build' # compare package managers
 hyperfine --warmup 3 'curl -s localhost'  # warm up before measuring
 ```
 
@@ -567,16 +557,6 @@ act push                     # simulate push event
 act -j test                  # run specific job
 ```
 
-### act3 (glance at last 3 GitHub Actions runs)
-
-```bash
-gha3                         # alias: view last 3 runs of every workflow
-act3 -r owner/repo           # view runs for a specific repo
-act3 -t html > status.html   # export HTML status page
-# Requires a GitHub token: `gh auth login` or $GH_TOKEN
-```
-
----
 
 ## Networking & Debugging
 
@@ -684,15 +664,6 @@ ytdl https://youtube.com/watch?v=...     # alias: download video
 ytmp3 https://youtube.com/watch?v=...    # alias: download as MP3
 yt-dlp -f best URL                       # best quality
 yt-dlp --list-formats URL                # show available formats
-```
-
-### Archives (p7zip)
-
-```bash
-7z a archive.7z files/       # create 7z archive
-7z x archive.7z              # extract
-7z l archive.zip             # list contents
-7z a -tzip archive.zip files/ # create zip specifically
 ```
 
 ### cmus (terminal music player)
@@ -885,7 +856,7 @@ sops --decrypt secrets.yaml  # decrypt to stdout
 ### Google Chrome
 
 1. **Import bookmarks:** Chrome Settings > Bookmarks > Import bookmarks and settings
-2. **Extensions:** uBlock Origin, React DevTools, axe DevTools, JSON Formatter, Lighthouse
+2. **Extensions:** uBlock Origin, React DevTools, axe DevTools, JSON Formatter
 3. **Default search:** Settings > Search engine > DuckDuckGo
 
 ### Ghostty (Terminal)
@@ -906,11 +877,6 @@ Already configured by the script (Dracula theme, JetBrains Mono, format on save,
 5. **MCP servers:** Already configured globally at `~/.kiro/settings/mcp.json`. Override per project at `<repo>/.kiro/settings/mcp.json`. Edit `disabled: true` → `false` on `playwright` and `postgres` when you want them.
 6. **Extensions:** Search OpenVSX, not the Microsoft Marketplace. `github.copilot` and `ms-vscode.*` are unavailable; Kiro's built-in agent replaces Copilot.
 7. **Keyboard shortcuts:** The script installs custom keybindings (see SHORTCUTS.md), including `⌘I` (open agent), `⌘⇧I` (inline edit), `⌘⇧S` (create spec).
-8. **Imported VS Code settings:** First launch offers to import `~/Library/Application Support/Code/User/`; safe to accept — the script's settings get merged.
-
-#### Suggested workflow with Kiro + Claude Code (CLI)
-
-Kiro is the IDE-native agent (UI surface, specs, hooks, inline edit). Claude Code is the terminal-native agent (full repo context, long-running tasks, automation). They share the same file system and can be used together — let Kiro handle interactive editing and Claude Code handle batch refactors, ultrareview, and CI-driven loops. Steering rules under `.kiro/steering/` are read by Kiro; the same content can live in `CLAUDE.md` for Claude Code.
 
 ### DBeaver
 
@@ -934,21 +900,6 @@ Kiro is the IDE-native agent (UI surface, specs, hooks, inline edit). Claude Cod
 2. **Templates:** Explore template gallery for project management, docs, wikis
 3. **Integrations:** Settings > Integrations > connect Slack, GitHub
 4. **Web clipper:** Install Notion Web Clipper browser extension
-
-### Mullvad VPN
-
-1. **Account:** Create account at mullvad.net (no email required, anonymous payment accepted)
-2. **Auto-connect:** Settings > VPN settings > Launch on startup, Auto-connect
-3. **Kill switch:** Settings > VPN settings > Always require VPN
-4. **DNS:** Settings > VPN settings > Use custom DNS if needed
-5. **Server:** Choose server location close to you for best performance
-
-### Shottr
-
-1. **Capture hotkey:** Preferences > Shortcuts > set area/scrolling capture keys (or remap the macOS `Cmd+Shift` defaults)
-2. **Output folder:** Preferences > General > set default save location to `~/Screenshots`
-3. **Annotations:** Built-in editor for arrows, blur/pixelate, and measurements after each capture
-4. **OCR:** Use "Copy text" on any capture to pull text straight out of the image
 
 ### UniFi Identity Endpoint
 
@@ -984,140 +935,6 @@ mas upgrade                          # upgrade all outdated MAS apps
 ```
 
 The setup script does not install any MAS apps by default — `mas` is provided so your own scripts can.
-
-### dockutil (Dock management)
-
-Programmatically add, remove, and reorder Dock items. The setup script installs `dockutil` and enables Dock auto-hide, but does not curate a pin list — pin whatever you want yourself with the commands below.
-
-```bash
-dockutil --list                                      # show current Dock contents
-dockutil --add /Applications/Kiro.app                # pin an app
-dockutil --remove "Kiro"                             # unpin by label
-dockutil --move "Kiro" --after "Finder"              # reorder
-dockutil --remove all --no-restart && killall Dock   # reset the Dock
-```
-
-### terminal-notifier (macOS notifications)
-
-Send native macOS notifications from shell scripts. The setup script uses it for run-complete and failure alerts.
-
-```bash
-terminal-notifier -title "Build" -message "Finished in 42s" -sound Glass
-terminal-notifier -title "Deploy" -subtitle "prod" -message "Succeeded" -group my-pipeline
-terminal-notifier -title "Error" -message "Tests failed" -sound Basso
-```
-
-Useful for long-running local commands:
-
-```bash
-npm run build && terminal-notifier -title "Build" -message "Done" -sound Glass
-```
-
----
-
-## Claude Code
-
-### Session names
-
-New sessions are named automatically, so the `/resume` picker and the terminal title
-are scannable instead of a wall of untitled rows:
-
-```
-2026-09-08-vixygrey-dev-setup
-```
-
-The repo half comes from the **git remote**, not the folder, so a checkout sitting in
-`vixygrey-dev-setup-main/` still reads `vixygrey-dev-setup`. Outside a repo, or in one
-with no remote, it falls back to the directory name.
-
-The name is only ever filled in for a **new** session. Resuming keeps whatever the
-session was already called, since stamping today's date on a session started last week
-would be wrong:
-
-| Invocation | Name |
-|---|---|
-| `claude` | auto: `<date>-<repo>` |
-| `claude --model opus` | auto: `<date>-<repo>` |
-| `claude -r` / `-c` / `--from-pr` | unchanged, the session keeps its own |
-| `claude -n mine` | `mine` — an explicit name always wins |
-
-Rename any session at any time with `/rename <name>`. The wrapper is interactive-only,
-so scripts and agents invoking `claude` are unaffected.
-
-### Custom Slash Commands
-
-20 custom commands are installed to `~/.claude/commands/`:
-
-| Command | What it does |
-|---------|-------------|
-| `/pr-review` | Review current branch changes vs main |
-| `/test-plan` | Generate test plan for recent changes |
-| `/dep-audit` | Audit dependencies for vulnerabilities and bloat |
-| `/quick-doc` | Generate docs for a file or function |
-| `/cleanup` | Find dead code, unused imports, debug statements |
-| `/security-scan` | Run gitleaks, semgrep, trivy, and dependency audits |
-| `/perf-check` | Benchmark with hyperfine, load test with oha |
-| `/docker-lint` | Lint Dockerfiles with hadolint, analyze layers with dive |
-| `/iac-review` | Review Terraform/CDK with tflint, trivy, infracost |
-| `/convert` | Convert between formats using pandoc, ffmpeg, magick, d2 |
-| `/new-feature` | Full trunk-based workflow: issue, branch, implement, tests, PR |
-| `/fix-bug` | Full trunk-based workflow: issue, branch, test-first fix, PR |
-| `/create-readme` | Analyze codebase and generate comprehensive README |
-| `/init-project` | Scaffold project with git, README, AGENTS.md, CI, Docker |
-| `/refactor` | Refactor with tests preserved, SOLID principles |
-| `/add-endpoint` | Add API endpoint: types, handler, validation, tests, docs |
-| `/add-component` | Add React component: TSX, tests, accessibility |
-| `/ci-fix` | Diagnose and fix CI failures via gh run view + act |
-| `/changelog` | Generate changelog (uses git-cliff if available) |
-| `/commit-msg` | Generate conventional commit message from staged changes |
-
-### Hooks (automatic)
-
-- **Format on edit:** Auto-runs Prettier on JS/TS/CSS/JSON/MD files after Claude edits them
-- **Lint Python:** Auto-runs ruff check + format on .py files after edits
-- **Lint Dockerfile:** Auto-runs hadolint on Dockerfiles after edits
-
-### Rules
-
-Language-specific rules are in `~/.claude/rules/`:
-- `workflow.md` — Trunk-based development, PR-first approach
-- `git.md` — Conventional commits, branch naming
-- `security.md` — No hardcoded secrets, input validation
-- `typescript.md` — Strict mode, no `any`, zod for validation
-- `python.md` — uv for packages, ruff for linting, type hints
-- `docker.md` — Multi-stage builds, non-root, hadolint
-- `iac.md` — OpenTofu, tflint, infracost, resource tagging
-- `style.md` — Voice: calm and concise, Dracula-Sakura when there is stylistic latitude
-- `writing.md` — The 53 rules of ASD-STE100 Simplified Technical English
-
-`writing.md` is the one rule file that is shared with the other agent. The same
-generator function writes it and the tail of `~/.omp/agent/AGENTS.md`, so Claude Code
-and omp cannot disagree about how to write.
-
-It has two tiers, and membership is by document type rather than by whether the text
-lands in a file:
-
-| Tier | Applies to |
-|------|------------|
-| **Strict** (every rule, both sentence limits, no contractions) | Commit messages, PR titles and bodies, specs, technical documentation (READMEs, runbooks, procedures, API guides), changelogs, release notes, incident reports, error messages and CLI output, UI copy, instructions for AI agents |
-| **Loose** (mechanical subset only) | Issues and their comments, wikis, chat replies |
-
-The mechanical subset is: no slop words, no filler adverbs, no Latin abbreviations, no
-hedging, one term per concept. The 20-word and 25-word limits and the no-contractions
-rule do not reach the loose tier. An issue is a first draft of a thought and often a
-dialogue, a wiki is collaborative prose that many hands edit, and chat in a
-maintenance-manual register would contradict `style.md`. In all three the rules cost
-more than the slop they remove.
-
-Note the asymmetry inside one workflow: **an issue body is loose, its PR body is
-strict**. The issue argues for a change while its shape is still open; the PR records
-what the change is, for someone reading later who was not there.
-
-One carve-out overrides the tier, and it is safety. A warning about data loss, an
-irreversible action, or a destructive flag is command-first and risk-second wherever
-it appears, including inside a loose document.
-
----
 
 ## Cheat Sheet
 
@@ -1212,7 +1029,6 @@ Use `/bin/rm` for permanent deletion.
 | `hc` | System health overview |
 | `sshsetup` | Generate SSH key + add to GitHub |
 | `brewsnap` | Export Brewfile snapshot |
-| `lfsinit` | Enable Git LFS hooks for this repo |
 
 ### Global Justfile Recipes (`gj <recipe>`)
 
@@ -1256,7 +1072,7 @@ The setup script configures these macOS defaults automatically via `defaults wri
 - Mission Control: fixed Spaces order, fast animations, grouped by app
 - Hot corners: all disabled to prevent accidental triggers
 
-`dockutil` is still installed for manual Dock management — see the dockutil section above.
+Dock pins remain unchanged.
 
 ### Screenshots
 

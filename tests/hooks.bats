@@ -8,6 +8,8 @@ setup() {
     mkdir -p "$HOOKS_DIR" "$REPO"
     awk "/<<'HOOK_CHAIN_LIB'/{f=1;next} /^HOOK_CHAIN_LIB$/{f=0} f" \
         "$BATS_TEST_DIRNAME/../scripts/setup-dev-tools-mac.sh" > "$HOOKS_DIR/dev-setup-chain.sh"
+    awk '/^preserve_foreign_hook[(][)] [{]/{f=1} f{print} f && /^}$/ {exit}' \
+        "$BATS_TEST_DIRNAME/../scripts/setup-dev-tools-mac.sh" > "$TEST_TMP/preserve-foreign-hook.sh"
     git -C "$REPO" init -q
     git -C "$REPO" config user.name Test
     git -C "$REPO" config user.email test@example.invalid
@@ -80,33 +82,23 @@ make_hook() {
     [ "$(cat "$COMMON_RAN")" = common ]
 }
 
-@test "LFS guard refuses a push without a repository hook and honors its bypass (#531)" {
-    mkdir -p "$TEST_TMP/bin"
-    printf '#!/usr/bin/env bash\nexit 0\n' > "$TEST_TMP/bin/git-lfs"
-    chmod +x "$TEST_TMP/bin/git-lfs"
-    export REAL_GIT="$(command -v git)"
-    cat > "$TEST_TMP/bin/git" <<'EOF'
-#!/usr/bin/env bash
-if [[ "$1" == "ls-files" && "$2" == ":(attr:filter=lfs)" ]]; then
-    printf 'sample.bin\n'
-    exit 0
-fi
-exec "$REAL_GIT" "$@"
-EOF
-    chmod +x "$TEST_TMP/bin/git"
-    printf '*.bin filter=lfs diff=lfs merge=lfs -text\n' > "$REPO/.gitattributes"
-    printf 'pointer\n' > "$REPO/sample.bin"
-    git -C "$REPO" add .gitattributes sample.bin
-    git -C "$REPO" commit -qm lfs
-    rm -f "$REPO/.git/hooks/pre-push"
+@test "Git LFS hooks are removed while other global hooks are preserved (#542)" {
+    make_hook "$HOOKS_DIR/pre-push" ': # git-lfs'
+    make_hook "$HOOKS_DIR/post-checkout.d/10-git-lfs" ': # git lfs'
+    make_hook "$HOOKS_DIR/post-merge" 'echo retained'
+    export GIT_HOOKS_DIR="$HOOKS_DIR"
+    export DRY_RUN=false
 
-    run env PATH="$TEST_TMP/bin:$PATH" bash -c '. "$1/dev-setup-chain.sh"; cd "$2"; run_hook_chain pre-push' \
-        _ "$HOOKS_DIR" "$REPO"
-    [ "$status" -eq 1 ]
-    [[ "$output" == *"tracks files with Git LFS"* ]]
+    run bash -c '
+        info() { :; }
+        . "$1"
+        preserve_foreign_hook pre-push
+        preserve_foreign_hook post-checkout
+        preserve_foreign_hook post-merge
+    ' _ "$TEST_TMP/preserve-foreign-hook.sh"
 
-    git -C "$REPO" config dev-setup.lfsguard false
-    run env PATH="$TEST_TMP/bin:$PATH" bash -c '. "$1/dev-setup-chain.sh"; cd "$2"; run_hook_chain pre-push' \
-        _ "$HOOKS_DIR" "$REPO"
     [ "$status" -eq 0 ]
+    [ ! -e "$HOOKS_DIR/pre-push" ]
+    [ ! -e "$HOOKS_DIR/post-checkout.d/10-git-lfs" ]
+    [ -x "$HOOKS_DIR/post-merge.d/10-preexisting" ]
 }

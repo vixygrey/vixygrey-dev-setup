@@ -176,8 +176,8 @@ as *the file is fine, the tool is ignoring it.*
 
 ## 7. Generated shell config is inherited by agents and scripts
 
-`~/.zshrc` is sourced by non-interactive shells, so anything defined there
-reaches Claude Code and any script. Aliases are an interactive convenience
+`~/.zshrc` is sourced by non-interactive shells, so its content reaches
+automation agents and scripts. Aliases are an interactive convenience
 and **must be gated** — every modern replacement rejects the original's
 flags (`du -sh` prints dust's help, `rm -rf` is rejected by trash), and the
 quiet ones are worse (`ps aux`, `dig +short` silently ignore the argument).
@@ -316,7 +316,7 @@ are what makes `--dry-run` honest.
 **delegator for every hook type**, each sourcing `dev-setup-chain.sh`,
 which runs the repo's own hook and then anything in `<type>.d/`.
 
-Three traps:
+Two traps:
 
 - **Never resolve the per-repo hook with `git rev-parse --git-path
   hooks/<type>`.** That call is itself `core.hooksPath` aware, so it
@@ -326,11 +326,6 @@ Three traps:
   here, so the chain must run `<type>.d/` too, and `preserve_foreign_hook`
   must move a foreign hook aside before a delegator takes its name. It
   re-runs on every setup, because tools re-create their hooks.
-- **`git-lfs` is deliberately NOT chained.** It is `core.hooksPath` aware
-  and installs `pre-push`/`post-checkout`/`post-merge`/`post-commit` here
-  from any repo, which made `git lfs pre-push` run on every push on the
-  machine — including repos with no LFS object in them. Per-repo opt-in
-  is `git-lfs-enable-repo`.
 
 Hooks fed data on stdin (`pre-push`, `post-rewrite`, `push-to-checkout`)
 need it buffered and replayed per link — the first reader would otherwise
@@ -557,9 +552,8 @@ with sections 1–16, which are the other rules about the code itself.
   its `trailing-whitespace` and `end-of-file-fixer` hooks run only on
   `md`, `yaml`, `yml`, `json`, and `toml`. Keep the two in agreement — a
   formatter and a hook that disagree produce a commit loop.
-- **croft does not read EditorConfig** and defaults shell to 4 spaces;
-  VS Code does read it. The shell rule above is what makes the two
-  editors agree rather than reformat each other's work.
+- `.editorconfig` keeps indentation consistent across compatible editors.
+  Shell files use four spaces even though the general default is two spaces.
 - `.gitattributes` normalizes on `text=auto eol=lf`. Adding it caused no
   renormalization: every tracked text file was already LF. Verify with
   `git ls-files --eol`, which should report `i/lf w/lf` for everything
