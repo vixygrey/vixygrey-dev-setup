@@ -3966,7 +3966,7 @@ if [[ "$DRY_RUN" == "true" ]]; then
         info "[DRY RUN] Would build llama.cpp $LLAMA_CPP_VERSION with Vulkan and Metal disabled"
     fi
     if [[ -f "$LLAMA_CPP_MODEL" ]] &&
-       [[ "$(stat -f '%z' "$LLAMA_CPP_MODEL" 2>/dev/null || true)" == "$LLAMA_CPP_MODEL_SIZE" ]] &&
+       [[ "$(/usr/bin/stat -f '%z' "$LLAMA_CPP_MODEL" 2>/dev/null || true)" == "$LLAMA_CPP_MODEL_SIZE" ]] &&
        [[ "$(/bin/cat "$LLAMA_CPP_MODEL.sha256" 2>/dev/null || true)" == "$LLAMA_CPP_MODEL_SHA256" ]]; then
         warn "[DRY RUN] llama.cpp model $LLAMA_CPP_MODEL_NAME — already downloaded"
     else
@@ -4013,16 +4013,27 @@ else
     fi
 
     mkdir -p "$LLAMA_CPP_MODEL_DIR"
-    if [[ -f "$LLAMA_CPP_MODEL" ]] &&
-       [[ "$(stat -f '%z' "$LLAMA_CPP_MODEL" 2>/dev/null || true)" == "$LLAMA_CPP_MODEL_SIZE" ]] &&
-       [[ "$(/bin/cat "$LLAMA_CPP_MODEL.sha256" 2>/dev/null || true)" == "$LLAMA_CPP_MODEL_SHA256" ]]; then
+    _llama_model_valid() {
+        local model_path="$1"
+        [[ -f "$model_path" ]] &&
+            [[ "$(/usr/bin/stat -f '%z' "$model_path" 2>/dev/null || true)" == "$LLAMA_CPP_MODEL_SIZE" ]] && {
+            printf '%s  %s\n' "$LLAMA_CPP_MODEL_SHA256" "$model_path" |
+                shasum -a 256 -c - >> "$LOG_FILE" 2>&1
+        }
+    }
+    if _llama_model_valid "$LLAMA_CPP_MODEL"; then
         warn "llama.cpp model $LLAMA_CPP_MODEL_NAME already downloaded"
     else
         info "Downloading $LLAMA_CPP_MODEL_NAME (8.4 GiB, resumable)..."
-        if curl --fail --location --continue-at - \
+        # Accept a complete verified partial file before curl. A server can close
+        # the final transfer with a nonzero status after every byte reached disk.
+        if _llama_model_valid "$LLAMA_CPP_MODEL.part" || {
+            # Override ~/.curlrc's 30-second request limit. This multi-gigabyte
+            # transfer keeps its resumable partial file, but one run must finish it.
+            curl --fail --location --continue-at - --max-time 0 \
                 --output "$LLAMA_CPP_MODEL.part" "$LLAMA_CPP_MODEL_URL" >> "$LOG_FILE" 2>&1 &&
-           [[ "$(stat -f '%z' "$LLAMA_CPP_MODEL.part" 2>/dev/null || true)" == "$LLAMA_CPP_MODEL_SIZE" ]] &&
-           printf '%s  %s\n' "$LLAMA_CPP_MODEL_SHA256" "$LLAMA_CPP_MODEL.part" | shasum -a 256 -c - >> "$LOG_FILE" 2>&1; then
+                _llama_model_valid "$LLAMA_CPP_MODEL.part"
+        }; then
             mv "$LLAMA_CPP_MODEL.part" "$LLAMA_CPP_MODEL"
             printf '%s\n' "$LLAMA_CPP_MODEL_SHA256" > "$LLAMA_CPP_MODEL.sha256"
             success "$LLAMA_CPP_MODEL_NAME downloaded and verified"
@@ -4030,6 +4041,7 @@ else
             error "Failed to download or verify $LLAMA_CPP_MODEL_NAME — resume by re-running setup"
         fi
     fi
+    unset -f _llama_model_valid
 fi
 progress
 unset LLAMA_CPP_VERSION LLAMA_CPP_PREFIX LLAMA_CPP_BUILD_ID LLAMA_CPP_MODEL_DIR
