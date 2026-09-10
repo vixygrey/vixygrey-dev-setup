@@ -195,7 +195,7 @@ and prefer tagged release artifacts with the published SHA256 checksum.
 | **e1s** | ECS TUI -- clusters/services/tasks, exec, logs, port-forward ("k9s for ECS") |
 | **e2c** | EC2 TUI -- start/stop/reboot/terminate, metrics, SSH (young project; via `go install`) |
 | **stu** | S3 TUI -- browse/preview/download buckets |
-| **claws** | Broad all-AWS TUI (~70 services, k9s-style; young; cask from `clawscli/tap`) |
+| **claws** | Broad all-AWS TUI with a managed palette and a read-only shell default |
 | **s5cmd** | Massively parallel S3 CLI -- 10-30x faster than `aws s3` for bulk |
 | **steampipe** | Query live AWS with SQL (inventory & posture); `steampipe plugin install aws` |
 | **dynein** | Ergonomic DynamoDB CLI (awslabs) -- shorthand ops, import/export |
@@ -352,9 +352,10 @@ The generated OMP policy selects Pyright for Python type intelligence and Ruff f
 
 | Tool | Description |
 |------|-------------|
+| **Caligula** | Disk imaging TUI with verification and compressed-image support |
+| **Nerdlog** | Multi-host log viewer with live filtering, histograms, and OpenSSH transport |
 | **Emeraldian** | Obsidian vault TUI with live preview, backlinks, graph views, and an optional assistant |
 | **Watchtower** | Global news, markets, weather, and optional model-generated intelligence briefs |
-| **Linecast** | Weather, tides, astronomy, radar, and maps that inherit the terminal palette |
 | **leaf** | Terminal Markdown previewer -- live watch, fuzzy picker, Mermaid/LaTeX, inline mode |
 | **mprocs** | TUI for running multiple dev processes side by side -- frontend/backend/worker/watchers in one terminal surface |
 | **broot** | Directory tree and file-navigation TUI with the shell-integrated `br` launcher |
@@ -410,7 +411,7 @@ The generated OMP policy selects Pyright for Python type intelligence and Ruff f
 
 | Tool | Description |
 |------|-------------|
-| **ATAC** | Terminal API client (TUI + scriptable CLI) -- Postman import, git-friendly JSON/YAML collections; replaced the Bruno GUI |
+| **Posting** | Terminal HTTP client with a compact layout, secret redaction, and git-friendly YAML collections |
 
 ---
 
@@ -496,6 +497,7 @@ The generated OMP policy selects Pyright for Python type intelligence and Ruff f
 |-----|-------------|
 | **Google Chrome** | Primary Chromium browser for development and DevTools |
 | **Firefox** | Privacy-focused browser with a separate engine for cross-browser development |
+| **Chawan** | Terminal web browser and pager with private defaults, CSS, JavaScript, and Kitty images |
 
 ---
 
@@ -537,7 +539,10 @@ Applied consistently across the machine, with built-in Dracula variants kept whe
 | **Zed** | Named interface, syntax, and terminal theme in `~/.config/zed/themes/dracula-sakura.json` |
 | **Croft** | Native extension manifest with full interface, syntax, terminal, and tab palettes |
 | **Emeraldian** | Native custom theme for the interface, Markdown, syntax, and graph views |
-| **Linecast** | Reads the active terminal palette, which Kitty supplies as Dracula-Sakura |
+| **Caligula** | Uses named terminal colors, which Kitty maps to the Dracula-Sakura palette |
+| **Nerdlog** | Uses named terminal colors, which Kitty maps to the Dracula-Sakura palette |
+| **Chawan** | True-color display defaults in `~/.config/chawan/config.toml` |
+| **Posting** | Native custom theme in `~/.local/share/posting/themes/dracula-sakura.yaml` |
 | **Obsidian** | Full per-vault CSS theme with dark plum surfaces and Sakura accent colors |
 | **Thunderbird** | Built-in dark base with a profile-level Dracula-Sakura `userChrome.css` stylesheet |
 | **jqp** | Dracula base theme with Dracula-Sakura override colors in `~/.jqp.yaml` |
@@ -561,7 +566,7 @@ Applied consistently across the machine, with built-in Dracula variants kept whe
 | **atuin** | 15-token theme in `~/.config/atuin/themes/dracula-sakura.toml` |
 | **stu** | 19 `ui.theme.*` keys in `~/.stu/config.toml` (hex, via Ratatouille's colour serde) |
 | **e1s** | 11 hex colour overrides in `~/.config/e1s/config.yml` |
-| **claws** | Built-in `dracula` theme via `claws --theme dracula` alias |
+| **claws** | Dracula preset with Sakura primary, danger, and success overrides |
 | **miniserve** | `--color-scheme-dark dracula` in the `serve` alias |
 | **vivid** | Dracula-themed LS_COLORS for file type coloring |
 | **vim** | Dracula-ish color scheme (no plugin needed) |
@@ -582,7 +587,7 @@ acceptance of a valid one meant anything.
 | `duf` | preset flags only (`dark\|light\|ansi`) with no custom palette |
 | `fx` | numbered built-in themes via `FX_THEME="0"`; no custom theme definition |
 | `procs` | indexed color only (`Color256`), so the palette can only use nearest terminal indices |
-| `atac`, `viddy`, `cheznav`, `lazynpm`, `lazyrsync`, `lazyssh` | no theming found in their help or configuration schemas |
+| `viddy`, `cheznav`, `lazynpm`, `lazyrsync`, `lazyssh` | no theming found in their help or configuration schemas |
 | `mullvad-tui`, Mullvad VPN | Both clients use fixed application colors and expose no theme configuration |
 | `chamber` | Its current configuration schema exposes no theme settings |
 | Firefox, Bitwarden, Docker Desktop | Appearance belongs to application or profile state, which the generator does not overwrite |
@@ -743,7 +748,6 @@ The script generates config files with sensible defaults:
 | `~/.config/zed/settings.json` | Zed | House fonts, Dracula-Sakura overrides, editor defaults, and an `omp acp` external agent |
 | `~/Library/Application Support/emeraldian/config.toml` | Emeraldian | Reading-first defaults, images, and an offline read-only assistant |
 | `~/Library/Application Support/emeraldian/themes/dracula-sakura.toml` | Emeraldian | Native Dracula-Sakura interface, Markdown, syntax, and graph theme |
-| `~/.config/linecast/config.json` | Linecast | Nerd Font icons while location, units, language, and clock remain automatic |
 | `~/.config/croft/config.json` | Croft | Format on save, selection whitespace, copy on select, 20k terminal scrollback, and whole-project diagnostics |
 | `~/.config/croft/extensions/dracula-sakura/extension.toml` | Croft | Native Dracula-Sakura interface, syntax, terminal, and tab theme |
 | `[each Thunderbird profile]/user.js` | Thunderbird | Seeded dark theme, delayed read marking, spell check before send, and disabled start page |
@@ -790,7 +794,10 @@ The script generates config files with sensible defaults:
 | `~/.tflint.hcl` | tflint | Recommended preset + AWS ruleset (fetched via `tflint --init`) |
 | `~/.actrc` | act | Ubuntu images, container reuse, `--container-architecture linux/amd64` |
 | `~/.ripgreprc` | ripgrep | Smart-case, hidden files, custom type definitions |
-| `~/.w3m/config` | w3m | UTF-8, cookies off, colors, proxy-from-env |
+| `~/.config/claws/config.yaml` | Claws | Dracula-Sakura palette, dashboard startup, no automatic config rewrites |
+| `~/.config/chawan/config.toml` | Chawan | Private browser defaults, Kitty images, true-color Dracula-Sakura display |
+| `~/.config/posting/config.yaml` | Posting | Compact layout, secret redaction, isolated request environment |
+| `~/.local/share/posting/themes/dracula-sakura.yaml` | Posting | Full application, syntax, URL, variable, and HTTP-method palette |
 | `~/.zshenv` | Shell | mise activation for all shell types (login + non-login) — coverage. mise is activated **again** at the end of `~/.zshrc` for *precedence*: `.zshenv` runs first, so everything prepended afterwards (`brew shellenv`, gnubin, `~/.local/bin`, `$PNPM_HOME`) would otherwise outrank it |
 | `~/.actrc` | act | Medium Ubuntu images, container reuse |
 | `~/.hushlogin` | Terminal | Suppresses "Last login" message |
@@ -873,7 +880,8 @@ All aliases are auto-written to `~/.zshrc`:
 | `gdft` | `git dft` | Syntax-aware git diff |
 | `gha` | `act` | Run GitHub Actions locally |
 | `hq` | `harlequin` | SQL IDE TUI |
-| `claws` | `claws --theme dracula` | All-AWS TUI (Dracula) |
+| `claws` | `claws --read-only` | All-AWS TUI with writes disabled by default |
+| `nerdlog` | `nerdlog --set transport=ssh-bin` | Multi-host logs through the generated OpenSSH config |
 | `prog` | `progress -m` | Monitor progress of running coreutils |
 | `ytdl` | `yt-dlp` | Download video |
 | `ytmp3` | `yt-dlp -x --audio-format mp3` | Download audio |

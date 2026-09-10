@@ -22,6 +22,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - Added Thunderbird with profile-aware mail defaults and Dracula-Sakura interface styling (#567).
 - Restored Croft with safe editor defaults and a native Dracula-Sakura theme (#568).
 - Added Emeraldian, Watchtower, and Linecast with supported defaults and Dracula-Sakura styling where available (#569).
+- Added Caligula, Nerdlog, and Chawan with private defaults and supported Dracula-Sakura styling (#572).
 
 ### Changed
 
@@ -37,6 +38,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - Adopted OMP automatic reasoning, MiniMax disablement, usage-aware fallback, and provider cache retention settings (#548).
 - Replaced rovr and nnn with Yazi and added managed Dracula-Sakura configuration files (#546).
 - The terminal welcome now displays the managed Dracula-Sakura fastfetch dashboard and disables OMP word completion hints (#561).
+- Replaced ATAC with Posting and added a custom Dracula-Sakura theme for the HTTP client (#572).
+- Added Sakura color overrides and a read-only shell default for Claws (#572).
 
 ### Removed
 
@@ -56,6 +59,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - Removed four redundant font packages. JetBrains Mono, its Nerd Font variant, and Inter remain (#555).
 - The setup no longer generates Zellij layouts or prints the Quick flow line in new terminals (#561).
 - Removed Borgtui because its current Rust dependencies do not support macOS (#563).
+- Removed w3m and its generated configuration in favor of Chawan (#572).
+- Removed Linecast and stopped merging defaults into its user-owned settings file (#572).
 
 ### Fixed
 

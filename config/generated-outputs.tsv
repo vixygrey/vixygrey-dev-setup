@@ -22,7 +22,11 @@ zellij-config|$ZELLIJ_CONFIG|managed|text|configs|none|zellij
 yazi-config|$YAZI_CONFIG|managed|toml|configs|taplo|none
 yazi-theme|$YAZI_THEME|managed|toml|configs|taplo|yazi
 mpv-config|$MPV_CONFIG|managed|text|configs|none|none
-w3m-config|$W3M_CONFIG|managed|text|configs|none|none
+chawan-config|$HOME/.config/chawan/config.toml|managed|toml|configs|taplo|none
+w3m-config|$HOME/.w3m/config|superseded|text|configs|none|none
+posting-theme|$POSTING_THEME|generated|yaml|configs|yq|none
+posting-config|$POSTING_CONFIG|seed|yaml|configs|yq|posting
+claws-config|$HOME/.config/claws/config.yaml|managed|yaml|configs|yq|none
 lnav-theme-dir-dracula-sakura-json|$LNAV_THEME_DIR/dracula-sakura.json|generated|json|configs|jq|lnav
 stu-root-dir-path-config-toml|$STU_ROOT_DIR_PATH/config.toml|managed|toml|configs|taplo|none
 home-config-e1s-config-yml|$HOME/.config/e1s/config.yml|managed|yaml|configs|yq|none
@@ -82,7 +86,7 @@ zed-settings|$ZED_CONFIG|merged|json|configs|jq|none
 zed-theme|$ZED_THEME|generated|json|configs|jq|none
 emeraldian-theme|$EMERALDIAN_THEME|generated|toml|configs|taplo|emeraldian
 emeraldian-config|$EMERALDIAN_CONFIG|seed|toml|configs|taplo|emeraldian
-linecast-config|$LINECAST_CONFIG|merged|json|configs|jq|linecast
+linecast-config|$HOME/.config/linecast/config.json|superseded|json|configs|jq|none
 croft-theme|$CROFT_THEME|generated|toml|configs|taplo|croft
 croft-config|$CROFT_CONFIG|merged|json|configs|jq|croft
 thunderbird-theme|$THUNDERBIRD_THEME|generated|css|configs|none|none

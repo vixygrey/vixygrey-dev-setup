@@ -229,7 +229,6 @@ concord                    # open Discord in the terminal
 cfait                      # manage local or CalDAV tasks
 emeraldian                 # open the most recent Obsidian vault
 watchtower                 # configure the intelligence dashboard
-linecast weather           # open the terminal weather dashboard
 herald --demo              # preview Herald without an account
 herald                     # configure email and calendar accounts
 mullvad account login      # authenticate the bundled Mullvad CLI
@@ -243,7 +242,6 @@ Zed lists **Oh My Pi** as an External Agent. It starts `omp acp` with the existi
 
 Eilmeldung, concord, cfait, Herald, Broot, Croft, Emeraldian, Zed, and Obsidian use native custom themes.
 
-Linecast reads the Dracula-Sakura terminal palette directly.
 
 Thunderbird uses its built-in dark base with a profile stylesheet. Thunderbird does not support this stylesheet interface.
 
@@ -630,6 +628,18 @@ xh POST api.example.com/data name=John  # POST with JSON
 xh -d api.example.com/file   # download file
 ```
 
+### Posting (terminal HTTP client)
+
+```bash
+posting                       # open the request workspace
+posting locate config         # print the active config path
+posting locate themes         # print the custom theme directory
+```
+
+Posting stores requests as git-friendly YAML files. The seed hides secret values and blocks implicit host environment access.
+
+The managed Dracula-Sakura theme covers the interface, syntax colors, URLs, variables, and HTTP methods.
+
 ---
 
 ## Media & Files
@@ -713,35 +723,42 @@ The first-run wizard collects a location and an optional model provider. The scr
 
 Watchtower hardcodes its colors and exposes no theme setting.
 
-### Linecast (terminal almanac)
+
+### Caligula (disk imaging TUI)
+
+CAUTION: Confirm the output device before you start a burn. Caligula overwrites the selected device.
 
 ```bash
-linecast doctor --offline    # inspect paths, terminal features, and saved settings
-linecast weather             # weather and air quality
-linecast sunshine            # solar day and year views
-linecast moon                # lunar phase and calendar
-linecast sky                 # stars, planets, and constellations
-linecast tides               # tide predictions
-linecast radar               # radar and satellite imagery
-linecast maps                # streets, terrain, and globe views
+caligula --help               # inspect the non-destructive command options
+caligula burn image.iso       # select a target, write, and verify the image
 ```
 
-Linecast reads the terminal palette, so Kitty supplies the Dracula-Sakura colors without a duplicate theme file.
+Caligula uses the terminal color names, so Kitty supplies the Dracula-Sakura palette.
 
-The seed selects Nerd Font icons. Location, units, language, clock, calendar, and sky culture remain automatic.
 
-### w3m (terminal web browser)
+### Nerdlog (multi-host log viewer)
 
 ```bash
-w3m https://example.com      # open URL in terminal
-w3m -dump https://example.com  # dump rendered text to stdout
-w3m -T text/html local.html  # render a local HTML file
-# Inside w3m:
-#   Tab — next link    Enter — follow link
-#   B   — back         U — enter URL     a — add bookmark
-#   q   — quit         h — help
-# Config: ~/.w3m/config (UTF-8, cookies off by default)
+nerdlog                       # start with local logs and saved query history
+nerdlog --version             # show the installed release
+nerdlog --lstreams web-* --time 1h
 ```
+
+The shell alias selects the OpenSSH transport. This transport honors the generated `~/.ssh/config`.
+
+Nerdlog uses terminal color names, so Kitty supplies the Dracula-Sakura palette.
+
+### Chawan (terminal web browser)
+
+```bash
+cha https://example.com       # open a URL in the terminal
+cha -d https://example.com    # dump the rendered page to standard output
+cha ./local.html              # open a local HTML file
+```
+
+The config disables cookies, referrers, and scripting by default. It enables CSS, Kitty images, and history.
+
+The true-color display uses the Dracula-Sakura background, text, and highlight colors.
 
 ### monolith (save pages as single HTML)
 
