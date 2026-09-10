@@ -61,6 +61,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - Removed Borgtui because its current Rust dependencies do not support macOS (#563).
 - Removed w3m and its generated configuration in favor of Chawan (#572).
 - Removed Linecast and stopped merging defaults into its user-owned settings file (#572).
+- Removed the remaining Claude Code credential protection, skill-link migration, shell guards, and private-note templates (#574).
 
 ### Fixed
 

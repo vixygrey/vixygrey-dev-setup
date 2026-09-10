@@ -16,9 +16,9 @@ agents alike. When the two conflict, follow the process in `AGENTS.md` and the s
 `CONVENTIONS.md`.
 
 One rule from `AGENTS.md` is worth stating here, because it is the step people skip:
-**edit the generator, never the output.** Almost every config file, and the whole of the
-user's `~/.claude` tree, is written by a heredoc inside
-[`scripts/setup-dev-tools-mac.sh`](scripts/setup-dev-tools-mac.sh). Editing the produced file
+**edit the generator, never the output.** Almost every config file and the complete OMP
+environment come from heredocs inside
+[`scripts/setup-dev-tools-mac.sh`](scripts/setup-dev-tools-mac.sh). Editing a produced file
 does nothing. The next run overwrites it.
 
 ## Setup

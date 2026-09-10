@@ -958,11 +958,11 @@ git_global() {
 # ensure_dir <dir...>
 # `mkdir -p` that honours --dry-run. Used at the sites a dry run actually reaches —
 # found by running one against a throwaway $HOME and listing what appeared, not by
-# reading (#380). An empty ~/.claude/agents or ~/.ssh/sockets is harmless in itself;
-# the problem is that "no changes were made" has to be true or it is worth nothing,
-# and a directory tree is the thing someone checks for when they want to know whether
-# a preview touched their machine. Same reasoning as git_global: one place, so the
-# next caller inherits the rule instead of having to remember it.
+# reading (#380). An empty ~/.ssh/sockets is harmless in itself; the problem is that
+# "no changes were made" has to be true or it is worth nothing, and a directory tree
+# is the thing someone checks for when they want to know whether a preview touched
+# their machine. Keep the guard here so the next caller inherits the rule instead
+# of having to remember it.
 ensure_dir() {
     if [[ "$DRY_RUN" == "true" ]]; then
         log "[DRY RUN] mkdir -p $*"
@@ -7134,13 +7134,6 @@ Thumbs.db
 ehthumbs.db
 Desktop.ini
 
-# -- Private agent instructions -----------------------------------------------
-# The convention on this machine: AGENTS.md is tracked and public (written for
-# anyone's agent), CLAUDE.md is private and holds personal preferences and notes.
-# Ignored globally rather than per-repo because forgetting the per-repo line
-# publishes private notes, and that cannot be undone once pushed. A repo that
-# genuinely wants a tracked CLAUDE.md can still `git add -f CLAUDE.md`.
-CLAUDE.md
 GITIGNORE_GLOBAL
     git_global core.excludesfile "$GLOBAL_GITIGNORE"
     configured "Global .gitignore created and registered with git"
@@ -9602,8 +9595,6 @@ Thumbs.db
 # Logs
 *.log
 
-# Private agent notes
-CLAUDE.md
 
 # --- Node (delete if this is not a Node project) ---
 node_modules/
@@ -11423,22 +11414,7 @@ WRITING_RULES_BODY
 }
 
 # ---- OMP shared skills ----
-# ~/.agents/skills is omp's canonical shared skill directory. Replace only stale
-# links that point into the retired Claude skill tree.
 AGENTS_SKILLS="$HOME/.agents/skills"
-for _stale in "$AGENTS_SKILLS"/*; do
-    [[ -L "$_stale" ]] || continue
-    case "$(readlink "$_stale")" in
-        "$HOME/.claude/skills/"*)
-            if [[ "$DRY_RUN" == "true" ]]; then
-                info "[DRY RUN] Would replace stale Claude skill link: $_stale"
-            else
-                rm -f "$_stale"
-            fi
-            ;;
-    esac
-done
-unset _stale
 
 write_generated "$AGENTS_SKILLS/office-layout-check/SKILL.md" <<'SKILL_OFFICE_LAYOUT'
 ---
@@ -11590,9 +11566,8 @@ else
     # -- AGENTS.md ----------------------------------------------------------------
     # Same two-part shape as pi's: shared preferences, then the shared writing rules.
     # Both come from the same emitters, so the two harnesses cannot drift (#504).
-    # omp gives this file the highest precedence of any user-level context source —
-    # its `native` provider outranks claude, codex, and the rest — so it shadows
-    # ~/.claude/CLAUDE.md for omp sessions rather than stacking with it.
+    # omp gives this file the highest precedence of any user-level context source.
+    # Its `native` provider outranks the other providers.
     {
     emit_agent_preferences "Oh My Pi"
     emit_writing_rules
@@ -11760,7 +11735,6 @@ const EXACT_HOME_SECRETS = new Set([
     ".config/gh/hosts.yml",
     ".docker/config.json",
     ".kube/config",
-    ".claude/.credentials.json",
     ".omp/auth-broker.token",
     ".omp/auth-gateway.token",
 ]);
@@ -12255,7 +12229,7 @@ command -v atuin &>/dev/null && eval "$(atuin init zsh)"
 # Interactive only, for the same reason as the alias section below: sourcing exports creds into the
 # shell you are sitting in, which is meaningless for a one-shot agent command, and shadowing the
 # binary with `source` makes plain invocations (`assume --help`) behave unexpectedly.
-if [[ -o interactive && -z "$CLAUDECODE" && -z "$AI_AGENT" ]]; then
+if [[ -o interactive && -z "$AI_AGENT" ]]; then
     command -v assume &>/dev/null && alias assume="source assume"
 fi
 
@@ -12327,9 +12301,9 @@ unset _cachedir
 #
 # Coding agents run commands through a non-interactive shell that still sources
 # this file, so they inherit these aliases without a guard. Gate on interactivity,
-# plus the agent variables as a backstop for an agent that invokes `zsh -i`.
+# plus the agent variable as a backstop for an agent that invokes `zsh -i`.
 # Gating the section also covers aliases added later.
-if [[ -o interactive && -z "$CLAUDECODE" && -z "$AI_AGENT" ]]; then
+if [[ -o interactive && -z "$AI_AGENT" ]]; then
     alias ls="eza --icons"
     alias ll="eza -la --icons --git"
     alias la="eza -a --icons"
@@ -15339,8 +15313,8 @@ MANAGED_REPAIRED_LIST=$(managed_list repaired)
 MANAGED_OUTSIDE_LIST=$(managed_list outside)
 MANAGED_REFRESHED_LIST=$(managed_list refreshed)
 
-# Files rewritten by write_generated because their content changed (Claude agents and
-# slash commands). Worth naming: the previous copy is kept alongside as *.replaced.*
+# Files rewritten by write_generated because their content changed. Worth naming:
+# the previous copy is kept alongside as *.replaced.*
 if [[ -n "$MANAGED_REFRESHED_LIST" ]]; then
     echo -e "${GREEN}${BOLD}Refreshed $(echo "$MANAGED_REFRESHED_LIST" | wc -l | tr -d ' ') generated file(s)${NC} (previous copies kept as .replaced.<timestamp>):"
     while IFS= read -r item; do
