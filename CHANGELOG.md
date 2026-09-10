@@ -13,6 +13,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - Added behavior checks for the global Git hook chain (#531).
 - Added generated-output inventory checks for verification and parser coverage (#534).
 - Added an omp protected-path extension for native mutations to credentials, dependency trees, and repository metadata (#540).
+- Added an OMP provider-key template for Anthropic and Gemini credentials (#548).
 
 ### Changed
 
@@ -25,6 +26,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - Replaced Ghostty with Kitty and ported the managed terminal theme, font, window, selection, and behavior settings (#544).
 - Restored `Cmd+Space` to Spotlight and `Cmd+Option+Space` to Finder search (#544).
 - Added a generated OMP instruction to complete each TODO item when its work finishes (#544).
+- Adopted OMP automatic reasoning, MiniMax disablement, usage-aware fallback, and provider cache retention settings (#548).
 - Replaced rovr and nnn with Yazi and added managed Dracula-Sakura configuration files (#546).
 
 ### Removed
