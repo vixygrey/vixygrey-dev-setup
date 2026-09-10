@@ -28,6 +28,7 @@ Quick reference for all **209+ shortcuts** configured by the setup scripts.
 | `f` | `fd` | Fast file finder |
 | `dft` | `difft` | Syntax-aware structural diff |
 | `y` | Yazi shell wrapper | Open Yazi and keep its directory after `q` |
+| `br` | Broot shell wrapper | Browse a directory tree and keep directory changes after exit |
 | `jx` | `fx` | Interactive JSON viewer |
 
 ### Downloads & Network

@@ -157,6 +157,7 @@ Every standard Unix tool has a faster, modern alternative:
 | `f` | `fd` | Fast file finder, simple syntax |
 | `dft` | `difft` | Syntax-aware structural diff |
 | `y` | `yazi` | Terminal file manager |
+| `br` | `broot` shell wrapper | Browse a tree and keep directory changes after exit |
 | `jx` | `fx` | Interactive JSON viewer |
 | `md` | `glow` | Render Markdown in terminal |
 | `wget` / `dl` | `aria2c` | Multi-connection downloader |
@@ -191,6 +192,21 @@ tldr tar                                             # simplified with examples
 ```
 
 ---
+
+## Restored Workstation Tools
+
+```bash
+br                         # browse files and keep directory changes
+herald --demo              # preview Herald without an account
+herald                     # configure email and calendar accounts
+mullvad account login      # authenticate the bundled Mullvad CLI
+mullvad-tui                # control Mullvad from the terminal
+zed .                      # open the current project in Zed
+```
+
+Zed lists **Oh My Pi** as an External Agent. It starts `omp acp` and uses the existing OMP configuration.
+
+Herald, Broot, and Zed use the Dracula-Sakura palette. Mullvad does not expose a theme configuration.
 
 ## Data & JSON
 

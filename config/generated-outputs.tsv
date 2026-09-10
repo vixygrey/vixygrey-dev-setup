@@ -48,6 +48,8 @@ mise-config|$MISE_CONFIG|managed|text|configs|none|mise
 topgrade-config|$TOPGRADE_CONFIG|managed|text|configs|none|topgrade
 fastfetch-config|$FASTFETCH_CONFIG|managed|text|configs|none|none
 mprocs-config|$MPROCS_CONFIG|managed|text|configs|none|none
+broot-config|$BROOT_CONF|managed|text|configs|none|none
+broot-skin|$BROOT_SKIN|managed|text|configs|none|none
 jqp-config|$JQP_CONFIG|managed|text|configs|none|none
 ripgreprc|$RIPGREPRC|managed|text|configs|none|ripgrep
 fdignore|$FDIGNORE|managed|text|configs|none|none
@@ -85,6 +87,9 @@ omp-extensions-dir-protected-paths-ts|$OMP_EXTENSIONS_DIR/protected-paths.ts|gen
 omp-env-file|$OMP_ENV_FILE|seed|dotenv|configs|bash|none
 zshrc|$ZSHRC|managed|shell|configs|bash|none
 micro-settings|$MICRO_CONFIG_DIR/settings.json|merged|json|configs|jq|none
+zed-settings|$ZED_CONFIG|merged|json|configs|jq|none
+herald-theme|$HERALD_THEME_FILE|generated|yaml|configs|yq|none
+herald-config|$HERALD_CONFIG|merged|yaml|configs|yq|none
 docker-daemon|$DOCKER_DAEMON|merged|json|configs|jq|none
 omp-config|$OMP_CONFIG_FILE|merged|yaml|configs|yq|omp
 clamav-freshclam|$CLAMAV_ETC/freshclam.conf|seed|text|always|none|none
@@ -106,8 +111,6 @@ retired-sketchybar-files|$_sketchybar_file|superseded|text|configs|none|none
 retired-aichat-config|$HOME/.config/aichat/config.yaml|superseded|yaml|configs|yq|none
 retired-asciinema-toml|$HOME/.config/asciinema/config.toml|superseded|toml|configs|taplo|none
 retired-asciinema-config|$HOME/.config/asciinema/config|superseded|text|configs|none|none
-retired-broot-config|$HOME/.config/broot/conf.hjson|superseded|text|configs|none|none
-retired-broot-skin|$HOME/.config/broot/skins/dracula-sakura.hjson|superseded|text|configs|none|none
 retired-newsboat-config|$HOME/.newsboat/config|superseded|text|configs|none|none
 retired-newsboat-urls|$HOME/.newsboat/urls|superseded|text|configs|none|none
 retired-git-lfs-helper|$HOME/Scripts/bin/git-lfs-enable-repo|superseded|shell|configs|bash|none
