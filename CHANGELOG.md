@@ -25,6 +25,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - Added Caligula, Nerdlog, and Chawan with private defaults and supported Dracula-Sakura styling (#572).
 - Added Bigpowers as an enabled OMP plugin with Bun-backed installation and verification (#576).
 - Added Draw.io as the local desktop diagram editor (#578).
+- Added `inspect-machine`, an OMP skill that discovers installed commands, applications, and human aliases from generated machine records (#583).
 
 ### Changed
 

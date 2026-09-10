@@ -1976,7 +1976,7 @@ if [[ "$UNINSTALL" == "true" ]]; then
     echo ""
     echo "# Remove OMP config, sessions, and generated shared skills:"
     echo "  rm -rf ~/.omp"
-    echo "  rm -rf ~/.agents/skills/api-testing ~/.agents/skills/d2-diagrams ~/.agents/skills/office-layout-check"
+    echo "  rm -rf ~/.agents/skills/api-testing ~/.agents/skills/d2-diagrams ~/.agents/skills/inspect-machine ~/.agents/skills/office-layout-check"
     echo "  brew untap can1357/tap"
     echo ""
     echo "# Remove Helix config:"
@@ -11258,7 +11258,71 @@ Run durable checks with `hurl --test <file>`.
 Reference secrets through environment variables. Do not store tokens in commands, fixtures, or checked-in files.
 SKILL_API
 
-configured "OMP shared skills written (api-testing, d2-diagrams, office-layout-check)"
+write_generated "$AGENTS_SKILLS/inspect-machine/SKILL.md" <<'SKILL_INSPECT_MACHINE'
+---
+name: inspect-machine
+description: Discovers CLI tools, terminal apps, GUI apps, and shell aliases on machines provisioned by vixygrey-dev-setup. Use when choosing a local tool, checking availability, translating aliases, or explaining machine capabilities.
+---
+
+# Inspect machine
+
+Use the generated machine records before you select a local tool.
+
+> **HARD GATE** — Read `~/Desktop/TOOL_REFERENCE.md` before you recommend an installed tool.
+
+Never infer current availability from the reference alone. Verify the target surface.
+
+## Sources
+
+1. Read `~/Desktop/TOOL_REFERENCE.md` for the intended CLI, TUI, and GUI inventory.
+2. Read `~/Desktop/TOOLKIT_SUMMARY.md` for a shorter capability map.
+3. Search `~/.zshrc` only when you must translate an alias or launcher function.
+4. Use the harness file tools for these records. Do not use shell paging or search commands.
+
+Treat the generated reference as intended state. Treat live resolution as observed state.
+
+## CLI tools
+
+Verify a command with `command -v -- <command>` in the target shell.
+
+Use the command name from the reference, not its Homebrew package name.
+
+Compare `zsh -c`, `zsh -l -i -c`, and `sh -c` only when command-path context matters.
+
+Report every resolved path when the shell contexts disagree.
+
+Use the canonical binary from an agent shell. Do not use human aliases.
+
+## GUI applications
+
+Verify an application with `open -Ra "<Application Name>"`.
+
+This command does not launch the target application. Finder reveals the application and becomes visible.
+
+Run `open -a "<Application Name>"` only when the user requests a launch.
+
+## Aliases and launchers
+
+Treat aliases inside the interactive `~/.zshrc` guard as human-only conveniences.
+
+Translate an alias to its canonical command before you act.
+
+Do not start terminal interfaces from a detached or non-interactive task.
+
+Use the agent shell `rm` wrapper for recoverable deletion.
+
+Use `/bin/rm` only for isolated test cleanup that requires permanent deletion.
+
+## Safety
+
+Do not read shell history, credentials, tokens, keychains, or environment-variable values.
+
+Report intended and observed state separately when installation is incomplete.
+
+→ verify: `test -r "$HOME/Desktop/TOOL_REFERENCE.md" && test -r "$HOME/.zshrc" && command -v omp >/dev/null`
+SKILL_INSPECT_MACHINE
+
+configured "OMP shared skills written (api-testing, d2-diagrams, inspect-machine, office-layout-check)"
 # ---- Oh My Pi (omp) coding agent (~/.omp/agent) ----
 # omp is the coding agent in this setup. It provides tools, LSP, DAP, subagents,
 # and workload-routed model roles. Credentials stay user-owned.
@@ -11268,7 +11332,7 @@ configured "OMP shared skills written (api-testing, d2-diagrams, office-layout-c
 #   * `google` is the MODEL provider (the Gemini API). `gemini` is a DISCOVERY
 #     provider — the source that reads GEMINI.md. Disabling or configuring the
 #     wrong one does nothing visible. Roles below are all `google/...`.
-#   * `~/.agents/skills` is omp's canonical shared skills location. The three
+#   * `~/.agents/skills` is omp's canonical shared skills location. The four
 #     generated skills need no copies under ~/.omp/agent/skills.
 OMP_DIR="$HOME/.omp/agent"
 OMP_THEME_DIR="$OMP_DIR/themes"
@@ -12660,7 +12724,7 @@ omp config path
 omp -p "summarise the diff on this branch"
 ```
 
-> Tip: omp's config lives under `~/.omp/agent/`, not `~/.config`. It reads three scoped skills from `~/.agents/skills/`: `api-testing`, `d2-diagrams`, and `office-layout-check`. The `protected-paths.ts` extension guards native file mutations to sensitive paths. Its `AGENTS.md` outranks other user-level context files. Settings merge into `config.yml` because omp writes that file.
+> Tip: omp's config lives under `~/.omp/agent/`, not `~/.config`. It reads four scoped skills from `~/.agents/skills/`: `api-testing`, `d2-diagrams`, `inspect-machine`, and `office-layout-check`. The `protected-paths.ts` extension guards native file mutations to sensitive paths. Its `AGENTS.md` outranks other user-level context files. Settings merge into `config.yml` because omp writes that file.
 >
 > `web_search` includes 23 backends. This setup puts local **SearXNG** first through `searxng.endpoint`.
 > Keyless backends remain available if SearXNG stops.

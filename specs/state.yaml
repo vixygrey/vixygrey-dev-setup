@@ -6,10 +6,10 @@
 # See AGENTS.md, "Commits, PRs, CHANGELOG".
 workflow_mode: team-pr
 
-active_phase: discover
+active_phase: sustain
 
 metrics:
-  story_start: "2026-09-10T18:35:56Z"
+  story_start: "2026-09-10T19:21:25Z"
 
 
 project:
@@ -20,8 +20,8 @@ project:
 
 status:
   summary: >-
-    Issue #580 is fixed and verified. OMP disables the broken duplicate MCP
-    server while the native Bigpowers extension remains active.
+    Issue #583 is implemented and verified. The generated `inspect-machine`
+    skill exposes intended machine capabilities and checks live availability.
 
 handoff:
   next_skill: survey-context
