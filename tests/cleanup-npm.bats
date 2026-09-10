@@ -35,12 +35,13 @@ exit 0
 STUB_NPM
     chmod +x "$STUB/npm"
 
-    # brew/mas are stubbed to "nothing installed" rather than left to the real
-    # machine. Two reasons: hermetic (a maintainer's actual Homebrew state can never
-    # change the result), and fast — the block probes ~98 rows, and a real `brew list`
-    # per row is ~1s each, which is minutes per test.
-    cat > "$STUB/brew" <<'STUB_BREW'
+    # brew/mas are stubbed rather than left to the real machine. The brew stub
+    # models ffmpeg as installed and records uninstall attempts. This keeps the
+    # cleanup regression hermetic while all unrelated formula probes stay absent.
+    cat > "$STUB/brew" <<STUB_BREW
 #!/usr/bin/env bash
+if [[ "\$*" == "list ffmpeg" ]]; then exit 0; fi
+if [[ "\$1" == "uninstall" ]]; then echo "\$*" >> "$TEST_TMP/brew-uninstall.log"; exit 0; fi
 exit 1
 STUB_BREW
     cat > "$STUB/mas" <<'STUB_MAS'
@@ -51,6 +52,7 @@ STUB_MAS
 
     export PATH="$STUB:$PATH"
     : > "$TEST_TMP/npm-uninstall.log"
+    : > "$TEST_TMP/brew-uninstall.log"
 }
 
 teardown() {
@@ -100,6 +102,13 @@ teardown() {
     [ "$status" -eq 0 ]
     [[ "$output" != *"Would remove: Playwright"* ]]
     [[ "$output" != *"unknown entry type 'npm'"* ]]
+}
+
+@test "--cleanup keeps ffmpeg when retained formulae require it (#563)" {
+    run bash "$SETUP_SCRIPT" --cleanup --no-prompt
+    [ "$status" -eq 0 ]
+    [ ! -s "$TEST_TMP/brew-uninstall.log" ]
+    [[ "$output" != *"Failed to remove ffmpeg"* ]]
 }
 
 

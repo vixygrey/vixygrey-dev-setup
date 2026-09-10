@@ -512,7 +512,6 @@ The generated OMP policy selects Pyright for Python type intelligence and Ruff f
 | **rclone** | Sync files to any cloud -- Google Drive, S3, Dropbox, etc. (replaced the Google Drive desktop app) |
 | **borg** | Deduplicated encrypted backups -- better than Time Machine for offsite |
 | **borgmatic** | Automated borg backup scheduling and configuration |
-| **borgtui** | Interactive Borg backup manager with Keychain passphrase support |
 
 ---
 
@@ -573,7 +572,7 @@ acceptance of a valid one meant anything.
 | `procs` | indexed color only (`Color256`), so the palette can only use nearest terminal indices |
 | `atac`, `viddy`, `cheznav`, `lazynpm`, `lazyrsync`, `lazyssh` | no theming found in their help or configuration schemas |
 | `mullvad-tui`, Mullvad VPN | Both clients use fixed application colors and expose no theme configuration |
-| `borgtui`, `chamber` | Their current configuration schemas expose no theme settings |
+| `chamber` | Its current configuration schema exposes no theme settings |
 | Firefox, Obsidian, Bitwarden, Docker Desktop | Appearance belongs to application or profile state, which the generator does not overwrite |
 
 `stu` and `e1s` are themed but carry **no `--verify` row**. Both are TUIs with no
