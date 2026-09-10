@@ -5,10 +5,13 @@ setup() {
     TEST_TMP="$(mktemp -d)"
     export GENERATED_CONFIG="$TEST_TMP/config.yml"
     export GENERATED_ENV="$TEST_TMP/.env"
+    export GENERATED_MACHINE_SKILL="$TEST_TMP/inspect-machine-SKILL.md"
     awk "/<<'OMP_CONFIG_CONF'/{f=1;next} /^OMP_CONFIG_CONF$/{f=0} f" \
         "$BATS_TEST_DIRNAME/../scripts/setup-dev-tools-mac.sh" > "$GENERATED_CONFIG"
     awk "/<<'OMP_ENV_CONF'/{f=1;next} /^OMP_ENV_CONF$/{f=0} f" \
         "$BATS_TEST_DIRNAME/../scripts/setup-dev-tools-mac.sh" > "$GENERATED_ENV"
+    awk "/<<'SKILL_INSPECT_MACHINE'/{f=1;next} /^SKILL_INSPECT_MACHINE$/{f=0} f" \
+        "$BATS_TEST_DIRNAME/../scripts/setup-dev-tools-mac.sh" > "$GENERATED_MACHINE_SKILL"
 }
 
 teardown() {
@@ -62,6 +65,27 @@ teardown() {
         [[ "${ANTHROPIC_API_KEY+x}" == x && -z "$ANTHROPIC_API_KEY" ]]
         [[ "${GEMINI_API_KEY+x}" == x && -z "$GEMINI_API_KEY" ]]
     ' bash "$GENERATED_ENV"
+
+    [ "$status" -eq 0 ]
+}
+
+@test "omp machine skill exposes machine records and live availability checks (#583)" {
+    run ruby -ryaml -e '
+        skill = File.read(ARGV.fetch(0))
+        frontmatter = skill.split(/^---\s*$/, 3).fetch(1)
+        metadata = YAML.safe_load(frontmatter)
+        abort "wrong skill name" unless metadata.fetch("name") == "inspect-machine"
+        abort "missing tool-selection trigger" unless metadata.fetch("description").include?("choosing a local tool")
+
+        required = [
+          "~/Desktop/TOOL_REFERENCE.md",
+          "command -v -- <command>",
+          "open -Ra",
+          "Do not use human aliases"
+        ]
+        missing = required.reject { |text| skill.include?(text) }
+        abort "missing machine inspection contracts: #{missing.join(", ")}" unless missing.empty?
+    ' "$GENERATED_MACHINE_SKILL"
 
     [ "$status" -eq 0 ]
 }

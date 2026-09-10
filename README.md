@@ -748,7 +748,7 @@ The script generates config files with sensible defaults:
 | `~/.config/zellij/config.kdl` | zellij | Dracula-Sakura theme, compact layout, mouse, Ctrl-a prefix |
 | `~/.config/mpv/mpv.conf` | mpv | Hardware accel, save position, screenshots to ~/Screenshots |
 | `~/.jqp.yaml` | jqp | Dracula base theme with Dracula-Sakura color overrides |
-| `~/.agents/skills/*` | omp | Symlinks to three scoped shared skills: `api-testing`, `d2-diagrams`, and `office-layout-check` |
+| `~/.agents/skills/*` | omp | Four scoped shared skills: `api-testing`, `d2-diagrams`, `inspect-machine`, and `office-layout-check` |
 | `~/.omp/agent/extensions/protected-paths.ts` | omp | Blocks native file mutations to credentials, dependency trees, and repository metadata. Bash and Eval remain under native approval policies |
 | `~/.omp/agent/AGENTS.md` | omp | Global Oh My Pi instruction layer with house preferences and writing rules |
 | `~/.omp/agent/themes/dracula-sakura.json` | omp | Full Dracula-Sakura theme with all 66 required omp color tokens, including the thirteen status-line colors pi has no equivalent for |
@@ -943,7 +943,7 @@ The `LLAMA_CPP_BASE_URL` variable points OMP to the Vulkan service on port 8081.
 
 OMP also carries the Dracula-Sakura theme and the generated `AGENTS.md`.
 The shared skill directory is `~/.agents/skills/`.
-It contains `api-testing`, `d2-diagrams`, and `office-layout-check`.
+It contains `api-testing`, `d2-diagrams`, `inspect-machine`, and `office-layout-check`.
 The enabled Bigpowers plugin adds its workflow skills, slash commands, git safety guards, and `bigpowers_skill` tool.
 
 **Web search is built in.** `web_search` carries 23 backends, and this setup puts your

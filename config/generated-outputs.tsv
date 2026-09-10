@@ -113,6 +113,7 @@ git-global-config|$HOME/.gitconfig|merged|gitconfig|configs|git|git
 global-ignore|$GLOBAL_IGNORE|managed|text|configs|none|none
 agents-skill-api-testing|$AGENTS_SKILLS/api-testing/SKILL.md|generated|markdown|configs|none|none
 agents-skill-d2-diagrams|$AGENTS_SKILLS/d2-diagrams/SKILL.md|generated|markdown|configs|none|none
+agents-skill-inspect-machine|$AGENTS_SKILLS/inspect-machine/SKILL.md|generated|markdown|configs|none|none
 agents-skill-office-layout-check|$AGENTS_SKILLS/office-layout-check/SKILL.md|generated|markdown|configs|none|none
 retired-sketchybar-files|$_sketchybar_file|superseded|text|configs|none|none
 retired-aichat-config|$HOME/.config/aichat/config.yaml|superseded|yaml|configs|yq|none
