@@ -7,16 +7,6 @@
 workflow_mode: team-pr
 
 active_phase: discover
-active_flow: fix_bug
-
-bug_cycle:
-  current_step: 5
-  completed_steps:
-    - 1
-    - 2
-    - 3
-    - 4
-  bug_id: BUG-2026-09-10T183556Z
 
 metrics:
   story_start: "2026-09-10T18:35:56Z"
@@ -34,4 +24,4 @@ status:
     server while the native Bigpowers extension remains active.
 
 handoff:
-  next_skill: release-branch
+  next_skill: survey-context
