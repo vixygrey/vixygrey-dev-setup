@@ -637,6 +637,34 @@ EOF
     [[ "$output" == *"[DRY RUN] Would install: Bigpowers"* ]]
 }
 
+@test "disable_omp_mcp_server: preserves user config and is idempotent (#580)" {
+    run run_with_helpers '
+        mcp_file="$HOME/.omp/agent/mcp.json"
+        mkdir -p "$(dirname "$mcp_file")"
+        cat > "$mcp_file" <<"EOF"
+{
+  "$schema": "https://example.test/mcp-schema.json",
+  "mcpServers": {
+    "personal": {
+      "type": "http",
+      "url": "https://example.test/mcp"
+    }
+  },
+  "disabledServers": ["personal-disabled"]
+}
+EOF
+        disable_omp_mcp_server "$mcp_file" "bigpowers-mcp"
+        disable_omp_mcp_server "$mcp_file" "bigpowers-mcp"
+        jq -c "{
+          schema: .[\"\$schema\"],
+          personal: .mcpServers.personal.url,
+          disabled: .disabledServers
+        }" "$mcp_file"
+    '
+    [ "$status" -eq 0 ]
+    [ "$output" = '{"schema":"https://example.test/mcp-schema.json","personal":"https://example.test/mcp","disabled":["bigpowers-mcp","personal-disabled"]}' ]
+}
+
 @test "run_remote_installer: executes the downloaded installer through the requested runner (#430)" {
     run run_with_helpers '
         export LOG_FILE="$HOME/log"
