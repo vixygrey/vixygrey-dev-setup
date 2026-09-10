@@ -19,6 +19,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - Added Firefox, Obsidian, Docker Desktop, and Bitwarden with supported application defaults (#557).
 - Added eilmeldung, concord, chamber, spotatui, and cfait with Dracula-Sakura styling where supported (#557).
 - Added the requested OMP language servers and exposed every command on the default `PATH` (#559).
+- Added Thunderbird with profile-aware mail defaults and Dracula-Sakura interface styling (#567).
+- Restored Croft with safe editor defaults and a native Dracula-Sakura theme (#568).
+- Added Emeraldian, Watchtower, and Linecast with supported defaults and Dracula-Sakura styling where available (#569).
 
 ### Changed
 

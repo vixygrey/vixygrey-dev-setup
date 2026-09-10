@@ -360,7 +360,7 @@ declare -A CATEGORY_DESC=(
     [code-quality]="shellcheck, shfmt, actionlint, act, hadolint, ruff, prettier"
     [perf-testing]="hyperfine, oha"
     [dev-servers]="ngrok, miniserve"
-    [terminal-productivity]="leaf, topgrade, fastfetch, mprocs, Broot, qalc, lazyssh/rsync/npm, cheznav, eilmeldung, concord, cfait"
+    [terminal-productivity]="Emeraldian, Watchtower, Linecast, leaf, topgrade, fastfetch, mprocs, Broot, qalc, lazyssh/rsync/npm, cheznav, eilmeldung, concord, cfait"
     [k8s-github]="stern, gh-dash"
     [database]="duckdb, harlequin, usql, dbmate"
     [containers]="Docker Desktop, lazydocker, dive, kubectl, k9s"
@@ -369,7 +369,7 @@ declare -A CATEGORY_DESC=(
     [dx]="fzf, starship, atuin, micro, Zed, Kitty, zellij, omp, language servers"
     [docs]="d2"
     [mac-system]="LuLu, Mullvad VPN, mullvad CLI, mullvad-tui"
-    [mac-productivity]="Obsidian, Herald, LibreOffice, Vulkan llama.cpp"
+    [mac-productivity]="Thunderbird, Obsidian, Herald, LibreOffice, Vulkan llama.cpp"
     [mac-browsers]="Firefox, Carbonyl, w3m, monolith"
     [mac-media]="mpv, oxipng, jpegoptim, cliamp, spotatui"
     [mac-cloud]="rclone, borg, borgmatic"
@@ -398,15 +398,15 @@ declare -A CONFIG_LIVES_IN_CONFIGS=(
     [code-quality]="shellcheck, act, prettier, editorconfig"
     [replacements]="btop, ripgreprc, fdignore, aria2, Yazi"
     [data-processing]="yt-dlp, jqp"
-    [terminal-productivity]="leaf, topgrade, fastfetch, mprocs, Broot, eilmeldung, concord, cfait"
+    [terminal-productivity]="Emeraldian, Linecast, leaf, topgrade, fastfetch, mprocs, Broot, eilmeldung, concord, cfait"
     [k8s-github]="stern, gh-dash"
     [database]="harlequin"
     [containers]="Docker daemon, lazydocker, k9s (config + Dracula skin)"
     [networking]="trippy"
-    [dx]="atuin, zellij, Kitty, Zed, omp (~/.omp/agent + ~/.agents/skills) — and starship, which is in the \`dracula\` category"
+    [dx]="atuin, zellij, Kitty, Zed, Croft, omp (~/.omp/agent + ~/.agents/skills) — and starship, which is in the \`dracula\` category"
     [mac-media]="mpv, spotatui"
     [mac-browsers]="w3m"
-    [mac-productivity]="Obsidian vault themes, Herald, llama.cpp service"
+    [mac-productivity]="Thunderbird profiles, Obsidian vault themes, Herald, llama.cpp service"
 )
 
 # Loud default: a key here that is not a real category is a notice that can never
@@ -1256,6 +1256,45 @@ write_seed_once() {
     return 0
 }
 
+# set_toml_top_level_string <file> <key> <value>
+# Replace or add one top-level TOML string without rewriting comments or user formatting.
+# A parser check fails closed before the edit. Nested keys with the same name stay untouched.
+set_toml_top_level_string() {
+    local file="$1" key="$2" value="$3"
+    local tmp
+    [[ "$key" =~ ^[A-Za-z0-9_-]+$ ]] || return 1
+    [[ "$value" != *'"'* && "$value" != *$'\n'* ]] || return 1
+    [[ -f "$file" ]] || return 1
+    if [[ "$DRY_RUN" == "true" ]]; then
+        info "[DRY RUN] Would set $key in $file"
+        return 0
+    fi
+    command -v taplo &>/dev/null || return 2
+    taplo check "$file" &>/dev/null || return 1
+    tmp="$(mktemp)"
+    if awk -v key="$key" -v replacement="$key = \"$value\"" '
+        BEGIN { done = 0 }
+        !done && /^[[:space:]]*\[/ {
+            print replacement
+            done = 1
+        }
+        !done && $0 ~ "^[[:space:]]*" key "[[:space:]]*=" {
+            print replacement
+            done = 1
+            next
+        }
+        { print }
+        END {
+            if (!done) print replacement
+        }
+    ' "$file" > "$tmp" && taplo check "$tmp" &>/dev/null; then
+        mv "$tmp" "$file"
+        return 0
+    fi
+    rm -f "$tmp"
+    return 1
+}
+
 # merge_json_defaults <file> [jq-filter] [source-file]   (defaults on stdin)
 # Merges script defaults below an existing JSON object. The on-disk object wins unless
 # the optional filter reasserts an owned key. A source file lets a caller supply a
@@ -1661,6 +1700,40 @@ trust_tap() {
     env -u XDG_CONFIG_HOME brew trust --tap "$tap" >> "$LOG_FILE" 2>&1 || true
 }
 
+# thunderbird_profile_paths <profiles.ini> <profile-root>
+# Print every Thunderbird profile path from Mozilla's registry. Relative paths
+# resolve under the registry root. Absolute paths remain unchanged.
+thunderbird_profile_paths() {
+    local registry="$1" root="$2"
+    [[ -f "$registry" ]] || return 0
+    awk -v root="$root" '
+        function emit() {
+            if (!in_profile || path == "") return
+            if (relative == "1") print root "/" path
+            else print path
+        }
+        /^[[:space:]]*\[Profile[0-9]+\][[:space:]]*$/ {
+            emit()
+            in_profile = 1
+            path = ""
+            relative = "1"
+            next
+        }
+        /^[[:space:]]*\[/ {
+            emit()
+            in_profile = 0
+            next
+        }
+        in_profile {
+            line = $0
+            sub(/\r$/, "", line)
+            if (line ~ /^Path=/) path = substr(line, 6)
+            else if (line ~ /^IsRelative=/) relative = substr(line, 12)
+        }
+        END { emit() }
+    ' "$registry"
+}
+
 # -- Source guard for unit tests ---------------------------------------------
 # #375: the helpers above carry all the risk in this script and were testable only
 # by hand (the file executes top to bottom on source, so `source setup-dev-tools-mac.sh`
@@ -1966,7 +2039,6 @@ if [[ "$CLEANUP" == "true" ]]; then
         "cask:proton-drive:Proton Drive:removed"
         "cask:warp:Warp terminal:Kitty:Warp"
         "cask:iterm2:iTerm2:Kitty:iTerm"
-        "cargo:croft:croft:micro"
         "formula:FelixKratz/formulae/sketchybar:SketchyBar:removed"
         "cask:font-sketchybar-app-font:SketchyBar app font:removed"
         "formula:blueutil:blueutil:removed"
@@ -2374,8 +2446,6 @@ if [[ "$CLEANUP" == "true" ]]; then
         # uses Trash after both Claude command providers are absent.
         "claude|$HOME/.claude|removed"
         "claude|$HOME/.claude.json|removed"
-        "croft|$HOME/.config/croft|micro"
-        "croft|$HOME/.cache/croft-build.noindex|micro"
         "sketchybar|$HOME/.config/sketchybar|removed"
         "cz|$HOME/.czrc|git template + omp"
         "freshclam|$HOME/Library/LaunchAgents/com.freshclam.update.plist|removed"
@@ -2651,8 +2721,13 @@ if [[ "$VERIFY" == "true" ]]; then
         "unchecked|lazydocker|$HOME/.config/lazydocker/config.yml|"
         "unchecked|yt-dlp|$HOME/.config/yt-dlp/config|"
         "unchecked|micro|$HOME/.config/micro/settings.json|"
-        # Each of these asks the tool itself where it reads from, so the row stays
-        # correct if the tool moves — the "ask the tool; do not hardcode" rule already
+        "unchecked|croft|$HOME/.config/croft/config.json|"
+        # Emeraldian exposes no headless config validator or path command.
+        "unchecked|emeraldian|$HOME/Library/Application Support/emeraldian/config.toml|"
+        # Linecast reports the effective settings path without network probes.
+        "path|linecast|$HOME/.config/linecast/config.json|env -u NO_COLOR linecast doctor --offline --json 2>/dev/null | jq -r '.paths.settings_file'"
+        # The remaining path checks ask each tool where it reads, so every row stays
+        # correct if the tool moves. This follows the "ask the tool; do not hardcode" rule
         # in AGENTS. The captured path is tilde-normalised on both sides before
         # comparing, so tools that return absolute paths and tools that return
         # `~/...` are compared against the same string. Cheap high-signal
@@ -3593,6 +3668,16 @@ brew_install "mprocs" "mprocs (TUI for running multiple dev processes)"
 brew_install "broot" "broot (directory tree and file-navigation TUI)"
 brew_install "lnav" "lnav (advanced log file viewer — auto-format, SQL queries on logs)"
 brew_install "progress" "progress (coreutils progress viewer — cp, mv, dd, tar)"
+# Native release packages avoid duplicate Rust and Go compilation.
+trust_tap iamrohithrnair/tap
+brew_install "iamrohithrnair/tap/emeraldian" \
+    "Emeraldian (Obsidian vault TUI with backlinks, graph, and optional assistant)"
+trust_tap lajosdeme/watchtower
+brew_install "lajosdeme/watchtower/watchtower" \
+    "Watchtower (global news, markets, weather, and intelligence dashboard)"
+uv_tool_install "linecast" linecast \
+    "Linecast (terminal weather, tides, sun, moon, sky, radar, and maps)" \
+    "linecast installed (terminal-aware weather and almanac suite)"
 # Upstream publishes checksum-addressed macOS binaries. Use those instead of its
 # Homebrew formula, whose build-only dependencies install a second Rust toolchain.
 EILMELDUNG_VERSION="1.8.1"
@@ -3829,9 +3914,11 @@ brew_install "atuin" "atuin (replaces shell history — SQLite-backed, searchabl
 # mise (single tool version manager — can replace nvm + pyenv)
 # mise already installed in core section
 
-# Editors and terminals. micro is the editor for git messages, quick edits, and
-# full project work. It is nonmodal and keeps its key menu visible.
+# Editors and terminals. micro handles quick edits and commit messages. Croft
+# provides the terminal IDE, while Zed provides the native graphical editor.
 brew_install "micro" "micro (non-modal terminal editor — \$EDITOR for git; on-screen key menu)"
+cargo_install "croft-software" croft \
+    "Croft (VS Code-style terminal IDE)" --locked
 brew_cask_install "zed" "Zed (fast native code editor)"
 
 brew_cask_install "kitty" "Kitty (fast GPU-accelerated terminal)"
@@ -4210,6 +4297,7 @@ unset LLAMA_CPP_MODEL_NAME LLAMA_CPP_MODEL LLAMA_CPP_MODEL_SIZE LLAMA_CPP_MODEL_
 # LibreOffice is the headless office suite for local document validation and conversion.
 brew_cask_install "libreoffice" "LibreOffice (headless document validation and conversion)"
 brew_cask_install "obsidian" "Obsidian (local Markdown knowledge base)"
+brew_cask_install "thunderbird" "Thunderbird (email, calendar, contacts, and RSS)"
 # The cask ships only the app. Link `soffice` into the managed user binary directory.
 if [[ "$DRY_RUN" != "true" ]]; then
     _soffice="/Applications/LibreOffice.app/Contents/MacOS/soffice"
@@ -5415,6 +5503,205 @@ fi
 unset ZED_CONFIG_DIR ZED_CONFIG ZED_THEME ZED_MERGE_FILE ZED_JSONC_TMP
 unset ZED_THEME_JSON ZED_THEME_STYLE ZED_DEFAULTS ZED_SETTINGS_FILTER
 
+# ---- Emeraldian Obsidian vault TUI ----
+# Emeraldian uses the macOS Application Support directory. Its custom themes sit
+# beside config.toml. The starter config stays user-owned after creation because
+# Emeraldian writes settings from the TUI.
+EMERALDIAN_CONFIG_DIR="$HOME/Library/Application Support/emeraldian"
+EMERALDIAN_CONFIG="$EMERALDIAN_CONFIG_DIR/config.toml"
+EMERALDIAN_THEME="$EMERALDIAN_CONFIG_DIR/themes/dracula-sakura.toml"
+
+write_generated "$EMERALDIAN_THEME" <<'EMERALDIAN_THEME_CONF'
+name = "dracula-sakura"
+extends = "dracula"
+dark = true
+
+bg_primary = "#282a36"
+bg_primary_alt = "#2f3144"
+bg_secondary = "#232530"
+bg_secondary_alt = "#1f202b"
+bg_hover = "#323448"
+bg_active = "#4b4963"
+bg_selection = "#4b4963"
+border = "#4b4963"
+border_focus = "#ff9fe3"
+text_normal = "#f8f8f2"
+text_muted = "#c6bce5"
+text_faint = "#8a88c7"
+text_accent = "#ff9fe3"
+text_on_accent = "#282a36"
+text_error = "#ff7aa8"
+text_warning = "#ffcf93"
+text_success = "#8af7cf"
+text_info = "#9be7ff"
+accent = "#ff9fe3"
+accent_hover = "#ffc2ec"
+h1 = "#ffc2ec"
+h2 = "#ff9fe3"
+h3 = "#d4b2ff"
+h4 = "#9be7ff"
+h5 = "#8af7cf"
+h6 = "#fff0a8"
+link = "#9be7ff"
+link_unresolved = "#ff7aa8"
+tag_fg = "#ffc2ec"
+tag_bg = "#323448"
+code_fg = "#f8f8f2"
+code_bg = "#232530"
+syn_keyword = "#ff9fe3"
+syn_string = "#fff0a8"
+syn_comment = "#8a88c7"
+syn_number = "#ffcf93"
+syn_function = "#8af7cf"
+syn_type = "#9be7ff"
+graph_bg = "#282a36"
+graph_node = "#d4b2ff"
+graph_node_focused = "#ff9fe3"
+graph_node_neighbor = "#9be7ff"
+graph_node_unresolved = "#8a88c7"
+graph_node_tag = "#8af7cf"
+graph_edge = "#c6bce5"
+graph_edge_active = "#ff9fe3"
+cursor = "#ffc2ec"
+cursor_line_bg = "#2f3144"
+EMERALDIAN_THEME_CONF
+
+if write_seed_once "$EMERALDIAN_CONFIG" \
+    "edit in Emeraldian with :mkconfig or the command palette" \
+    <<'EMERALDIAN_CONFIG_CONF'
+theme = "dracula-sakura"
+
+[ui]
+show_hints = true
+show_hidden = false
+line_numbers = true
+reading_mode = true
+sort_order = "modified"
+
+[editor]
+tab_width = 4
+expand_tabs = true
+wrap = true
+vim = false
+auto_save = true
+daily_folder = "Daily"
+daily_format = "%Y-%m-%d"
+
+[images]
+enabled = true
+max_height_percent = 66
+protocol = "auto"
+
+[agent]
+provider = "offline"
+allow_writes = false
+include_active_note = false
+EMERALDIAN_CONFIG_CONF
+then
+    configured "Emeraldian starter config and Dracula-Sakura theme configured"
+elif set_toml_top_level_string "$EMERALDIAN_CONFIG" theme "dracula-sakura"; then
+    configured "Emeraldian existing config selected the Dracula-Sakura theme"
+else
+    _emeraldian_theme_status=$?
+    if [[ "$_emeraldian_theme_status" -eq 2 ]]; then
+        warn "Emeraldian config exists, but taplo is missing. The theme selection did not change."
+    else
+        warn "Could not update the Emeraldian theme setting. The script left $EMERALDIAN_CONFIG unchanged."
+    fi
+    unset _emeraldian_theme_status
+fi
+unset EMERALDIAN_CONFIG_DIR EMERALDIAN_CONFIG EMERALDIAN_THEME
+
+# ---- Linecast terminal almanac ----
+# Linecast derives its colors from the terminal palette. Kitty already supplies
+# Dracula-Sakura, so keep theme discovery on auto and seed only the installed
+# Nerd Font icon set. The JSON merge preserves every saved personal setting.
+LINECAST_CONFIG="$HOME/.config/linecast/config.json"
+if merge_json_defaults "$LINECAST_CONFIG" <<'LINECAST_CONFIG_CONF'
+{
+  "icons": "nerd"
+}
+LINECAST_CONFIG_CONF
+then
+    configured "Linecast configured (terminal Dracula-Sakura palette, Nerd Font icons)"
+else
+    _linecast_merge_status=$?
+    if [[ "$_linecast_merge_status" -eq 2 ]]; then
+        warn "Linecast settings exist, but jq is missing. New defaults did not merge."
+    else
+        warn "Could not merge Linecast settings. The script left $LINECAST_CONFIG unchanged."
+    fi
+    unset _linecast_merge_status
+fi
+unset LINECAST_CONFIG
+
+# ---- Croft terminal IDE ----
+# Croft loads user themes from extension manifests and deep-merges its JSON
+# preference layers. The config merge preserves unrelated user settings.
+CROFT_CONFIG_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/croft"
+CROFT_CONFIG="$CROFT_CONFIG_DIR/config.json"
+CROFT_THEME="$CROFT_CONFIG_DIR/extensions/dracula-sakura/extension.toml"
+
+write_generated "$CROFT_THEME" <<'CROFT_THEME_CONF'
+id = "vixygrey-dracula-sakura"
+name = "Dracula-Sakura"
+description = "Dark plum surfaces with rose, lilac, cyan, and mint accents."
+builtin = false
+api_version = 1
+
+[[themes]]
+id = "dracula-sakura"
+label = "Dracula-Sakura"
+background = "#282a36"
+accent = "#ff9fe3"
+selection = "#4b4963"
+search = "#232530"
+button = "#ff9fe3"
+gradient = false
+osk_key = "#323448"
+osk_special = "#232530"
+osk_armed = "#d4b2ff"
+tab_strip = "#2f3144"
+tab_inactive = "#323448"
+tab_active = "#4b4963"
+tab_hover = "#5d5878"
+tab_close_pill = "#ff9fe3"
+syn_comment = "#8a88c7"
+syn_keyword = "#ff9fe3"
+syn_string = "#fff0a8"
+syn_constant = "#d4b2ff"
+syn_function = "#8af7cf"
+syn_type = "#9be7ff"
+syn_tag = "#ff7aa8"
+syn_fg = "#f8f8f2"
+ansi = ["#232530","#ff7aa8","#8af7cf","#fff0a8","#8bb8ff","#ff9fe3","#9be7ff","#f8f8f2","#6f6990","#ff9abb","#a8ffe3","#fff5bf","#a8c8ff","#ffc2ec","#b9eeff","#ffffff"]
+CROFT_THEME_CONF
+
+if merge_json_defaults "$CROFT_CONFIG" '.theme = "dracula-sakura"' <<'CROFT_CONFIG_CONF'
+{
+  "theme": "dracula-sakura",
+  "format_on_save": true,
+  "render_whitespace": "selection",
+  "copy_on_select": true,
+  "terminal_scrollback": 20000,
+  "problems_scope": "whole_project",
+  "problems_project_scope": "auto",
+  "diff_ignore_whitespace": "off"
+}
+CROFT_CONFIG_CONF
+then
+    configured "Croft defaults and Dracula-Sakura theme configured"
+else
+    _croft_merge_status=$?
+    if [[ "$_croft_merge_status" -eq 2 ]]; then
+        warn "Croft settings exist, but jq is missing. New defaults did not merge."
+    else
+        warn "Could not merge Croft settings. The script left $CROFT_CONFIG unchanged."
+    fi
+    unset _croft_merge_status
+fi
+unset CROFT_CONFIG_DIR CROFT_CONFIG CROFT_THEME
+
 # ---- Obsidian per-vault theme ----
 # Obsidian stores custom themes inside each vault. Read its registry instead of
 # assuming a notes path, then refresh only theme directories this script owns.
@@ -5620,8 +5907,117 @@ done
 unset OBSIDIAN_REGISTRY OBSIDIAN_THEME_NAME OBSIDIAN_THEME_MANIFEST OBSIDIAN_THEME_CSS
 unset OBSIDIAN_VAULTS OBSIDIAN_VAULT OBSIDIAN_THEME_DIR OBSIDIAN_THEME_MARKER
 
-# Croft was retired in #542. Its merged user config can contain personal edits,
-# so only the explicit --cleanup path moves ~/.config/croft to the Trash.
+# ---- Thunderbird profiles ----
+# Thunderbird keeps account, identity, server, credential, and message data in each
+# profile. This block only seeds low-risk preferences and a user-interface stylesheet.
+# Existing user.js and userChrome.css files stay untouched.
+THUNDERBIRD_ROOT="$HOME/Library/Thunderbird"
+THUNDERBIRD_PROFILES_INI="$THUNDERBIRD_ROOT/profiles.ini"
+THUNDERBIRD_PROFILES=()
+mapfile -t THUNDERBIRD_PROFILES < <(
+    thunderbird_profile_paths "$THUNDERBIRD_PROFILES_INI" "$THUNDERBIRD_ROOT"
+)
+
+if [[ "${#THUNDERBIRD_PROFILES[@]}" -eq 0 ]]; then
+    info "No Thunderbird profiles found. Open Thunderbird once, then run --only configs."
+fi
+
+for THUNDERBIRD_PROFILE in "${THUNDERBIRD_PROFILES[@]}"; do
+    if [[ ! -d "$THUNDERBIRD_PROFILE" ]]; then
+        warn "Thunderbird profile path does not exist: $THUNDERBIRD_PROFILE"
+        continue
+    fi
+
+    THUNDERBIRD_USER_JS="$THUNDERBIRD_PROFILE/user.js"
+    THUNDERBIRD_USER_CHROME="$THUNDERBIRD_PROFILE/chrome/userChrome.css"
+    THUNDERBIRD_THEME="$THUNDERBIRD_PROFILE/chrome/dracula-sakura.css"
+
+    write_generated "$THUNDERBIRD_THEME" <<'THUNDERBIRD_THEME_CONF'
+/*
+ * Dracula-Sakura for Thunderbird.
+ * Thunderbird's built-in dark theme supplies the stable base. These variables
+ * add the house plum surfaces with rose, lilac, cyan, and mint accents.
+ */
+:root {
+  color-scheme: dark !important;
+
+  --lwt-accent-color: #282a36 !important;
+  --lwt-text-color: #f8f8f2 !important;
+  --toolbar-bgcolor: #2f3144 !important;
+  --toolbar-color: #f8f8f2 !important;
+  --toolbarbutton-icon-fill: #ddd2f7 !important;
+  --toolbarbutton-hover-background: #3b3d52 !important;
+  --toolbarbutton-active-background: #4b4963 !important;
+  --toolbar-field-background-color: #323448 !important;
+  --toolbar-field-color: #f8f8f2 !important;
+  --toolbar-field-border-color: #4b4963 !important;
+
+  --button-primary-background-color: #ff9fe3 !important;
+  --button-primary-hover-background-color: #ffc2ec !important;
+  --button-primary-active-background-color: #d4b2ff !important;
+  --button-primary-color: #282a36 !important;
+  --in-content-primary-button-background: #ff9fe3 !important;
+  --in-content-primary-button-background-hover: #ffc2ec !important;
+  --in-content-primary-button-text-color: #282a36 !important;
+
+  --selected-item-color: #4b4963 !important;
+  --selected-item-text-color: #f8f8f2 !important;
+  --sidebar-background-color: #282a36 !important;
+  --sidebar-text-color: #ddd2f7 !important;
+  --sidebar-border-color: #4b4963 !important;
+  --tabs-toolbar-background-color: #282a36 !important;
+  --tab-selected-bgcolor: #323448 !important;
+  --tab-selected-textcolor: #ffc2ec !important;
+  --focus-outline-color: #d4b2ff !important;
+  --link-color: #9be7ff !important;
+}
+
+#messengerWindow,
+#mail-toolbox,
+#navigation-toolbox {
+  background-color: #282a36 !important;
+  color: #f8f8f2 !important;
+}
+
+button[default="true"],
+.primary {
+  --button-background-color: #ff9fe3 !important;
+  --button-text-color: #282a36 !important;
+}
+
+:focus-visible {
+  outline-color: #d4b2ff !important;
+}
+THUNDERBIRD_THEME_CONF
+
+    if write_seed_once "$THUNDERBIRD_USER_CHROME" \
+        "existing userChrome.css remains user-owned; import dracula-sakura.css manually" \
+        <<'THUNDERBIRD_USER_CHROME_CONF'
+@import url("dracula-sakura.css");
+THUNDERBIRD_USER_CHROME_CONF
+    then
+        configured "Thunderbird Dracula-Sakura stylesheet enabled in $THUNDERBIRD_PROFILE"
+    fi
+
+    if write_seed_once "$THUNDERBIRD_USER_JS" \
+        "existing user.js preferences remain user-owned" \
+        <<'THUNDERBIRD_USER_PREFS_CONF'
+// Thunderbird defaults from vixygrey-dev-setup. Edit or remove this file to override them.
+user_pref("extensions.activeThemeID", "thunderbird-compact-dark@mozilla.org");
+user_pref("toolkit.legacyUserProfileCustomizations.stylesheets", true);
+user_pref("mailnews.start_page.enabled", false);
+user_pref("mailnews.mark_message_read.delay", true);
+user_pref("mailnews.mark_message_read.delay.interval", 2);
+user_pref("mail.SpellCheckBeforeSend", true);
+THUNDERBIRD_USER_PREFS_CONF
+    then
+        configured "Thunderbird dark theme and mail defaults enabled in $THUNDERBIRD_PROFILE"
+    fi
+done
+
+unset THUNDERBIRD_ROOT THUNDERBIRD_PROFILES_INI THUNDERBIRD_PROFILES
+unset THUNDERBIRD_PROFILE THUNDERBIRD_USER_JS THUNDERBIRD_USER_CHROME THUNDERBIRD_THEME
+
 
 
 # ---- Fonts (required for icons in eza, starship, lazygit, etc.) ----
@@ -12076,7 +12472,11 @@ echo "  [~/.jqp.yaml]           jq playground theme overrides"
 echo "  [~/.omp/agent]          OMP settings, LSP policy, model routing, theme, and path guard"
 echo "  [~/.agents/skills]      Curated skills Oh My Pi reads natively"
 echo "  [~/.config/zed]         Zed house fonts, Dracula-Sakura theme, and OMP ACP agent"
+echo "  [~/.config/croft]       Croft defaults and native Dracula-Sakura theme"
+echo "  [Application Support/emeraldian]  User-owned defaults and native Dracula-Sakura theme"
+echo "  [~/.config/linecast]    Nerd Font icons with the terminal Dracula-Sakura palette"
 echo "  [Obsidian vaults]       Per-vault Dracula-Sakura theme and appearance defaults"
+echo "  [Thunderbird profiles]  Mail defaults and Dracula-Sakura interface styling"
 echo "  [~/.herald]             Herald email/calendar config and Dracula-Sakura theme"
 echo "  [~/.config/eilmeldung] Dracula-Sakura RSS reader theme"
 echo "  [~/.config/concord]    Keychain credentials and Dracula-Sakura theme"
@@ -12160,6 +12560,8 @@ Complete the manual permissions, credentials, and account steps after the script
 - [ ] Run `infracost auth login` before you use infrastructure cost estimates.
 - [ ] Run `ngrok config add-authtoken <TOKEN>` before you create public tunnels.
 - [ ] Run `herald --demo`, then run `herald` to configure email and calendar accounts.
+- [ ] Open Thunderbird once to create a profile and configure an account.
+- [ ] Run `setup-dev-tools-mac.sh --only configs` after Thunderbird creates another profile.
 - [ ] Run `mullvad account login <ACCOUNT_NUMBER>`, then open `mullvad-tui`.
 - [ ] Open Zed's Agent Panel and select **Oh My Pi** to confirm the `omp acp` connection.
 - [ ] Sign in to Bitwarden.
@@ -12167,6 +12569,9 @@ Complete the manual permissions, credentials, and account steps after the script
 - [ ] Run `concord`.
 - [ ] Complete the Discord login.
 - [ ] Run `eilmeldung`.
+- [ ] Run `emeraldian` to open the most recent Obsidian vault.
+- [ ] Run `watchtower` to choose a location and optional model provider.
+- [ ] Run `linecast doctor`, then open a view such as `linecast weather`.
 - [ ] Select an RSS provider.
 - [ ] Open the Firefox theme page at `https://draculatheme.com/firefox`.
 - [ ] Install the theme in the Firefox profile.
@@ -12244,6 +12649,9 @@ Every binding is on screen: the **key menu** sits along the bottom, and there ar
 | `eilmeldung` | RSS reader with vim-style navigation |
 | `concord` | Discord client with Keychain token storage |
 | `cfait` | Local-first task manager |
+| `emeraldian` | Obsidian vault TUI with backlinks, graph, and an optional assistant |
+| `watchtower` | Global news, markets, weather, and intelligence dashboard |
+| `linecast weather` | Terminal weather, tides, astronomy, radar, and maps |
 | `chamber ui` | Local encrypted secrets vault |
 | `spotatui` | Multi-source terminal music player |
 
@@ -12277,10 +12685,15 @@ The setup installs a Dracula-Sakura wallpaper at `~/Media/photos/dracula-sakura.
 - **harlequin** and **usql** provide database clients.
 - **d2** provides diagrams as code.
 - **LibreOffice** and **poppler** support visual checks of Office documents.
+- **Croft** provides a terminal IDE with LSP, debugging, source control, and PDF previews.
+- **Thunderbird** provides email, calendar, contacts, and RSS.
 - **Herald** provides terminal email and calendar access.
 - **eilmeldung** provides RSS reading with a managed Dracula-Sakura palette.
 - **concord** provides Discord access with Keychain token storage.
 - **cfait** provides local-first tasks with optional CalDAV synchronization.
+- **Emeraldian** provides a themed Obsidian vault TUI with graph and backlink views.
+- **Watchtower** provides a global news, markets, and weather dashboard.
+- **Linecast** provides weather, tides, astronomy, radar, and maps with terminal-native colors.
 
 ## Data, media, and storage
 - **Yazi** provides file management, previews, and bulk tasks.
@@ -14290,6 +14703,41 @@ br
 br ~/Code
 ```
 
+### `emeraldian`
+Emeraldian provides a keyboard-first interface for existing Obsidian vaults.
+The seed starts in reading mode with safe image defaults and an offline, read-only assistant.
+The native custom theme uses the full Dracula-Sakura interface, Markdown, syntax, and graph palette.
+
+```bash
+emeraldian
+emeraldian ~/Notes
+```
+
+### `watchtower`
+Watchtower provides global news, markets, local weather, and optional model-generated briefs.
+Run the setup wizard to choose the required location and any model provider.
+Watchtower hardcodes its colors, so this release cannot apply the house theme through configuration.
+
+```bash
+watchtower
+```
+
+### `linecast`
+Linecast provides terminal weather, tides, astronomy, radar, and maps without an account or API key.
+It reads Kitty's Dracula-Sakura palette directly and uses the installed Nerd Font icon set.
+Location, units, language, clock, calendar, and sky culture remain automatic until you save a preference.
+
+```bash
+linecast doctor
+linecast weather
+linecast sunshine
+linecast moon
+linecast sky
+linecast tides
+linecast radar
+linecast maps
+```
+
 ### `eilmeldung`
 Eilmeldung provides a fast RSS reader with vim-style navigation.
 The managed config uses Dracula-Sakura colors and the macOS URL opener.
@@ -14331,6 +14779,26 @@ Its user-owned seed applies Dracula-Sakura colors and disables optional presence
 ```bash
 spotatui
 spotatui --help
+```
+
+### `croft`
+Croft provides a VS Code-style IDE in the terminal.
+The generated extension supplies the Dracula-Sakura interface, syntax, terminal, and tab palettes.
+The generated defaults enable format on save, selection whitespace, copy on select, and 20,000 terminal scrollback lines.
+
+```bash
+croft .
+croft --help
+```
+
+### Thunderbird
+Thunderbird provides email, calendar, contacts, and RSS in a native macOS application.
+Open Thunderbird once, then run the configuration category to seed its profile defaults.
+The profile stylesheet uses Thunderbird's unsupported `userChrome.css` interface.
+
+```bash
+open -a Thunderbird
+setup-dev-tools-mac.sh --only configs
 ```
 
 ### `herald`

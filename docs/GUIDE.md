@@ -227,18 +227,27 @@ br                         # browse files and keep directory changes
 eilmeldung                 # read RSS feeds in the terminal
 concord                    # open Discord in the terminal
 cfait                      # manage local or CalDAV tasks
+emeraldian                 # open the most recent Obsidian vault
+watchtower                 # configure the intelligence dashboard
+linecast weather           # open the terminal weather dashboard
 herald --demo              # preview Herald without an account
 herald                     # configure email and calendar accounts
 mullvad account login      # authenticate the bundled Mullvad CLI
 mullvad-tui                # control Mullvad from the terminal
+croft .                    # open the current project in Croft
+open -a Thunderbird        # create a profile and configure an account
 zed .                      # open the current project in Zed
 ```
 
 Zed lists **Oh My Pi** as an External Agent. It starts `omp acp` with the existing OMP configuration.
 
-Eilmeldung, concord, cfait, Herald, Broot, Zed, and Obsidian use Dracula-Sakura colors through supported custom themes.
+Eilmeldung, concord, cfait, Herald, Broot, Croft, Emeraldian, Zed, and Obsidian use native custom themes.
 
-Chamber and Mullvad do not expose theme configuration.
+Linecast reads the Dracula-Sakura terminal palette directly.
+
+Thunderbird uses its built-in dark base with a profile stylesheet. Thunderbird does not support this stylesheet interface.
+
+Chamber and Mullvad do not expose theme configuration. Watchtower also hardcodes its palette.
 
 ## Data & JSON
 
@@ -681,6 +690,46 @@ eilmeldung                   # select an RSS provider and open the reader
 
 Eilmeldung uses rounded borders, Nerd Font icons, and the managed Dracula-Sakura palette.
 
+### Emeraldian (Obsidian vault TUI)
+
+```bash
+emeraldian                   # open the most recent Obsidian vault
+emeraldian ~/Notes           # open a specific vault
+emeraldian --list-vaults     # list registered Obsidian vaults
+```
+
+The starter configuration uses reading mode, line numbers, safe image limits, and an offline read-only assistant.
+
+The native Dracula-Sakura theme covers the interface, Markdown, syntax highlighting, and graph views.
+
+### Watchtower (intelligence dashboard)
+
+```bash
+watchtower                   # configure a location and open the dashboard
+watchtower --version         # show the installed release
+```
+
+The first-run wizard collects a location and an optional model provider. The script does not guess personal values or store credentials.
+
+Watchtower hardcodes its colors and exposes no theme setting.
+
+### Linecast (terminal almanac)
+
+```bash
+linecast doctor --offline    # inspect paths, terminal features, and saved settings
+linecast weather             # weather and air quality
+linecast sunshine            # solar day and year views
+linecast moon                # lunar phase and calendar
+linecast sky                 # stars, planets, and constellations
+linecast tides               # tide predictions
+linecast radar               # radar and satellite imagery
+linecast maps                # streets, terrain, and globe views
+```
+
+Linecast reads the terminal palette, so Kitty supplies the Dracula-Sakura colors without a duplicate theme file.
+
+The seed selects Nerd Font icons. Location, units, language, clock, calendar, and sky culture remain automatic.
+
 ### w3m (terminal web browser)
 
 ```bash
@@ -845,6 +894,21 @@ The script configures Kitty with the Dracula-Sakura palette and JetBrains Mono N
 1. To change the font size, edit `~/.config/kitty/kitty.conf`.
 2. To add transparency, set `background_opacity 0.95`.
 3. To reload the configuration, press `Ctrl+Cmd+,`.
+
+### Croft
+
+The script installs Croft as the terminal IDE and selects a native Dracula-Sakura theme extension.
+The configuration enables format on save, selection whitespace, copy on select, and 20,000 terminal scrollback lines.
+Croft uses the existing `pdftoppm`, Node.js, npm, and language-server installations.
+
+Run `croft .` to open the current project.
+
+### Thunderbird
+
+Open Thunderbird once to create a profile. Then run `setup-dev-tools-mac.sh --only configs`.
+The script seeds preferences only when `user.js` does not exist.
+It also preserves an existing `userChrome.css` file.
+The stylesheet interface is unsupported by Thunderbird and can require updates after a Thunderbird interface change.
 
 ### Zed
 

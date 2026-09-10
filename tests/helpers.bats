@@ -901,3 +901,80 @@ EOF
     [[ "$output" == *"turbo"* ]]
     [[ "$output" != *"/bin/jq"* ]]
 }
+
+# ---------------------------------------------------------------------------
+# #567: Thunderbird profiles.ini can mix relative and absolute profile paths.
+# Configuration must reach each registered profile without guessing a directory.
+# ---------------------------------------------------------------------------
+
+@test "thunderbird_profile_paths: resolves relative and absolute profiles (#567)" {
+    run run_with_helpers '
+        registry="'"$TEST_TMP"'/Thunderbird/profiles.ini"
+        mkdir -p "$(dirname "$registry")"
+        cat > "$registry" <<EOF
+[Profile0]
+Name=default-release
+IsRelative=1
+Path=Profiles/a1b2.default-release
+
+[InstallABC]
+Default=Profiles/a1b2.default-release
+Locked=1
+
+[Profile1]
+Name=Archive
+IsRelative=0
+Path=/Volumes/Mail Archive/Thunderbird
+EOF
+        thunderbird_profile_paths "$registry" "$(dirname "$registry")"'
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"$TEST_TMP/Thunderbird/Profiles/a1b2.default-release"* ]]
+    [[ "$output" == *"/Volumes/Mail Archive/Thunderbird"* ]]
+    [ "${lines[0]}" = "$TEST_TMP/Thunderbird/Profiles/a1b2.default-release" ]
+    [ "${lines[1]}" = "/Volumes/Mail Archive/Thunderbird" ]
+}
+
+@test "thunderbird_profile_paths: missing registry is a silent no-op (#567)" {
+    run run_with_helpers '
+        thunderbird_profile_paths "'"$TEST_TMP"'/missing.ini" "'"$TEST_TMP"'/Thunderbird"
+        echo "rc=$?"'
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"rc=0"* ]]
+}
+
+# ---------------------------------------------------------------------------
+# #569: Emeraldian rewrites its TOML settings. Theme selection must update one
+# top-level key without replacing comments or similarly named nested settings.
+# ---------------------------------------------------------------------------
+
+@test "set_toml_top_level_string: replaces only the top-level key (#569)" {
+    run run_with_helpers '
+        cat > "$HOME/config.toml" <<EOF
+# personal comment
+theme = "obsidian-dark"
+
+[preview]
+theme = "terminal"
+EOF
+        set_toml_top_level_string "$HOME/config.toml" theme dracula-sakura
+        cat "$HOME/config.toml"'
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"# personal comment"* ]]
+    [[ "$output" == *'theme = "dracula-sakura"'* ]]
+    [[ "$output" == *'theme = "terminal"'* ]]
+    [[ "$output" != *'theme = "obsidian-dark"'* ]]
+}
+
+@test "set_toml_top_level_string: inserts before the first table (#569)" {
+    run run_with_helpers '
+        cat > "$HOME/config.toml" <<EOF
+# personal comment
+[ui]
+show_hints = false
+EOF
+        set_toml_top_level_string "$HOME/config.toml" theme dracula-sakura
+        cat "$HOME/config.toml"'
+    [ "$status" -eq 0 ]
+    [[ "$output" == *$'# personal comment\ntheme = "dracula-sakura"\n[ui]'* ]]
+    [[ "$output" == *"show_hints = false"* ]]
+}
