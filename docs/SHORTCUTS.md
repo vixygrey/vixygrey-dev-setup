@@ -574,9 +574,9 @@ section survived for years.
 | `btop` | in-app | 1,593-line README, no keymap; `--help` has none |
 | `atuin` | in-app | docs keybinds page 404s; `--help` "key" hits are about encryption keys |
 | `fx` | in-app | README defers to fx.wtf, which publishes no keybindings page |
-| `gh-dash`, `atac` | in-app | READMEs and `man atac` carry no keymap |
+| `gh-dash`, `posting`, `caligula`, `nerdlog` | in-app | upstream help and manuals do not publish a stable keymap table |
 | `viddy`, `mprocs` | in-app | no man page; upstream repo renamed, docs not reachable |
-| `w3m`, `bandwhich` | in-app | man pages carry no keybindings section |
+| `cha`, `bandwhich` | in-app | man pages carry no complete keybindings section |
 
 
 ---

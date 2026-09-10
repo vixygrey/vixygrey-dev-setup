@@ -360,17 +360,17 @@ declare -A CATEGORY_DESC=(
     [code-quality]="shellcheck, shfmt, actionlint, act, hadolint, ruff, prettier"
     [perf-testing]="hyperfine, oha"
     [dev-servers]="ngrok, miniserve"
-    [terminal-productivity]="Emeraldian, Watchtower, Linecast, leaf, topgrade, fastfetch, mprocs, Broot, qalc, lazyssh/rsync/npm, cheznav, eilmeldung, concord, cfait"
+    [terminal-productivity]="Caligula, Nerdlog, Emeraldian, Watchtower, leaf, topgrade, fastfetch, mprocs, Broot, qalc, lazyssh/rsync/npm, cheznav, eilmeldung, concord, cfait"
     [k8s-github]="stern, gh-dash"
     [database]="duckdb, harlequin, usql, dbmate"
     [containers]="Docker Desktop, lazydocker, dive, kubectl, k9s"
-    [api]="ATAC"
+    [api]="Posting"
     [networking]="bandwhich, nmap, trippy"
     [dx]="fzf, starship, atuin, micro, Zed, Kitty, zellij, omp, language servers"
     [docs]="d2"
     [mac-system]="LuLu, Mullvad VPN, mullvad CLI, mullvad-tui"
     [mac-productivity]="Thunderbird, Obsidian, Herald, LibreOffice, Vulkan llama.cpp"
-    [mac-browsers]="Firefox, Carbonyl, w3m, monolith"
+    [mac-browsers]="Firefox, Carbonyl, Chawan, monolith"
     [mac-media]="mpv, oxipng, jpegoptim, cliamp, spotatui"
     [mac-cloud]="rclone, borg, borgmatic"
     [dracula]="Dracula-Sakura theme pass for terminal, editor, and TUI surfaces"
@@ -393,19 +393,20 @@ declare -A CATEGORY_DESC=(
 declare -A CONFIG_LIVES_IN_CONFIGS=(
     [core]="mise, direnv, ~/.npmrc, pip, gemrc"
     [git]="the global pre-commit hook, lazygit, gh, the commit template, global gitignore"
-    [aws]="the AWS CLI config (\$HOME/.aws/config)"
+    [aws]="the AWS CLI config (\$HOME/.aws/config), Claws"
     [iac]="tflint"
     [code-quality]="shellcheck, act, prettier, editorconfig"
     [replacements]="btop, ripgreprc, fdignore, aria2, Yazi"
     [data-processing]="yt-dlp, jqp"
-    [terminal-productivity]="Emeraldian, Linecast, leaf, topgrade, fastfetch, mprocs, Broot, eilmeldung, concord, cfait"
+    [api]="Posting"
+    [terminal-productivity]="Emeraldian, leaf, topgrade, fastfetch, mprocs, Broot, eilmeldung, concord, cfait"
     [k8s-github]="stern, gh-dash"
     [database]="harlequin"
     [containers]="Docker daemon, lazydocker, k9s (config + Dracula skin)"
     [networking]="trippy"
     [dx]="atuin, zellij, Kitty, Zed, Croft, omp (~/.omp/agent + ~/.agents/skills) — and starship, which is in the \`dracula\` category"
     [mac-media]="mpv, spotatui"
-    [mac-browsers]="w3m"
+    [mac-browsers]="Chawan"
     [mac-productivity]="Thunderbird profiles, Obsidian vault themes, Herald, llama.cpp service"
 )
 
@@ -2044,7 +2045,7 @@ if [[ "$CLEANUP" == "true" ]]; then
         "formula:blueutil:blueutil:removed"
         "cask:cursor:Cursor (AI editor):micro + omp:Cursor"
         "cask:kiro:Kiro:micro + omp:Kiro"
-        "cask:bruno:Bruno:ATAC:Bruno"
+        "cask:bruno:Bruno:Posting:Bruno"
         "cask:dbeaver-community:DBeaver Community:harlequin:DBeaver"
         "cask:cyberduck:Cyberduck:rclone:Cyberduck"
         "cask:google-drive:Google Drive:rclone:Google Drive"
@@ -2136,6 +2137,7 @@ if [[ "$CLEANUP" == "true" ]]; then
         "cask:font-fira-code-nerd-font:Fira Code Nerd Font:JetBrains Mono Nerd Font"
         "cask:font-hack-nerd-font:Hack Nerd Font:JetBrains Mono Nerd Font"
         "uv:llm:llm:omp"
+        "uv:linecast:Linecast:removed"
         "formula:pgcli:pgcli:harlequin + usql"
         "formula:mycli:mycli:harlequin + usql"
         "formula:lazysql:lazysql:harlequin"
@@ -2154,6 +2156,10 @@ if [[ "$CLEANUP" == "true" ]]; then
         "formula:kondo:kondo:removed"
         "formula:miller:Miller:csvkit + DuckDB"
         "formula:grpcurl:grpcurl:removed"
+        # Replaced by the themed terminal browser in #572.
+        "formula:w3m:w3m:Chawan"
+        # Replaced by Posting in #572.
+        "formula:atac:ATAC:Posting"
         # The direct ffmpeg install was retired in #555, but mpv and cliamp still
         # require the formula. Do not make cleanup break those retained tools (#563).
     )
@@ -2703,6 +2709,7 @@ if [[ "$VERIFY" == "true" ]]; then
         "validate|concord|$HOME/.config/concord/config.toml|concord --check-config"
         "unchecked|spotatui|$HOME/.config/spotatui/config.yml|"
         "unchecked|cfait|$HOME/.config/cfait/config.toml|"
+        "path|posting|$HOME/.config/posting/config.yaml|posting locate config 2>/dev/null | sed -n '\$p'"
         "validate|ngrok|$HOME/Library/Application Support/ngrok/ngrok.yml|ngrok config check"
         "template|borgmatic|$HOME/.config/borgmatic/config.yaml|borgmatic config validate"
         "path|k9s|$HOME/.config/k9s/config.yaml|k9s info 2>/dev/null | sed 's/\x1b\[[0-9;]*m//g' | sed -n 's/^Config: *//p'"
@@ -2724,8 +2731,6 @@ if [[ "$VERIFY" == "true" ]]; then
         "unchecked|croft|$HOME/.config/croft/config.json|"
         # Emeraldian exposes no headless config validator or path command.
         "unchecked|emeraldian|$HOME/Library/Application Support/emeraldian/config.toml|"
-        # Linecast reports the effective settings path without network probes.
-        "path|linecast|$HOME/.config/linecast/config.json|env -u NO_COLOR linecast doctor --offline --json 2>/dev/null | jq -r '.paths.settings_file'"
         # The remaining path checks ask each tool where it reads, so every row stays
         # correct if the tool moves. This follows the "ask the tool; do not hardcode" rule
         # in AGENTS. The captured path is tilde-normalised on both sides before
@@ -3675,9 +3680,6 @@ brew_install "iamrohithrnair/tap/emeraldian" \
 trust_tap lajosdeme/watchtower
 brew_install "lajosdeme/watchtower/watchtower" \
     "Watchtower (global news, markets, weather, and intelligence dashboard)"
-uv_tool_install "linecast" linecast \
-    "Linecast (terminal weather, tides, sun, moon, sky, radar, and maps)" \
-    "linecast installed (terminal-aware weather and almanac suite)"
 # Upstream publishes checksum-addressed macOS binaries. Use those instead of its
 # Homebrew formula, whose build-only dependencies install a second Rust toolchain.
 EILMELDUNG_VERSION="1.8.1"
@@ -3797,6 +3799,10 @@ unset _eilmeldung_formula _eilmeldung_had_formula _eilmeldung_resolved
 brew_install "concord" "concord (Discord client for the terminal)"
 cargo_install "cfait" cfait \
     "cfait (offline-first task manager TUI with optional CalDAV sync)" --locked
+cargo_install "caligula" caligula \
+    "Caligula (disk imaging TUI with verification and compressed-image support)" --locked
+go_install "github.com/dimonomid/nerdlog/cmd/nerdlog@latest" nerdlog \
+    "Nerdlog (multi-host log viewer with live filtering, histograms, and SSH transport)"
 
 # -- Additional TUI/CLI tools (homebrew-core) --
 brew_install "lazyssh" "lazyssh (SSH connection manager TUI)"
@@ -3884,7 +3890,9 @@ fi  # containers
 if should_run "api"; then
 banner "API Development"
 
-brew_install "atac" "ATAC (terminal API client — TUI + scriptable CLI, Postman import, git-friendly collections)"
+uv_tool_install "posting" posting \
+    "Posting (terminal HTTP client with git-friendly YAML collections)" \
+    "Posting installed (HTTP client TUI)" --python 3.13
 
 fi  # api
 
@@ -4322,7 +4330,7 @@ brew_cask_install "google-chrome" "Google Chrome"
 brew_cask_install "firefox" "Firefox"
 
 npm_global_install "carbonyl" "Carbonyl (Chromium-based browser for the terminal)"
-brew_install "w3m" "w3m (text-based terminal browser and pager)"
+brew_install "chawan" "Chawan (terminal web browser and pager with CSS, JavaScript, and Kitty images)"
 brew_install "monolith" "monolith (save complete web pages as a single HTML file)"
 
 fi  # mac-browsers
@@ -5612,28 +5620,10 @@ else
 fi
 unset EMERALDIAN_CONFIG_DIR EMERALDIAN_CONFIG EMERALDIAN_THEME
 
-# ---- Linecast terminal almanac ----
-# Linecast derives its colors from the terminal palette. Kitty already supplies
-# Dracula-Sakura, so keep theme discovery on auto and seed only the installed
-# Nerd Font icon set. The JSON merge preserves every saved personal setting.
-LINECAST_CONFIG="$HOME/.config/linecast/config.json"
-if merge_json_defaults "$LINECAST_CONFIG" <<'LINECAST_CONFIG_CONF'
-{
-  "icons": "nerd"
-}
-LINECAST_CONFIG_CONF
-then
-    configured "Linecast configured (terminal Dracula-Sakura palette, Nerd Font icons)"
-else
-    _linecast_merge_status=$?
-    if [[ "$_linecast_merge_status" -eq 2 ]]; then
-        warn "Linecast settings exist, but jq is missing. New defaults did not merge."
-    else
-        warn "Could not merge Linecast settings. The script left $LINECAST_CONFIG unchanged."
-    fi
-    unset _linecast_merge_status
-fi
-unset LINECAST_CONFIG
+# Linecast was removed from the setup. Its JSON was merged into a user-owned
+# file, so the managed-marker ownership check deliberately retains that file.
+remove_superseded_managed "$HOME/.config/linecast/config.json" \
+    "Linecast was removed from the setup" "(#572)"
 
 # ---- Croft terminal IDE ----
 # Croft loads user themes from extension manifests and deep-merges its JSON
@@ -6581,47 +6571,156 @@ MPV_CONF
 # cliamp self-configures on first run (point it at ~/Media/music from its UI /
 # `cliamp ~/Media/music`); no hand-written config here.
 
-# ---- w3m config ----
-W3M_CONFIG_DIR="$HOME/.w3m"
-W3M_CONFIG="$W3M_CONFIG_DIR/config"
-    info "Creating w3m config (UTF-8, cookies off, colors)..."
-    write_managed "$W3M_CONFIG" "#" <<'W3M_CONF'
-# w3m configuration — sensible privacy + display defaults
-display_charset UTF-8
-document_charset UTF-8
-system_charset UTF-8
-auto_detect 2
+# ---- Chawan terminal browser ----
+# The generated zshrc sets XDG_CONFIG_HOME to ~/.config, which Chawan checks
+# before ~/.chawan. Keep privacy-sensitive browser features opt-in.
+write_managed "$HOME/.config/chawan/config.toml" "#" <<'CHAWAN_CONF'
+[buffer]
+styling = true
+images = true
+scripting = false
+referer-from = false
+cookie = false
+meta-refresh = "ask"
+history = true
+mark-links = false
 
-# Rendering
-display_image 0
-use_mouse 1
-tabstop 8
-show_lnum 0
+[search]
+wrap = true
+ignore-case = "auto"
 
-# Colors
-color 1
-basic_color terminal
-anchor_color blue
-image_color green
-form_color red
-mark_color cyan
+[network]
+max-redirect = 10
+max-net-connections = 12
+prepend-scheme = "https://"
+allow-http-from-file = false
 
-# Privacy — disable cookies by default
-use_cookie 0
-accept_cookie 0
-show_cookie 0
+[input]
+vi-numeric-prefix = true
+use-mouse = "auto"
+osc52-copy = "auto"
+osc52-primary = "auto"
+bracketed-paste = "auto"
+wheel-scroll = 5
 
-# Don't follow redirects silently
-follow_redirection 5
+[status]
+show-cursor-position = true
+show-hover-link = true
+format-mode = ["reverse"]
 
-# Proxy — inherit from env (http_proxy, https_proxy)
-use_proxy 1
+[display]
+color-mode = "true-color"
+image-mode = "kitty"
+alt-screen = "auto"
+highlight-color = "#ff9fe3"
+highlight-marks = true
+minimum-contrast = 100
+set-title = true
+default-background-color = "#282a36"
+default-foreground-color = "#f8f8f2"
+CHAWAN_CONF
+configured "Chawan configured (private defaults, Kitty images, Dracula-Sakura display)"
 
-# Bookmarks
-bookmark bookmark.html
-keep_cache_in_memory 0
-W3M_CONF
-    configured "w3m configured (UTF-8, cookies off)"
+# ---- Posting terminal HTTP client ----
+# Posting keeps its user themes under XDG_DATA_HOME, not beside config.yaml.
+# Refresh the theme asset, but seed the user-editable application config once.
+POSTING_CONFIG="$HOME/.config/posting/config.yaml"
+POSTING_THEME="$HOME/.local/share/posting/themes/dracula-sakura.yaml"
+write_generated "$POSTING_THEME" <<'POSTING_THEME_CONF'
+name: dracula-sakura
+author: vixygrey-dev-setup
+description: Dark plum surfaces with sakura pink, lilac, cyan, and mint accents.
+primary: "#ff9fe3"
+secondary: "#d4b2ff"
+background: "#282a36"
+surface: "#2f3144"
+panel: "#3a3b52"
+warning: "#ffcf93"
+error: "#ff7aa8"
+success: "#8af7cf"
+accent: "#9be7ff"
+dark: true
+
+text_area:
+  gutter: "#8a88c7 on #2f3144"
+  cursor: "#282a36 on #ff9fe3"
+  cursor_line: "#f8f8f2 on #2f3144"
+  cursor_line_gutter: "#d4b2ff on #2f3144"
+  matched_bracket: "bold #fff0a8"
+  selection: "#f8f8f2 on #4b4963"
+
+syntax:
+  json_key: "#9be7ff"
+  json_string: "#fff0a8"
+  json_number: "#d4b2ff"
+  json_boolean: "#8af7cf"
+  json_null: "#ff7aa8"
+
+url:
+  base: "#f8f8f2"
+  protocol: "#9be7ff"
+  separator: "#8a88c7"
+
+variable:
+  resolved: "#8af7cf"
+  unresolved: "#ff7aa8"
+
+method:
+  get: "#9be7ff"
+  post: "#8af7cf"
+  put: "#ffcf93"
+  delete: "#ff7aa8"
+  patch: "#ff9fe3"
+  options: "#d4b2ff"
+  head: "#ffc2ec"
+POSTING_THEME_CONF
+configured "Posting Dracula-Sakura theme written ($POSTING_THEME)"
+
+if write_seed_once "$POSTING_CONFIG" \
+    "edit Posting defaults in this user-owned YAML file" \
+    <<'POSTING_CONFIG_CONF'
+theme: dracula-sakura
+layout: vertical
+spacing: compact
+animation: none
+use_host_environment: false
+watch_env_files: true
+watch_collection_files: true
+watch_themes: true
+
+heading:
+  visible: true
+  show_host: true
+  show_version: true
+
+url_bar:
+  show_value_preview: true
+  hide_secrets_in_value_preview: true
+
+response:
+  prettify_json: true
+  show_size_and_time: true
+
+collection_browser:
+  position: left
+  show_on_startup: true
+
+command_palette:
+  theme_preview: true
+
+focus:
+  on_startup: url
+
+editor: micro
+POSTING_CONFIG_CONF
+then
+    configured "Posting configured (Dracula-Sakura, compact layout, protected host environment)"
+fi
+
+# Remove the old browser config only when its managed markers prove ownership.
+remove_superseded_managed "$HOME/.w3m/config" \
+    "w3m was replaced by Chawan" "(#572)"
+
 
 # Nushell was removed from the setup. Clear only files whose managed blocks prove
 # ownership, including the superseded pre-XDG location (#333, #555).
@@ -6855,6 +6954,35 @@ colors:
   Gray: "#8a88c7"
 E1S_CONF
     configured "e1s Dracula-Sakura colours written (~/.config/e1s/config.yml)"
+fi
+
+# ---- Claws (all-AWS TUI) Dracula-Sakura theme and safe defaults ----
+# Claws supports a Dracula preset plus three documented colour overrides. Its
+# read-only default remains a shell alias, because read-only is a flag rather
+# than a config key. `command claws` bypasses that alias for intentional writes.
+if installed claws; then
+    write_managed "$HOME/.config/claws/config.yaml" "#" <<'CLAWS_CONF'
+theme:
+  preset: dracula
+  primary: "#ff9fe3"
+  danger: "#ff7aa8"
+  success: "#8af7cf"
+
+autosave:
+  enabled: false
+
+compact_header: false
+
+startup:
+  view: dashboard
+
+navigation:
+  max_stack_size: 100
+
+ai:
+  save_sessions: false
+CLAWS_CONF
+    configured "Claws configured (Dracula-Sakura palette, dashboard, read-only alias)"
 fi
 
 # Retired tool configs are removed only when their managed blocks prove ownership.
@@ -12175,10 +12303,6 @@ autoload -Uz bashcompinit && bashcompinit   # bash-style complete (aws_completer
 _compcache() { local f="$_cachedir/comp_$1"; shift; [[ -r "$f" ]] || "$@" > "$f" 2>/dev/null; [[ -r "$f" ]] && source "$f"; }
 command -v kubectl       &>/dev/null && _compcache kubectl kubectl completion zsh
 command -v gh            &>/dev/null && _compcache gh gh completion -s zsh
-# Note: atac is intentionally NOT cached here — `atac completions zsh` writes a
-# _atac FILE to a directory and prints a status line to stdout (it has no
-# print-to-stdout mode), so `_compcache` would capture the message, not the
-# completion (and litter the cwd). Skip it rather than break shell startup.
 command -v aws_completer &>/dev/null && complete -C aws_completer aws
 unset -f _compcache
 unset _cachedir
@@ -12307,9 +12431,10 @@ alias fmt-sh="shfmt -w -i 4"
 # -- Terminal Apps ------------------------------------------------------------
 alias prog="progress -m"
 alias clip="clipse"    # clipboard-history TUI (replaces Raycast clipboard)
+alias nerdlog="nerdlog --set transport=ssh-bin"  # honor the generated OpenSSH config
 
 # -- Dracula theming for tools that theme via env/flags (config-file tools themed elsewhere) --
-alias claws="claws --theme dracula"    # claws AWS TUI — built-in Dracula theme
+alias claws="claws --read-only"         # safe default; use `command claws` for writes
 export D2_THEME=200                     # d2 diagrams — dark theme (d2 has no exact Dracula; 200 = Dark Mauve)
 export D2_DARK_THEME=200
 
@@ -12474,7 +12599,6 @@ echo "  [~/.agents/skills]      Curated skills Oh My Pi reads natively"
 echo "  [~/.config/zed]         Zed house fonts, Dracula-Sakura theme, and OMP ACP agent"
 echo "  [~/.config/croft]       Croft defaults and native Dracula-Sakura theme"
 echo "  [Application Support/emeraldian]  User-owned defaults and native Dracula-Sakura theme"
-echo "  [~/.config/linecast]    Nerd Font icons with the terminal Dracula-Sakura palette"
 echo "  [Obsidian vaults]       Per-vault Dracula-Sakura theme and appearance defaults"
 echo "  [Thunderbird profiles]  Mail defaults and Dracula-Sakura interface styling"
 echo "  [~/.herald]             Herald email/calendar config and Dracula-Sakura theme"
@@ -12571,7 +12695,6 @@ Complete the manual permissions, credentials, and account steps after the script
 - [ ] Run `eilmeldung`.
 - [ ] Run `emeraldian` to open the most recent Obsidian vault.
 - [ ] Run `watchtower` to choose a location and optional model provider.
-- [ ] Run `linecast doctor`, then open a view such as `linecast weather`.
 - [ ] Select an RSS provider.
 - [ ] Open the Firefox theme page at `https://draculatheme.com/firefox`.
 - [ ] Install the theme in the Firefox profile.
@@ -12645,13 +12768,16 @@ Every binding is on screen: the **key menu** sits along the bottom, and there ar
 | `br` Broot | Directory browser that keeps shell directory changes |
 | `mullvad-tui` | Terminal controller for the Mullvad VPN app and daemon |
 | `cliamp` | Terminal music player (Winamp-style) — playback, EQ, cycle visualizers |
-| `atac` | API client TUI (or `atac request send <coll>/<req>` headless) |
+| `posting` | HTTP client TUI with git-friendly YAML collections |
+| `caligula` | Disk imaging TUI with write verification |
+| `nerdlog` | Multi-host log viewer through OpenSSH |
+| `cha` | Terminal web browser and pager |
+| `claws` | Broad AWS TUI with a read-only shell default |
 | `eilmeldung` | RSS reader with vim-style navigation |
 | `concord` | Discord client with Keychain token storage |
 | `cfait` | Local-first task manager |
 | `emeraldian` | Obsidian vault TUI with backlinks, graph, and an optional assistant |
 | `watchtower` | Global news, markets, weather, and intelligence dashboard |
-| `linecast weather` | Terminal weather, tides, astronomy, radar, and maps |
 | `chamber ui` | Local encrypted secrets vault |
 | `spotatui` | Multi-source terminal music player |
 
@@ -12681,7 +12807,7 @@ The setup installs a Dracula-Sakura wallpaper at `~/Media/photos/dracula-sakura.
 
 ## Development workflow
 - **lazygit**, **gh**, and **scc** support GitHub workflows and repository maintenance.
-- **ATAC**, **xh**, and **Hurl** support API development.
+- **Posting**, **xh**, and **Hurl** support API development.
 - **harlequin** and **usql** provide database clients.
 - **d2** provides diagrams as code.
 - **LibreOffice** and **poppler** support visual checks of Office documents.
@@ -12693,7 +12819,10 @@ The setup installs a Dracula-Sakura wallpaper at `~/Media/photos/dracula-sakura.
 - **cfait** provides local-first tasks with optional CalDAV synchronization.
 - **Emeraldian** provides a themed Obsidian vault TUI with graph and backlink views.
 - **Watchtower** provides a global news, markets, and weather dashboard.
-- **Linecast** provides weather, tides, astronomy, radar, and maps with terminal-native colors.
+- **Caligula** provides verified disk imaging with compressed-image support.
+- **Nerdlog** provides multi-host log viewing through OpenSSH.
+- **Chawan** provides terminal web browsing and paging with private defaults.
+- **Claws** provides broad read-only AWS resource inspection by default.
 
 ## Data, media, and storage
 - **Yazi** provides file management, previews, and bulk tasks.
@@ -13518,19 +13647,20 @@ hurl --variable base_url=https://staging.example.com api.hurl
 hurl --test --report-html report/ tests/*.hurl
 ```
 
-### `atac` — Terminal API Client
-"Arguably a Terminal API Client" — a Postman/Insomnia alternative that runs fully offline in the terminal, with no account required. It's TUI-first for building and running requests interactively, but collections are stored as plain files so they're git-friendly, and it can import existing Postman, cURL, or OpenAPI collections.
+### `posting` — Terminal HTTP Client
+Posting builds and sends HTTP requests from a keyboard-driven interface. It stores collections as git-friendly YAML files.
+
+The seed uses a compact layout and hides secret values. It does not expose the host environment to requests.
 
 ```bash
-# launch the TUI in the current directory (creates a workspace)
-atac
-# use a specific directory for collections/config/logs
-atac -d ~/api-collections
-# import an existing Postman collection
-atac import postman_collection.json
+# open the request workspace
+posting
+# inspect the active config and theme paths
+posting locate config
+posting locate themes
 ```
 
-> Tip: `atac --dry-run` runs without writing changes to disk — handy for trying it out risk-free.
+The custom theme covers the interface, syntax colors, URLs, variables, and HTTP methods.
 
 ### `oha` — HTTP Load Testing
 A Rust-based HTTP load-testing tool (an alternative to `ab`/`wrk`) that fires many requests at an endpoint and shows a live TUI of latency percentiles and throughput as results come in. Reach for it when you want a quick, visual sense of how an API endpoint holds up under load.
@@ -13585,7 +13715,7 @@ mkcert localhost 127.0.0.1 myapp.local
 ```
 
 ### `carbonyl` — Chromium in the Terminal
-A real Chromium browser rendered entirely inside the terminal, including images, CSS, JavaScript, and video. Unlike `w3m`, it renders actual web pages rather than just text, which makes it useful for quickly checking how a page looks over SSH or in a headless environment.
+A real Chromium browser rendered entirely inside the terminal, including images, CSS, JavaScript, and video. It supports full pages over SSH or in headless environments.
 
 ```bash
 # open a URL in the terminal browser
@@ -13594,16 +13724,18 @@ carbonyl https://example.com
 carbonyl --width=120 --height=40 https://example.com
 ```
 
-### `w3m` — Classic Text-Based Browser
-A lightweight, text-only terminal web browser and pager that renders HTML as formatted plain text (tables, links, basic layout) without images or JS. It's useful for quickly reading a page or man-page-like HTML over SSH where a full browser isn't practical.
+### `cha` [Chawan] — Terminal Web Browser
+Chawan is a terminal browser and pager with CSS, JavaScript, and Kitty image support.
+
+The config disables cookies, referrers, and scripting by default. It uses the Dracula-Sakura true-color display.
 
 ```bash
 # open a page in the browser
-w3m https://example.com
-# render a page straight to stdout, no interactive session
-w3m -dump https://example.com | less
+cha https://example.com
+# render a page to standard output
+cha -d https://example.com
 # browse a local HTML file
-w3m ./notes.html
+cha ./notes.html
 ```
 
 ### `trip` [trippy] — Traceroute + Ping TUI
@@ -13991,14 +14123,16 @@ dy scan -t my-table
 ```
 
 ### `claws` — Broad AWS TUI
-A `k9s`-style terminal UI that spans roughly 70 AWS services in one browsable interface, rather than focusing on a single service like `e1s` or `e2c` do. It's useful when you want one general-purpose place to poke around AWS without switching tools per service, though as a younger project it's less polished than the service-specific TUIs. Treat it as a broad-coverage exploration tool rather than your primary daily driver for any one service.
+Claws provides one terminal interface for approximately 70 AWS services.
+
+The generated config selects the Dracula preset and applies Sakura color overrides. The shell alias starts Claws in read-only mode.
 
 ```bash
-# launch using your default AWS profile/region
+# inspect resources with writes disabled
 claws
+# bypass the alias for an intentional write session
+command claws
 ```
-
-> Tip: being a younger project, expect rougher edges than `k9s`/`e1s` — fall back to `aws` CLI or a service-specific TUI if a feature is missing.
 
 ### `iamlive` — IAM Policy Generator
 Watches the AWS API calls your application or script actually makes and generates a least-privilege IAM policy from that observed traffic, instead of you guessing which permissions are needed. It runs either as a local HTTPS proxy or via AWS's client-side monitoring (CSM) protocol. Use it while running a script or app to derive the minimal IAM policy it truly needs, rather than over-granting.
@@ -14703,6 +14837,31 @@ br
 br ~/Code
 ```
 
+### `caligula`
+Caligula writes and verifies compressed or uncompressed disk images.
+
+CAUTION: Confirm the output device before you start a burn. Caligula overwrites the selected device.
+
+```bash
+caligula --help
+caligula burn image.iso
+```
+
+Caligula uses named terminal colors, which Kitty maps to the Dracula-Sakura palette.
+
+
+### `nerdlog`
+Nerdlog reads and filters logs from the local system or several SSH hosts.
+
+The shell alias selects the OpenSSH transport. This transport honors the generated `~/.ssh/config`.
+
+Nerdlog uses terminal colors, which Kitty maps to the Dracula-Sakura palette.
+
+```bash
+nerdlog
+nerdlog --lstreams web-* --time 1h
+```
+
 ### `emeraldian`
 Emeraldian provides a keyboard-first interface for existing Obsidian vaults.
 The seed starts in reading mode with safe image defaults and an offline, read-only assistant.
@@ -14722,21 +14881,6 @@ Watchtower hardcodes its colors, so this release cannot apply the house theme th
 watchtower
 ```
 
-### `linecast`
-Linecast provides terminal weather, tides, astronomy, radar, and maps without an account or API key.
-It reads Kitty's Dracula-Sakura palette directly and uses the installed Nerd Font icon set.
-Location, units, language, clock, calendar, and sky culture remain automatic until you save a preference.
-
-```bash
-linecast doctor
-linecast weather
-linecast sunshine
-linecast moon
-linecast sky
-linecast tides
-linecast radar
-linecast maps
-```
 
 ### `eilmeldung`
 Eilmeldung provides a fast RSS reader with vim-style navigation.
@@ -14844,8 +14988,8 @@ JetBrains Mono Nerd Font, compact padding, and an integrated titlebar. Config
 lives at `~/.config/kitty/kitty.conf`.
 
 ### Google Chrome — Primary Browser
-The primary GUI browser (Carbonyl and w3m cover terminal browsing). Kept for
-sites that need a full modern engine, extensions, and DevTools.
+The primary GUI browser handles sites that need extensions and DevTools.
+Carbonyl and Chawan cover terminal browsing.
 
 ### Firefox
 Firefox provides an independent browser engine for privacy and compatibility work.
