@@ -4,9 +4,9 @@
 
 ## Context
 
-The script writes about 60 config files, the user's whole `~/.claude` tree, pi's
-`~/.pi/agent/AGENTS.md`, and four Desktop documents. Every one of them exists twice: as a
-heredoc in the script, and as a file on a machine.
+The script writes about 60 config files, the user's OMP environment, and four Desktop
+documents. Every generated output exists twice: as a heredoc in the script and as a
+file on a machine.
 
 Two copies of anything drift. Here the drift is one-directional and silent, because the
 script overwrites the machine on the next run. A hand edit to a generated file looks like it
@@ -24,8 +24,8 @@ the script, so a defect found there may already be fixed upstream. Extract the h
 inspect that:
 
 ```bash
-awk "/<<'CLAUDE_MD_CONF'/{f=1;next} /^CLAUDE_MD_CONF\$/{f=0} f" \
-    scripts/setup-dev-tools-mac.sh > /tmp/gen.md
+awk "/<<'OMP_CONFIG_CONF'/{f=1;next} /^OMP_CONFIG_CONF\$/{f=0} f" \
+    scripts/setup-dev-tools-mac.sh > /tmp/config.yml
 ```
 
 ## Consequences
@@ -34,7 +34,7 @@ awk "/<<'CLAUDE_MD_CONF'/{f=1;next} /^CLAUDE_MD_CONF\$/{f=0} f" \
 - Reviewing a config change means reading a heredoc, not a config file. Harder to read, and
   the reason the `generated-config` CI job exists: it extracts each heredoc and hands it to
   the real parser rather than trusting it by eye.
-- **An audit that reads the local machine will produce false findings.** During #209 the
-  local `CLAUDE.md` showed `kew`, `snyk`, and `tmux` as stale references. All three had been
-  corrected upstream already, and the finding was retracted mid-audit.
+- **An audit that reads the local machine will produce false findings.** During #209,
+  generated agent instructions showed stale tool references that the generator had already
+  corrected. The finding was retracted mid-audit.
 - Users get one guarantee in exchange: a re-run repairs anything they broke by hand.

@@ -44,15 +44,14 @@ in `shell`, and the mise shim links are ungated because they must reflect the fi
 a run. `CONFIG_LIVES_IN_CONFIGS` exists so that `--only git` tells the user it refreshed no
 git configuration.
 
-**Data flow is one direction: generator to machine.** The script reads almost nothing back.
-The two places it does are the `jq` merge branch for `~/.claude/settings.json` and the
-managed-block markers that let `write_managed` recognize its own previous output.
+**Data flow is one direction: generator to machine.** The script reads back only
+when a safe update requires existing state. Managed markers establish ownership,
+JSON merges preserve user settings, and seed files remain user-owned after creation.
 
-**Output has two delivery paths, and they behave differently.** Files written through
-`write_managed` refresh on every run. `~/.claude/settings.json` writes its full heredoc only
-when absent, and takes a `jq` merge on every machine that already has one. Anything guarded
-by `if [[ -f ... ]]` is create-once and freezes silently. Choosing the wrong one is how a
-fix reaches new machines and never reaches provisioned ones.
+**Output policies have different delivery behavior.** Managed and generated files
+refresh on every run. JSON merges preserve unrelated settings while reasserting owned
+keys. Seed files write only when absent. Choosing the wrong policy can make a fix reach
+new machines but not provisioned ones.
 
 ## Conventions (observed)
 

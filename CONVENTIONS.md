@@ -10,8 +10,7 @@
 > substance.
 
 This file is **public and tracked**. It describes the repo, not the
-maintainer. Personal preferences belong in a gitignored `CLAUDE.md` on the
-maintainer's own machine.
+maintainer. Personal preferences and private notes do not belong here.
 
 ---
 
@@ -20,9 +19,9 @@ maintainer's own machine.
 A single idempotent Bash script,
 [`scripts/setup-dev-tools-mac.sh`](scripts/setup-dev-tools-mac.sh), that
 provisions a macOS developer machine: installs CLI/GUI tools via Homebrew,
-writes dotfiles and config, and generates the user's Claude environment
-(`~/.claude/CLAUDE.md`, `~/.claude/rules/*`, agents, commands, skills, MCP
-servers). Almost all work happens in that one file.
+writes dotfiles and config, and generates the user's OMP environment
+(`~/.omp/agent/` and `~/.agents/skills/`). Almost all work happens in that
+one file.
 
 Generated output lives on the user's machine; tracked config (this file,
 `AGENTS.md`, `tests/`, `.github/`, `.pre-commit-config.yaml`, `docs/`,
@@ -32,7 +31,7 @@ Generated output lives on the user's machine; tracked config (this file,
 
 ## 2. The golden rule: edit the generator, never the output
 
-Config files, the user's `~/.claude/CLAUDE.md`, the pre-commit hook, and the
+Config files, the user's OMP environment, the pre-commit hook, and the
 Desktop docs are all **generated** by the script — usually inside a quoted
 heredoc. To change any of them, edit the heredoc **in the script**, not the
 produced file (which gets overwritten on the next run).
@@ -62,27 +61,26 @@ does not eat an outside region that does NOT match our block`).
 
 ---
 
-## 3. Two delivery paths — a fix that only lands on fresh installs is half a fix
+## 3. Delivery policies — a fix that only lands on fresh installs is half a fix
 
 Most breakage found in this repo has the same shape: the generator is
 correct, but the machine never receives the correction. Before calling
 anything done, ask *how does this reach a machine that was already
 provisioned?*
 
-The two paths are:
+Generated outputs have distinct delivery paths:
 
 1. **Files written with `write_managed` / `write_managed_script`** refresh
    on every run. Nothing more to do — but only the region between the
    markers refreshes.
-2. **`~/.claude/settings.json` is different.** The heredoc
-   (`CLAUDE_SETTINGS_CONF`) only writes the full block when the file is
-   absent. Existing machines take the `jq` **merge branch**, which must be
-   taught about the change explicitly.
+2. **Files written with `write_generated`** refresh as complete generated
+   files. The helper backs up replaced content.
+3. **Merged files** preserve user values except for explicitly owned keys.
+4. **Files written with `write_seed_once`** write only when absent and then
+   remain user-owned.
 
-Anything guarded by `if [[ -f … ]]` / `if [[ -d … ]]` is create-once and
-silently freezes — that is exactly how `~/.claude/CLAUDE.md` and
-`~/.claude/rules/` have drifted behind the generator in past releases. Prefer
-`write_managed`.
+Choosing the wrong policy can make a fix reach new machines but not existing
+machines. Prefer a refreshing policy unless the user must own later changes.
 
 Retiring a tool is not the same as cleaning up after it. `--cleanup`
 uninstalls the package; the config dir, the tap, and orphaned dependencies
@@ -125,7 +123,7 @@ Related rules the codebase has learned by breakage:
   `dynein`→`dy`, `imagemagick`→`magick`, `csvkit`→`csvlook`. A permission
   rule or doc line naming the package never matches.
 - **Generated docs must reflect what the script installs.** A checklist
-  step, `TOOL_REFERENCE` entry, or `CLAUDE.md` line can promise a tool,
+  step, `TOOL_REFERENCE` entry, or agent instruction can promise a tool,
   backend, default provider, or example command that the script never
   installs. Cross-check every tool / backend / default / example command a
   generated doc names against the install calls
@@ -182,9 +180,8 @@ and **must be gated** — every modern replacement rejects the original's
 flags (`du -sh` prints dust's help, `rm -rf` is rejected by trash), and the
 quiet ones are worse (`ps aux`, `dig +short` silently ignore the argument).
 Gate the whole section on
-`[[ -o interactive && -z "$CLAUDECODE" && -z "$AI_AGENT" ]]` rather than
-enumerating hazards — the enumerate approach has failed before, letting
-`wget` through.
+`[[ -o interactive && -z "$AI_AGENT" ]]` rather than enumerating hazards —
+the enumerate approach has failed before, letting `wget` through.
 
 ### Shell startup order decides which tool wins
 
@@ -218,7 +215,7 @@ dispatches on `argv[0]`. **Link the shim, not the versioned
 `~/.local/bin` outranks Homebrew. Anything linked there wins in **every**
 context — git hooks, launchd, GUI-launched editors — not only where
 `mise activate` has run. That is the point when the tool is one mise owns
-(`claude`, `prettier`, `tsc`, `copilot`). It is a hazard when something
+(`prettier`, `tsc`, `copilot`). It is a hazard when something
 else already depends on the Homebrew copy. Prefer linking by **exclusion**
 over an allowlist — a tool added to mise later is then picked up
 automatically. Pair it with a prune scoped to symlinks pointing into the
