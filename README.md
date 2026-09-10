@@ -301,7 +301,33 @@ Faster, prettier, smarter replacements for standard Unix utilities.
 | **ast-grep** | Structural code search/replace using AST -- like semgrep but interactive |
 | **ruff** | Extremely fast Python linter and formatter -- replaces flake8+black+isort |
 
+## Language Servers for OMP
+
+OMP discovers each server from project markers and its command on `PATH`.
+
+| Languages | Command | Installation |
+|---|---|---|
+| TypeScript and JavaScript | `typescript-language-server` | npm |
+| HTML | `vscode-html-language-server` | npm |
+| CSS, SCSS, Sass, and Less | `vscode-css-language-server` | npm |
+| JSON and JSONC | `vscode-json-language-server` | npm |
+| ESLint | `vscode-eslint-language-server` | npm |
+| YAML | `yaml-language-server` | npm |
+| Bash and Zsh | `bash-language-server` | npm |
+| Python types | `pyright-langserver` | npm |
+| Python lint and format | `ruff server` | Homebrew |
+| C, C++, and Objective-C | `clangd` | Homebrew LLVM |
+| Rust | `rust-analyzer` | Homebrew |
+| C# | `omnisharp` | Verified official release and .NET SDK |
+| Lua | `lua-language-server` | Homebrew |
+| Dockerfile | `docker-language-server start --stdio` | Homebrew |
+| Markdown | `marksman` | Homebrew |
+| TypeScript, JavaScript, JSON, and CSS lint | `biome lsp-proxy` | npm |
+
+The generated OMP policy selects Pyright for Python type intelligence and Ruff for lint and format operations.
+
 ---
+
 
 ## Performance & Load Testing
 

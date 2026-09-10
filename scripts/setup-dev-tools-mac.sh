@@ -366,7 +366,7 @@ declare -A CATEGORY_DESC=(
     [containers]="Docker Desktop, lazydocker, dive, kubectl, k9s"
     [api]="ATAC"
     [networking]="bandwhich, nmap, trippy"
-    [dx]="fzf, starship, atuin, micro, Zed, Kitty, zellij, omp"
+    [dx]="fzf, starship, atuin, micro, Zed, Kitty, zellij, omp, language servers"
     [docs]="d2"
     [mac-system]="LuLu, Mullvad VPN, mullvad CLI, mullvad-tui"
     [mac-productivity]="Obsidian, Herald, LibreOffice, Vulkan llama.cpp"
@@ -1833,6 +1833,9 @@ if [[ "$UNINSTALL" == "true" ]]; then
     echo "  rm -rf ~/.local/share/llama.cpp-vulkan ~/.local/share/llama.cpp"
     echo "  rm -f ~/.local/bin/mullvad-tui"
     echo "  rm -rf ~/.local/share/mullvad-tui"
+    echo "  [[ \"\$(readlink ~/.local/bin/clangd 2>/dev/null)\" == */opt/llvm/bin/clangd ]] && rm -f ~/.local/bin/clangd"
+    echo "  [[ \"\$(readlink ~/.local/bin/omnisharp 2>/dev/null)\" == ~/.local/share/omnisharp/omnisharp ]] && rm -f ~/.local/bin/omnisharp"
+    echo "  [[ -f ~/.local/share/omnisharp/.dev-setup-build ]] && rm -rf ~/.local/share/omnisharp"
     echo "  launchctl bootout gui/\$(id -u) ~/Library/LaunchAgents/dev.vixygrey.llama-cpp.plist 2>/dev/null || true"
     echo "  rm -f ~/Library/LaunchAgents/dev.vixygrey.llama-cpp.plist"
     echo ""
@@ -3703,29 +3706,139 @@ brew_cask_install "zed" "Zed (fast native code editor)"
 brew_cask_install "kitty" "Kitty (fast GPU-accelerated terminal)"
 brew_install "zellij" "zellij (modern terminal multiplexer — discoverable UI, layouts)"
 
-# Language servers for OMP and other editor clients.
+# Language servers for OMP and other editor clients (#559). Homebrew formulae
+# land in its default bin directory. npm binaries become mise shims, and the
+# final shim-link pass exposes them through ~/.local/bin to non-zsh callers.
 brew_install "taplo" "taplo (TOML language server and formatter)"
 brew_install "marksman" "marksman (Markdown language server)"
+brew_install "llvm" "LLVM (clangd language server)"
+
+# Homebrew keeps LLVM keg-only. Publish only clangd through the PATH directory
+# that this script already owns, without replacing a foreign file or link.
+LLVM_CLANGD="$HOMEBREW_PREFIX/opt/llvm/bin/clangd"
+LLVM_CLANGD_LINK="$HOME/.local/bin/clangd"
+if [[ "$DRY_RUN" == "true" ]]; then
+    info "[DRY RUN] Would expose clangd through $LLVM_CLANGD_LINK"
+elif [[ ! -x "$LLVM_CLANGD" ]]; then
+    error "LLVM installed without clangd at $LLVM_CLANGD"
+elif [[ -e "$LLVM_CLANGD_LINK" || -L "$LLVM_CLANGD_LINK" ]]; then
+    if [[ -L "$LLVM_CLANGD_LINK" && "$(readlink "$LLVM_CLANGD_LINK")" == "$LLVM_CLANGD" ]]; then
+        warn "clangd already linked into ~/.local/bin"
+    else
+        warn "Left $LLVM_CLANGD_LINK alone because another installation owns it"
+    fi
+else
+    mkdir -p "$HOME/.local/bin"
+    if ln -s "$LLVM_CLANGD" "$LLVM_CLANGD_LINK"; then
+        success "clangd linked into ~/.local/bin"
+    else
+        error "Failed to link clangd into ~/.local/bin"
+    fi
+fi
+unset LLVM_CLANGD LLVM_CLANGD_LINK
+
+brew_install "rust-analyzer" "rust-analyzer (Rust language server)"
+brew_install "lua-language-server" "Lua language server"
+brew_install "docker-language-server" "Docker language server"
+
 if installed npm; then
     npm_global_install "typescript-language-server" "TypeScript and JavaScript language server"
     npm_global_install "vscode-langservers-extracted" "HTML, CSS, JSON, and ESLint language servers"
     npm_global_install "bash-language-server" "Bash language server"
     npm_global_install "yaml-language-server" "YAML language server"
+    npm_global_install "pyright" "Pyright language server"
+    npm_global_install "@biomejs/biome" "Biome linter and language server"
 else
-    progress; progress; progress; progress  # keep progress bar accurate when npm unavailable
+    progress; progress; progress; progress; progress; progress  # keep progress bar accurate when npm unavailable
 fi
 
-# Python language servers for OMP and other editor clients.
-uv_tool_install ty ty "ty (Astral Python type server)" \
-    "ty installed"
-uv_tool_install basedpyright basedpyright-langserver \
-    "basedpyright (open-source pyright fork)" \
-    "basedpyright installed"
-if [[ "$DRY_RUN" != "true" ]]; then
-    # Add the Rust and Go language servers when their toolchains are available.
-    if installed rustup; then
-        rustup component add rust-analyzer >> "$LOG_FILE" 2>&1 || warn "Could not add rust-analyzer"
+# Ruff already comes from code-quality. Its `ruff server` command is the
+# supported language server. Disable the redundant ty and basedpyright servers
+# in omp's generated LSP policy below so Pyright owns Python type intelligence.
+
+# OmniSharp has no current Homebrew formula. Its official net6 build needs a
+# .NET runtime. Install the current SDK, then use runtime roll-forward so the
+# pinned server can run without an unsupported .NET 6 installation.
+brew_cask_install "dotnet-sdk" ".NET SDK (OmniSharp runtime)"
+OMNISHARP_VERSION="1.39.15"
+OMNISHARP_PREFIX="$HOME/.local/share/omnisharp"
+OMNISHARP_APP="$OMNISHARP_PREFIX/OmniSharp"
+OMNISHARP_BIN="$OMNISHARP_PREFIX/omnisharp"
+OMNISHARP_LINK="$HOME/.local/bin/omnisharp"
+case "$(uname -m)" in
+    arm64)
+        OMNISHARP_ASSET="omnisharp-osx-arm64-net6.0.tar.gz"
+        OMNISHARP_SHA256="ae9ccca3ef1c4a4a3fbae7186a02bbc6c1290d8f4e2c845a214dabaf03cd7103"
+        ;;
+    x86_64)
+        OMNISHARP_ASSET="omnisharp-osx-x64-net6.0.tar.gz"
+        OMNISHARP_SHA256="bd2d273aff669645bdac2ee382d3a9c0220381b725a78697c9f6b6df9d22dafb"
+        ;;
+    *)
+        OMNISHARP_ASSET=""
+        OMNISHARP_SHA256=""
+        ;;
+esac
+OMNISHARP_URL="https://github.com/OmniSharp/omnisharp-roslyn/releases/download/v$OMNISHARP_VERSION/$OMNISHARP_ASSET"
+_omnisharp_resolved="$(command -v omnisharp 2>/dev/null || true)"
+progress
+if [[ -n "$_omnisharp_resolved" && "$_omnisharp_resolved" != "$OMNISHARP_LINK" ]]; then
+    warn "OmniSharp already available at $_omnisharp_resolved"
+elif [[ -z "$OMNISHARP_ASSET" ]]; then
+    error "OmniSharp has no supported archive for $(uname -m)"
+elif [[ "$DRY_RUN" == "true" ]]; then
+    if [[ -e "$OMNISHARP_PREFIX" && ! -f "$OMNISHARP_PREFIX/.dev-setup-build" ]]; then
+        warn "[DRY RUN] Would leave $OMNISHARP_PREFIX alone because this script does not own it"
+    elif [[ -x "$OMNISHARP_BIN" ]] &&
+         [[ "$(/bin/cat "$OMNISHARP_PREFIX/.dev-setup-build" 2>/dev/null || true)" == "$OMNISHARP_VERSION" ]]; then
+        warn "[DRY RUN] OmniSharp $OMNISHARP_VERSION already installed"
+    else
+        info "[DRY RUN] Would install OmniSharp $OMNISHARP_VERSION -> $OMNISHARP_PREFIX"
     fi
+elif [[ -e "$OMNISHARP_PREFIX" && ! -f "$OMNISHARP_PREFIX/.dev-setup-build" ]]; then
+    warn "Left $OMNISHARP_PREFIX alone because this script does not own it"
+elif [[ ! -x "$OMNISHARP_BIN" ]] ||
+     [[ "$(/bin/cat "$OMNISHARP_PREFIX/.dev-setup-build" 2>/dev/null || true)" != "$OMNISHARP_VERSION" ]]; then
+    _omnisharp_tmp="$(mktemp -d "${TMPDIR:-/tmp}/dev-setup-omnisharp.XXXXXX")"
+    _omnisharp_archive="$_omnisharp_tmp/$OMNISHARP_ASSET"
+    _omnisharp_stage="$_omnisharp_tmp/stage"
+    info "Installing OmniSharp $OMNISHARP_VERSION..."
+    if curl -fL --retry 3 "$OMNISHARP_URL" -o "$_omnisharp_archive" >> "$LOG_FILE" 2>&1 &&
+       printf '%s  %s\n' "$OMNISHARP_SHA256" "$_omnisharp_archive" |
+           shasum -a 256 -c - >> "$LOG_FILE" 2>&1 &&
+       mkdir -p "$_omnisharp_stage" &&
+       tar -xzf "$_omnisharp_archive" -C "$_omnisharp_stage" >> "$LOG_FILE" 2>&1 &&
+       [[ -x "$_omnisharp_stage/OmniSharp" ]]; then
+        rm -rf "$OMNISHARP_PREFIX"
+        mv "$_omnisharp_stage" "$OMNISHARP_PREFIX"
+        printf '#!/bin/sh\nexport DOTNET_ROOT="/usr/local/share/dotnet"\nexport DOTNET_ROLL_FORWARD="Major"\nexec "%s" "$@"\n' "$OMNISHARP_APP" > "$OMNISHARP_BIN"
+        chmod +x "$OMNISHARP_BIN"
+        printf '%s\n' "$OMNISHARP_VERSION" > "$OMNISHARP_PREFIX/.dev-setup-build"
+        success "OmniSharp $OMNISHARP_VERSION installed"
+    else
+        error "Failed to download or verify OmniSharp $OMNISHARP_VERSION"
+    fi
+    rm -rf "$_omnisharp_tmp"
+    unset _omnisharp_tmp _omnisharp_archive _omnisharp_stage
+fi
+
+if [[ "$DRY_RUN" != "true" && -x "$OMNISHARP_BIN" ]] &&
+   [[ "$(/bin/cat "$OMNISHARP_PREFIX/.dev-setup-build" 2>/dev/null || true)" == "$OMNISHARP_VERSION" ]]; then
+    mkdir -p "$HOME/.local/bin"
+    if [[ -L "$OMNISHARP_LINK" && "$(readlink "$OMNISHARP_LINK")" == "$OMNISHARP_BIN" ]]; then
+        warn "OmniSharp already linked into ~/.local/bin"
+    elif [[ -e "$OMNISHARP_LINK" || -L "$OMNISHARP_LINK" ]]; then
+        warn "Left $OMNISHARP_LINK alone because another installation owns it"
+    elif ln -s "$OMNISHARP_BIN" "$OMNISHARP_LINK"; then
+        success "OmniSharp linked into ~/.local/bin"
+    else
+        error "Failed to link OmniSharp into ~/.local/bin"
+    fi
+fi
+unset OMNISHARP_VERSION OMNISHARP_PREFIX OMNISHARP_APP OMNISHARP_BIN OMNISHARP_LINK
+unset OMNISHARP_ASSET OMNISHARP_SHA256 OMNISHARP_URL _omnisharp_resolved
+
+if [[ "$DRY_RUN" != "true" ]]; then
     if installed go; then
         info "Installing gopls..."
         go install golang.org/x/tools/gopls@latest >> "$LOG_FILE" 2>&1 || warn "Could not install gopls"
@@ -10561,6 +10674,7 @@ OMP_RETIRED_EXTENSIONS=(
 # config.yml is canonical. Preserve config.yaml when omp already uses that name.
 OMP_CONFIG_FILE="$OMP_DIR/config.yml"
 OMP_ENV_FILE="$OMP_DIR/.env"
+OMP_LSP_FILE="$OMP_DIR/lsp.yml"
 [[ -f "$OMP_DIR/config.yaml" && ! -f "$OMP_CONFIG_FILE" ]] && OMP_CONFIG_FILE="$OMP_DIR/config.yaml"
 
 # OMP loads provider credentials from this exact path after the process and project
@@ -10580,6 +10694,7 @@ fi
 if [[ "$DRY_RUN" == "true" ]]; then
     info "[DRY RUN] Would write omp config -> $OMP_DIR (AGENTS.md, themes/dracula-sakura.json)"
     info "[DRY RUN] Would merge omp settings -> $OMP_CONFIG_FILE (theme, model routing, provider settings)"
+    info "[DRY RUN] Would write omp LSP policy -> $OMP_LSP_FILE"
     info "[DRY RUN] Would retire obsolete omp skills and extensions"
     info "[DRY RUN] Would write the protected-paths guard -> $OMP_EXTENSIONS_DIR/protected-paths.ts"
 else
@@ -10710,6 +10825,27 @@ else
 }
 OMP_THEME_CONF
     success "omp: Dracula-Sakura theme written (~/.omp/agent/themes/dracula-sakura.json)"
+
+    # -- lsp.yml ------------------------------------------------------------------
+    # OMP merges this low-precedence user policy onto its built-in server registry.
+    # A user can override it with lsp.yaml or lsp.json in the same directory.
+    # Pyright owns Python type intelligence, Ruff owns lint and format operations,
+    # and Docker's current server replaces the retired docker-langserver command.
+    write_managed "$OMP_LSP_FILE" "#" <<'OMP_LSP_CONF'
+servers:
+  ty:
+    disabled: true
+  basedpyright:
+    disabled: true
+  dockerls:
+    command: docker-language-server
+    args:
+      - start
+      - --stdio
+    initOptions:
+      telemetry: "off"
+OMP_LSP_CONF
+    configured "omp LSP policy written ($OMP_LSP_FILE)"
 
 
     # -- Protected paths ----------------------------------------------------------
@@ -11575,7 +11711,7 @@ echo "  [~/.config/atuin]       Fuzzy search, local-only"
 echo "  [~/.config/mprocs]      Multi-process TUI defaults + per-proc logs"
 echo "  [~/.config/broot]       Broot git-aware defaults and Dracula-Sakura skin"
 echo "  [~/.jqp.yaml]           jq playground theme overrides"
-echo "  [~/.omp/agent]          Oh My Pi settings, model routing, theme, protected-path guard"
+echo "  [~/.omp/agent]          OMP settings, LSP policy, model routing, theme, and path guard"
 echo "  [~/.agents/skills]      Curated skills Oh My Pi reads natively"
 echo "  [~/.config/zed]         Zed house fonts, Dracula-Sakura theme, and OMP ACP agent"
 echo "  [~/.herald]             Herald email/calendar config and Dracula-Sakura theme"
@@ -13910,10 +14046,29 @@ Bitwarden provides encrypted native and browser credential access.
 The application owns its account, vault, and appearance state.
 
 ### Language servers
-OMP uses these servers for completion, diagnostics, and symbol navigation:
-`bash-language-server`, `marksman` (Markdown), `taplo` (TOML + formatter),
-`yaml-language-server`, `typescript-language-server`,
-`vscode-langservers-extracted` (HTML/CSS/JSON/ESLint).
+OMP discovers these servers from project markers and command names on `PATH`.
+
+| Languages | Command | Package |
+|---|---|---|
+| TypeScript and JavaScript | `typescript-language-server` | `typescript-language-server` |
+| HTML | `vscode-html-language-server` | `vscode-langservers-extracted` |
+| CSS, SCSS, Sass, and Less | `vscode-css-language-server` | `vscode-langservers-extracted` |
+| JSON and JSONC | `vscode-json-language-server` | `vscode-langservers-extracted` |
+| ESLint | `vscode-eslint-language-server` | `vscode-langservers-extracted` |
+| YAML | `yaml-language-server` | `yaml-language-server` |
+| Bash and Zsh | `bash-language-server` | `bash-language-server` |
+| Python types | `pyright-langserver` | `pyright` |
+| Python lint and format | `ruff server` | `ruff` |
+| C, C++, and Objective-C | `clangd` | `llvm` |
+| Rust | `rust-analyzer` | `rust-analyzer` |
+| C# | `omnisharp` | Official OmniSharp release and .NET SDK |
+| Lua | `lua-language-server` | `lua-language-server` |
+| Dockerfile | `docker-language-server start --stdio` | `docker-language-server` |
+| Markdown | `marksman` | `marksman` |
+| TypeScript, JavaScript, JSON, and CSS lint | `biome lsp-proxy` | `@biomejs/biome` |
+
+The OMP policy disables `ty` and `basedpyright`, so Pyright provides Python type intelligence.
+Ruff remains the Python linter and formatter.
 
 ### Build and runtime dependencies
 These packages support builds and local inference:
