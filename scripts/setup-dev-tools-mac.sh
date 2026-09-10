@@ -176,7 +176,7 @@ managed_list() { [[ -s "$MANAGED_STATE" ]] && awk -F'\t' -v k="$1" '$1 == k { pr
 # Count all install calls + standalone progress calls for accurate progress bar
 # Note: `grep -c` prints "0" AND exits 1 on zero matches, so `|| echo 0` would append
 # a SECOND "0" ("0\n0") and break the arithmetic. Use `|| true` + a default instead.
-_INSTALL_CALLS=$(grep -cE '^\s*(brew_install|brew_cask_install|npm_global_install|go_install|uv_tool_install|cargo_install) ' "$0" 2>/dev/null || true)
+_INSTALL_CALLS=$(grep -cE '^\s*(brew_install|brew_cask_install|npm_global_install|omp_plugin_install|go_install|uv_tool_install|cargo_install) ' "$0" 2>/dev/null || true)
 _PROGRESS_CALLS=$(grep -cE '^\s*progress\s*$' "$0" 2>/dev/null || true)
 INSTALL_TOTAL=$(( ${_INSTALL_CALLS:-0} + ${_PROGRESS_CALLS:-0} ))
 [[ "$INSTALL_TOTAL" -eq 0 ]] && INSTALL_TOTAL=200
@@ -1540,6 +1540,44 @@ npm_global_install() {
     fi
 }
 
+# omp_plugin_install <package-spec> <plugin-name> <display-name>
+# Installs an OMP plugin into the user plugin root. OMP records the package as
+# enabled, then loads its manifest-declared extensions, skills, and prompts.
+omp_plugin_install() {
+    local package="$1" plugin="$2" name="$3" plugins=""
+    progress
+    is_done "omp-plugin:$plugin" && { warn "$name already completed (resume)"; return 0; }
+
+    if installed omp; then
+        plugins="$(omp plugin list --json 2>> "$LOG_FILE")"
+    fi
+    if [[ "$plugins" =~ \"name\"[[:space:]]*:[[:space:]]*\"$plugin\" ]]; then
+        warn "$name already installed"
+        mark_done "omp-plugin:$plugin"
+        return 0
+    fi
+    if [[ "$DRY_RUN" == "true" ]]; then
+        info "[DRY RUN] Would install: $name"
+        return 0
+    fi
+    if ! installed omp; then
+        warn "Skipping $name — omp not installed"
+        return 0
+    fi
+    if ! installed bun; then
+        warn "Skipping $name — Bun not installed"
+        return 0
+    fi
+
+    info "Installing $name..."
+    if omp plugin install "$package" >> "$LOG_FILE" 2>&1; then
+        success "$name installed"
+        mark_done "omp-plugin:$plugin"
+    else
+        error "Failed to install $name"
+    fi
+}
+
 
 # go_install <import-path@ver> <cmd-name> <description>
 # Installs a Go tool into $GOBIN (the dir the login shell puts on PATH), so it's
@@ -2002,11 +2040,10 @@ if [[ "$CLEANUP" == "true" ]]; then
         "formula:bendews/tap/apw:apw:removed"
         "formula:keith/formulae/reminders-cli:reminders-cli:removed"
         "npm:@anthropic-ai/claude-code:Claude Code CLI:omp"
-        "npm:bigpowers:bigpowers:removed"
+        "npm:bigpowers:bigpowers (global copy):OMP plugin"
         "formula:ikebastuz/wiper/wiper:wiper:removed"
         "formula:glab:glab:removed"
         "formula:doxx:doxx:removed"
-        "formula:oven-sh/bun/bun:bun:removed"
         "formula:dhth/tap/bmm:bmm:removed"
         "uv:manly:manly:removed"
         "formula:git-lfs:Git LFS:removed"
@@ -2431,7 +2468,6 @@ if [[ "$CLEANUP" == "true" ]]; then
         "apw|$HOME/.config/apw|removed"
         "act3|$HOME/.config/act3|removed"
         "manly|$HOME/.config/manly|removed"
-        "bun|$HOME/.bun|removed"
         "bmm|$HOME/.local/share/bmm|removed"
         "bmm|$HOME/.config/bmm|removed"
         "glab|$HOME/.config/glab-cli|removed"
@@ -2688,12 +2724,22 @@ if [[ "$VERIFY" == "true" ]]; then
             "$HOME/.config/kitty/kitty.conf"
     }
 
+    _verify_bigpowers() {
+        local out
+        out="$(omp plugin list --json 2>&1)" || return 1
+        jq -e '.npm[]? | select(.name == "bigpowers" and .enabled == true)' \
+            <<<"$out" >/dev/null
+    }
+
     VERIFY_TARGETS=(
         # `omp config get` prints the EFFECTIVE value, so a pass proves omp read the file
         # at this path and resolved our merged key — not merely that the YAML parses.
         # Reading theme.dark rather than a model role keeps it honest when no
         # GEMINI_API_KEY is set: the theme resolves with no provider reachable at all.
         "validate|omp|$HOME/.omp/agent/config.yml|_verify_output_has 'dracula-sakura' omp config get theme.dark"
+        # OMP records user plugins separately from agent config. This proves that
+        # Bigpowers is installed, enabled, and visible through OMP's own registry.
+        "validate|omp|$HOME/.omp/plugins/node_modules/bigpowers|_verify_bigpowers"
         # Parse the installed managed file through fastfetch itself. This catches
         # invalid managed-marker comments that body-only JSON checks cannot see (#561).
         "validate|fastfetch|$HOME/.config/fastfetch/config.jsonc|fastfetch --config '$HOME/.config/fastfetch/config.jsonc' --logo none --structure Title"
@@ -4073,11 +4119,13 @@ fi
 
 # pi was retired in #513. omp replaces its agent runtime, web search, local model
 # discovery, approval policies, and one-shot prompt use.
-# Oh My Pi is a prebuilt native binary with LSP, DAP, subagents, and
-# workload-routed model roles. The Homebrew tap keeps it available to shells,
-# hooks, and launchd without a separate JavaScript runtime.
+# OMP ships as a prebuilt native binary. Its plugin manager uses Bun to install
+# package dependencies into the user plugin root.
+brew_install "bun" "Bun (package manager for OMP plugins)"
 trust_tap can1357/tap
 brew_install "can1357/tap/omp" "omp (Oh My Pi — workload-routed agent harness)"
+omp_plugin_install "bigpowers" "bigpowers" \
+    "Bigpowers (OMP workflow skills and safety extension)"
 
 # Clipboard history
 # clipse — TUI clipboard manager (replaces Raycast clipboard history). Not on Homebrew.

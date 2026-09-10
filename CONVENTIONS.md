@@ -264,7 +264,7 @@ guard once, benefit forever.
 | `log` | Verbose detail to `$LOG_FILE`. |
 | `mark_done <key>`, `is_done <key>` | Resume state. No-op under `--dry-run`. |
 | `installed <cmd>` | `command -v <cmd>` test. |
-| `brew_install`, `brew_cask_install`, `npm_global_install`, `go_install`, `uv_tool_install` | Snapshot installed state; skip work already done. Don't call `brew install` directly. |
+| `brew_install`, `brew_cask_install`, `npm_global_install`, `omp_plugin_install`, `go_install`, `uv_tool_install`, `cargo_install` | Inspect installed state and skip completed work. Don't call package managers directly. |
 | `write_managed <file> [comment-prefix]`, `write_managed_script <file>` | Wrap stdin in a managed block. Refresh in place on re-run. Back up + replace an unmarked pre-existing file. The `write_managed_script` form keeps the shebang on line 1 and `chmod +x`. |
 | `remove_superseded_managed <file> <explanation> [ref]` | For the *other* half of a path change: clears a copy we wrote at an address the tool no longer reads, and only when it is provably ours. |
 | `git_global` | A `git config --global` WRITE that honors `--dry-run` in one place. **Writes only** — reads stay as raw `git config`. |
@@ -279,9 +279,9 @@ question is "should this be a helper?".
 
 Every run must be safe to repeat. Use the existing guards: `mark_done` /
 `is_done "<key>"`, and the `brew_install` / `brew_cask_install` /
-`npm_global_install` / `go_install` / `uv_tool_install` helpers (they
-snapshot installed state and skip work already done). Don't call `brew
-install` directly.
+`npm_global_install` / `omp_plugin_install` / `go_install` /
+`uv_tool_install` / `cargo_install` helpers. They inspect installed state and skip completed
+work. Don't call package managers directly.
 
 Honor `--dry-run`. Any block with side effects must do nothing when
 `$DRY_RUN == "true"` (print an `info "[DRY RUN] Would …"` line instead).
