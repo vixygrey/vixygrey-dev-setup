@@ -773,15 +773,10 @@ Run from anywhere with `gj <recipe>` (or `just --justfile ~/.justfile <recipe>`)
 
 ## macOS App Shortcuts
 
-*Source: this repo's generated Ghostty config, cross-checked against the copy on disk.*
-
-Only Ghostty gets custom bindings from this setup. They are **global** hotkeys, so they work
-from any application:
-
 | App | Shortcut | Action |
 |-----|----------|--------|
-| Ghostty | `Cmd+Space` | Toggle the quick terminal (the drop-down shelf) **(house)** |
-| Ghostty | `Cmd+Alt+T` | New window **(house)** |
+| Spotlight | `Cmd+Space` | Search applications, files, and the web |
+| Finder | `Cmd+Option+Space` | Open a Finder search window |
 
-`Cmd+Space` is deliberately taken from Spotlight, which the setup disables for that
-combination. Spotlight-style search moves to the shell functions `a`, `ff`, `rgf`, and `s`.
+Kitty uses its standard macOS bindings. The setup does not register a global
+terminal shortcut or a background launcher.

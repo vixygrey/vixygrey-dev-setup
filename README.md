@@ -429,9 +429,9 @@ Faster, prettier, smarter replacements for standard Unix utilities.
 | **omp** | Oh My Pi coding agent with LSP, DAP, subagents, and role-based routing across Codex, Gemini, Claude Sonnet, and local llama.cpp |
 | **chezmoi** | Dotfile manager -- backup and restore configs across machines |
 | **mitmproxy** | Free HTTP debugging proxy -- inspect and modify API calls from any app |
-| **Ghostty** | Fast GPU-accelerated terminal -- daily driver, native macOS feel |
+| **Kitty** | Fast GPU-accelerated terminal with native macOS support |
 | **zellij** | Modern terminal multiplexer -- discoverable UI, layouts, Rust-based |
-| **Ghostty quick terminal + `a`/`ff`/`rgf`/`s`** | Terminal launcher and search with a global Command+Space dropdown. Clipse provides clipboard history |
+| **Spotlight + `ff`/`rgf`/`s`** | Global application search plus terminal file and content search. Clipse provides clipboard history |
 | **TypeScript** | Typed JavaScript -- installed globally for scripts and tooling |
 | **tsx** | Run TypeScript files directly without a build step |
 
@@ -518,7 +518,7 @@ Applied consistently across the machine, with built-in Dracula variants kept whe
 | **micro** | Dracula (`dracula-tc`) set in `settings.json` |
 | **bat** | Dracula syntax theme in config |
 | **delta** | Dracula syntax theme for git diffs |
-| **Ghostty** | Full 16-color Dracula-Sakura palette in config |
+| **Kitty** | Full 16-color Dracula-Sakura palette in `kitty.conf` |
 | **jqp** | Dracula base theme with Dracula-Sakura override colors in `~/.jqp.yaml` |
 | **fzf** | Dracula colors in `FZF_DEFAULT_OPTS` |
 | **Starship** | Dracula-Sakura palette in `starship.toml` |
@@ -725,7 +725,7 @@ The script generates config files with sensible defaults:
 | `~/.omp/agent/config.yml` | omp | Merged because omp also writes this file. Codex handles normal work, Gemini handles vision and lightweight roles, and Claude Sonnet handles only `slow` and `plan`. Fallbacks never use Anthropic and end at local Qwen 2.5 Coder |
 | `~/Library/LaunchAgents/dev.vixygrey.llama-cpp.plist` | llama.cpp | Runs Qwen2.5 Coder 14B on port 8081 with the Vulkan backend |
 | `~/.config/nushell/env.nu` | nushell | Starship prompt, Homebrew paths |
-| `~/.config/ghostty/config` | Ghostty | JetBrainsMono Nerd Font, Dracula-Sakura palette, transparent titlebar |
+| `~/.config/kitty/kitty.conf` | Kitty | JetBrainsMono Nerd Font, Dracula-Sakura palette, compact padding, integrated titlebar |
 | `~/.config/fastfetch/config.jsonc` | fastfetch | Nerd Font icons, package counts, Node/Python/Go/Rust/Docker versions, battery, disk, colored output |
 | `~/.config/mise/config.toml` | mise | Auto-install, trust ~/Code |
 | `~/.config/topgrade.toml` | topgrade | Cleanup, greedy cask updates |
@@ -813,7 +813,7 @@ All aliases are auto-written to `~/.zshrc`:
 | `rm` | `trash` | Safe delete (Trash) |
 | `make` | `just` | Task runner |
 | `y` | `rovr` | File manager (`n` → nnn fallback) |
-| `a` / `ff` / `rgf` / `s` | launcher / find / grep / mdfind | Terminal launcher & search (replaces Raycast/Spotlight) |
+| `ff` / `rgf` / `s` | find / grep / mdfind | Terminal file and content search |
 | `clip` | `clipse` | Clipboard-history TUI |
 | `jx` | `fx` | Interactive JSON viewer |
 | `f` | `fd` | Fast find |
@@ -956,12 +956,13 @@ keep secrets, then confirm with `omp config get modelRoles`.
 
 ---
 
-## Terminal Launcher & Window Management (replaces Raycast/Spotlight)
+## Terminal and Search
 
 | Key / command | Action |
 |---------------|--------|
-| `cmd + space` | Ghostty quick terminal (global dropdown) — after disabling Spotlight's shortcut |
-| `a` | Fuzzy-launch an app · `ff` find a file · `rgf <q>` search contents · `s <q>` mdfind |
+| `cmd + space` | Open Spotlight for application, file, and web search |
+| `ff` | Find a file and open it |
+| `rgf <q>` / `s <q>` | Search file content or the Spotlight index |
 | `clip` | Clipboard history (clipse) |
 | `taproom` · `k9s` · `lazydocker` | Homebrew · Kubernetes · Docker TUIs |
 

@@ -66,7 +66,8 @@ harlequin-config|$HARLEQUIN_CONFIG|managed|text|configs|none|harlequin
 harlequin-superseded|$HARLEQUIN_SUPERSEDED|superseded|text|configs|none|none
 myclirc|$MYCLIRC|managed|text|configs|none|none
 justfile-global|$JUSTFILE_GLOBAL|managed|text|configs|none|none
-ghostty-config|$GHOSTTY_CONFIG|managed|text|configs|none|ghostty
+ghostty-config-superseded|$GHOSTTY_CONFIG|superseded|text|configs|none|none
+kitty-config|$KITTY_CONFIG|managed|text|configs|none|kitty
 direnv-config|$DIRENV_CONFIG|managed|text|configs|none|direnv
 home-scripts-bin-clean-downloads|$HOME/Scripts/bin/clean-downloads|managed-script|text|configs|none|none
 home-scripts-bin-new-project|$HOME/Scripts/bin/new-project|managed-script|text|configs|none|none

@@ -366,7 +366,7 @@ declare -A CATEGORY_DESC=(
     [containers]="lazydocker, dive, kubectl, k9s"
     [api]="ATAC, grpcurl"
     [networking]="mtr, bandwhich, nmap"
-    [dx]="fzf, starship, atuin, micro, Ghostty, zellij, llm, omp"
+    [dx]="fzf, starship, atuin, micro, Kitty, zellij, llm, omp"
     [docs]="d2, Mermaid CLI"
     [mac-system]="LuLu"
     [mac-productivity]="LibreOffice, Vulkan llama.cpp"
@@ -403,7 +403,7 @@ declare -A CONFIG_LIVES_IN_CONFIGS=(
     [database]="pgcli, mycli, harlequin"
     [containers]="lazydocker, k9s (config + Dracula skin)"
     [networking]="trippy"
-    [dx]="atuin, zellij, Ghostty, omp (~/.omp/agent + ~/.agents/skills) — and starship, which is in the \`dracula\` category"
+    [dx]="atuin, zellij, Kitty, omp (~/.omp/agent + ~/.agents/skills) — and starship, which is in the \`dracula\` category"
     [mac-media]="mpv"
     [mac-browsers]="w3m"
     [mac-productivity]="llama.cpp service"
@@ -1800,7 +1800,7 @@ if [[ "$UNINSTALL" == "true" ]]; then
     echo "  rm -rf ~/.config/yt-dlp ~/.config/gh-dash ~/.config/stern"
     echo "  rm -rf ~/.config/btop ~/.config/lazydocker ~/.config/mise"
     echo "  rm -rf ~/.config/topgrade.toml ~/.config/fastfetch ~/.config/pgcli"
-    echo "  rm -rf ~/.config/direnv ~/.config/caddy ~/.config/ghostty"
+    echo "  rm -rf ~/.config/direnv ~/.config/caddy ~/.config/kitty"
     echo "  rm -f ~/.justfile ~/Media/photos/dracula-sakura.jpg"
     echo ""
     echo "# Remove Rust (installed via rustup):"
@@ -1874,6 +1874,9 @@ if [[ "$CLEANUP" == "true" ]]; then
         "brew:boolean-maybe/tap/tiki:tiki:plain Markdown + reminders"
         # Retired in #542. Cleanup removes the packages first, then removes
         # exclusive per-user data only after the owning command or app is absent.
+        # Retired in #544. The managed config and exact generated login agent are
+        # removed in the configs segment, where normal reruns also reach them.
+        "cask:ghostty:Ghostty:Kitty:Ghostty"
         "formula:vhs:vhs:removed"
         "cask:claude:Claude:removed:Claude"
         "formula:ollama:Ollama:llama.cpp"
@@ -1920,8 +1923,8 @@ if [[ "$CLEANUP" == "true" ]]; then
         "cask:proton-pass:Proton Pass:removed"
         "cask:proton-drive:Proton Drive:removed"
         "cask:docker:Docker Desktop:removed:Docker"
-        "cask:warp:Warp terminal:Ghostty:Warp"
-        "cask:iterm2:iTerm2:Ghostty:iTerm"
+        "cask:warp:Warp terminal:Kitty:Warp"
+        "cask:iterm2:iTerm2:Kitty:iTerm"
         "cargo:croft:croft:micro"
         "formula:FelixKratz/formulae/sketchybar:SketchyBar:removed"
         "cask:font-sketchybar-app-font:SketchyBar app font:removed"
@@ -1940,7 +1943,7 @@ if [[ "$CLEANUP" == "true" ]]; then
         "brew:kew:kew:cliamp"
         "brew:tokei:tokei:scc"
         "brew:glow:glow:leaf"
-        "cask:raycast:Raycast:Ghostty quick-terminal + clipse:Raycast"
+        "cask:raycast:Raycast:Spotlight + clipse:Raycast"
         "cask:aerospace:AeroSpace:native Spaces + macOS tiling:AeroSpace"
         "cask:unifi-identity-endpoint:UniFi Identity Endpoint:removed:UniFi Identity Endpoint"
         "cask:cleanshot:CleanShot X:removed"
@@ -2522,6 +2525,13 @@ if [[ "$VERIFY" == "true" ]]; then
         ! grep -q 'Unable to parse the config file' <<<"$out"
     }
 
+    _verify_kitty() {
+        # Kitty has no public validate-config command. Its bundled Python runtime
+        # exposes the same loader used at startup and can collect rejected lines.
+        kitty +runpy 'import sys; from kitty.config import load_config; bad = []; load_config(sys.argv[1], accumulate_bad_lines=bad); [print(line, file=sys.stderr) for line in bad]; raise SystemExit(bool(bad))' \
+            "$HOME/.config/kitty/kitty.conf"
+    }
+
     VERIFY_TARGETS=(
         # `omp config get` prints the EFFECTIVE value, so a pass proves omp read the file
         # at this path and resolved our merged key — not merely that the YAML parses.
@@ -2540,7 +2550,7 @@ if [[ "$VERIFY" == "true" ]]; then
         # a good config and a deliberately broken one produce the identical panic, so
         # any row built on that would report nothing about the config (#519).
         "validate|lazyenv|$HOME/Library/Application Support/lazyenv/config.toml|_verify_output_has '^Config OK' lazyenv --check-config"
-        "validate|ghostty|$HOME/.config/ghostty/config|ghostty +validate-config"
+        "validate|kitty|$HOME/.config/kitty/kitty.conf|_verify_kitty"
         "validate|zellij|$HOME/.config/zellij/config.kdl|_verify_output_has 'Well defined' zellij setup --check"
         "validate|ngrok|$HOME/Library/Application Support/ngrok/ngrok.yml|ngrok config check"
         "template|borgmatic|$HOME/.config/borgmatic/config.yaml|borgmatic config validate"
@@ -3754,7 +3764,7 @@ brew_install "atuin" "atuin (replaces shell history — SQLite-backed, searchabl
 # full project work. It is nonmodal and keeps its key menu visible.
 brew_install "micro" "micro (non-modal terminal editor — \$EDITOR for git; on-screen key menu)"
 
-brew_cask_install "ghostty" "Ghostty (fast GPU-accelerated terminal)"
+brew_cask_install "kitty" "Kitty (fast GPU-accelerated terminal)"
 brew_install "zellij" "zellij (modern terminal multiplexer — discoverable UI, layouts)"
 
 # Language servers for OMP and other editor clients.
@@ -4912,7 +4922,7 @@ K9S_CFG
 # Non-modal by design, so the settings below favor discoverability and match the
 # code standards in the generated OMP AGENTS.md.
 #   keymenu    - persistent key-binding strip along the bottom (the whole point)
-#   dracula-tc - built into micro; needs truecolor, which Ghostty advertises via COLORTERM
+#   dracula-tc - built into micro; needs truecolor, which Kitty advertises via COLORTERM
 #   rmtrailingws/eofnewline - match what prettier and ruff would do on save anyway
 # Indentation follows the house rules: 2 spaces, 4 for Python, real tabs for Go/Makefiles.
 MICRO_CONFIG_DIR="$HOME/.config/micro"
@@ -6300,16 +6310,15 @@ defaults write com.apple.screencapture disable-shadow -bool true
 defaults write com.apple.screencapture show-thumbnail -bool false
 configured "Screenshots configured (PNG, ~/Screenshots, no shadow)"
 
-# -- Global hotkey: free cmd+space for Ghostty's quick terminal --
-# Ghostty binds global:cmd+space, which macOS Spotlight owns by default. Disable
-# Spotlight's cmd+space (id 64) and its Finder-search-window variant (id 65) so the
-# OS doesn't swallow the hotkey. Takes effect after logout (or `killall SystemUIServer`).
-# To keep Spotlight on cmd+space instead, re-enable these and rebind Ghostty to cmd+`.
+# -- Global hotkey: restore cmd+space to Spotlight ----------------------------
+# Earlier releases disabled Spotlight for Ghostty's global quick terminal.
+# Restore Spotlight search (id 64) and Finder search (id 65) for existing
+# machines as well as fresh installs. The change takes effect after logout.
 defaults write com.apple.symbolichotkeys.plist AppleSymbolicHotKeys -dict-add 64 \
-    "<dict><key>enabled</key><false/><key>value</key><dict><key>type</key><string>standard</string><key>parameters</key><array><integer>32</integer><integer>49</integer><integer>1048576</integer></array></dict></dict>"
+    "<dict><key>enabled</key><true/><key>value</key><dict><key>type</key><string>standard</string><key>parameters</key><array><integer>32</integer><integer>49</integer><integer>1048576</integer></array></dict></dict>"
 defaults write com.apple.symbolichotkeys.plist AppleSymbolicHotKeys -dict-add 65 \
-    "<dict><key>enabled</key><false/></dict>"
-configured "Spotlight cmd+space disabled (freed for Ghostty; takes effect after logout)"
+    "<dict><key>enabled</key><true/><key>value</key><dict><key>type</key><string>standard</string><key>parameters</key><array><integer>32</integer><integer>49</integer><integer>1572864</integer></array></dict></dict>"
+configured "Spotlight cmd+space restored (takes effect after logout)"
 
 # -- Keyboard --
 # Faster key repeat rate (lower = faster, default is 6)
@@ -7746,95 +7755,16 @@ loc:
 JUSTFILE_CONF
     configured "Global justfile created (~/.justfile — system, git, docker, network, cleanup, info recipes)"
 
-# ---- Ghostty config ----
-GHOSTTY_CONFIG_DIR="$HOME/.config/ghostty"
-GHOSTTY_CONFIG="$GHOSTTY_CONFIG_DIR/config"
-info "Configuring Ghostty..."
-write_managed "$GHOSTTY_CONFIG" "#" <<'GHOSTTY_CONF'
-# Ghostty configuration
-# Docs: https://ghostty.org/docs/config
+# ---- Retired Ghostty config and launcher ------------------------------------
+# Normal reruns must stop the login agent even before the user requests package
+# cleanup. Remove the config only when its managed block has no user content.
+GHOSTTY_CONFIG="$HOME/.config/ghostty/config"
+remove_superseded_managed "$GHOSTTY_CONFIG" "Kitty now owns the terminal configuration." "#544"
 
-# Font — the Nerd Font variant so glyph icons from eza, starship, lazygit, and
-# other terminal tools render natively instead of relying on font fallback.
-# If double-width glyphs misalign, use "JetBrainsMono Nerd Font Mono".
-font-family = "JetBrainsMono Nerd Font"
-font-size = 14
-
-# Dracula-Sakura theme
-background = 282a36
-foreground = f8f8f2
-selection-background = 6a5d86
-selection-foreground = f8f8f2
-palette = 0=#2f3144
-palette = 1=#ff7aa8
-palette = 2=#8af7cf
-palette = 3=#fff0a8
-palette = 4=#d4b2ff
-palette = 5=#ff9fe3
-palette = 6=#9be7ff
-palette = 7=#f8f8f2
-palette = 8=#8a88c7
-palette = 9=#ff7aa8
-palette = 10=#8af7cf
-palette = 11=#fff0a8
-palette = 12=#d4b2ff
-palette = 13=#ffc2ec
-palette = 14=#9be7ff
-palette = 15=#ffffff
-
-# Window
-window-padding-x = 8
-window-padding-y = 4
-window-decoration = true
-macos-titlebar-style = transparent
-
-# Behavior
-copy-on-select = clipboard
-confirm-close-surface = false
-mouse-hide-while-typing = true
-
-# Quick terminal — global dropdown launcher (Spotlight/Raycast replacement).
-# Requires Accessibility permission for Ghostty and disabling Spotlight's
-# cmd+space first (see ~/Desktop/POST_SETUP_CHECKLIST.md). In the dropdown,
-# type `a` to fuzzy-launch an app, `ff` to find files, `s <q>` for Spotlight search.
-keybind = global:cmd+space=toggle_quick_terminal
-quick-terminal-position = top
-# `mouse` puts the dropdown on the display the cursor is on (multi-monitor correct);
-# on a single display it is identical to `main`.
-quick-terminal-screen = mouse
-quick-terminal-animation-duration = 0.15
-quick-terminal-autohide = true
-
-# Global "new Ghostty window on the current Space". The `a` launcher uses `open`, which
-# for an already-running app just re-activates its existing window (yanking you to whatever
-# Space that window is on) instead of making a new one where you are. A freshly-created
-# window lands on the active Space, so this hotkey reliably drops a Ghostty window onto the
-# Space you're actually looking at. Rebind the chord to taste.
-keybind = global:cmd+alt+t=new_window
-GHOSTTY_CONF
-configured "Ghostty configured (JetBrainsMono Nerd Font, Dracula-Sakura palette, transparent titlebar)"
-
-# ---- Ghostty auto-start + keep-alive (launchd agent) ----
-# Ghostty's global cmd+space quick-terminal keybind only works while Ghostty is running:
-# a fresh login with no Ghostty leaves the hotkey dead, and if you later quit Ghostty the
-# hotkey stays dead until you relaunch it by hand. This agent keeps Ghostty alive.
-# `open -gW -a Ghostty` launches it in the BACKGROUND (`-g`, no focus steal at login) and
-# WAITS for it to exit (`-W`), so launchd can track the process and — with KeepAlive —
-# relaunch it within seconds whenever it quits. Because `-W` also attaches to an
-# already-running Ghostty, re-loading the agent never spawns a duplicate window. To stop
-# Ghostty for good, unload the agent:
-#   launchctl unload ~/Library/LaunchAgents/com.ghostty.autostart.plist
-# Refreshed on every run (content-diffed, not create-once) so existing machines pick up
-# plist changes. Still needs Accessibility permission for Ghostty (see the checklist).
-GHOSTTY_APP="/Applications/Ghostty.app"
+# The old launch agent predates managed plist helpers. Compare the complete file
+# with the exact generated form before removal, so a user-edited agent survives.
 GHOSTTY_PLIST="$HOME/Library/LaunchAgents/com.ghostty.autostart.plist"
-if [[ ! -d "$GHOSTTY_APP" ]]; then
-    warn "Ghostty.app not found in /Applications — skipping keep-alive launch agent"
-elif [[ "$DRY_RUN" == "true" ]]; then
-    info "[DRY RUN] Would (re)write Ghostty keep-alive launch agent (open -gW, KeepAlive)"
-else
-    mkdir -p "$HOME/Library/LaunchAgents"
-    _ghostty_plist_new="$(cat <<'GHOSTTY_PLIST_EOF'
+_ghostty_plist_expected="$(cat <<'GHOSTTY_PLIST_EOF'
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
@@ -7853,15 +7783,68 @@ else
 </plist>
 GHOSTTY_PLIST_EOF
 )"
-    if [[ ! -f "$GHOSTTY_PLIST" ]] || ! printf '%s\n' "$_ghostty_plist_new" | diff -q - "$GHOSTTY_PLIST" >/dev/null 2>&1; then
-        printf '%s\n' "$_ghostty_plist_new" > "$GHOSTTY_PLIST"
-        launchctl unload "$GHOSTTY_PLIST" >> "$LOG_FILE" 2>&1 || true
-        launchctl load "$GHOSTTY_PLIST" >> "$LOG_FILE" 2>&1 || warn "Could not load Ghostty launch agent"
-        success "Ghostty keep-alive agent (re)written and reloaded (open -gW, KeepAlive)"
+if [[ -f "$GHOSTTY_PLIST" ]]; then
+    if ! printf '%s\n' "$_ghostty_plist_expected" | diff -q - "$GHOSTTY_PLIST" >/dev/null 2>&1; then
+        warn "Left $GHOSTTY_PLIST alone. It differs from the launcher generated by this script."
+    elif [[ "$DRY_RUN" == "true" ]]; then
+        info "[DRY RUN] Would unload and remove the retired Ghostty login agent"
     else
-        warn "Ghostty keep-alive agent already current"
+        launchctl bootout "gui/$(id -u)" "$GHOSTTY_PLIST" >> "$LOG_FILE" 2>&1 \
+            || launchctl unload "$GHOSTTY_PLIST" >> "$LOG_FILE" 2>&1 \
+            || true
+        rm -f "$GHOSTTY_PLIST"
+        info "Removed the retired Ghostty login agent. Kitty does not need a background launcher. #544"
     fi
 fi
+unset _ghostty_plist_expected
+
+# ---- Kitty config -----------------------------------------------------------
+KITTY_CONFIG_DIR="$HOME/.config/kitty"
+KITTY_CONFIG="$KITTY_CONFIG_DIR/kitty.conf"
+info "Configuring Kitty..."
+write_managed "$KITTY_CONFIG" "#" <<'KITTY_CONF'
+# Kitty configuration
+# Docs: https://sw.kovidgoyal.net/kitty/conf/
+
+# Font. Use the Nerd Font variant for eza, starship, lazygit, and other glyphs.
+# If double-width glyphs misalign, use "JetBrainsMono Nerd Font Mono".
+font_family JetBrainsMono Nerd Font
+font_size 14.0
+
+# Dracula-Sakura theme
+background #282a36
+foreground #f8f8f2
+selection_background #6a5d86
+selection_foreground #f8f8f2
+color0 #2f3144
+color1 #ff7aa8
+color2 #8af7cf
+color3 #fff0a8
+color4 #d4b2ff
+color5 #ff9fe3
+color6 #9be7ff
+color7 #f8f8f2
+color8 #8a88c7
+color9 #ff7aa8
+color10 #8af7cf
+color11 #fff0a8
+color12 #d4b2ff
+color13 #ffc2ec
+color14 #9be7ff
+color15 #ffffff
+
+# Window. Kitty accepts vertical and horizontal padding as a two-value setting.
+window_padding_width 4 8
+hide_window_decorations no
+macos_titlebar_color background
+
+# Behavior
+copy_on_select clipboard
+confirm_os_window_close 0
+mouse_hide_wait -1
+shell_integration enabled
+KITTY_CONF
+configured "Kitty configured (JetBrainsMono Nerd Font, Dracula-Sakura palette, integrated titlebar)"
 
 # ---- Retired SketchyBar config ----
 # Remove only generator-owned files during normal config refreshes. The broader
@@ -9755,6 +9738,11 @@ emit_agent_preferences() {
 - Before compaction, or when context grows large, persist important project state to the repo's existing status, planning, or memory files when that workflow exists.
 - Never write secrets into agent instruction files, memory files, or committed project docs.
 
+## Task tracking
+
+- Mark each TODO item complete immediately after its work finishes.
+- Do not defer completed TODO updates until a batch or phase ends.
+
 ## Token discipline and recovery
 
 - Use targeted file reads and concise summaries to protect context.
@@ -11027,16 +11015,7 @@ alias claws="claws --theme dracula"    # claws AWS TUI — built-in Dracula them
 export D2_THEME=200                     # d2 diagrams — dark theme (d2 has no exact Dracula; 200 = Dark Mauve)
 export D2_DARK_THEME=200
 
-# -- Terminal launcher & search (replaces Raycast / Spotlight) ----------------
-# Run these in the Ghostty quick terminal (global cmd+space) for a quick,
-# keyboard-first launcher flow.
-# a: fuzzy-launch an installed macOS app
-a() {
-  local app
-  app=$(mdfind "kMDItemContentType == 'com.apple.application-bundle'" 2>/dev/null \
-        | sort -u | fzf --prompt='apps ❯ ' --header='↩ open app' --with-nth=-1 --delimiter=/) \
-    && [[ -n "$app" ]] && open "$app"
-}
+# -- Terminal search helpers --------------------------------------------------
 # ff: find a file by name and open it
 ff() {
   local file
@@ -11214,9 +11193,9 @@ echo "  - axe DevTools (accessibility testing)"
 echo "  - React Developer Tools"
 echo "  - JSON Formatter"
 echo ""
-info "Terminal launcher & window management (keyboard-first, quick-terminal style):"
-echo "  - cmd+space           Ghostty quick terminal (Spotlight's cmd+space auto-disabled; log out/in)"
-echo "  - a                   open an installed app       ff   find & open a file"
+info "Terminal and search:"
+echo "  - cmd+space           open Spotlight (log out/in after migration)"
+echo "  - ff                  find and open a file"
 echo "  - rgf <pattern>       live code/content search    s <q>  Spotlight-index search"
 echo "  - clip                clipboard history (clipse)"
 echo "  - taproom             browse/install Homebrew;    k9s / lazydocker  containers"
@@ -11251,8 +11230,8 @@ if [[ "$DRY_RUN" != "true" ]]; then
 Complete the manual permissions, credentials, and account steps after the script finishes.
 
 ## macOS permissions and settings
-- [ ] Grant Accessibility access to Ghostty for the global quick-terminal shortcut.
-- [ ] Log out, then log in to apply the Spotlight shortcut and visible menu bar.
+- [ ] Log out, then log in to apply the restored Spotlight shortcuts and visible menu bar.
+- [ ] Open Kitty and confirm the Dracula-Sakura palette and JetBrains Mono Nerd Font.
 - [ ] Select `~/Media/photos/dracula-sakura.jpg` in System Settings if you want the bundled wallpaper.
 
 ## Local inference
@@ -11286,17 +11265,16 @@ CHECKLIST_EOF
     cat > "$DESKTOP/KEYBOARD_SHORTCUTS.md" <<'SHORTCUTS_EOF'
 # Keyboard Shortcuts
 
-A compact map of the highest-frequency keys, launchers, and click actions this
-setup wires in. This is the **quick card**, deliberately kept to one screen.
+A compact map of the highest-frequency keys and commands this setup wires in.
+This is the **quick card**, deliberately kept to one screen.
 
 > The full reference is `docs/SHORTCUTS.md` in the dev-setup repository.
 > It includes zellij, lazygit, k9s, lazydocker, micro, lnav, and mpv.
 
-## Launcher & search (Ghostty quick terminal)
+## Search and clipboard
 | Keys / command | Action |
 |------|--------|
-| `cmd + space` | Toggle the Ghostty quick terminal (global dropdown) |
-| `a` | Open an installed app from a fuzzy launcher |
+| `cmd + space` | Open Spotlight for application, file, and web search |
 | `ff` | Find a file by name and open it |
 | `rgf <pattern>` | Live code/content search (ripgrep + fzf) |
 | `s <query>` | Spotlight-index search (mdfind) |
@@ -11350,10 +11328,11 @@ The setup installs a Dracula-Sakura wallpaper at `~/Media/photos/dracula-sakura.
 - **llama.cpp** serves Qwen2.5 Coder 14B through Vulkan on `127.0.0.1:8081`.
 - **llm** provides one-shot prompts and shell pipelines through its Anthropic plugin.
 
-## Terminal and launcher
-- **Ghostty** provides the global `cmd+space` quick terminal.
+## Terminal and search
+- **Kitty** provides the GPU-accelerated terminal with the Dracula-Sakura theme.
+- **Spotlight** provides global application, file, and web search.
 - **zellij** provides panes, tabs, and persistent terminal sessions.
-- `a`, `ff`, `rgf`, `s`, and `clip` provide application, file, search, and clipboard access.
+- `ff`, `rgf`, `s`, and `clip` provide file, search, and clipboard access.
 - **atuin**, **starship**, **fzf**, and **zoxide** improve shell history, prompts, search, and navigation.
 
 ## Development workflow
@@ -13736,11 +13715,10 @@ These are the deliberate GUI survivors — apps kept because a terminal equivale
 would cost real capability — plus the invisible plumbing the toolkit depends on
 but you rarely invoke by hand.
 
-### Ghostty — Terminal Emulator
-The fast, GPU-accelerated terminal that hosts this whole setup, themed Dracula-Sakura.
-Its global **quick terminal** drops down from anywhere on `cmd+space` and hosts
-the launcher functions (`a`, `ff`, `rgf`, `s`, `clip`). Config lives at
-`~/.config/ghostty/config`.
+### Kitty (Terminal Emulator)
+The GPU-accelerated terminal that hosts this setup uses the Dracula-Sakura theme,
+JetBrains Mono Nerd Font, compact padding, and an integrated titlebar. Config
+lives at `~/.config/kitty/kitty.conf`.
 
 ### Google Chrome — Primary Browser
 The primary GUI browser (Carbonyl and w3m cover terminal browsing). Kept for

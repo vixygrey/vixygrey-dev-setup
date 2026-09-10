@@ -846,25 +846,18 @@ sops --decrypt secrets.yaml  # decrypt to stdout
 
 ## GUI Apps
 
-### Raycast
+### Spotlight
 
-1. **Set as Spotlight replacement:** System Settings > Keyboard > Shortcuts > Spotlight > disable both. Then set Raycast hotkey to `Cmd+Space`
-2. **Install extensions:** Raycast Store > search for: Clipboard History, GitHub, AWS, Docker, Notion, Brew, Kill Process, Color Picker
-3. **Enable Clipboard History:** Raycast Settings > Extensions > Clipboard History > enable
-4. **Window management:** Raycast Settings > Extensions > Window Management > enable (replaces Rectangle)
+The setup restores `Cmd+Space` for Spotlight and `Cmd+Option+Space` for Finder search.
+The change takes effect after the next login.
 
-### Google Chrome
+### Kitty (Terminal)
 
-1. **Import bookmarks:** Chrome Settings > Bookmarks > Import bookmarks and settings
-2. **Extensions:** uBlock Origin, React DevTools, axe DevTools, JSON Formatter
-3. **Default search:** Settings > Search engine > DuckDuckGo
+The script configures Kitty with the Dracula-Sakura palette and JetBrains Mono Nerd Font.
 
-### Ghostty (Terminal)
-
-Already configured by the script with the Dracula-Sakura palette and JetBrains Mono font. Optional tweaks:
-1. **Font size:** Edit `~/.config/ghostty/config`, change `font-size`
-2. **Opacity:** Add `background-opacity = 0.95` for slight transparency
-3. **Shell integration:** Automatic (zsh integration built-in)
+1. To change the font size, edit `~/.config/kitty/kitty.conf`.
+2. To add transparency, set `background_opacity 0.95`.
+3. To reload the configuration, press `Ctrl+Cmd+,`.
 
 ### Kiro
 
