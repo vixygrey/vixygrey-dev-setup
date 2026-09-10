@@ -432,7 +432,7 @@ The generated OMP policy selects Pyright for Python type intelligence and Ruff f
 | **atuin** | Replaces shell history with SQLite-backed, fuzzy-searchable database |
 | **mise** | Universal version manager -- Node, Python, Go, Ruby all in one (replaces nvm + pyenv + rbenv) |
 | **micro** | The `$EDITOR` -- git/gh/lazygit commit messages, leaf's Ctrl+E, quick edits. Non-modal, on-screen key menu (`Ctrl+G` for help), Dracula theme |
-| **Zed** | Fast native editor with Dracula-Sakura defaults and OMP in the Agent Panel through ACP |
+| **Zed** | Fast native editor with a named Dracula-Sakura theme and OMP in the Agent Panel through ACP |
 | **omp** | Oh My Pi coding agent with LSP, DAP, subagents, and role-based routing across Codex, Gemini, Claude Sonnet, and local llama.cpp |
 | **chezmoi** | Dotfile manager -- backup and restore configs across machines |
 | **mitmproxy** | Free HTTP debugging proxy -- inspect and modify API calls from any app |
@@ -480,7 +480,7 @@ The generated OMP policy selects Pyright for Python type intelligence and Ruff f
 |-----|-------------|
 | **LibreOffice** | Headless office suite for validation and conversion of `.pptx`, `.xlsx`, and `.docx` files |
 | **Herald** | Terminal email and calendar client with a local Dracula-Sakura theme |
-| **Obsidian** | Local Markdown knowledge base with per-vault extensions and themes |
+| **Obsidian** | Local Markdown knowledge base with a managed Dracula-Sakura theme in each registered vault |
 | **rclone** | SFTP/S3/cloud file transfer from the terminal (replaced the Cyberduck GUI) |
 
 ---
@@ -529,7 +529,8 @@ Applied consistently across the machine, with built-in Dracula variants kept whe
 | **Yazi** | Dracula-Sakura manager, status, dialog, mode, and file-type colors in `theme.toml` |
 | **broot** | Full Dracula-Sakura skin in `~/.config/broot/skins/dracula-sakura.hjson` |
 | **Herald** | Full role-based Dracula-Sakura theme in `~/.herald/themes/dracula-sakura.yaml` |
-| **Zed** | Dracula-Sakura interface, syntax, and terminal colors through supported `theme_overrides` |
+| **Zed** | Named interface, syntax, and terminal theme in `~/.config/zed/themes/dracula-sakura.json` |
+| **Obsidian** | Full per-vault CSS theme with dark plum surfaces and Sakura accent colors |
 | **jqp** | Dracula base theme with Dracula-Sakura override colors in `~/.jqp.yaml` |
 | **fzf** | Dracula colors in `FZF_DEFAULT_OPTS` |
 | **Starship** | Dracula-Sakura palette in `starship.toml` |
@@ -573,7 +574,7 @@ acceptance of a valid one meant anything.
 | `atac`, `viddy`, `cheznav`, `lazynpm`, `lazyrsync`, `lazyssh` | no theming found in their help or configuration schemas |
 | `mullvad-tui`, Mullvad VPN | Both clients use fixed application colors and expose no theme configuration |
 | `chamber` | Its current configuration schema exposes no theme settings |
-| Firefox, Obsidian, Bitwarden, Docker Desktop | Appearance belongs to application or profile state, which the generator does not overwrite |
+| Firefox, Bitwarden, Docker Desktop | Appearance belongs to application or profile state, which the generator does not overwrite |
 
 `stu` and `e1s` are themed but carry **no `--verify` row**. Both are TUIs with no
 validate mode, and without a TTY they panic inside crossterm before config parsing

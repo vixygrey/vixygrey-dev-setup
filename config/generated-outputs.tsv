@@ -79,6 +79,11 @@ omp-lsp-policy|$OMP_LSP_FILE|managed|yaml|configs|yq|none
 zshrc|$ZSHRC|managed|shell|configs|bash|none
 micro-settings|$MICRO_CONFIG_DIR/settings.json|merged|json|configs|jq|none
 zed-settings|$ZED_CONFIG|merged|json|configs|jq|none
+zed-theme|$ZED_THEME|generated|json|configs|jq|none
+obsidian-theme-owner|$OBSIDIAN_THEME_MARKER|generated|text|configs|none|none
+obsidian-theme-manifest|$OBSIDIAN_THEME_DIR/manifest.json|generated|json|configs|jq|none
+obsidian-theme-css|$OBSIDIAN_THEME_DIR/theme.css|generated|css|configs|none|none
+obsidian-appearance|$OBSIDIAN_VAULT/.obsidian/appearance.json|merged|json|configs|jq|none
 herald-theme|$HERALD_THEME_FILE|generated|yaml|configs|yq|none
 herald-config|$HERALD_CONFIG|merged|yaml|configs|yq|none
 eilmeldung-config|$EILMELDUNG_CONFIG|managed|toml|configs|taplo|eilmeldung
