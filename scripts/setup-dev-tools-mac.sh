@@ -372,7 +372,7 @@ declare -A CATEGORY_DESC=(
     [mac-productivity]="Obsidian, Herald, LibreOffice, Vulkan llama.cpp"
     [mac-browsers]="Firefox, Carbonyl, w3m, monolith"
     [mac-media]="mpv, oxipng, jpegoptim, cliamp, spotatui"
-    [mac-cloud]="rclone, borg, borgtui"
+    [mac-cloud]="rclone, borg, borgmatic"
     [dracula]="Dracula-Sakura theme pass for terminal, editor, and TUI surfaces"
     [configs]="Every tool's generated config, git hooks, and omp setup"
     [filesystem]="Directory structure, helper scripts, git identity"
@@ -2069,7 +2069,8 @@ if [[ "$CLEANUP" == "true" ]]; then
         "formula:kondo:kondo:removed"
         "formula:miller:Miller:csvkit + DuckDB"
         "formula:grpcurl:grpcurl:removed"
-        "formula:ffmpeg:ffmpeg:removed"
+        # The direct ffmpeg install was retired in #555, but mpv and cliamp still
+        # require the formula. Do not make cleanup break those retained tools (#563).
     )
 
     CLEANUP_COUNT=0
@@ -3579,8 +3580,122 @@ brew_install "mprocs" "mprocs (TUI for running multiple dev processes)"
 brew_install "broot" "broot (directory tree and file-navigation TUI)"
 brew_install "lnav" "lnav (advanced log file viewer — auto-format, SQL queries on logs)"
 brew_install "progress" "progress (coreutils progress viewer — cp, mv, dd, tar)"
-trust_tap christo-auer/eilmeldung
-brew_install "christo-auer/eilmeldung/eilmeldung" "eilmeldung (TUI RSS reader)"
+# Upstream publishes checksum-addressed macOS binaries. Use those instead of its
+# Homebrew formula, whose build-only dependencies install a second Rust toolchain.
+EILMELDUNG_VERSION="1.8.1"
+EILMELDUNG_PREFIX="$HOME/.local/share/eilmeldung"
+EILMELDUNG_BIN="$EILMELDUNG_PREFIX/eilmeldung"
+EILMELDUNG_LINK="$HOME/.local/bin/eilmeldung"
+case "$(uname -m)" in
+    arm64)
+        EILMELDUNG_ASSET="eilmeldung-aarch64-apple-darwin-$EILMELDUNG_VERSION.tar.gz"
+        EILMELDUNG_SHA256="37af65f24cf50f7e95339679b6ab5cf90eb492a333ca31316d173e1064beaf31"
+        ;;
+    x86_64)
+        EILMELDUNG_ASSET="eilmeldung-x86_64-apple-darwin-$EILMELDUNG_VERSION.tar.gz"
+        EILMELDUNG_SHA256="c7387b767aed5f1b5b85649321cb8effcbda001df7018580d130091c91b191d0"
+        ;;
+    *)
+        EILMELDUNG_ASSET=""
+        EILMELDUNG_SHA256=""
+        ;;
+esac
+EILMELDUNG_URL="https://github.com/christo-auer/eilmeldung/releases/download/$EILMELDUNG_VERSION/$EILMELDUNG_ASSET"
+
+# Migrate the Homebrew formula from the first release that carried eilmeldung.
+# Remove only Homebrew-recorded dependencies after its formula is gone. A manual
+# reinstall after this migration remains untouched because the state key persists.
+_eilmeldung_formula="christo-auer/eilmeldung/eilmeldung"
+_eilmeldung_had_formula=false
+if ! is_done "cleanup:eilmeldung-homebrew" && brew list --formula "$_eilmeldung_formula" &>/dev/null; then
+    _eilmeldung_had_formula=true
+    if [[ "$DRY_RUN" == "true" ]]; then
+        info "[DRY RUN] Would replace the Homebrew eilmeldung formula with its verified macOS binary"
+    else
+        info "Replacing the Homebrew eilmeldung formula with its verified macOS binary..."
+        if brew uninstall "$_eilmeldung_formula" >> "$LOG_FILE" 2>&1; then
+            success "Homebrew eilmeldung formula removed"
+        else
+            error "Failed to remove the Homebrew eilmeldung formula"
+        fi
+    fi
+fi
+if [[ "$DRY_RUN" != "true" ]] && ! is_done "cleanup:eilmeldung-homebrew" &&
+   ! brew list --formula "$_eilmeldung_formula" &>/dev/null; then
+    brew untap christo-auer/eilmeldung >> "$LOG_FILE" 2>&1 || true
+    XDG_CONFIG_HOME="$HOME/.config" brew untrust --formula "$_eilmeldung_formula" >> "$LOG_FILE" 2>&1 || true
+    XDG_CONFIG_HOME="$HOME/.config" brew untrust --tap christo-auer/eilmeldung >> "$LOG_FILE" 2>&1 || true
+    env -u XDG_CONFIG_HOME brew untrust --formula "$_eilmeldung_formula" >> "$LOG_FILE" 2>&1 || true
+    env -u XDG_CONFIG_HOME brew untrust --tap christo-auer/eilmeldung >> "$LOG_FILE" 2>&1 || true
+    if [[ "$_eilmeldung_had_formula" == "true" ]]; then
+        brew autoremove >> "$LOG_FILE" 2>&1 || true
+        _brew_snapshot_ready=""
+        _BREW_FORMULAE=""
+    fi
+    mark_done "cleanup:eilmeldung-homebrew"
+fi
+_eilmeldung_resolved="$(command -v eilmeldung 2>/dev/null || true)"
+if [[ "$DRY_RUN" == "true" && "$_eilmeldung_had_formula" == "true" ]]; then
+    _eilmeldung_resolved=""
+fi
+
+# The official macOS archive links against Homebrew's libxml2 dylib.
+if [[ -n "$EILMELDUNG_ASSET" &&
+      ( -z "$_eilmeldung_resolved" || "$_eilmeldung_resolved" == "$EILMELDUNG_LINK" ) ]]; then
+    brew_install "libxml2" "libxml2 (eilmeldung runtime library)"
+else
+    progress
+fi
+progress
+if [[ -n "$_eilmeldung_resolved" && "$_eilmeldung_resolved" != "$EILMELDUNG_LINK" ]]; then
+    warn "eilmeldung already available at $_eilmeldung_resolved"
+elif [[ -z "$EILMELDUNG_ASSET" ]]; then
+    error "eilmeldung has no supported archive for $(uname -m)"
+elif [[ "$DRY_RUN" == "true" ]]; then
+    if [[ -e "$EILMELDUNG_PREFIX" && ! -f "$EILMELDUNG_PREFIX/.dev-setup-version" ]]; then
+        warn "[DRY RUN] Would leave $EILMELDUNG_PREFIX alone because this script does not own it"
+    elif [[ -x "$EILMELDUNG_BIN" ]] &&
+         [[ "$(/bin/cat "$EILMELDUNG_PREFIX/.dev-setup-version" 2>/dev/null || true)" == "$EILMELDUNG_VERSION" ]]; then
+        warn "[DRY RUN] eilmeldung $EILMELDUNG_VERSION already installed"
+    else
+        info "[DRY RUN] Would install eilmeldung $EILMELDUNG_VERSION -> $EILMELDUNG_PREFIX"
+    fi
+elif [[ -e "$EILMELDUNG_PREFIX" && ! -f "$EILMELDUNG_PREFIX/.dev-setup-version" ]]; then
+    warn "Left $EILMELDUNG_PREFIX alone because this script does not own it"
+elif [[ ! -x "$EILMELDUNG_BIN" ]] ||
+     [[ "$(/bin/cat "$EILMELDUNG_PREFIX/.dev-setup-version" 2>/dev/null || true)" != "$EILMELDUNG_VERSION" ]]; then
+    _eilmeldung_tmp="$(mktemp -d "${TMPDIR:-/tmp}/dev-setup-eilmeldung.XXXXXX")"
+    mkdir -p "$_eilmeldung_tmp/stage"
+    info "Installing eilmeldung $EILMELDUNG_VERSION..."
+    if run_remote_installer "eilmeldung $EILMELDUNG_VERSION" "$EILMELDUNG_URL" "$EILMELDUNG_SHA256" \
+           tar -xzf -- -C "$_eilmeldung_tmp/stage" eilmeldung/eilmeldung &&
+       [[ -x "$_eilmeldung_tmp/stage/eilmeldung/eilmeldung" ]]; then
+        rm -rf "$EILMELDUNG_PREFIX"
+        mkdir -p "$EILMELDUNG_PREFIX"
+        mv "$_eilmeldung_tmp/stage/eilmeldung/eilmeldung" "$EILMELDUNG_BIN"
+        printf '%s\n' "$EILMELDUNG_VERSION" > "$EILMELDUNG_PREFIX/.dev-setup-version"
+        success "eilmeldung $EILMELDUNG_VERSION installed"
+    else
+        error "Failed to download or verify eilmeldung $EILMELDUNG_VERSION"
+    fi
+    rm -rf "$_eilmeldung_tmp"
+    unset _eilmeldung_tmp
+fi
+if [[ "$DRY_RUN" != "true" && -x "$EILMELDUNG_BIN" ]]; then
+    mkdir -p "$HOME/.local/bin"
+    if [[ -L "$EILMELDUNG_LINK" && "$(readlink "$EILMELDUNG_LINK")" == "$EILMELDUNG_BIN" ]]; then
+        warn "eilmeldung already linked into ~/.local/bin"
+    elif [[ -e "$EILMELDUNG_LINK" || -L "$EILMELDUNG_LINK" ]]; then
+        warn "Left $EILMELDUNG_LINK alone because another installation owns it"
+    elif ln -s "$EILMELDUNG_BIN" "$EILMELDUNG_LINK"; then
+        success "eilmeldung linked into ~/.local/bin"
+    else
+        error "Failed to link eilmeldung into ~/.local/bin"
+    fi
+fi
+unset EILMELDUNG_VERSION EILMELDUNG_PREFIX EILMELDUNG_BIN EILMELDUNG_LINK
+unset EILMELDUNG_ASSET EILMELDUNG_SHA256 EILMELDUNG_URL
+unset _eilmeldung_formula _eilmeldung_had_formula _eilmeldung_resolved
 brew_install "concord" "concord (Discord client for the terminal)"
 cargo_install "cfait" cfait \
     "cfait (offline-first task manager TUI with optional CalDAV sync)" --locked
@@ -4137,9 +4252,6 @@ banner "Mac Apps — Cloud Storage"
 brew_install "rclone" "rclone (sync files to any cloud — Google Drive, S3, Dropbox, etc.)"
 brew_install "borgbackup" "borg (deduplicated encrypted backups — better than Time Machine for offsite)"
 brew_install "borgmatic" "borgmatic (automated borg backup scheduling and config)"
-cargo_install "borgtui" borgtui \
-    "borgtui (interactive Borg backup manager)" \
-    --git https://github.com/dpbriggs/borgtui.git --locked
 # borgmatic does nothing without a config. Scaffold a commented starter (only if none
 # exists, so user edits are never clobbered): source dirs, retention, and excludes for
 # churny/regenerable data (node_modules/caches/Downloads — same intent as the old Time
@@ -11796,7 +11908,6 @@ Complete the manual permissions, credentials, and account steps after the script
 - [ ] Run `chezmoi init <repository>` before you place generated configuration under version control.
 - [ ] Place music under `~/Media/music`, then run `cliamp ~/Media/music`.
 - [ ] Open Docker Desktop once to install its required privileged helper.
-- [ ] Run `borgtui` and add repositories through its Keychain-backed setup.
 - [ ] Run `chamber init` to create the first encrypted local vault.
 - [ ] Run `spotatui` and select a music source.
 - [ ] Run `cfait` to open its local task collection.
@@ -11862,7 +11973,6 @@ Every binding is on screen: the **key menu** sits along the bottom, and there ar
 | `eilmeldung` | RSS reader with vim-style navigation |
 | `concord` | Discord client with Keychain token storage |
 | `cfait` | Local-first task manager |
-| `borgtui` | Interactive Borg backup manager |
 | `chamber ui` | Local encrypted secrets vault |
 | `spotatui` | Multi-source terminal music player |
 
@@ -11906,7 +12016,7 @@ The setup installs a Dracula-Sakura wallpaper at `~/Media/photos/dracula-sakura.
 - **eza**, **bat**, **fd**, **ripgrep**, **dust**, **duf**, and **sd** replace common file utilities.
 - **cliamp** and **spotatui** provide music playback.
 - **surge** and **aria2** manage downloads.
-- **rclone**, **borg**, and **borgtui** provide synchronization and backups.
+- **rclone**, **borg**, and **borgmatic** provide synchronization and backups.
 
 ## Infrastructure and security
 - **kubectl**, **k9s**, **stern**, and **dive** support container and cluster inspection.
@@ -13932,15 +14042,6 @@ The seed uses its Dracula theme and leaves credentials to the OS keyring.
 
 ```bash
 cfait
-```
-
-### `borgtui`
-Borgtui manages Borg repositories and backup sources.
-Its profile files remain user-owned because they contain repository and encryption settings.
-
-```bash
-borgtui
-borgtui config-path
 ```
 
 ### `chamber`

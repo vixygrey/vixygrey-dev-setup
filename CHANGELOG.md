@@ -17,7 +17,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - Restored Herald, Broot, Mullvad VPN, `mullvad-tui`, and Zed with Dracula-Sakura styling where supported (#550).
 - Added Oh My Pi to Zed as an Agent Client Protocol server through `omp acp` (#550).
 - Added Firefox, Obsidian, Docker Desktop, and Bitwarden with supported application defaults (#557).
-- Added eilmeldung, borgtui, concord, chamber, spotatui, and cfait with Dracula-Sakura styling where supported (#557).
+- Added eilmeldung, concord, chamber, spotatui, and cfait with Dracula-Sakura styling where supported (#557).
 - Added the requested OMP language servers and exposed every command on the default `PATH` (#559).
 
 ### Changed
@@ -47,11 +47,12 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - Removed Ghostty, its global quick terminal, its login agent, and the `a` shell application launcher (#544).
 - Removed starlit, its credential configuration, and its zellij dashboard pane (#546).
 - Removed cdk-nag, tree, curlie, detect-secrets, global commitlint, Commitizen, npkill, Homebrew nano, and four redundant fonts (#555).
-- Removed mtr, Watchman, has, taproom, keyward, lazyenv, kondo, Miller, grpcurl, and ffmpeg (#555).
+- Removed mtr, Watchman, has, taproom, keyward, lazyenv, kondo, Miller, grpcurl, and the direct ffmpeg installation (#555).
 - Removed `llm`, `pgcli`, `mycli`, `lazysql`, `sq`, `git-cliff`, Mermaid CLI, Nushell, and their generated configuration (#555).
 - Removed Caddy and ClamAV automation. The cleanup command stops ClamAV before package removal (#555).
 - Removed four redundant font packages. JetBrains Mono, its Nerd Font variant, and Inter remain (#555).
 - The setup no longer generates Zellij layouts or prints the Quick flow line in new terminals (#561).
+- Removed Borgtui because its current Rust dependencies do not support macOS (#563).
 
 ### Fixed
 
@@ -62,6 +63,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - Removed Anthropic models from every omp fallback chain (#538).
 - Removed stale completion notifier calls that failed after successful real runs (#551).
 - The llama.cpp model download now overrides the generated 30-second curl timeout (#553).
+- `--cleanup` now keeps ffmpeg because mpv and cliamp require its Homebrew formula (#563).
+- Eilmeldung now uses its verified macOS binary, which avoids the missing custom tap and duplicate Homebrew Rust toolchain (#563).
 
 ## [7.23.0] - 2026-09-09
 

@@ -227,7 +227,6 @@ br                         # browse files and keep directory changes
 eilmeldung                 # read RSS feeds in the terminal
 concord                    # open Discord in the terminal
 cfait                      # manage local or CalDAV tasks
-borgtui                    # manage Borg repositories and backups
 herald --demo              # preview Herald without an account
 herald                     # configure email and calendar accounts
 mullvad account login      # authenticate the bundled Mullvad CLI
@@ -239,7 +238,7 @@ Zed lists **Oh My Pi** as an External Agent. It starts `omp acp` with the existi
 
 Eilmeldung, concord, cfait, Herald, Broot, and Zed use Dracula-Sakura colors where their schemas support them.
 
-Borgtui, chamber, and Mullvad do not expose theme configuration.
+Chamber and Mullvad do not expose theme configuration.
 
 ## Data & JSON
 
@@ -681,16 +680,6 @@ eilmeldung                   # select an RSS provider and open the reader
 ```
 
 Eilmeldung uses rounded borders, Nerd Font icons, and the managed Dracula-Sakura palette.
-
-### borgtui (Borg backup manager)
-
-```bash
-borgtui                      # open the interactive backup manager
-borgtui add ~/Documents      # add a backup source
-borgtui config-path          # print the active profile path
-```
-
-Borgtui stores repository locations and Keychain passphrase settings in user-owned profile files.
 
 ### w3m (terminal web browser)
 
