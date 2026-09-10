@@ -353,23 +353,23 @@ declare -A CATEGORY_DESC=(
     [core]="mise (Node, Python), Go, Rust, uv, pnpm, PyYAML helper venv"
     [git]="Git, GitHub CLI, delta, lazygit, pre-commit framework (hooks + config: configs)"
     [aws]="AWS CLI, CDK, SAM, Granted, cfn-lint, e1s/e2c/stu/claws (TUIs), s5cmd, steampipe, dynein, iamlive"
-    [iac]="OpenTofu (Terraform), tflint, terraform-docs, checkov, infracost"
+    [iac]="terraform-docs, checkov"
     [security]="gitleaks, trivy, semgrep, Objective-See, Bitwarden, chamber"
     [replacements]="eza, bat, fd, ripgrep, zoxide, btop, sd, dust, just, Yazi, fx, etc."
     [data-processing]="yq, csvkit, jc, jqp, pandoc, ImageMagick"
     [code-quality]="shellcheck, shfmt, actionlint, act, hadolint, ruff, prettier"
-    [perf-testing]="hyperfine, oha"
+    [perf-testing]="Hurl"
     [dev-servers]="ngrok, miniserve"
     [terminal-productivity]="Caligula, Nerdlog, Emeraldian, Watchtower, leaf, topgrade, fastfetch, mprocs, Broot, qalc, lazyssh/rsync/npm, cheznav, eilmeldung, concord, cfait"
-    [k8s-github]="stern, gh-dash"
+    [k8s-github]="gh-dash"
     [database]="duckdb, harlequin, usql, dbmate"
-    [containers]="Docker Desktop, lazydocker, dive, kubectl, k9s"
+    [containers]="Docker Desktop, lazydocker, dive"
     [api]="Posting"
-    [networking]="bandwhich, nmap, trippy"
+    [networking]="nmap, trippy"
     [dx]="fzf, starship, atuin, micro, Zed, Kitty, zellij, omp, language servers"
     [docs]="d2"
     [mac-system]="LuLu, Mullvad VPN, mullvad CLI, mullvad-tui"
-    [mac-productivity]="Thunderbird, Obsidian, Herald, LibreOffice, Vulkan llama.cpp"
+    [mac-productivity]="Draw.io, Obsidian, Herald, LibreOffice, Vulkan llama.cpp"
     [mac-browsers]="Firefox, Carbonyl, Chawan, monolith"
     [mac-media]="mpv, oxipng, jpegoptim, cliamp, spotatui"
     [mac-cloud]="rclone, borg, borgmatic"
@@ -394,20 +394,19 @@ declare -A CONFIG_LIVES_IN_CONFIGS=(
     [core]="mise, direnv, ~/.npmrc, pip, gemrc"
     [git]="the global pre-commit hook, lazygit, gh, the commit template, global gitignore"
     [aws]="the AWS CLI config (\$HOME/.aws/config), Claws"
-    [iac]="tflint"
     [code-quality]="shellcheck, act, prettier, editorconfig"
     [replacements]="btop, ripgreprc, fdignore, aria2, Yazi"
     [data-processing]="yt-dlp, jqp"
     [api]="Posting"
     [terminal-productivity]="Emeraldian, leaf, topgrade, fastfetch, mprocs, Broot, eilmeldung, concord, cfait"
-    [k8s-github]="stern, gh-dash"
+    [k8s-github]="gh-dash"
     [database]="harlequin"
-    [containers]="Docker daemon, lazydocker, k9s (config + Dracula skin)"
+    [containers]="Docker daemon, lazydocker"
     [networking]="trippy"
     [dx]="atuin, zellij, Kitty, Zed, Croft, omp (~/.omp/agent + ~/.agents/skills) — and starship, which is in the \`dracula\` category"
     [mac-media]="mpv, spotatui"
     [mac-browsers]="Chawan"
-    [mac-productivity]="Thunderbird profiles, Obsidian vault themes, Herald, llama.cpp service"
+    [mac-productivity]="Obsidian vault themes, Herald, llama.cpp service"
 )
 
 # Loud default: a key here that is not a real category is a notice that can never
@@ -1739,39 +1738,6 @@ trust_tap() {
     env -u XDG_CONFIG_HOME brew trust --tap "$tap" >> "$LOG_FILE" 2>&1 || true
 }
 
-# thunderbird_profile_paths <profiles.ini> <profile-root>
-# Print every Thunderbird profile path from Mozilla's registry. Relative paths
-# resolve under the registry root. Absolute paths remain unchanged.
-thunderbird_profile_paths() {
-    local registry="$1" root="$2"
-    [[ -f "$registry" ]] || return 0
-    awk -v root="$root" '
-        function emit() {
-            if (!in_profile || path == "") return
-            if (relative == "1") print root "/" path
-            else print path
-        }
-        /^[[:space:]]*\[Profile[0-9]+\][[:space:]]*$/ {
-            emit()
-            in_profile = 1
-            path = ""
-            relative = "1"
-            next
-        }
-        /^[[:space:]]*\[/ {
-            emit()
-            in_profile = 0
-            next
-        }
-        in_profile {
-            line = $0
-            sub(/\r$/, "", line)
-            if (line ~ /^Path=/) path = substr(line, 6)
-            else if (line ~ /^IsRelative=/) relative = substr(line, 12)
-        }
-        END { emit() }
-    ' "$registry"
-}
 
 # -- Source guard for unit tests ---------------------------------------------
 # #375: the helpers above carry all the risk in this script and were testable only
@@ -2086,7 +2052,6 @@ if [[ "$CLEANUP" == "true" ]]; then
         "cask:dbeaver-community:DBeaver Community:harlequin:DBeaver"
         "cask:cyberduck:Cyberduck:rclone:Cyberduck"
         "cask:google-drive:Google Drive:rclone:Google Drive"
-        "cask:drawio:draw.io:d2:draw.io"
         "cask:notion:Notion:plain Markdown + reminders:Notion"
         "cask:notion-calendar:Notion Calendar:removed:Notion Calendar"
         "brew:cmus:cmus:cliamp"
@@ -2197,6 +2162,20 @@ if [[ "$CLEANUP" == "true" ]]; then
         "formula:w3m:w3m:Chawan"
         # Replaced by Posting in #572.
         "formula:atac:ATAC:Posting"
+        # Retired from the curated setup in #578.
+        "formula:k9s:k9s:removed"
+        "formula:stern:stern:removed"
+        "formula:kubernetes-cli:kubectl:removed"
+        "formula:bandwhich:bandwhich:removed"
+        "formula:opentofu:OpenTofu:removed"
+        "cask:tflint:tflint:removed"
+        "formula:infracost:infracost:removed"
+        "cask:thunderbird:Thunderbird:removed:Thunderbird"
+        "cask:mitmproxy:mitmproxy:removed"
+        "formula:parallel:GNU parallel:removed"
+        "formula:sops:sops:removed"
+        "formula:hyperfine:hyperfine:removed"
+        "formula:oha:oha:removed"
         # The direct ffmpeg install was retired in #555, but mpv and cliamp still
         # require the formula. Do not make cleanup break those retained tools (#563).
     )
@@ -2372,6 +2351,9 @@ if [[ "$CLEANUP" == "true" ]]; then
         "Skim|$HOME/Library/Application Support/Skim"
         "OrbStack|$HOME/.orbstack"
         "OrbStack|$HOME/Library/Application Support/OrbStack"
+        # CAUTION: This directory contains mail and account data. Cleanup moves it
+        # to Trash only after the Thunderbird application is absent (#578).
+        "Thunderbird|$HOME/Library/Thunderbird"
     )
     for entry in "${ORPHANED_EDITOR_DIRS[@]}"; do
         _app="${entry%%|*}"
@@ -2491,6 +2473,9 @@ if [[ "$CLEANUP" == "true" ]]; then
         "sketchybar|$HOME/.config/sketchybar|removed"
         "cz|$HOME/.czrc|git template + omp"
         "freshclam|$HOME/Library/LaunchAgents/com.freshclam.update.plist|removed"
+        "k9s|$HOME/.config/k9s|removed"
+        "stern|$HOME/.config/stern|removed"
+        "tflint|$HOME/.tflint.hcl|removed"
     )
     for entry in "${CONFIG_ORPHANS[@]}"; do
         _tool="${entry%%|*}"
@@ -2601,6 +2586,7 @@ if [[ "$CLEANUP" == "true" ]]; then
         "kdabir/tap|has"
         "gateway-of-last-resort/tap|keyward"
         "lazynop/tap|lazyenv"
+        "terraform-linters/tap|tflint"
     )
     for entry in "${DEPRECATED_TAPS[@]}"; do
         _tap="${entry%%|*}"
@@ -2758,7 +2744,6 @@ if [[ "$VERIFY" == "true" ]]; then
         "path|posting|$HOME/.config/posting/config.yaml|posting locate config 2>/dev/null | sed -n '\$p'"
         "validate|ngrok|$HOME/Library/Application Support/ngrok/ngrok.yml|ngrok config check"
         "template|borgmatic|$HOME/.config/borgmatic/config.yaml|borgmatic config validate"
-        "path|k9s|$HOME/.config/k9s/config.yaml|k9s info 2>/dev/null | sed 's/\x1b\[[0-9;]*m//g' | sed -n 's/^Config: *//p'"
         "path|mise|$HOME/.config/mise/config.toml|mise config ls 2>/dev/null | awk 'NR==1 {print \$1}' | sed \"s|^~|\$HOME|\""
         "path|lazygit|$HOME/.config/lazygit/config.yml|echo \"\$(lazygit --print-config-dir)/config.yml\""
         "path|atuin|$HOME/.config/atuin/config.toml|atuin info 2>/dev/null | awk -F'\"' '/client config:/ {print \$2}'"
@@ -2770,7 +2755,6 @@ if [[ "$VERIFY" == "true" ]]; then
         "unchecked|trippy|$HOME/.config/trippy/trippy.toml|"
         "path|harlequin|$HOME/.harlequin.toml|_verify_harlequin_config"
         "unchecked|gh-dash|$HOME/.config/gh-dash/config.yml|"
-        "path|stern|$HOME/.config/stern/config.yaml|_verify_stern_config"
         "unchecked|lazydocker|$HOME/.config/lazydocker/config.yml|"
         "unchecked|yt-dlp|$HOME/.config/yt-dlp/config|"
         "unchecked|micro|$HOME/.config/micro/settings.json|"
@@ -2854,9 +2838,6 @@ if [[ "$VERIFY" == "true" ]]; then
     # the `[[ -e "$path" ]]` check.
     _verify_gem_config() {
         [[ -f "$HOME/.gemrc" ]] && echo "$HOME/.gemrc"
-    }
-    _verify_stern_config() {
-        stern --help 2>/dev/null | awk -F'"' '/Path to the stern config file/ {print $2; exit}'
     }
     _verify_harlequin_config() {
         local out
@@ -3359,15 +3340,8 @@ fi  # aws
 if should_run "iac"; then
 banner "Infrastructure as Code"
 
-brew_install "opentofu" "OpenTofu (open-source Terraform — multi-cloud IaC)"
-trust_tap terraform-linters/tap
-# tflint ships as a CASK in its tap, not a formula (#366). `brew install` falls back to the
-# cask so it installed fine, but _brew_has_formula can never match a cask, so every
-# non-resume run re-ran the install and --dry-run always claimed it was missing.
-brew_cask_install "terraform-linters/tap/tflint" "tflint (Terraform linter — terraform-linters tap, not homebrew-core)"
 brew_install "terraform-docs" "terraform-docs (auto-generate module docs from variables/outputs)"
 brew_install "checkov" "checkov (IaC static analysis — Terraform, CloudFormation, Kubernetes, Dockerfile)"
-brew_install "infracost" "infracost (cost estimation for Terraform changes before apply)"
 # Note: tfsec was folded into trivy (installed under 'security'). Run `trivy config .`
 # instead — same Terraform misconfig coverage, broader scan surface.
 
@@ -3379,7 +3353,6 @@ banner "Security & Secrets"
 
 # Secret management
 brew_install "age" "age (modern file encryption)"
-brew_install "sops" "sops (encrypt secrets in YAML/JSON, works with AWS KMS)"
 cargo_install "chamber-tui" chamber \
     "chamber (local encrypted secrets manager and TUI)" --locked
 brew_cask_install "bitwarden" "Bitwarden (password manager)"
@@ -3679,8 +3652,6 @@ fi  # code-quality
 if should_run "perf-testing"; then
 banner "Performance & Load Testing"
 
-brew_install "hyperfine" "hyperfine (command benchmarking)"
-brew_install "oha" "oha (HTTP load testing, Rust-based)"
 brew_install "hurl" "hurl (HTTP requests from plain text files — curl + test runner)"
 
 fi  # perf-testing
@@ -3711,7 +3682,6 @@ if [[ "$DRY_RUN" != "true" ]] && command -v leaf &>/dev/null && ! is_done "confi
 fi
 brew_install "watchexec" "watchexec (run commands on file changes — better entr)"
 brew_install "pv" "pv (pipe viewer — progress bars for pipes)"
-brew_install "parallel" "parallel (GNU parallel — run commands in parallel)"
 brew_install "gum" "gum (shell script UI toolkit — prompts, spinners, confirmations)"
 brew_install "topgrade" "topgrade (update everything — brew, npm, pip, macOS, all at once)"
 brew_install "fastfetch" "fastfetch (quick system info display — faster neofetch)"
@@ -3866,9 +3836,8 @@ fi  # terminal-productivity
 
 # =============================================================================
 if should_run "k8s-github"; then
-banner "Kubernetes & GitHub Extras"
+banner "GitHub Extras"
 
-brew_install "stern" "stern (multi-pod log tailing for k8s)"
 
 # gh-dash (GitHub dashboard extension)
 # A raw `gh extension install` — not one of the managed helpers — so it has to guard
@@ -3920,15 +3889,6 @@ banner "Containers & Orchestration"
 brew_install "lazydocker" "lazydocker (terminal UI for Docker)"
 brew_cask_install "docker-desktop" "Docker Desktop"
 brew_install "dive" "dive (explore Docker image layers)"
-# Declared as kubernetes-cli, not kubectl. `kubectl` is a Homebrew ALIAS; the canonical
-# formula name is what `brew list --formula -1` prints, and that list is what
-# _brew_has_formula matches against. Declaring the alias made the membership test false
-# on a machine that already had it, so every run took the install branch, brew no-opped,
-# and the run counted a fresh install that never happened (#371). Same trap as naming a
-# package where the binary is meant — check `brew info --json=v2 <x> | jq -r
-# '.formulae[0].name'` before adding a formula whose name you are guessing.
-brew_install "kubernetes-cli" "kubectl (Kubernetes CLI)"
-brew_install "k9s" "k9s (terminal UI for Kubernetes)"
 
 fi  # containers
 
@@ -3946,7 +3906,6 @@ fi  # api
 if should_run "networking"; then
 banner "Networking & Debugging"
 
-brew_install "bandwhich" "bandwhich (real-time bandwidth by process)"
 brew_install "nmap" "nmap (network scanning)"
 brew_install "trippy" "trippy (modern traceroute TUI with charts)"
 
@@ -4134,9 +4093,6 @@ go_install github.com/savedra1/clipse@latest clipse "clipse (TUI clipboard manag
 # Dotfile management
 brew_install "chezmoi" "chezmoi (dotfile manager — backup/restore configs across machines)"
 
-# HTTP debugging
-# HTTP debugging (mitmproxy — free, open-source)
-brew_cask_install "mitmproxy" "mitmproxy (HTTP/HTTPS debugging proxy — free Proxyman alternative)"
 
 # Node/JS tooling (via npm)
 if installed npm; then
@@ -4353,7 +4309,9 @@ unset LLAMA_CPP_MODEL_NAME LLAMA_CPP_MODEL LLAMA_CPP_MODEL_SIZE LLAMA_CPP_MODEL_
 # LibreOffice is the headless office suite for local document validation and conversion.
 brew_cask_install "libreoffice" "LibreOffice (headless document validation and conversion)"
 brew_cask_install "obsidian" "Obsidian (local Markdown knowledge base)"
-brew_cask_install "thunderbird" "Thunderbird (email, calendar, contacts, and RSS)"
+brew_cask_install "drawio" "Draw.io (desktop diagram editor)"
+# Draw.io keeps its supported user settings in application-owned Electron
+# storage. It exposes no stable preference file for this generator to manage (#578).
 # The cask ships only the app. Link `soffice` into the managed user binary directory.
 if [[ "$DRY_RUN" != "true" ]]; then
     _soffice="/Applications/LibreOffice.app/Contents/MacOS/soffice"
@@ -5136,154 +5094,17 @@ fi  # installed lazygit
 
 
 
-# ---- k9s Dracula skin ----
-# k9s follows XDG too, so the Library path this used to write was read by nobody and
-# the Dracula skin never applied (#333). `k9s info` reports the config file it will
-# use; strip its ANSI colouring, and match on the whole rest of the line because these
-# paths contain a space ("Application Support") that a field-splitting read truncates.
-#
-# Asking is itself a side effect here, which is the trap. `k9s info` CREATES its config
-# directory as a consequence of being asked — verified against a throwaway
-# XDG_CONFIG_HOME, where `k9s info` alone leaves behind `k9s/` and `k9s/skins/`. So a
-# --dry-run that probed it made two directories on a machine that had never run k9s,
-# and it was the last thing still doing so after #380's other guards went in.
-#
-# "Ask the tool, do not hardcode" still holds for a real run; under --dry-run we take
-# the documented default instead. The cost is that the preview names the default path
-# on a machine where k9s has been relocated. That is the right trade: a preview may be
-# approximate, but it may not change anything.
-if [[ "$DRY_RUN" == "true" ]]; then
-    K9S_CONFIG_DIR="$HOME/.config/k9s"
-else
-    K9S_CONFIG_DIR="$(XDG_CONFIG_HOME="$HOME/.config" k9s info 2>/dev/null \
-        | sed 's/\x1b\[[0-9;]*m//g' | sed -n 's|^Config: *||p' | head -1)"
-fi
-K9S_CONFIG_DIR="${K9S_CONFIG_DIR%/config.yaml}"
-K9S_CONFIG_DIR="${K9S_CONFIG_DIR:-$HOME/.config/k9s}"
-K9S_SKINS_DIR="$K9S_CONFIG_DIR/skins"
-K9S_SKIN="$K9S_SKINS_DIR/dracula.yaml"
-K9S_SUPERSEDED_DIR="$HOME/Library/Application Support/k9s"
-    info "Creating k9s Dracula skin..."
-    write_managed "$K9S_SKIN" "#" <<'K9S_DRACULA'
-k9s:
-  body:
-    fgColor: "#f8f8f2"
-    bgColor: "#282a36"
-    logoColor: "#d4b2ff"
-  prompt:
-    fgColor: "#f8f8f2"
-    bgColor: "#282a36"
-    suggestColor: "#d4b2ff"
-  info:
-    fgColor: "#9be7ff"
-    sectionColor: "#ddd2f7"
-  dialog:
-    fgColor: "#f8f8f2"
-    bgColor: "#323448"
-    buttonFgColor: "#282a36"
-    buttonBgColor: "#d4b2ff"
-    buttonFocusFgColor: "#282a36"
-    buttonFocusBgColor: "#ff9fe3"
-    labelFgColor: "#ffcf93"
-    fieldFgColor: "#f8f8f2"
-  frame:
-    border:
-      fgColor: "#4b4963"
-      focusColor: "#d4b2ff"
-    menu:
-      fgColor: "#f8f8f2"
-      keyColor: "#d4b2ff"
-      numKeyColor: "#d4b2ff"
-    crumbs:
-      fgColor: "#282a36"
-      bgColor: "#d4b2ff"
-      activeColor: "#ff9fe3"
-    status:
-      newColor: "#8af7cf"
-      modifyColor: "#d4b2ff"
-      addColor: "#9be7ff"
-      errorColor: "#ff7aa8"
-      highlightColor: "#ffcf93"
-      killColor: "#8a88c7"
-      completedColor: "#8a88c7"
-    title:
-      fgColor: "#f8f8f2"
-      bgColor: "#282a36"
-      highlightColor: "#d4b2ff"
-      counterColor: "#9be7ff"
-      filterColor: "#ff9fe3"
-  views:
-    charts:
-      bgColor: default
-      defaultDialColors:
-        - "#d4b2ff"
-        - "#ff7aa8"
-      defaultChartColors:
-        - "#d4b2ff"
-        - "#ff7aa8"
-    table:
-      fgColor: "#f8f8f2"
-      bgColor: "#282a36"
-      header:
-        fgColor: "#8a88c7"
-        bgColor: "#282a36"
-        sorterColor: "#9be7ff"
-    xray:
-      fgColor: "#f8f8f2"
-      bgColor: "#282a36"
-      cursorColor: "#323448"
-      graphicColor: "#d4b2ff"
-      showColor: "#8af7cf"
-    yaml:
-      keyColor: "#9be7ff"
-      colonColor: "#d4b2ff"
-      valueColor: "#f8f8f2"
-    logs:
-      fgColor: "#f8f8f2"
-      bgColor: "#282a36"
-      indicator:
-        fgColor: "#282a36"
-        bgColor: "#d4b2ff"
-        toggleOnColor: "#8af7cf"
-        toggleOffColor: "#8a88c7"
-K9S_DRACULA
-
-    # Set dracula as active skin in k9s config. Existing files are updated with yq
-    # rather than a blind EOF append: the old append bypassed DRY_RUN and assumed the
-    # file ended inside the right YAML nesting, which is not a safe assumption (#392).
-    K9S_MAIN_CONFIG="$K9S_CONFIG_DIR/config.yaml"
-    if [[ -f "$K9S_MAIN_CONFIG" ]]; then
-        if installed yq; then
-            _k9s_skin="$(yq eval '.k9s.ui.skin // ""' "$K9S_MAIN_CONFIG" 2>/dev/null || true)"
-            if [[ "$_k9s_skin" == "dracula" ]]; then
-                warn "k9s active skin already set to dracula"
-            elif [[ "$DRY_RUN" == "true" ]]; then
-                info "[DRY RUN] Would set k9s.ui.skin to dracula in $K9S_MAIN_CONFIG"
-            elif yq eval '.k9s.ui.skin = "dracula"' -i "$K9S_MAIN_CONFIG" >> "$LOG_FILE" 2>&1; then
-                :
-            else
-                warn "Could not set k9s.ui.skin in $K9S_MAIN_CONFIG — leaving existing YAML unchanged"
-            fi
-            unset _k9s_skin
-        elif grep -Eq '^[[:space:]]*skin:[[:space:]]*dracula([[:space:]]|$)' "$K9S_MAIN_CONFIG" 2>/dev/null; then
-            warn "k9s active skin already set to dracula"
-        elif [[ "$DRY_RUN" == "true" ]]; then
-            info "[DRY RUN] Would set k9s.ui.skin to dracula in $K9S_MAIN_CONFIG"
-        else
-            warn "yq not installed — leaving existing k9s YAML unchanged rather than appending a brittle line"
-        fi
-    else
-        write_managed "$K9S_MAIN_CONFIG" "#" <<'K9S_CFG'
-k9s:
-  ui:
-    skin: dracula
-K9S_CFG
-    fi
-    remove_superseded_managed "$K9S_SUPERSEDED_DIR/skins/dracula.yaml" \
-        "k9s reads $K9S_SKIN" "(#333)"
-    remove_superseded_managed "$K9S_SUPERSEDED_DIR/config.yaml" \
-        "k9s reads $K9S_CONFIG_DIR/config.yaml" "(#333)"
-    configured "k9s Dracula skin configured"
+# ---- Retired Kubernetes config cleanup ----
+# Remove only files that still contain a complete managed block. The cleanup
+# path can remove modified or unmarked leftovers after the retired tools are absent.
+remove_superseded_managed "$HOME/.config/k9s/skins/dracula.yaml" \
+    "k9s was retired from this setup" "(#578)"
+remove_superseded_managed "$HOME/.config/k9s/config.yaml" \
+    "k9s was retired from this setup" "(#578)"
+remove_superseded_managed "$HOME/Library/Application Support/k9s/skins/dracula.yaml" \
+    "k9s was retired from this setup" "(#578)"
+remove_superseded_managed "$HOME/Library/Application Support/k9s/config.yaml" \
+    "k9s was retired from this setup" "(#578)"
 
 # ---- micro editor config ----
 # micro is the $EDITOR: git/gh/lazygit commit messages, leaf's Ctrl+E, quick file edits.
@@ -5945,116 +5766,6 @@ done
 unset OBSIDIAN_REGISTRY OBSIDIAN_THEME_NAME OBSIDIAN_THEME_MANIFEST OBSIDIAN_THEME_CSS
 unset OBSIDIAN_VAULTS OBSIDIAN_VAULT OBSIDIAN_THEME_DIR OBSIDIAN_THEME_MARKER
 
-# ---- Thunderbird profiles ----
-# Thunderbird keeps account, identity, server, credential, and message data in each
-# profile. This block only seeds low-risk preferences and a user-interface stylesheet.
-# Existing user.js and userChrome.css files stay untouched.
-THUNDERBIRD_ROOT="$HOME/Library/Thunderbird"
-THUNDERBIRD_PROFILES_INI="$THUNDERBIRD_ROOT/profiles.ini"
-THUNDERBIRD_PROFILES=()
-mapfile -t THUNDERBIRD_PROFILES < <(
-    thunderbird_profile_paths "$THUNDERBIRD_PROFILES_INI" "$THUNDERBIRD_ROOT"
-)
-
-if [[ "${#THUNDERBIRD_PROFILES[@]}" -eq 0 ]]; then
-    info "No Thunderbird profiles found. Open Thunderbird once, then run --only configs."
-fi
-
-for THUNDERBIRD_PROFILE in "${THUNDERBIRD_PROFILES[@]}"; do
-    if [[ ! -d "$THUNDERBIRD_PROFILE" ]]; then
-        warn "Thunderbird profile path does not exist: $THUNDERBIRD_PROFILE"
-        continue
-    fi
-
-    THUNDERBIRD_USER_JS="$THUNDERBIRD_PROFILE/user.js"
-    THUNDERBIRD_USER_CHROME="$THUNDERBIRD_PROFILE/chrome/userChrome.css"
-    THUNDERBIRD_THEME="$THUNDERBIRD_PROFILE/chrome/dracula-sakura.css"
-
-    write_generated "$THUNDERBIRD_THEME" <<'THUNDERBIRD_THEME_CONF'
-/*
- * Dracula-Sakura for Thunderbird.
- * Thunderbird's built-in dark theme supplies the stable base. These variables
- * add the house plum surfaces with rose, lilac, cyan, and mint accents.
- */
-:root {
-  color-scheme: dark !important;
-
-  --lwt-accent-color: #282a36 !important;
-  --lwt-text-color: #f8f8f2 !important;
-  --toolbar-bgcolor: #2f3144 !important;
-  --toolbar-color: #f8f8f2 !important;
-  --toolbarbutton-icon-fill: #ddd2f7 !important;
-  --toolbarbutton-hover-background: #3b3d52 !important;
-  --toolbarbutton-active-background: #4b4963 !important;
-  --toolbar-field-background-color: #323448 !important;
-  --toolbar-field-color: #f8f8f2 !important;
-  --toolbar-field-border-color: #4b4963 !important;
-
-  --button-primary-background-color: #ff9fe3 !important;
-  --button-primary-hover-background-color: #ffc2ec !important;
-  --button-primary-active-background-color: #d4b2ff !important;
-  --button-primary-color: #282a36 !important;
-  --in-content-primary-button-background: #ff9fe3 !important;
-  --in-content-primary-button-background-hover: #ffc2ec !important;
-  --in-content-primary-button-text-color: #282a36 !important;
-
-  --selected-item-color: #4b4963 !important;
-  --selected-item-text-color: #f8f8f2 !important;
-  --sidebar-background-color: #282a36 !important;
-  --sidebar-text-color: #ddd2f7 !important;
-  --sidebar-border-color: #4b4963 !important;
-  --tabs-toolbar-background-color: #282a36 !important;
-  --tab-selected-bgcolor: #323448 !important;
-  --tab-selected-textcolor: #ffc2ec !important;
-  --focus-outline-color: #d4b2ff !important;
-  --link-color: #9be7ff !important;
-}
-
-#messengerWindow,
-#mail-toolbox,
-#navigation-toolbox {
-  background-color: #282a36 !important;
-  color: #f8f8f2 !important;
-}
-
-button[default="true"],
-.primary {
-  --button-background-color: #ff9fe3 !important;
-  --button-text-color: #282a36 !important;
-}
-
-:focus-visible {
-  outline-color: #d4b2ff !important;
-}
-THUNDERBIRD_THEME_CONF
-
-    if write_seed_once "$THUNDERBIRD_USER_CHROME" \
-        "existing userChrome.css remains user-owned; import dracula-sakura.css manually" \
-        <<'THUNDERBIRD_USER_CHROME_CONF'
-@import url("dracula-sakura.css");
-THUNDERBIRD_USER_CHROME_CONF
-    then
-        configured "Thunderbird Dracula-Sakura stylesheet enabled in $THUNDERBIRD_PROFILE"
-    fi
-
-    if write_seed_once "$THUNDERBIRD_USER_JS" \
-        "existing user.js preferences remain user-owned" \
-        <<'THUNDERBIRD_USER_PREFS_CONF'
-// Thunderbird defaults from vixygrey-dev-setup. Edit or remove this file to override them.
-user_pref("extensions.activeThemeID", "thunderbird-compact-dark@mozilla.org");
-user_pref("toolkit.legacyUserProfileCustomizations.stylesheets", true);
-user_pref("mailnews.start_page.enabled", false);
-user_pref("mailnews.mark_message_read.delay", true);
-user_pref("mailnews.mark_message_read.delay.interval", 2);
-user_pref("mail.SpellCheckBeforeSend", true);
-THUNDERBIRD_USER_PREFS_CONF
-    then
-        configured "Thunderbird dark theme and mail defaults enabled in $THUNDERBIRD_PROFILE"
-    fi
-done
-
-unset THUNDERBIRD_ROOT THUNDERBIRD_PROFILES_INI THUNDERBIRD_PROFILES
-unset THUNDERBIRD_PROFILE THUNDERBIRD_USER_JS THUNDERBIRD_USER_CHROME THUNDERBIRD_THEME
 
 
 
@@ -6215,29 +5926,9 @@ ACT_CONFIG="$HOME/.actrc"
 ACT_CONF
     configured "act configured (medium Ubuntu images, container reuse)"
 
-# ---- tflint config (Terraform linter) ----
-# tflint core only catches syntax/deprecations; the real rules live in the AWS
-# ruleset plugin, which must be declared here and fetched via `tflint --init`.
-# Without it, "lint with tflint" gives near-zero coverage.
-TFLINT_CONFIG="$HOME/.tflint.hcl"
-    info "Creating tflint configuration..."
-    write_managed "$TFLINT_CONFIG" "#" <<'TFLINT_CONF'
-plugin "terraform" {
-  enabled = true
-  preset  = "recommended"
-}
-
-plugin "aws" {
-  enabled = true
-  version = "0.48.0"
-  source  = "github.com/terraform-linters/tflint-ruleset-aws"
-}
-TFLINT_CONF
-    if [[ "$DRY_RUN" != "true" ]] && installed tflint; then
-        tflint --init >> "$LOG_FILE" 2>&1 \
-            && success "tflint configured (recommended preset + AWS ruleset v0.48.0)" \
-            || warn "tflint config written; run 'tflint --init' to fetch the AWS ruleset"
-    fi
+# ---- Retired tflint config cleanup ----
+remove_superseded_managed "$HOME/.tflint.hcl" \
+    "tflint was retired from this setup" "(#578)"
 
 # ---- trippy Dracula-Sakura theme ----
 # trippy theme colors are hex WITHOUT the leading '#' (or named colors). Item names
@@ -6332,27 +6023,9 @@ GHDASH_CONF
         configured "gh-dash configured (Dracula-Sakura theme, PR/issue sections)"
     fi
 
-# ---- stern config ----
-if installed stern; then
-STERN_CONFIG="$HOME/.config/stern/config.yaml"
-    info "Creating stern configuration..."
-    write_managed "$STERN_CONFIG" "#" <<'STERN_CONF'
-# stern configuration (multi-pod log tailing)
-
-# Output format: default, json, or custom template
-template: '{{color .PodColor .PodName}} {{color .ContainerColor .ContainerName}} {{.Message}}{{"\n"}}'
-
-# Tail last N lines on start
-tail: 50
-
-# Timestamps
-timestamps: short
-
-# Only show logs from last 5 minutes on connect
-since: 5m
-STERN_CONF
-    configured "stern configured (50 tail lines, 5m lookback, timestamps)"
-fi  # installed stern
+# ---- Retired stern config cleanup ----
+remove_superseded_managed "$HOME/.config/stern/config.yaml" \
+    "stern was retired from this setup" "(#578)"
 
 # ---- zellij config ----
 if installed zellij; then
@@ -7571,8 +7244,6 @@ if [[ "$DRY_RUN" != "true" ]]; then
 defaults write NSGlobalDomain _HIHideMenuBar -bool false
 
 # -- Dock --
-# Auto-hide the Dock
-defaults write com.apple.dock autohide -bool true
 # Small Dock icon size
 defaults write com.apple.dock tilesize -integer 36
 # Don't show recent applications
@@ -7581,7 +7252,7 @@ defaults write com.apple.dock show-recents -bool false
 defaults write com.apple.dock mineffect -string "scale"
 # Minimize windows into their application icon
 defaults write com.apple.dock minimize-to-application -bool true
-configured "Dock configured (small icons, auto-hide, scale effect)"
+configured "Dock configured (small icons, scale effect)"
 
 # -- Screenshots --
 # Save screenshots as PNG
@@ -12323,7 +11994,6 @@ autoload -Uz bashcompinit && bashcompinit   # bash-style complete (aws_completer
 # Tool completions cached to files — live-generating each per shell was the
 # dominant startup cost. Delete ~/.cache/dev-setup to refresh after tool updates.
 _compcache() { local f="$_cachedir/comp_$1"; shift; [[ -r "$f" ]] || "$@" > "$f" 2>/dev/null; [[ -r "$f" ]] && source "$f"; }
-command -v kubectl       &>/dev/null && _compcache kubectl kubectl completion zsh
 command -v gh            &>/dev/null && _compcache gh gh completion -s zsh
 command -v aws_completer &>/dev/null && complete -C aws_completer aws
 unset -f _compcache
@@ -12368,9 +12038,7 @@ if [[ -o interactive && -z "$AI_AGENT" ]]; then
     alias rm="trash"
 
 # Short aliases for modern tools (don't override builtins)
-alias rg="rg"          # ripgrep (already the command name)
 alias f="fd"           # fd (fast find)
-alias sd="sd"          # sd (fast sed)
 alias dft="difft"      # difftastic
 # Yazi's recommended wrapper changes the parent shell directory after exit.
 # Press `Q` instead of `q` in Yazi to leave the shell directory unchanged.
@@ -12413,8 +12081,6 @@ alias gha="act"
 
 # -- Containers & Kubernetes --------------------------------------------------
 alias lzd="lazydocker"
-alias k="kubectl"
-alias klog="stern"
 
 # -- File Tools ---------------------------------------------------------------
 alias md="leaf"
@@ -12444,9 +12110,6 @@ alias gj="just --justfile ~/.justfile --working-directory ."
 
 # -- Dev & Testing ------------------------------------------------------------
 alias watchrun="watchexec --exts ts,tsx --restart"
-alias bench="hyperfine"
-alias loadtest="oha"
-alias par="parallel"
 alias lint-sh="shellcheck"
 alias fmt-sh="shfmt -w -i 4"
 
@@ -12622,7 +12285,6 @@ echo "  [~/.config/zed]         Zed house fonts, Dracula-Sakura theme, and OMP A
 echo "  [~/.config/croft]       Croft defaults and native Dracula-Sakura theme"
 echo "  [Application Support/emeraldian]  User-owned defaults and native Dracula-Sakura theme"
 echo "  [Obsidian vaults]       Per-vault Dracula-Sakura theme and appearance defaults"
-echo "  [Thunderbird profiles]  Mail defaults and Dracula-Sakura interface styling"
 echo "  [~/.herald]             Herald email/calendar config and Dracula-Sakura theme"
 echo "  [~/.config/eilmeldung] Dracula-Sakura RSS reader theme"
 echo "  [~/.config/concord]    Keychain credentials and Dracula-Sakura theme"
@@ -12633,7 +12295,6 @@ echo "  [~/.local/share/llama.cpp]  Verified Qwen2.5 Coder GGUF model"
 echo "  [leaf]                  Terminal Markdown previewer (live watch, fuzzy picker, Mermaid)"
 echo "  [~/.config/yt-dlp]      Best quality, aria2c downloader"
 echo "  [~/.config/gh-dash]     GitHub dashboard, Dracula-Sakura theme"
-echo "  [~/.config/stern]       K8s log tailing"
 echo "  [~/.config/zellij]      Modern terminal multiplexer with Dracula-Sakura theme"
 echo "  [~/.config/mpv]         Video player (hardware accel, save position)"
 echo "  [Mullvad]               VPN app, bundled CLI, and source-built mullvad-tui"
@@ -12643,7 +12304,6 @@ echo "  [~/.justfile]           Global task runner recipes (run them with: gj --
 echo "  [~/.config/brewfile]    Brewfile snapshot for reproducibility"
 echo "  [~/.config/micro]       micro — Dracula, on-screen key menu, house indent rules"
 echo "  [lazygit]               Dracula-Sakura theme, delta pager"
-echo "  [k9s]                   Dracula-Sakura-colored skin"
 echo "  [Finder]                Hidden files, path bar, list view"
 echo "  [macOS]                 Dock, keyboard, screenshots, Spotlight hotkey, Stage Manager"
 echo ""
@@ -12657,7 +12317,6 @@ echo "  - cmd+space           open Spotlight (log out/in after migration)"
 echo "  - ff                  find and open a file"
 echo "  - rgf <pattern>       live code/content search    s <q>  Spotlight-index search"
 echo "  - clip                clipboard history (clipse)"
-echo "  - k9s / lazydocker    inspect containers and clusters"
 echo ""
 info "Chezmoi quickstart (bring dotfiles under version control):"
 echo "  chezmoi init                          # Initialize"
@@ -12668,8 +12327,6 @@ echo ""
 info "A few useful next moves:"
 echo "  - Keep ~/Desktop empty — use 'ff' / 's' (mdfind) to find files from the terminal"
 echo "  - Disable iCloud Desktop & Documents: System Settings > Apple ID > iCloud > iCloud Drive > Options"
-echo "  - hyperfine: benchmark commands with 'hyperfine \"command1\" \"command2\"'"
-echo "  - oha: load test with 'oha -n 1000 -c 50 http://localhost:3000'"
 echo "  - watchexec: watch files with 'watchexec --exts ts,tsx -- npm test'"
 echo "  - pv: add progress bars with 'pv largefile.tar.gz | tar xz'"
 echo ""
@@ -12703,11 +12360,8 @@ Complete the manual permissions, credentials, and account steps after the script
 - [ ] Run `gh auth login` to enable the GitHub issue and pull request workflow.
 - [ ] Run `aws configure sso` or `aws configure` before you use AWS tools.
 - [ ] Run `atuin register` to enable optional encrypted shell-history synchronization.
-- [ ] Run `infracost auth login` before you use infrastructure cost estimates.
 - [ ] Run `ngrok config add-authtoken <TOKEN>` before you create public tunnels.
 - [ ] Run `herald --demo`, then run `herald` to configure email and calendar accounts.
-- [ ] Open Thunderbird once to create a profile and configure an account.
-- [ ] Run `setup-dev-tools-mac.sh --only configs` after Thunderbird creates another profile.
 - [ ] Run `mullvad account login <ACCOUNT_NUMBER>`, then open `mullvad-tui`.
 - [ ] Open Zed's Agent Panel and select **Oh My Pi** to confirm the `omp acp` connection.
 - [ ] Sign in to Bitwarden.
@@ -12747,7 +12401,7 @@ A compact map of the highest-frequency keys and commands this setup wires in.
 This is the **quick card**, deliberately kept to one screen.
 
 > The full reference is `docs/SHORTCUTS.md` in the dev-setup repository.
-> It includes zellij, lazygit, k9s, lazydocker, micro, lnav, and mpv.
+> It includes zellij, lazygit, lazydocker, micro, lnav, and mpv.
 
 ## Search and clipboard
 | Keys / command | Action |
@@ -12833,8 +12487,8 @@ The setup installs a Dracula-Sakura wallpaper at `~/Media/photos/dracula-sakura.
 - **harlequin** and **usql** provide database clients.
 - **d2** provides diagrams as code.
 - **LibreOffice** and **poppler** support visual checks of Office documents.
+- **Draw.io** provides a local desktop diagram editor.
 - **Croft** provides a terminal IDE with LSP, debugging, source control, and PDF previews.
-- **Thunderbird** provides email, calendar, contacts, and RSS.
 - **Herald** provides terminal email and calendar access.
 - **eilmeldung** provides RSS reading with a managed Dracula-Sakura palette.
 - **concord** provides Discord access with Keychain token storage.
@@ -12854,10 +12508,9 @@ The setup installs a Dracula-Sakura wallpaper at `~/Media/photos/dracula-sakura.
 - **rclone**, **borg**, and **borgmatic** provide synchronization and backups.
 
 ## Infrastructure and security
-- **kubectl**, **k9s**, **stern**, and **dive** support container and cluster inspection.
-- **Docker Desktop** provides the macOS container runtime.
-- **awscli**, **granted**, **OpenTofu**, **checkov**, and **trivy** support cloud infrastructure.
-- **gitleaks**, **sops**, and **age** protect repository secrets.
+- **Docker Desktop**, **lazydocker**, and **dive** support container workflows.
+- **awscli**, **granted**, **checkov**, and **trivy** support cloud infrastructure.
+- **gitleaks** and **age** protect repository secrets.
 - **Bitwarden** and **chamber** provide encrypted secret storage.
 - **LuLu** provides the remaining graphical network security control.
 - **Mullvad VPN**, its bundled CLI, and **mullvad-tui** provide VPN control.
@@ -13069,19 +12722,6 @@ gum spin --title "Installing..." -- npm install
 
 > Tip: Because gum's output is just text on stdout, you can capture a choice directly into a variable: `env=$(gum choose staging production)`.
 
-### `parallel` — GNU Parallel
-Runs shell commands concurrently across a list of inputs, spreading work across CPU cores instead of processing one item at a time in a `for` loop. It's a major speedup over sequential loops for embarrassingly parallel tasks — converting a folder of images, hitting an API for a list of IDs, or running the same script over many files. Reach for it whenever a loop's iterations don't depend on each other.
-
-```bash
-# run a command once per argument
-parallel echo ::: alice bob carol
-# convert every jpg to png, 4 at a time
-ls *.jpg | parallel -j4 convert {} {.}.png
-# download a list of URLs in parallel
-parallel -a urls.txt curl -O
-```
-
-> Tip: `{}` is replaced with the full input and `{.}` with the input minus its extension — useful for generating output filenames.
 
 ### `topgrade` — Topgrade
 A single command that updates everything on the machine — Homebrew formulae and casks, npm/pnpm global packages, mise-managed runtimes, macOS system updates, shell plugins, and more — instead of remembering and running a dozen separate update commands. It replaces a personal checklist (or a stale update script) with one tool that knows how to detect and update each package manager it finds installed. Run it periodically as routine maintenance.
@@ -13684,31 +13324,6 @@ posting locate themes
 
 The custom theme covers the interface, syntax colors, URLs, variables, and HTTP methods.
 
-### `oha` — HTTP Load Testing
-A Rust-based HTTP load-testing tool (an alternative to `ab`/`wrk`) that fires many requests at an endpoint and shows a live TUI of latency percentiles and throughput as results come in. Reach for it when you want a quick, visual sense of how an API endpoint holds up under load.
-
-```bash
-# 200 requests total against an endpoint
-oha https://example.com/api
-# fixed number of requests
-oha -n 1000 https://example.com/api
-# run for a fixed duration instead of a fixed count
-oha -z 30s https://example.com/api
-# set concurrency level
-oha -c 50 -n 2000 https://example.com/api
-```
-
-### `hyperfine` — Command-Line Benchmarking
-Runs a command many times and reports statistically sound timing (mean, min/max, standard deviation), optionally comparing multiple commands side by side. It replaces ad hoc `time` loops for answering "which of these is actually faster?"
-
-```bash
-# benchmark a single command
-hyperfine 'grep foo bigfile.txt'
-# compare two commands directly
-hyperfine 'fd pattern' 'find . -name pattern'
-# warm up caches with 3 runs before timing
-hyperfine --warmup 3 'npm run build'
-```
 
 ### `ngrok` — Public HTTPS Tunnel to Localhost
 Exposes a port on your local machine as a public HTTPS URL, so you can share a dev server, test webhooks from a third-party service, or demo something running locally. Requires a free account and an authtoken configured once via `ngrok config add-authtoken`.
@@ -13800,15 +13415,6 @@ doggo example.com @1.1.1.1
 doggo --json example.com A | jq '.responses[0].answers[].address'
 ```
 
-### `bandwhich` — Live Network Utilization by Process
-Shows a live TUI breakdown of current network bandwidth usage per process and per connection, so you can immediately see what's saturating your link. It needs raw socket access, so it must be run with `sudo`.
-
-```bash
-# launch the live bandwidth-by-process view (needs sudo)
-sudo bandwhich
-# only watch a specific network interface
-sudo bandwhich -i en0
-```
 
 ### `nmap` — Network Scanner
 The standard network scanner for host discovery, port scanning, and service/version detection. Use it to find what's alive on a network, which ports are open on a host, and what software is listening on them — common for auditing your own infrastructure or debugging connectivity.
@@ -13839,7 +13445,7 @@ ssh-audit --json example.com
 ```
 
 ### `lazyssh` — TUI SSH Connection Manager
-A keyboard-driven TUI for browsing, searching, and connecting to hosts defined in `~/.ssh/config`, inspired by `lazydocker`/`k9s`. It saves you from memorizing IPs or retyping long `ssh` invocations — pick a host from a list and connect, all through the standard `ssh` binary underneath so it never touches your keys or credentials directly.
+A keyboard-driven TUI for browsing, searching, and connecting to hosts defined in `~/.ssh/config`. It replaces memorized addresses and long `ssh` commands while keeping OpenSSH in control of keys and credentials.
 
 ```bash
 # launch the TUI (lists hosts from ~/.ssh/config)
@@ -13964,43 +13570,6 @@ cosign verify --key cosign.pub myimage:latest
 
 > Tip: `cosign sign myimage:latest` without `--key` does keyless signing via OIDC (e.g. GitHub Actions identity) — no key management needed.
 
-### `kubectl` — Kubernetes CLI
-The standard command-line client for Kubernetes resources. It is the base client used by tools such as `k9s` and `stern`.
-
-```bash
-# list pods in the current namespace
-kubectl get pods
-# see detailed info and recent events for a pod
-kubectl describe pod mypod
-# stream logs from a pod
-kubectl logs -f mypod
-# apply a manifest
-kubectl apply -f deployment.yaml
-```
-
-### `k9s` — Kubernetes TUI
-A real-time terminal UI for navigating and managing Kubernetes clusters — browse resources, drill into pods, view logs, and edit or delete objects, all without memorizing `kubectl` flags. It's dramatically faster for day-to-day cluster exploration than typing individual `kubectl` commands. Use it whenever you're actively debugging or monitoring what's running in a cluster.
-
-```bash
-# launch against your current kube context
-k9s
-# start in a specific namespace
-k9s -n kube-system
-# start against a specific kube context
-k9s --context prod
-```
-
-### `stern` — Multi-Pod Log Tailing
-Tails logs from multiple Kubernetes pods and containers at once, matching them by name or label selector and color-coding each source. It solves the problem of `kubectl logs` only following one pod at a time, which is painful once you have replicas. Use it whenever you need to watch logs across a deployment during a rollout or incident.
-
-```bash
-# tail logs from all pods matching a name prefix
-stern mypod-prefix
-# tail all pods in a namespace
-stern . -n kube-system
-# tail pods matching a label selector
-stern --selector app=myapp
-```
 
 ### `awscli` — AWS CLI
 The official command-line interface for every AWS service, used both directly and as the foundation many other AWS tools (like `granted` and `session-manager-plugin`) build on. It's how you configure credentials, inspect resources, and script anything AWS from the terminal. Nearly every AWS workflow starts or ends with an `aws` command.
@@ -14109,7 +13678,7 @@ stu --bucket mybucket
 ```
 
 ### `e1s` — ECS TUI
-A `k9s`-style terminal UI for Amazon ECS — browse clusters, services, and tasks, exec into running containers, and tail logs, all interactively instead of chaining `aws ecs describe-*` commands. It's the fastest way to see what's actually running in an ECS cluster and poke at it. Use it for day-to-day ECS operations and debugging.
+A terminal UI for Amazon ECS resources. Browse clusters, services, and tasks, exec into containers, and tail logs without chaining `aws ecs describe-*` commands.
 
 ```bash
 # launch using your default AWS profile/region
@@ -14121,7 +13690,7 @@ e1s --region us-east-1
 ```
 
 ### `e2c` — EC2 TUI
-A terminal UI for browsing and managing Amazon EC2 instances — view state, type, and other details, and start/stop/reboot/terminate or connect via SSH, all without leaving the terminal or opening the Console. It's the EC2 counterpart to `e1s` and `k9s`. Reach for it when you need a quick visual view of running instances across a region.
+A terminal UI for Amazon EC2 instances. View state and details, then start, stop, reboot, terminate, or connect through SSH. It complements `e1s` for instance-level work.
 
 ```bash
 # launch using default credentials/region
@@ -14181,34 +13750,9 @@ aws ssm start-session --target i-0123456789abcdef0 \
   --parameters '{"portNumber":["5432"],"localPortNumber":["15432"]}'
 ```
 
-### `tofu` — OpenTofu
-The open-source, community-governed fork of Terraform for defining and provisioning multi-cloud infrastructure as code. It's a drop-in replacement using the same HCL syntax and workflow (`init`/`plan`/`apply`), for teams that want infrastructure tooling that stays fully open source. Use it as your primary IaC tool for any cloud resources.
-
-```bash
-# initialize providers and backend
-tofu init
-# preview changes
-tofu plan
-# apply changes
-tofu apply
-# auto-format all .tf files recursively
-tofu fmt -recursive
-```
-
-### `tflint` — Terraform/OpenTofu Linter
-A linter for Terraform/OpenTofu configuration that catches provider-specific errors, deprecated syntax, and style issues that `tofu validate` won't catch, since it understands provider resource schemas. Run it before `tofu plan`/`apply` to catch mistakes early and enforce team conventions.
-
-```bash
-# install/update provider plugins tflint needs
-tflint --init
-# lint the current directory
-tflint
-# lint recursively through subdirectories/modules
-tflint --recursive
-```
 
 ### `terraform-docs` — Module Documentation Generator
-Auto-generates Markdown documentation of a Terraform/OpenTofu module's inputs, outputs, providers, and resources directly from the code, so module docs never drift out of sync by hand. Use it to keep every module's README accurate with zero manual upkeep.
+Auto-generates Markdown documentation of a Terraform module's inputs, outputs, providers, and resources directly from the code, so module docs do not drift. Use it to keep each module README accurate.
 
 ```bash
 # generate a markdown table and write it to a new file
@@ -14231,15 +13775,6 @@ checkov -f template.yaml
 checkov -d . --framework terraform
 ```
 
-### `infracost` — Cloud Cost Estimation
-Estimates the monthly dollar cost of Terraform/OpenTofu changes before you apply them, by combining your plan output with live cloud pricing data. It turns "will this change blow up our AWS bill" into a number you can see in a PR, rather than finding out after the fact. Run it as part of your pre-apply review process.
-
-```bash
-# estimate the cost of the infrastructure in the current directory
-infracost breakdown --path .
-# show the cost difference against a previous estimate
-infracost diff --path . --compare-to infracost-base.json
-```
 
 
 ## Security, testing, runtimes & backups
@@ -14284,19 +13819,6 @@ age -d -i key.txt -o secret.txt secret.age
 age -p -o secret.age secret.txt
 ```
 
-### `sops` — sops
-Encrypts the values inside a YAML/JSON/ENV file while leaving the keys in plaintext, so a secrets file stays diffable and readable in git while its contents stay protected. It integrates with age, AWS KMS, GCP KMS, and PGP as the underlying encryption backend. Use it to safely commit per-environment secrets (like `secrets.prod.yaml`) straight into a repo.
-
-```bash
-# encrypt a file in place (uses .sops.yaml config for the key)
-sops -e -i secrets.yaml
-# decrypt a file to stdout
-sops -d secrets.yaml
-# open the encrypted file in $EDITOR, re-encrypting on save
-sops secrets.yaml
-```
-
-> Tip: define your age recipient or KMS key once in a `.sops.yaml` at the repo root so `sops` picks it up automatically instead of passing `--age`/`--kms` every time.
 
 ### LuLu — Outbound Firewall
 LuLu is a free, open-source macOS outbound firewall that watches for and blocks unexpected outbound network connections — the reverse of most firewalls, which focus on inbound traffic. It alerts the first time an app tries to phone home, letting you allow or block it, which is useful for catching malware, trackers, or apps being unexpectedly chatty. There's no CLI; everything happens through its menu-bar icon and the alert popups it shows when a new connection is attempted.
@@ -14571,7 +14093,7 @@ A `watch` replacement that highlights what changed between runs, keeps history y
 
 ```bash
 # re-run every 2 seconds
-viddy -n 2 kubectl get pods
+viddy -n 2 docker ps
 # highlight the differences between runs
 viddy -d docker ps
 # drop the header for a clean full-screen view
@@ -14581,7 +14103,7 @@ viddy --no-title tail -n 40 app.log
 > The scrollable run history is the real reason to reach for it over `watch`: you can go back and see the state three refreshes ago rather than only the latest frame.
 
 ### `d2` — Text-to-Diagram Language
-A declarative diagramming language: you write plain-text code describing boxes, arrows, and containers, and `d2` compiles it into a clean SVG, PNG, or PDF. It replaces GUI diagramming tools (draw.io, Visio) with something that lives in a repo, diffs cleanly, and renders from the terminal — reach for it when documenting architecture, flows, or system diagrams alongside code.
+A declarative diagramming language that converts plain-text boxes, arrows, and containers into SVG, PNG, or PDF. Use it for diagrams that must live and diff in a repository.
 
 ```bash
 # render a .d2 file to SVG (default output)
@@ -14655,6 +14177,17 @@ soffice --headless --convert-to csv data.xlsx
 ```
 
 > Tip: add `--outdir <path>` to control where the converted file lands.
+
+### Draw.io
+Draw.io provides local diagram editing without a browser dependency.
+The application owns its preferences because it has no stable managed settings file.
+
+```bash
+# open the application
+open -a draw.io
+# open a diagram from the terminal
+drawio architecture.drawio
+```
 
 ### `magick` — ImageMagick
 The all-purpose image toolkit: resize, crop, rotate, composite, convert between formats, and batch-process images from the command line. It replaces opening Preview/Photoshop for anything mechanical — resizing a folder of screenshots, converting HEIC to PNG, stitching a thumbnail.
@@ -14957,15 +14490,6 @@ croft .
 croft --help
 ```
 
-### Thunderbird
-Thunderbird provides email, calendar, contacts, and RSS in a native macOS application.
-Open Thunderbird once, then run the configuration category to seed its profile defaults.
-The profile stylesheet uses Thunderbird's unsupported `userChrome.css` interface.
-
-```bash
-open -a Thunderbird
-setup-dev-tools-mac.sh --only configs
-```
 
 ### `herald`
 Herald provides email and calendar workflows in the terminal.

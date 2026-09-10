@@ -1,14 +1,14 @@
-# macOS Keyboard Shortcuts & Aliases
+# macOS Keyboard Shortcuts and Shell Commands
 
-Quick reference for all **209+ shortcuts** configured by the setup scripts.
+Quick reference for the shell shortcuts, terminal keys, Git aliases, recipes, and macOS shortcuts that the setup configures.
 
 ---
 
-## Shell Aliases
+## Shell Shortcuts
 
 ### Modern Tool Replacements
 
-| Alias | Runs | What it does |
+| Shortcut | Runs | What it does |
 |-------|------|-------------|
 | `ls` | `eza --icons` | Colorful file listing with icons |
 | `ll` | `eza -la --icons --git` | Long listing with git status |
@@ -24,19 +24,27 @@ Quick reference for all **209+ shortcuts** configured by the setup scripts.
 | `watch` | `viddy` | Watch with diff highlighting |
 | `hexdump` | `hexyl` | Colorized hex viewer |
 | `rm` | `trash` | Move to Trash (recoverable) |
-| `make` | `just` | Simpler task runner |
 | `f` | `fd` | Fast file finder |
 | `dft` | `difft` | Syntax-aware structural diff |
 | `y` | Yazi shell wrapper | Open Yazi and keep its directory after `q` |
 | `br` | Broot shell wrapper | Browse a directory tree and keep directory changes after exit |
 | `jx` | `fx` | Interactive JSON viewer |
 
+
+### Search & Clipboard
+
+| Shortcut | Runs | What it does |
+|----------|------|--------------|
+| `ff` | `fd` + `fzf` + `open` | Find a file by name and open it |
+| `rgf [query]` | `rg` + `fzf` + `bat` | Search file content with an interactive preview |
+| `s <query>` | `mdfind` | Search the Spotlight index |
+| `clip` | `clipse` | Open clipboard history |
+
 ### Downloads & Network
 
 | Alias | Runs | What it does |
 |-------|------|-------------|
 | `dl` | `aria2c` | Multi-connection downloader |
-| `wget` | `aria2c` | Download with 16 connections |
 
 ### Database
 
@@ -53,19 +61,16 @@ Quick reference for all **209+ shortcuts** configured by the setup scripts.
 | `gdft` | `git dft` | Syntax-aware git diff |
 | `gha` | `act` | Run GitHub Actions locally |
 
-### Containers & Kubernetes
+### Containers
 
 | Alias | Runs | What it does |
 |-------|------|-------------|
 | `lzd` | `lazydocker` | Interactive Docker UI |
-| `k` | `kubectl` | Kubernetes CLI |
-| `klog` | `stern` | Multi-pod log tailing |
 
 ### Python (via uv)
 
 | Alias | Runs | What it does |
 |-------|------|-------------|
-| `pip` | `uv pip` | Fast pip (10-100x faster) |
 | `venv` | `uv venv` | Fast virtualenv creation |
 | `pyrun` | `uv run` | Run Python scripts with uv |
 
@@ -89,9 +94,6 @@ Quick reference for all **209+ shortcuts** configured by the setup scripts.
 |-------|------|-------------|
 | `gj` | `just --justfile ~/.justfile --working-directory .` | Global justfile recipes |
 | `watchrun` | `watchexec --exts ts,tsx --restart` | Watch & rerun on changes |
-| `bench` | `hyperfine` | Benchmark commands |
-| `loadtest` | `oha` | HTTP load testing |
-| `par` | `parallel` | GNU parallel |
 | `lint-sh` | `shellcheck` | Lint shell scripts |
 | `fmt-sh` | `shfmt -w -i 4` | Format shell scripts |
 
@@ -100,6 +102,8 @@ Quick reference for all **209+ shortcuts** configured by the setup scripts.
 | Alias | Runs | What it does |
 |-------|------|-------------|
 | `prog` | `progress -m` | Live progress bars for running cp/mv/dd/tar |
+| `claws` | `claws --read-only` | Open the AWS TUI with writes disabled |
+| `nerdlog` | `nerdlog --set transport=ssh-bin` | Use the generated OpenSSH config for multi-host logs |
 
 ### Directory Shortcuts (via zoxide)
 
@@ -272,44 +276,6 @@ omits the plugin that draws them.
 
 ---
 
-### k9s
-
-*Source: [k9scli.io command reference](https://k9scli.io/topics/commands/).*
-
-| Key | Action |
-|-----|--------|
-| `?` | Show active keyboard mnemonics and help |
-| `Ctrl+a` | Show all available resource aliases |
-| `:q` or `Ctrl+c` | Quit |
-| `Esc` | Leave view / command / filter mode |
-| `d` | Describe |
-| `v` | View |
-| `e` | Edit |
-| `l` | View logs |
-| `Ctrl+d` | Delete a resource (Tab and Enter to confirm) |
-| `Ctrl+k` | Kill a resource, no confirmation |
-
-**Command mode** (`:` then):
-
-| Command | Action |
-|---------|--------|
-| `:pod` | View a resource by singular, plural, or short name |
-| `:pod ns-x` | View a resource in a given namespace |
-| `:ctx` | View and switch Kubernetes context |
-| `:ns` | View and switch namespace |
-| `:xray RESOURCE [NS]` | Launch XRay view |
-| `:pulses` or `:pu` | Pulses view |
-
-**Filtering**
-
-| Filter | Effect |
-|--------|--------|
-| `/text` | Regex filter on name |
-| `/! text` | Keep everything that does *not* match |
-| `/-l label-selector` | Filter by label |
-| `/-f text` | Fuzzy find |
-
----
 
 ### lazydocker
 
@@ -546,7 +512,7 @@ comes from the online reference.
 ---
 
 
-### Tools whose keymap you configure, not memorise
+### Tools whose keymap you configure, not memorize
 
 These tools have no fixed default table because users can change their bindings.
 Use each tool's own interface to inspect its current keymap:
@@ -561,22 +527,21 @@ config rather than learning the upstream default.
 
 ---
 
-### Tools where the in-app help is the documentation
+### Tools where current help is the documentation
 
-For these, the help key genuinely **is** the reference. Each was checked against its man
-page, its `--help`, and its upstream README or docs site; none publishes a keymap table.
-Listing a plausible one here would be a guess, which is exactly how the retired Kiro
-section survived for years.
+This setup does not manage fixed keymaps for these tools.
+Use current in-app help or upstream documentation because default bindings can change between releases.
 
-| Tool | Help key | What was checked |
-|------|----------|------------------|
+| Tool | Help access | Reference |
+|------|-------------|-----------|
 | `e1s` | `?` | upstream README key-bindings section |
 | `btop` | in-app | 1,593-line README, no keymap; `--help` has none |
 | `atuin` | in-app | docs keybinds page 404s; `--help` "key" hits are about encryption keys |
 | `fx` | in-app | README defers to fx.wtf, which publishes no keybindings page |
 | `gh-dash`, `posting`, `caligula`, `nerdlog` | in-app | upstream help and manuals do not publish a stable keymap table |
 | `viddy`, `mprocs` | in-app | no man page; upstream repo renamed, docs not reachable |
-| `cha`, `bandwhich` | in-app | man pages carry no complete keybindings section |
+| `cha` | in-app | the man page carries no complete keybindings section |
+| `broot`, `e2c`, `claws`, `chamber`, `surge`, `leaf`, `emeraldian`, `watchtower`, `eilmeldung`, `concord`, `cfait`, `lazyssh`, `lazyrsync`, `lazynpm`, `cheznav`, `croft`, `spotatui`, `cliamp`, `mullvad-tui` | in-app | no house keymap. Use the current application help |
 
 
 ---
@@ -712,6 +677,7 @@ Run from anywhere with `gj <recipe>` (or `just --justfile ~/.justfile <recipe>`)
 | Recipe | Usage | What it does |
 |--------|-------|-------------|
 | `update` | `gj update` | Update everything via topgrade |
+| `default` | `gj` | List all global recipes |
 | `info` | `gj info` | System info via fastfetch |
 | `flush-dns` | `gj flush-dns` | Flush DNS cache |
 | `ports` | `gj ports` | Show all listening ports |
@@ -773,10 +739,10 @@ Run from anywhere with `gj <recipe>` (or `just --justfile ~/.justfile <recipe>`)
 
 | Corner | Action |
 |--------|--------|
-| **Top-left** | Disabled |
-| **Top-right** | Disabled |
-| **Bottom-left** | Disabled |
-| **Bottom-right** | Disabled |
+| **Top-left** | macOS default (no action) |
+| **Top-right** | macOS default (no action) |
+| **Bottom-left** | macOS default (no action) |
+| **Bottom-right** | macOS default (no action) |
 
 ---
 
