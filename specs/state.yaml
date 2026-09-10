@@ -7,12 +7,6 @@
 workflow_mode: team-pr
 
 active_phase: sustain
-active_flow: fix_bug
-
-bug_cycle:
-  current_step: 5
-  completed_steps: [1, 2, 3, 4]
-
 
 metrics:
   story_start: "2026-09-10T20:04:22Z"
@@ -26,8 +20,8 @@ project:
 
 status:
   summary: >-
-    Issue #586 is fixed and verified in the working tree.
-    SurgeDM is retired without removing the unrelated core Surge cask or unowned application data.
+    Issues #585 and #586 merged through PR #587.
+    SurgeDM is retired, and CI passed for merge commit 744d5e0.
 
 handoff:
-  next_skill: release-branch
+  next_skill: survey-context
