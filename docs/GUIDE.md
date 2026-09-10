@@ -74,15 +74,10 @@ z project           # jump to most-visited directory matching "project"
 z code work         # jump to directory matching both "code" and "work"
 zi                  # interactive selection with fzf
 
-# File manager (yazi)
-y                   # open terminal file manager
-# j/k to navigate, l to enter, h to go back, q to quit
-
-# Alternative file manager (nnn — minimal, fast, keyboard-driven)
-n                   # alias: nnn -de (detail view, open text in pager)
-# Inside nnn: arrows to navigate, Enter to open, ! to spawn shell,
-#             ^G cd-quit to parent shell, q to quit, ? for help
-# Env vars: NNN_OPTS, NNN_COLORS, NNN_PLUG are pre-configured
+# File manager (Yazi)
+y                   # open Yazi
+# j/k navigate, l enters, h returns, q quits and keeps Yazi's directory
+# Press Q to quit without changing the parent shell directory.
 ```
 
 ### Searching
