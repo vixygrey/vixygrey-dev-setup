@@ -15,7 +15,7 @@ Personal preferences and private notes do not belong in this file.
 
 ## What this repo is
 
-A single idempotent Bash script, [`scripts/setup-dev-tools-mac.sh`](scripts/setup-dev-tools-mac.sh), provisions a macOS developer machine. It installs tools, writes configs, generates the OMP environment under `~/.omp/agent/`, and writes Desktop reference documents.
+A single idempotent Bash script, [`scripts/setup-dev-tools-mac.sh`](scripts/setup-dev-tools-mac.sh), provisions a macOS developer machine. It installs tools, writes configs, generates OMP settings and plugins under `~/.omp/`, writes shared skills under `~/.agents/skills/`, and writes Desktop reference documents.
 
 ## Commands
 
@@ -30,7 +30,7 @@ underlying invocations, so there is one place to change when they change.
 | Dry run | `just dry-run` | Preview a full run; must leave no trace |
 | Hooks | `just hooks` | `pre-commit run --all-files` |
 | **Preflight** | `just preflight` | All four above. **Run before every commit.** |
-| Verify | `just verify` | Ask each installed tool whether it reads what we generate |
+| Verify | `just verify` | Ask supported installed tools whether they read generated config |
 
 `verify` is deliberately outside `preflight`: it queries the tools on *this* machine, so it
 cannot gate a PR. Run it after touching any config path, and read a `FAIL` as *the file is
@@ -66,19 +66,19 @@ Config files, the OMP agent environment, the pre-commit hook, and the Desktop do
 
 Most breakage found in this repo has the same shape: **the generator is correct, but the machine never receives the correction.** Before calling anything done, ask *how does this reach a machine that was already provisioned?*
 
-- **Files written with `write_managed`/`write_managed_script`** refresh on every run. Nothing more to do — but only the region **between** the markers refreshes. Content *outside* them is never rewritten, which is deliberate (`~/.ssh/config` Host entries, `~/.aws/config` profiles, `~/.zshrc` edits all live out there) and was also how 19 configs stayed frozen carrying a duplicate copy of their own block, left by the pre-#130 version that appended instead of replacing. `write_managed` now deletes an outside region when it exactly matches the block being written *or* the block already on disk — both are provably ours. **Do not loosen that test**: anything short of an exact match to our own output eats real user config, which is why the "replace the file wholesale" repair proposed in #259 was not the fix (#261). Leftover outside-marker content is reported once at the end of a run.
+- **Files written with `write_managed`/`write_managed_script`** refresh on every run, but only the region **between** the markers refreshes. Content outside the markers is preserved by default. `write_managed` removes an outside region only when it exactly matches the block being written or the block already on disk. Both cases prove ownership. **Do not loosen that test**: anything short of an exact match can delete real user config (#259, #261).
 - **Create-once guards silently freeze generated content.** Prefer `write_managed` for files that must refresh.
 - **Retiring a tool is not the same as cleaning up after it.** `--cleanup` uninstalls the package; its config dir, its tap, and its orphaned dependencies each needed separate handling (#210, #214, #224).
 
-## Categories install; `configs` configures
+## Categories install. `configs` configures
 
-`should_run "<category>"` gates only the **install** sections. Every generated config
-file is written in one ordered `configs` segment further down the script — with three
+`should_run "<category>"` gates only the **install** sections. Generated config
+files are written in three ordered `configs` segments further down the script — with three
 exceptions: starship is in `dracula`, `~/Scripts/*` in `filesystem`, `~/.zshrc` in
 `shell`. So `--only git` installs git tooling, refreshes **no** git configuration
 (the global pre-commit hook included), and still reports `Failed: 0` (#258).
 
-When you add a config block, it goes in the `configs` segment with everything else —
+When you add a config block, put it in the `configs` category with everything else —
 and if it belongs to a category a user would plausibly try to refresh on its own, add
 that category to **`CONFIG_LIVES_IN_CONFIGS`** so `--only <cat>` names what it is not
 refreshing. The keys of that table are validated against `ALL_CATEGORIES` at startup,
@@ -148,7 +148,7 @@ outside them, the same test `write_managed` applies before removing an outside r
 version has our content but no markers, so ownership cannot be proven and it stays with a
 warning. A harmless stale file beats deleting something we cannot prove is ours.
 
-`--verify` (step 5 below) is the check for all of this, and the only one that can answer
+`--verify` (step 6 below) is the check for all of this, and the only one that can answer
 "does anything read this". Read a `FAIL` as *the file is fine, the tool is ignoring it*.
 
 ## Generated shell config is inherited by agents and scripts
@@ -169,7 +169,7 @@ zsh reads **`~/.zshenv` -> `~/.zprofile` -> `~/.zshrc`**. Anything activated in 
 Rules that follow:
 
 - **Activate in `.zshenv` for coverage, and again at the end of `.zshrc` for precedence.** Both, not either. `mise activate` registers its hook with `add-zsh-hook`, which is idempotent per function name, so the second call does not double-fire it — verified by counting `$precmd_functions`.
-- **`command -v foo` is not an answer unless you say which shell you asked.** Check both: `zsh -c 'command -v foo'` and `zsh -l -i -c 'command -v foo'`. A tool that resolves differently in the two is a bug, not a quirk — and `--verify` results inherit the same split (see [[verify-generated-config-before-flagging]] territory: k9s and nushell "fail" from a non-login shell purely because `XDG_CONFIG_HOME` is unset there).
+- **`command -v foo` is not an answer unless you say which shell you asked.** Check both: `zsh -c 'command -v foo'` and `zsh -l -i -c 'command -v foo'`. A tool that resolves differently in the two is a bug, not a quirk. `--verify` results inherit the same split, so pin `XDG_CONFIG_HOME` to the generated value before path discovery.
 - **`mise activate` is for interactive shells; `mise` SHIMS are for everything else.** Activation only happens where a shell rc runs — zsh, here. Git hooks run under `sh`, and launchd and GUI-launched apps run under neither, so none of them see an activated tool. `~/.local/share/mise/shims` resolves the active version with no activation at all, which is exactly what those callers need: `sh -c '~/.local/share/mise/shims/node --version'` works from a completely bare environment. Because that directory cannot go on a system-wide `PATH` without `sudo`, the script links the shims into `~/.local/bin`, which is already on `PATH` there (#345).
 
   Two constraints when linking a shim, both found by testing rather than reading: **the link name must match the shim name** — mise dispatches on `argv[0]`, so a link called `nodetest` pointing at the `node` shim dies with `nodetest is not a valid shim` — and **link the shim, not the versioned `installs/node/<ver>/bin` path**, which silently rots at the next `mise use node@…`.
@@ -237,7 +237,7 @@ Two rules whenever you add or edit a table that is dispatched on a string field:
 
 ## Testing / verification loop (do this before every commit)
 
-**`just preflight` runs steps 1-3 plus the pre-commit hooks.** The numbered list below is
+**`just preflight` runs steps 1-4 plus the pre-commit hooks.** The numbered list below is
 what each one proves and why it cannot be dropped; the Justfile is where the commands
 actually live.
 
@@ -245,15 +245,16 @@ actually live.
 2. `shellcheck -x -S warning scripts/setup-dev-tools-mac.sh` — **this is what CI runs**
    (`.github/workflows/lint.yml`), `-x` included. Keep it clean — and note a green local run
    is not proof CI is green: 0.11.0 passed a dead `NUSHELL_CONFIG_DIR` that the runner's older
-   build flagged as SC2034. When CI disagrees with your shellcheck, CI is the gate.
-3. `./scripts/setup-dev-tools-mac.sh --dry-run` (or `--only <category>`) — preview without mutating the machine.
-4. When you change a generated file, extract and exercise it in a throwaway dir rather than trusting the heredoc by eye (e.g. the pre-commit hook was tested against sample staged files in a temp `git init`).
-5. `./scripts/setup-dev-tools-mac.sh --verify` — asks each installed tool whether it
-   actually reads what we generate. Steps 1-3 and CI all check the file is *well-formed*;
-   none of them can tell you it is at an address the tool looks at. Run this after touching
-   any config path, and read a `FAIL` as "the file is fine, the tool is ignoring it".
+   build flagged as SC2034. When CI disagrees with your ShellCheck, CI is the gate.
+3. `bats tests/` — helper behavior under `SETUP_LIB_ONLY=1`.
+4. `./scripts/setup-dev-tools-mac.sh --dry-run` (or `--only <category>`) — preview without mutating the machine.
+5. When you change a generated file, extract and exercise it in a throwaway dir rather than trusting the heredoc by eye (e.g. the pre-commit hook was tested against sample staged files in a temp `git init`).
+6. `./scripts/setup-dev-tools-mac.sh --verify` — asks supported installed tools whether they
+   read generated config. Steps 1-4 and CI all check syntax or behavior.
+   These checks cannot prove path usage for unsupported tools. Run this after touching any config path, and
+   read a `FAIL` as "the file is fine, the tool is ignoring it".
 
-Useful flags: `--dry-run`, `--list`, `--list-categories`, `--only <cats>`, `--skip <cats>`, `--interactive/-i`, `--resume`, `--cleanup`, `--verify`, `--uninstall`, `--version`.
+Useful flags: `--dry-run`, `--no-prompt`, `--list`, `--list-categories`, `--only <cats>`, `--skip <cats>`, `--interactive/-i`, `--resume`, `--cleanup`, `--verify`, `--uninstall`, `--version`.
 
 ## The global hooks directory is shared, and `--git-path` lies inside it
 
@@ -305,9 +306,11 @@ Releases are hand-prepared in a PR, then **a tag push triggers the GitHub releas
 
 ## Environment gotchas
 
-- `rm` is aliased to **`trash`** (rejects `-rf`); use `/bin/rm` in test scripts that clean up temp dirs.
-- `bat` shadows `cat`; use `/bin/cat` in scripts/subshells that need raw output.
-- These aliases are **interactive-only as of 7.6.0** (#218/#220), so an agent shell gets the real POSIX tools. The two notes above still apply to *your own* interactive terminal, and to any session on a machine that has not re-run the script yet.
+- `rm` uses **`trash`** in both shell modes. The interactive alias rejects `-rf`.
+  The non-interactive wrapper strips `rm` flags and trashes the remaining paths.
+  Use `/bin/rm` in test scripts that require permanent cleanup.
+- `bat` shadows `cat` interactively. Use `/bin/cat` in scripts or subshells that need raw output.
+- Other aliases are interactive-only as of 7.6.0 (#218/#220), so an agent shell gets the real POSIX tools. The non-interactive `rm` wrapper is the deliberate exception.
 - `sed` is **GNU sed** here (from the coreutils install), not BSD — `sed -i '' 's/…/…/' file` fails with "can't read". Use `sed -i 's/…/…/' file`.
 - `du` is `dust` interactively: `du -sh` prints dust's help text rather than a size. Use `/usr/bin/du -sh`.
 - Target platform is macOS + zsh; the script is bash and assumes Homebrew.

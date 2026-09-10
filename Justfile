@@ -25,7 +25,7 @@ dry-run:
 hooks:
     pre-commit run --all-files
 
-# Everything a PR must pass. Mirrors .github/workflows/lint.yml.
+# Core local gate. CI adds workflow, Homebrew name, and generated-config checks.
 preflight: lint test dry-run hooks
 
 # ── Machine checks ───────────────────────────────────────────────────────────
@@ -33,7 +33,7 @@ preflight: lint test dry-run hooks
 # Not part of preflight: the answer depends on which tools this machine has,
 # so it cannot gate a PR. Run it after touching any config path.
 
-# Ask each installed tool whether it actually reads what we generate
+# Ask supported installed tools whether they read generated config
 verify:
     ./{{SCRIPT}} --verify
 

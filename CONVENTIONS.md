@@ -19,9 +19,9 @@ maintainer. Personal preferences and private notes do not belong here.
 A single idempotent Bash script,
 [`scripts/setup-dev-tools-mac.sh`](scripts/setup-dev-tools-mac.sh), that
 provisions a macOS developer machine: installs CLI/GUI tools via Homebrew,
-writes dotfiles and config, and generates the user's OMP environment
-(`~/.omp/agent/` and `~/.agents/skills/`). Almost all work happens in that
-one file.
+writes dotfiles and config, and generates OMP settings, plugins, and shared
+skills under `~/.omp/` and `~/.agents/skills/`. Almost all work happens in
+that one file.
 
 Generated output lives on the user's machine; tracked config (this file,
 `AGENTS.md`, `tests/`, `.github/`, `.pre-commit-config.yaml`, `docs/`,
@@ -45,9 +45,10 @@ Generated files carry a managed-block marker:
 ```
 
 Content *between* the markers refreshes on every run. Content *outside* the
-markers is never rewritten — deliberately. That outside region is where user
-content lives (`~/.ssh/config` Host entries, `~/.aws/config` profiles,
-`~/.zshrc` hand edits). The script never deletes or rewrites it.
+markers is preserved by default because that region holds user content
+(`~/.ssh/config` Host entries, `~/.aws/config` profiles, `~/.zshrc` hand
+edits). The exact-match repair below removes only duplicate regions proved
+to be generator output.
 
 ### The exact-match deletion test
 
@@ -88,26 +89,27 @@ each need separate handling.
 
 ---
 
-## 4. Categories install; `configs` configures
+## 4. Categories install. `configs` configures
 
-`should_run "<category>"` gates only the **install** sections. Every
-generated config file is written in one ordered `configs` segment further
-down the script — with three named exceptions: starship is in `dracula`,
+`should_run "<category>"` gates only the **install** sections. Generated
+config files are written in three ordered `configs` segments further down
+the script — with three named exceptions: starship is in `dracula`,
 `~/Scripts/*` in `filesystem`, `~/.zshrc` in `shell`.
 
 So `--only git` installs git tooling, refreshes **no** git configuration
 (the global pre-commit hook included), and still reports `Failed: 0`.
 
-When you add a config block, put it in the `configs` segment with everything
+When you add a config block, put it in the `configs` category with everything
 else — and if it belongs to a category a user would plausibly try to refresh
 on its own, add that category to **`CONFIG_LIVES_IN_CONFIGS`** so
 `--only <cat>` names what it is *not* refreshing. The keys of that table are
 validated against `ALL_CATEGORIES` at startup, so a typo fails loudly
 instead of producing a notice that can never fire.
 
-`ALL_CATEGORIES` and `CONFIG_LIVES_IN_CONFIGS` are the canonical category
-lists. Add a new category in **both** places, in the same order, or the
-interactive picker is broken.
+`ALL_CATEGORIES` and `CATEGORY_DESC` are the canonical category lists. Add a
+new category in **both** places, in the same order. Add it to
+`CONFIG_LIVES_IN_CONFIGS` only when the category has generated config in the
+`configs` category.
 
 ---
 
@@ -166,9 +168,9 @@ managed-block discipline exists carries our content but no markers, so
 ownership cannot be proven and it stays with a warning. A harmless stale
 file beats deleting something we cannot prove is ours.
 
-`./scripts/setup-dev-tools-mac.sh --verify` is the check for all of this,
-and the only one that can answer "does anything read this." Read a `FAIL`
-as *the file is fine, the tool is ignoring it.*
+`./scripts/setup-dev-tools-mac.sh --verify` is the only check that can prove
+path usage for supported tools. Read a `FAIL` as *the file is fine, the tool
+is ignoring it.*
 
 ---
 
@@ -416,11 +418,12 @@ own periodic review (see "drift" below).
 - **`--verify` coverage gap, honestly reported.** The CI `generated-config`
   job proves each heredoc *parses* — JSON via `jq`, shell via `zsh -n`,
   etc. It does not prove the file is at an address the tool reads; that's
-  what `--verify` is for. Coverage is partial (15 path rows at time of
-  writing). The generated-output inventory computes the missing-file set,
-  so the summary does not hide the gap.
+  what `--verify` is for. Coverage remains partial. `VERIFY_TARGETS` combines
+  runtime validation, path discovery, templates, and explicitly unchecked
+  rows. The generated-output inventory computes the missing-file set, so the
+  summary does not hide the gap.
 - **Cleanup audit.** `DEPRECATED_TOOLS` (defined inside the `--cleanup`
-  branch) has 98 rows at time of writing and no CI job diffs them against
+  branch) is a large table with no CI job that diffs it against
   `brew list --formula` / `brew list --cask`. A static check would catch
   retired-but-not-removed packages before they accumulate.
 - **Pre-commit hook language coverage.** The hook covers JS/TS
@@ -500,11 +503,10 @@ own periodic review (see "drift" below).
 
 ## 19. Verification
 
-**`just preflight` is the entry point.** It runs steps 1–3 below plus the
-pre-commit hooks, and mirrors `.github/workflows/lint.yml`. The list is
-kept because each step proves something the others cannot; the
-[`Justfile`](Justfile) is where the commands live, so they are defined
-once rather than in three documents.
+**`just preflight` is the local entry point.** It runs steps 1-4 below plus
+the pre-commit hooks. CI adds workflow validation, Homebrew name validation,
+and generated-config parser checks. The [`Justfile`](Justfile) defines the
+local commands once.
 
 Per `AGENTS.md`, every change goes through:
 
@@ -512,20 +514,21 @@ Per `AGENTS.md`, every change goes through:
 2. `shellcheck -x -S warning scripts/setup-dev-tools-mac.sh` — **this is
    what CI runs** (`.github/workflows/lint.yml`), `-x` included. Keep it
    clean. A green local run is not proof CI is green: the runner's
-   shellcheck may flag things local builds miss.
-3. `./scripts/setup-dev-tools-mac.sh --dry-run` (or `--only <category>`)
+   ShellCheck can flag things that local builds miss.
+3. `bats tests/` — helper behavior under `SETUP_LIB_ONLY=1`.
+4. `./scripts/setup-dev-tools-mac.sh --dry-run` (or `--only <category>`)
    — preview without mutating the machine.
-4. When you change a generated file, **extract and exercise it in a
+5. When you change a generated file, **extract and exercise it in a
    throwaway dir** rather than trusting the heredoc by eye.
-5. `./scripts/setup-dev-tools-mac.sh --verify` — asks each installed tool
-   whether it actually reads what we generate. Steps 1–3 and CI all check
-   the file is *well-formed*; none of them can tell you it is at an
-   address the tool looks at. Run this after touching any config path.
+6. `./scripts/setup-dev-tools-mac.sh --verify` — asks supported installed
+   tools whether they read generated config. Steps 1-4 and CI check syntax
+   or behavior. These checks do not prove path usage for unsupported tools.
+   Run this after touching any config path.
 
 For changes to this file specifically: this file is markdown, not Bash.
-Steps 1, 2, and 3 still apply to the unchanged generator. Step 5 is a
-good sanity check that no heredoc references a helper or category this
-file has renamed or removed.
+Steps 1-4 still apply to the unchanged generator. Step 6 is a good sanity
+check that no heredoc references a helper or category this file has renamed
+or removed.
 
 ---
 
@@ -539,9 +542,8 @@ with sections 1–16, which are the other rules about the code itself.
 - [`.editorconfig`](.editorconfig) and [`.gitattributes`](.gitattributes)
   are the source of truth for that policy. Do not override them per-file.
 - Indentation is **4 spaces for shell and bats**, 2 elsewhere, tabs for
-  Go and Makefiles. The setup script is ~18k lines at 4 spaces and the
-  tests follow it, so the template's bare 2-space default would fight
-  every file that matters here.
+  Go and Makefiles. The large setup script and its tests use 4 spaces, so
+  the template's bare 2-space default would fight the files that matter here.
 - **`scripts/*.sh` is exempt from trailing-whitespace trimming.** The
   script embeds heredocs whose content may depend on exact bytes, so an
   editor must not strip inside them. This mirrors the exclusion

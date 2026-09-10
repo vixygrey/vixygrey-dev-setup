@@ -8,7 +8,7 @@ assignees: ""
 
 ## Environment
 
-- **macOS version**: (e.g., macOS 15.3)
+- **macOS version**: (run `sw_vers -productVersion`)
 - **Script version**: (run `./scripts/setup-dev-tools-mac.sh --version`)
 - **Shell**: (e.g., zsh 5.9)
 

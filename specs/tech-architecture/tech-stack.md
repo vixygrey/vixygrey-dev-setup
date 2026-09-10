@@ -10,8 +10,9 @@
 - **Homebrew** is the primary package manager. Six installation paths sit beside it.
   Each path uses an idempotent helper: `npm_global_install`, `omp_plugin_install`,
   `go_install`, `uv_tool_install`, `cargo_install`, or `run_remote_installer`.
-- **mise** is the version manager for Node, Python, Go, and Ruby. No `nvm`, `pyenv`, or
-  `asdf`: mixing them is called out in `CONVENTIONS.md` section 16.
+  Pinned source builds cover releases without suitable packages.
+- **mise** manages Node and Python. Go and Rust install separately. No `nvm`, `pyenv`,
+  or `asdf`: mixing version managers is called out in `CONVENTIONS.md` section 16.
 - **zsh** is the target login shell. The script writes `~/.zshenv`, `~/.zprofile`, and
   `~/.zshrc`, and their read order decides which tool wins on `PATH`.
 - **Bun** installs OMP plugin packages. OMP remains a prebuilt native binary.
@@ -22,28 +23,30 @@
 
 ## Architecture
 
-One file holds nearly everything: `scripts/setup-dev-tools-mac.sh`, about 18k lines.
-It reads top to bottom in five bands.
+One large file holds nearly everything: `scripts/setup-dev-tools-mac.sh`.
+It reads top to bottom in these bands.
 
-| Band | Lines | Holds |
-|---|---|---|
-| Guard and constants | 1-300 | bash 4+ re-exec, `SCRIPT_VERSION`, colors, log paths |
-| Helper layer | 77-1400 | Everything reusable. This is the tested surface. |
-| Flags and preflight | 300-1500 | `ALL_CATEGORIES`, argument parsing, lock, disk and network checks |
-| Install sections | 2438-4275 | One `should_run "<category>"` block per category |
-| Config generation | 4527-14289 | Three `configs` segments plus four category-owned exceptions |
+| Band | Holds |
+|---|---|
+| Guard and constants | Bash 4+ re-exec, `SCRIPT_VERSION`, colors, log paths |
+| Helper layer | Reusable installers, file writers, logging, and safety checks |
+| Flags and preflight | Categories, argument parsing, lock, disk, and network checks |
+| Install sections | One `should_run "<category>"` block per category |
+| Machine configuration | Three `configs` segments and category-owned exceptions |
+| Finalization | Desktop docs, first-run actions, mise links, verification, and summary |
 
-**The helper layer is the load-bearing part.** `write_managed`, `write_managed_script`, and
-`remove_superseded_managed` write every generated file and carry the whole risk of the
-project: each one decides whether to overwrite something a user cares about. They are
-loadable in isolation under `SETUP_LIB_ONLY=1`, which is what `tests/helpers.bats` exercises.
+**The file writers are load-bearing.** `write_managed`, `write_managed_script`,
+`write_generated`, `write_seed_once`, JSON merge helpers, and
+`remove_superseded_managed` decide whether to overwrite something a user cares about.
+The reusable helpers load in isolation under `SETUP_LIB_ONLY=1`, which is what
+`tests/helpers.bats` exercises.
 
-**Categories install; the `configs` segment configures.** `should_run` gates only install
-work. Every generated config file is written in one ordered segment further down, with four
-deliberate exceptions: starship lives in `dracula`, `~/Scripts/*` in `filesystem`, `~/.zshrc`
-in `shell`, and the mise shim links are ungated because they must reflect the final state of
-a run. `CONFIG_LIVES_IN_CONFIGS` exists so that `--only git` tells the user it refreshed no
-git configuration.
+**Categories install. The `configs` category configures.** `should_run` gates only install
+work. Generated config files are written in three ordered segments further down.
+Three exceptions are starship in `dracula`, `~/Scripts/*` in `filesystem`, and
+`~/.zshrc` in `shell`. The mise shim links are ungated.
+They must reflect the final state of a run.
+`CONFIG_LIVES_IN_CONFIGS` makes `--only git` report that it did not refresh Git configuration.
 
 **Data flow is one direction: generator to machine.** The script reads back only
 when a safe update requires existing state. Managed markers establish ownership,
@@ -57,9 +60,9 @@ new machines but not provisioned ones.
 ## Conventions (observed)
 
 - **Error handling is counted, not thrown.** `set +e` is deliberate, so one failed formula
-  cannot abandon the other 200. Failures accumulate in `INSTALL_FAILED` and `FAILED_ITEMS`,
-  and the last lines of the file turn the count back into an exit status. Before that
-  existed, every run exited 0 regardless of what it printed.
+  cannot abandon the remaining installs. Failures accumulate in `INSTALL_FAILED` and
+  `FAILED_ITEMS`, and the last lines of the file turn the count back into an exit status.
+  Before that existed, every run exited 0 regardless of what it printed.
 - **Four report verbs, four meanings.** `success` means a tool was installed, `configured`
   means a file was written and is silent under `--dry-run`, `checked` means a preflight test
   passed and counts nowhere, `warn` and `error` accumulate. They were one function once, and
@@ -92,23 +95,23 @@ Six CI jobs, each answering a question the others cannot.
 | `dry-run` | macOS | The script runs, leaves no trace, and exits non-zero when it fails |
 
 The layering matters. `bash -n` checks grammar, not reachability. `generated-config` proves a
-file parses, never that a tool reads it. Only `--verify` can answer the last question, and it
-runs on a machine rather than in CI.
+file parses, never that a tool reads it. `--verify` answers the last question for supported
+tools, and it runs on a machine rather than in CI.
 
 ## Signals and active considerations
 
-- **`--verify` coverage is partial.** It has 15 path rows against a larger generated-file inventory.
-  The summary reports the actual missing-file set.
-- **`DEPRECATED_TOOLS` has ~98 rows and no CI check** diffing it against what is installed.
-  Retired packages can remain installed without a report.
+- **`--verify` coverage is partial.** It combines runtime validation, path discovery,
+  templates, and explicitly unchecked rows. The summary reports the actual missing-file set.
+- **`DEPRECATED_TOOLS` has no CI comparison with installed packages.** Retired packages can
+  remain installed without a report.
 - **The pre-commit hook covers JS/TS, Python, and Ruby.** It misses
   `console.debug`, `console.warn`, and `console.info`.
 - **`CONFIG_LIVES_IN_CONFIGS` values are unchecked prose.** The keys are validated against
   `ALL_CATEGORIES` at startup, so a typo fails loudly, but nothing proves a category actually
   writes what its description claims.
-- **One file, 18k lines.** Splitting it has a real cost: the release ships a single script
-  that a user runs directly, so any split needs a build step or a loader, and both weaken the
-  "download one file and run it" property. Recorded here as a known tension, not a plan.
+- **One large source file is a known tension.** Splitting it has a real cost: the release
+  ships a single script that a user runs directly, so any split needs a build step or a
+  loader. Both options weaken the "download one file and run it" property.
 
 `CONVENTIONS.md` section 17 is the maintained version of this list and should shrink over
 time. Anything here that lands as a PR should be removed from both.

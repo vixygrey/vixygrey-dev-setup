@@ -29,8 +29,9 @@ fi
 # Version:  see SCRIPT_VERSION below (source of truth)
 # Platform: macOS (Apple Silicon + Intel), requires bash 4+
 # Run:      chmod +x setup-dev-tools-mac.sh && ./setup-dev-tools-mac.sh
-# Flags:    --dry-run, --list, --list-categories, --only <cats>, --skip <cats>,
-#           --interactive/-i, --resume, --cleanup, --uninstall, --version, --help
+# Flags:    --dry-run, --no-prompt, --list, --list-categories, --only <cats>,
+#           --skip <cats>, --interactive/-i, --resume, --cleanup, --verify,
+#           --uninstall, --version, --help
 # =============================================================================
 
 SCRIPT_VERSION="7.23.0"
@@ -374,16 +375,16 @@ declare -A CATEGORY_DESC=(
     [mac-media]="mpv, oxipng, jpegoptim, cliamp, spotatui"
     [mac-cloud]="rclone, borg, borgmatic"
     [dracula]="Dracula-Sakura theme pass for terminal, editor, and TUI surfaces"
-    [configs]="Every tool's generated config, git hooks, and omp setup"
+    [configs]="Generated tool config, global git hooks, and omp setup"
     [filesystem]="Directory structure, helper scripts, git identity"
     [macos-defaults]="Finder, keyboard, screenshots, Touch ID, DNS"
     [shell]="\$HOME/.zshrc, Brewfile export"
 )
 
 # -- Install-vs-config split --------------------------------------------------
-# A category INSTALLS its tools; it does not CONFIGURE them. Every generated config
-# file lives in one ordered `configs` segment (with starship in `dracula`, ~/Scripts
-# in `filesystem` and ~/.zshrc in `shell`), so `--only git` installs git tooling and
+# A category INSTALLS its tools. It does not CONFIGURE them. Generated config files
+# live in three ordered `configs` segments (with starship in `dracula`, ~/Scripts in
+# `filesystem` and ~/.zshrc in `shell`), so `--only git` installs git tooling and
 # refreshes NONE of its configuration — including the global pre-commit hook — while
 # still reporting "Failed: 0". That silent half-run is #258.
 #
@@ -403,7 +404,7 @@ declare -A CONFIG_LIVES_IN_CONFIGS=(
     [database]="harlequin"
     [containers]="Docker daemon, lazydocker"
     [networking]="trippy"
-    [dx]="atuin, zellij, Kitty, Zed, Croft, omp (~/.omp/agent + ~/.agents/skills) — and starship, which is in the \`dracula\` category"
+    [dx]="atuin, zellij, Kitty, Zed, Croft, omp (~/.omp/agent + ~/.omp/plugins + ~/.agents/skills) — and starship, which is in the \`dracula\` category"
     [mac-media]="mpv, spotatui"
     [mac-browsers]="Chawan"
     [mac-productivity]="Obsidian vault themes, Herald, llama.cpp service"
@@ -683,10 +684,10 @@ show_help() {
     echo "  --resume            Skip items that succeeded in a previous run"
     echo "  --uninstall         Show commands to remove everything (no changes made)"
     echo "  --cleanup           Remove tools from previous versions no longer in this script"
-    echo "  --verify            Check each generated config is at the path its tool reads"
-    echo "                      and that the tool accepts it. CI proves these files parse;"
-    echo "                      only a machine with the tools installed can prove anything"
-    echo "                      reads them. Exits 1 if any tool is ignoring our config"
+    echo "  --verify            Check supported generated config with installed consumers"
+    echo "                      and report unchecked inventory rows. CI proves syntax."
+    echo "                      Only a machine with each tool can prove path usage."
+    echo "                      Exits 1 when a supported consumer ignores our config"
     echo "  --interactive, -i   Interactively pick which categories to install"
     echo "  --no-prompt         Never wait for input — decline every optional prompt."
     echo "                      Use when nothing can answer (CI, a detached pane, an"
@@ -697,14 +698,14 @@ show_help() {
     echo "                      Add 'configs' to also refresh generated config —"
     echo "                      a category installs its tools but does not configure them"
     echo "  --list-categories   List all available categories"
-    echo "  --list              List all tools that would be installed"
+    echo "  --list              List declared Homebrew and npm packages"
     echo "  --version           Show script version"
     echo ""
     echo "Examples:"
     echo "  ./setup-dev-tools-mac.sh                          # Install everything"
     echo "  ./setup-dev-tools-mac.sh -i                       # Interactive category picker"
     echo "  ./setup-dev-tools-mac.sh --dry-run                # Preview only"
-    echo "  ./setup-dev-tools-mac.sh --list                   # List all tools"
+    echo "  ./setup-dev-tools-mac.sh --list                   # List package declarations"
     echo "  ./setup-dev-tools-mac.sh --resume                 # Continue after a failure"
     echo "  ./setup-dev-tools-mac.sh --uninstall              # Show removal commands"
     echo "  ./setup-dev-tools-mac.sh --cleanup                # Remove dropped tools from previous versions"
@@ -804,7 +805,7 @@ while [[ $# -gt 0 ]]; do
             ;;
         --list)
             echo ""
-            echo -e "${BOLD}Tools installed by this script:${NC}"
+            echo -e "${BOLD}Declared Homebrew and npm packages:${NC}"
             echo ""
             echo -e "${CYAN}Homebrew formulae:${NC}"
             grep -E '^\s*brew_install ' "$0" | sed 's/.*brew_install "\([^"]*\)".*/  \1/' | sort
@@ -818,7 +819,7 @@ while [[ $# -gt 0 ]]; do
             _f=$(grep -cE '^\s*brew_install ' "$0")
             _c=$(grep -cE '^\s*brew_cask_install ' "$0")
             _n=$(grep -cE '^\s*npm_global_install ' "$0")
-            echo -e "${DIM}Total: ${_f} formulae, ${_c} casks, ${_n} npm packages ($((_f + _c + _n)) tools)${NC}"
+            echo -e "${DIM}Total: ${_f} formulae, ${_c} casks, ${_n} npm packages ($((_f + _c + _n)) package declarations)${NC}"
             exit 0
             ;;
         *)
@@ -2220,6 +2221,9 @@ if [[ "$CLEANUP" == "true" ]]; then
         "formula:sops:sops:removed"
         "formula:hyperfine:hyperfine:removed"
         "formula:oha:oha:removed"
+        # Retired in #586. The qualified token is required because Homebrew's core
+        # cask uses the same basename for the unrelated Nssurge application.
+        "cask:surgedm/tap/surge:SurgeDM:removed"
         # The direct ffmpeg install was retired in #555, but mpv and cliamp still
         # require the formula. Do not make cleanup break those retained tools (#563).
     )
@@ -2270,6 +2274,13 @@ if [[ "$CLEANUP" == "true" ]]; then
                         info "[DRY RUN] Would remove: $display (replaced by $replacement)"
                     else
                         info "Removing $display (replaced by $replacement)..."
+                        if [[ "$name" == "surgedm/tap/surge" ]] && installed surge; then
+                            if ! surge service uninstall >> "$LOG_FILE" 2>&1; then
+                                error "Failed to uninstall the SurgeDM service. SurgeDM remains installed for a safe retry."
+                                ((CLEANUP_SKIPPED++))
+                                continue
+                            fi
+                        fi
                         case "$name" in
                             claude|gitkraken-cli|visual-studio-code|pearcleaner|shottr|skim|orbstack)
                                 _cask_remove=(brew uninstall --cask --zap "$name")
@@ -2555,6 +2566,15 @@ if [[ "$CLEANUP" == "true" ]]; then
     done
     unset _tool _rest _dir _repl _pretty
 
+    # SurgeDM stores its queue, token, logs, and settings together. The generator
+    # did not write these files, so package retirement does not prove that the
+    # directory is disposable. Keep it for manual review instead of risking user data.
+    _surgedm_data="$HOME/Library/Application Support/surge"
+    if [[ -e "$_surgedm_data" ]] && ! command -v surge &>/dev/null; then
+        info "Keeping $_surgedm_data. Review and remove it manually if SurgeDM data is no longer needed."
+    fi
+    unset _surgedm_data
+
     # -- Orphaned Homebrew node_modules ---------------------------------------
     # #344 removed Homebrew's node and left its global npm tree behind: 19
     # packages and 1.6 GB on the maintainer's machine, plus 31 live symlinks in
@@ -2631,6 +2651,7 @@ if [[ "$CLEANUP" == "true" ]]; then
         "gateway-of-last-resort/tap|keyward"
         "lazynop/tap|lazyenv"
         "terraform-linters/tap|tflint"
+        "surgedm/tap|SurgeDM"
     )
     for entry in "${DEPRECATED_TAPS[@]}"; do
         _tap="${entry%%|*}"
@@ -2649,7 +2670,9 @@ if [[ "$CLEANUP" == "true" ]]; then
         else
             info "Untapping $_tap (was $_why; provides nothing)..."
             if brew untap "$_tap" >> "$LOG_FILE" 2>&1; then
-                ((CLEANUP_COUNT++)); success "$_tap untapped"
+                XDG_CONFIG_HOME="$HOME/.config" brew untrust --tap "$_tap" >> "$LOG_FILE" 2>&1 || true
+                env -u XDG_CONFIG_HOME brew untrust --tap "$_tap" >> "$LOG_FILE" 2>&1 || true
+                ((CLEANUP_COUNT++)); success "$_tap untapped and untrusted"
             else
                 warn "Could not untap $_tap"
             fi
@@ -3532,22 +3555,6 @@ brew_install "hexyl" "hexyl (replaces hexdump — colorized hex viewer)"
 # flags differ, so the alias only turned "command not found" into an exception.
 brew_install "aria2" "aria2 (replaces curl/wget for downloads — multi-connection, BitTorrent)"
 
-# surge — interactive TUI download manager whose browser extension intercepts
-# browser-started downloads and hands them to a background daemon (port 1700).
-# Complements aria2 (aria2 = CLI/scripts; surge = interactive + browser capture).
-trust_tap SurgeDM/tap
-# surge is distributed as a cask (prebuilt binary) in SurgeDM/tap, not a formula.
-brew_cask_install "surge" "surge (TUI download manager — browser-download capture via a daemon + extension)"
-# Register the surge background service so the browser extension has something to
-# talk to. May prompt for your password; non-fatal if it doesn't (do it later via
-# `surge service install`). Extension install + token are in the POST_SETUP checklist.
-if [[ "$DRY_RUN" != "true" ]] && command -v surge &>/dev/null; then
-    if surge service install >> "$LOG_FILE" 2>&1; then
-        success "surge daemon service installed (browser extension can now connect on :1700)"
-    else
-        warn "Could not install surge service now — run 'surge service install' later (see checklist)"
-    fi
-fi
 
 # tar/unzip/7z -> ouch: universal archive tool, auto-detects format
 brew_install "ouch" "ouch (universal archive tool — compress/decompress any format)"
@@ -9291,10 +9298,9 @@ cd "$PROJECT_DIR"
 git init -b main
 
 # Shell and bats get 4 spaces, not the 2-space default (#494). The file carved
-# out Makefile, Go and Python and left shell on the default, which is the wrong
-# way round on a machine whose own flagship project is 18k lines of 4-space bash.
-# The explicit shell rule prevents editors and formatters from applying the
-# generic 2-space default to the repository's 4-space shell style.
+# out Makefile, Go and Python but left shell on the default. The explicit shell
+# rule prevents editors and formatters from applying the generic 2-space
+# default to a repository whose large setup script uses 4-space shell style.
 cat > .editorconfig <<'EDITORCONFIG'
 root = true
 
@@ -9666,7 +9672,7 @@ Most files here are written by a skill rather than by hand. Each one names its o
 | `epics/` | Epic capsules and their stories | `slice-tasks`, `plan-work` |
 | `bugs/` | `registry.yaml` plus one `BUG-*.md` per investigation | `investigate-bug` |
 | `verifications/` | Verification output per story | `verify-work` |
-| `metrics/` | Cycle times and benchmark output | `generate-allure-report` |
+| `metrics/` | Cycle times and benchmark output | `generate-allure-report`, `run-benchmark` |
 
 Start with `state.yaml`. It names the active phase and the next skill to run.
 SPECSREADME
@@ -12332,10 +12338,10 @@ fi
 # and therefore which global node_modules tree `npm install -g` wrote into — came down
 # to whether the shell was a login shell.
 #
-# Re-activating here puts mise back in front, so node, python, go and ruby resolve to the
-# versions mise manages in BOTH kinds of shell. `mise activate` registers its precmd hook
-# with `add-zsh-hook`, which is idempotent for a given function name, so running it twice
-# does not double-fire it.
+# Re-activating here puts mise back in front, so its managed runtimes — currently
+# Node and Python — resolve consistently in both kinds of shell. `mise activate`
+# registers its precmd hook with `add-zsh-hook`, which is idempotent for a given function name,
+# so running it twice does not double-fire it.
 command -v mise &>/dev/null && eval "$(mise activate zsh)"
 
 # -- Terminal Welcome Screen --------------------------------------------------
@@ -12454,7 +12460,7 @@ echo "  - pv: add progress bars with 'pv largefile.tar.gz | tar xz'"
 echo ""
 # =============================================================================
 # GENERATE DESKTOP DOCS (checklist, shortcuts, toolkit summary)
-# Regenerated fresh each run so they always match the current toolset.
+# Regenerated from these heredocs on every run.
 # =============================================================================
 if [[ "$DRY_RUN" != "true" ]]; then
     DESKTOP="$HOME/Desktop"
@@ -12499,7 +12505,6 @@ Complete the manual permissions, credentials, and account steps after the script
 - [ ] Open each registered Obsidian vault and confirm Dracula-Sakura under Settings > Appearance > Themes.
 
 ## Services and storage
-- [ ] Run `surge service install`, then pair the browser extension with `surge service token`.
 - [ ] Configure repositories and Keychain credentials in `~/.config/borgmatic/config.yaml`.
 - [ ] Run `borgmatic create --dry-run` before you schedule automatic backups.
 - [ ] Run `chezmoi init <repository>` before you place generated configuration under version control.
@@ -12576,7 +12581,7 @@ Every binding is on screen: the **key menu** sits along the bottom, and there ar
 | `cfait` | Local-first task manager |
 | `emeraldian` | Obsidian vault TUI with backlinks, graph, and an optional assistant |
 | `watchtower` | Global news, markets, weather, and intelligence dashboard |
-| `chamber ui` | Local encrypted secrets vault |
+| `chamber` | Local encrypted secrets vault and terminal interface |
 | `spotatui` | Multi-source terminal music player |
 
 SHORTCUTS_EOF
@@ -12626,7 +12631,7 @@ The setup installs a Dracula-Sakura wallpaper at `~/Media/photos/dracula-sakura.
 - **Yazi** provides file management, previews, and bulk tasks.
 - **eza**, **bat**, **fd**, **ripgrep**, **dust**, **duf**, and **sd** replace common file utilities.
 - **cliamp** and **spotatui** provide music playback.
-- **surge** and **aria2** manage downloads.
+- **aria2** manages downloads.
 - **rclone**, **borg**, and **borgmatic** provide synchronization and backups.
 
 ## Infrastructure and security
@@ -12640,20 +12645,20 @@ The setup installs a Dracula-Sakura wallpaper at `~/Media/photos/dracula-sakura.
 ## Configuration flow
 The script writes managed configuration under `~/.config` and tool-specific directories.
 Use **chezmoi** and **cheznav** to place selected files under version control.
-The CLI and TUI tools work locally and through SSH.
+Terminal tools remain usable in local and SSH shell sessions, subject to the
+remote terminal's capabilities.
 
 ## Full tool reference
-See **TOOL_REFERENCE.md** for commands and examples for each installed tool.
+See **TOOL_REFERENCE.md** for commands and examples for the principal installed tools.
 SUMMARY_EOF
 
     # ---- 4. TOOL_REFERENCE.md ----
     cat > "$DESKTOP/TOOL_REFERENCE.md" <<'REFERENCE_EOF'
 # Tool Reference
 
-The long-form field guide to the machine: every command-line tool, TUI, and app
-this setup installs, grouped by when you'd actually reach for it. Each entry
-says what the tool is, what it replaces when relevant, and a few worked
-examples, so a freshly provisioned machine still feels legible.
+This long-form field guide covers the principal command-line tools, TUIs, and apps
+that the setup installs. The entries are grouped by use and include current command
+examples, so a freshly provisioned machine remains legible.
 
 **How to read this:** headings show the command you actually type (e.g. `rg`,
 not "ripgrep"). Where a tool replaces a classic command, that's called out.
@@ -12726,8 +12731,9 @@ omp -p "summarise the diff on this branch"
 
 > Tip: omp's config lives under `~/.omp/agent/`, not `~/.config`. It reads four scoped skills from `~/.agents/skills/`: `api-testing`, `d2-diagrams`, `inspect-machine`, and `office-layout-check`. The `protected-paths.ts` extension guards native file mutations to sensitive paths. Its `AGENTS.md` outranks other user-level context files. Settings merge into `config.yml` because omp writes that file.
 >
-> `web_search` includes 23 backends. This setup puts local **SearXNG** first through `searxng.endpoint`.
-> Keyless backends remain available if SearXNG stops.
+> `web_search` includes selectable provider backends. This setup configures `http://127.0.0.1:8080`
+> as the preferred SearXNG endpoint but does not install or manage that service.
+> Keyless backends remain available if the endpoint is unavailable.
 > Paste the API keys into `ANTHROPIC_API_KEY=` and `GEMINI_API_KEY=` in `~/.omp/agent/.env`.
 > OMP loads this file directly.
 >
@@ -13267,7 +13273,7 @@ jqp '.items[] | {name, id}' -f data.json
 
 > Tip: this setup writes `~/.jqp.yaml` with a Dracula-Sakura-flavored override layer on top of jqp's built-in Dracula theme, so it matches the rest of the terminal palette.
 
-### `csvkit` [csvcut/csvgrep/csvstat/csvjson] — CSV Utility Suite
+### `csvstat` [csvkit: csvcut/csvgrep/csvjson] — CSV Utility Suite
 A suite of small Unix-style utilities for working with CSV files: cutting columns, grepping rows, computing summary stats, and converting to JSON or SQL. It brings classic Unix text-tool ergonomics to tabular data that plain grep/cut mangle because of quoting and commas. Reach for it for quick, composable CSV inspection without opening a spreadsheet.
 
 ```bash
@@ -13321,7 +13327,7 @@ lazygit -p ~/Code/other-repo
 
 > Tip: press `p` to stage individual hunks/lines interactively instead of whole files.
 
-### `git-delta` [delta] — Syntax-Highlighting Diff Pager
+### `delta` [git-delta] — Syntax-Highlighting Diff Pager
 A syntax-highlighting pager for git diffs that renders side-by-side views with line numbers, replacing git's plain-text diff output. It's wired in here as git's default pager, so `git diff` and `git log -p` are readable by default — no extra flags needed day to day. Call it directly when piping a diff from somewhere else.
 
 ```bash
@@ -13331,7 +13337,7 @@ git diff | delta
 delta file_old.py file_new.py
 ```
 
-### `difftastic` [difft] — Structural Diff Tool
+### `difft` [difftastic] — Structural Diff Tool
 A structural, syntax-aware diff tool that compares parsed syntax trees instead of raw text lines, so it doesn't get confused by reformatting or reordered code that a line-based diff would flag as a huge change. Reach for it when a normal diff is noisy — e.g., after a formatter run — and you want to see what actually changed logically.
 
 ```bash
@@ -13455,8 +13461,8 @@ Exposes a port on your local machine as a public HTTPS URL, so you can share a d
 ngrok http 3000
 # tunnel a specific local host:port
 ngrok http 127.0.0.1:8080
-# use a reserved/custom subdomain (paid plans)
-ngrok http --subdomain=myapp 3000
+# use a reserved endpoint URL
+ngrok http 3000 --url https://myapp.ngrok.app
 ```
 
 > Tip: ngrok prints a local web UI at `http://127.0.0.1:4040` where you can inspect and replay every request that hit the tunnel.
@@ -13479,8 +13485,6 @@ A real Chromium browser rendered entirely inside the terminal, including images,
 ```bash
 # open a URL in the terminal browser
 carbonyl https://example.com
-# open with a specific window size
-carbonyl --width=120 --height=40 https://example.com
 ```
 
 ### `cha` [Chawan] — Terminal Web Browser
@@ -13519,8 +13523,8 @@ Pings one or more hosts and plots the results as a live latency graph in the ter
 gping example.com
 # compare multiple hosts on the same graph
 gping example.com 1.1.1.1 8.8.8.8
-# ping by specifying an interval between pings
-gping --interval 0.5 example.com
+# set the interval between pings
+gping --watch-interval 0.5 example.com
 ```
 
 ### `doggo` — Modern DNS Client
@@ -13693,7 +13697,7 @@ cosign verify --key cosign.pub myimage:latest
 > Tip: `cosign sign myimage:latest` without `--key` does keyless signing via OIDC (e.g. GitHub Actions identity) — no key management needed.
 
 
-### `awscli` — AWS CLI
+### `aws` [awscli] — AWS CLI
 The official command-line interface for every AWS service, used both directly and as the foundation many other AWS tools (like `granted` and `session-manager-plugin`) build on. It's how you configure credentials, inspect resources, and script anything AWS from the terminal. Nearly every AWS workflow starts or ends with an `aws` command.
 
 ```bash
@@ -14446,15 +14450,6 @@ y
 yazi ~/Code
 ```
 
-### `surge` — Download Manager (TUI)
-A TUI download manager that pairs with a browser extension: the extension intercepts downloads in Chrome and hands them to a local `surge` daemon, giving you a manageable, resumable download queue instead of the browser's own download tray. It complements `aria2` — `aria2` is for scripted/CLI downloads, `surge` is for downloads you start by clicking a link in the browser.
-
-```bash
-# install the background daemon service (one-time)
-surge service install
-# open the TUI to manage the download queue
-surge
-```
 
 ### `aria2c` — Multi-Protocol Download Utility
 A multi-connection, multi-protocol downloader supporting HTTP(S), FTP, BitTorrent, and Metalink, capable of splitting a single download across multiple connections for much higher throughput. Reach for it for large files, resumable downloads, or bulk/scripted downloading where a browser's download manager isn't enough.
@@ -14590,7 +14585,7 @@ The script installs the binary but never creates a vault or password.
 
 ```bash
 chamber init
-chamber ui
+chamber
 ```
 
 ### `spotatui`
@@ -14714,8 +14709,8 @@ The terminal and editors use JetBrains Mono, JetBrains Mono Nerd Font, and Inter
 
 ---
 
-*This file is regenerated on every run of `setup-dev-tools-mac.sh`, so it always
-matches the tools the script currently installs.*
+*This file is regenerated from the setup script on every run. Edit the
+`TOOL_REFERENCE.md` heredoc in the generator when the toolset changes.*
 REFERENCE_EOF
 
     success "Desktop docs written: POST_SETUP_CHECKLIST.md, KEYBOARD_SHORTCUTS.md, TOOLKIT_SUMMARY.md, TOOL_REFERENCE.md"

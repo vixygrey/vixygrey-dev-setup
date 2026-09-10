@@ -9,7 +9,9 @@ REST API.
 - [`main.json`](main.json) — protections for the default branch (`main`):
   - Require pull request before merging (squash-merge only, conversation
     resolution required, stale reviews dismissed on new push)
-  - Require `ShellCheck` status check to pass, with the branch up to date
+  - Require all six lint workflow checks to pass, with the branch up to date:
+    `ShellCheck`, `Actionlint`, `Helper unit tests`, `Homebrew name canonicality`,
+    `Generated config parses`, and `Dry run (macOS)`
   - Block force pushes (`non_fast_forward`) and branch deletion
   - Require linear history (matches the `gh pm` squash-merge workflow)
   - Repo admins bypass the ruleset (for emergency fixes)

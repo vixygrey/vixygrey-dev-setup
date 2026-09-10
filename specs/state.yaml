@@ -7,9 +7,15 @@
 workflow_mode: team-pr
 
 active_phase: sustain
+active_flow: fix_bug
+
+bug_cycle:
+  current_step: 5
+  completed_steps: [1, 2, 3, 4]
+
 
 metrics:
-  story_start: "2026-09-10T19:21:25Z"
+  story_start: "2026-09-10T20:04:22Z"
 
 
 project:
@@ -20,8 +26,8 @@ project:
 
 status:
   summary: >-
-    Issue #583 is implemented and verified. The generated `inspect-machine`
-    skill exposes intended machine capabilities and checks live availability.
+    Issue #586 is fixed and verified in the working tree.
+    SurgeDM is retired without removing the unrelated core Surge cask or unowned application data.
 
 handoff:
-  next_skill: survey-context
+  next_skill: release-branch
