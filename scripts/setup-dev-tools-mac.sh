@@ -1331,6 +1331,50 @@ merge_json_defaults() {
     return 1
 }
 
+# disable_omp_mcp_server <mcp-file> <server-name>
+# Adds one server to OMP's user denylist without changing definitions or other
+# disabled servers. OMP owns this JSON file, so update it through an atomic merge
+# rather than managed markers. Invalid JSON fails closed (#580).
+disable_omp_mcp_server() {
+    local file="$1" server="$2"
+    local current tmp
+    [[ "$server" =~ ^[A-Za-z0-9_.:-]+$ ]] || return 1
+    if [[ "$DRY_RUN" == "true" ]]; then
+        info "[DRY RUN] Would disable OMP MCP server: $server"
+        return 0
+    fi
+    command -v jq &>/dev/null || return 2
+    current="$(mktemp)"
+    tmp="$(mktemp)"
+    if [[ -f "$file" ]]; then
+        cat "$file" > "$current"
+    else
+        printf '{}\n' > "$current"
+    fi
+    if jq --arg server "$server" '
+        if type != "object" then
+            error("OMP MCP config must be an object")
+        elif (.disabledServers != null and (.disabledServers | type) != "array") then
+            error("disabledServers must be an array")
+        elif all((.disabledServers // [])[]; type == "string") then
+            .disabledServers = (((.disabledServers // []) + [$server]) | unique)
+        else
+            error("disabledServers entries must be strings")
+        end
+    ' "$current" > "$tmp" 2>/dev/null; then
+        mkdir -p "$(dirname "$file")"
+        if [[ -f "$file" ]] && cmp -s "$tmp" "$file"; then
+            rm -f "$current" "$tmp"
+            return 0
+        fi
+        mv "$tmp" "$file"
+        rm -f "$current"
+        return 0
+    fi
+    rm -f "$current" "$tmp"
+    return 1
+}
+
 # normalize_zed_jsonc <input> <output>
 # Zed rewrites settings with trailing commas. Remove only commas immediately
 # before a closing object or array, then require jq to accept the result.
@@ -11248,6 +11292,7 @@ OMP_RETIRED_EXTENSIONS=(
 # config.yml is canonical. Preserve config.yaml when omp already uses that name.
 OMP_CONFIG_FILE="$OMP_DIR/config.yml"
 OMP_ENV_FILE="$OMP_DIR/.env"
+OMP_MCP_FILE="$OMP_DIR/mcp.json"
 OMP_LSP_FILE="$OMP_DIR/lsp.yml"
 [[ -f "$OMP_DIR/config.yaml" && ! -f "$OMP_CONFIG_FILE" ]] && OMP_CONFIG_FILE="$OMP_DIR/config.yaml"
 
@@ -11271,6 +11316,7 @@ if [[ "$DRY_RUN" == "true" ]]; then
     info "[DRY RUN] Would write omp LSP policy -> $OMP_LSP_FILE"
     info "[DRY RUN] Would retire obsolete omp skills and extensions"
     info "[DRY RUN] Would write the protected-paths guard -> $OMP_EXTENSIONS_DIR/protected-paths.ts"
+    info "[DRY RUN] Would disable Bigpowers' redundant broken MCP server (#580)"
 else
     mkdir -p "$OMP_THEME_DIR" "$OMP_SKILLS_DIR" "$OMP_EXTENSIONS_DIR" "$AGENTS_SKILLS"
     for _skill in "${OMP_RETIRED_SKILLS[@]}"; do
@@ -11781,6 +11827,18 @@ OMP_CONFIG_CONF
         unset OMP_TMP OMP_OURS
     else
         warn "omp: yq missing — skipping config.yml merge"
+    fi
+
+    # Bigpowers already exposes its catalog through OMP's native bigpowers_skill
+    # tool. Its separate MCP package is redundant and cannot start from the
+    # published npm package: `${workspaceFolder}` is not an OMP environment
+    # variable, and the nested runtime dependencies are not installed (#580,
+    # upstream bigpowers#123). Disable only that discovered server. Keep every
+    # user definition and every other denylist entry.
+    if disable_omp_mcp_server "$OMP_MCP_FILE" "bigpowers-mcp"; then
+        configured "omp: disabled Bigpowers' redundant MCP server; native skills remain available"
+    else
+        warn "omp: could not update $OMP_MCP_FILE — Bigpowers MCP may report a startup error"
     fi
 
     # The seed above owns only the initial template. OMP reads any pasted values
