@@ -352,6 +352,9 @@ The generated OMP policy selects Pyright for Python type intelligence and Ruff f
 
 | Tool | Description |
 |------|-------------|
+| **Emeraldian** | Obsidian vault TUI with live preview, backlinks, graph views, and an optional assistant |
+| **Watchtower** | Global news, markets, weather, and optional model-generated intelligence briefs |
+| **Linecast** | Weather, tides, astronomy, radar, and maps that inherit the terminal palette |
 | **leaf** | Terminal Markdown previewer -- live watch, fuzzy picker, Mermaid/LaTeX, inline mode |
 | **mprocs** | TUI for running multiple dev processes side by side -- frontend/backend/worker/watchers in one terminal surface |
 | **broot** | Directory tree and file-navigation TUI with the shell-integrated `br` launcher |
@@ -432,6 +435,7 @@ The generated OMP policy selects Pyright for Python type intelligence and Ruff f
 | **atuin** | Replaces shell history with SQLite-backed, fuzzy-searchable database |
 | **mise** | Universal version manager -- Node, Python, Go, Ruby all in one (replaces nvm + pyenv + rbenv) |
 | **micro** | The `$EDITOR` -- git/gh/lazygit commit messages, leaf's Ctrl+E, quick edits. Non-modal, on-screen key menu (`Ctrl+G` for help), Dracula theme |
+| **Croft** | VS Code-style terminal IDE with LSP, debugging, source control, PDF previews, and a Dracula-Sakura theme |
 | **Zed** | Fast native editor with a named Dracula-Sakura theme and OMP in the Agent Panel through ACP |
 | **omp** | Oh My Pi coding agent with LSP, DAP, subagents, and role-based routing across Codex, Gemini, Claude Sonnet, and local llama.cpp |
 | **chezmoi** | Dotfile manager -- backup and restore configs across machines |
@@ -479,6 +483,7 @@ The generated OMP policy selects Pyright for Python type intelligence and Ruff f
 | App | Description |
 |-----|-------------|
 | **LibreOffice** | Headless office suite for validation and conversion of `.pptx`, `.xlsx`, and `.docx` files |
+| **Thunderbird** | Email, calendar, contacts, and RSS with seeded mail defaults and Dracula-Sakura profile styling |
 | **Herald** | Terminal email and calendar client with a local Dracula-Sakura theme |
 | **Obsidian** | Local Markdown knowledge base with a managed Dracula-Sakura theme in each registered vault |
 | **rclone** | SFTP/S3/cloud file transfer from the terminal (replaced the Cyberduck GUI) |
@@ -530,7 +535,11 @@ Applied consistently across the machine, with built-in Dracula variants kept whe
 | **broot** | Full Dracula-Sakura skin in `~/.config/broot/skins/dracula-sakura.hjson` |
 | **Herald** | Full role-based Dracula-Sakura theme in `~/.herald/themes/dracula-sakura.yaml` |
 | **Zed** | Named interface, syntax, and terminal theme in `~/.config/zed/themes/dracula-sakura.json` |
+| **Croft** | Native extension manifest with full interface, syntax, terminal, and tab palettes |
+| **Emeraldian** | Native custom theme for the interface, Markdown, syntax, and graph views |
+| **Linecast** | Reads the active terminal palette, which Kitty supplies as Dracula-Sakura |
 | **Obsidian** | Full per-vault CSS theme with dark plum surfaces and Sakura accent colors |
+| **Thunderbird** | Built-in dark base with a profile-level Dracula-Sakura `userChrome.css` stylesheet |
 | **jqp** | Dracula base theme with Dracula-Sakura override colors in `~/.jqp.yaml` |
 | **fzf** | Dracula colors in `FZF_DEFAULT_OPTS` |
 | **Starship** | Dracula-Sakura palette in `starship.toml` |
@@ -557,6 +566,8 @@ Applied consistently across the machine, with built-in Dracula variants kept whe
 | **vivid** | Dracula-themed LS_COLORS for file type coloring |
 | **vim** | Dracula-ish color scheme (no plugin needed) |
 | **macOS** | System highlight color set to Dracula purple |
+
+Watchtower hardcodes its palette and exposes no theme setting. The setup leaves its upstream colors unchanged.
 
 ---
 
@@ -730,6 +741,13 @@ The script generates config files with sensible defaults:
 | `~/Library/Application Support/ngrok/ngrok.yml` | ngrok | Base config (add authtoken). ngrok's real macOS path — **not** `~/.config/ngrok`, which it never reads; a stranded copy there is removed on the next run |
 | `~/.config/micro/settings.json` | micro | Dracula (`dracula-tc`), the $EDITOR for git/gh/lazygit and leaf's Ctrl+Ents, auto-format on save (ruff for Python, taplo/marksman/TS/CSS/bash/yaml servers, rust-analyzer, gopls) |
 | `~/.config/zed/settings.json` | Zed | House fonts, Dracula-Sakura overrides, editor defaults, and an `omp acp` external agent |
+| `~/Library/Application Support/emeraldian/config.toml` | Emeraldian | Reading-first defaults, images, and an offline read-only assistant |
+| `~/Library/Application Support/emeraldian/themes/dracula-sakura.toml` | Emeraldian | Native Dracula-Sakura interface, Markdown, syntax, and graph theme |
+| `~/.config/linecast/config.json` | Linecast | Nerd Font icons while location, units, language, and clock remain automatic |
+| `~/.config/croft/config.json` | Croft | Format on save, selection whitespace, copy on select, 20k terminal scrollback, and whole-project diagnostics |
+| `~/.config/croft/extensions/dracula-sakura/extension.toml` | Croft | Native Dracula-Sakura interface, syntax, terminal, and tab theme |
+| `[each Thunderbird profile]/user.js` | Thunderbird | Seeded dark theme, delayed read marking, spell check before send, and disabled start page |
+| `[each Thunderbird profile]/chrome/` | Thunderbird | Seeded stylesheet import plus the refreshed Dracula-Sakura palette |
 | `~/.herald/conf.yaml` | Herald | User-owned account config with `theme.name` merged to select Dracula-Sakura |
 | `~/.herald/themes/dracula-sakura.yaml` | Herald | Managed Dracula-Sakura role palette |
 | `~/.config/eilmeldung/config.toml` | eilmeldung | Managed Dracula-Sakura palette, rounded borders, Nerd Font icons, and the macOS URL opener |

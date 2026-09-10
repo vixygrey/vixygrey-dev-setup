@@ -80,6 +80,14 @@ zshrc|$ZSHRC|managed|shell|configs|bash|none
 micro-settings|$MICRO_CONFIG_DIR/settings.json|merged|json|configs|jq|none
 zed-settings|$ZED_CONFIG|merged|json|configs|jq|none
 zed-theme|$ZED_THEME|generated|json|configs|jq|none
+emeraldian-theme|$EMERALDIAN_THEME|generated|toml|configs|taplo|emeraldian
+emeraldian-config|$EMERALDIAN_CONFIG|seed|toml|configs|taplo|emeraldian
+linecast-config|$LINECAST_CONFIG|merged|json|configs|jq|linecast
+croft-theme|$CROFT_THEME|generated|toml|configs|taplo|croft
+croft-config|$CROFT_CONFIG|merged|json|configs|jq|croft
+thunderbird-theme|$THUNDERBIRD_THEME|generated|css|configs|none|none
+thunderbird-user-chrome|$THUNDERBIRD_USER_CHROME|seed|css|configs|none|none
+thunderbird-user-js|$THUNDERBIRD_USER_JS|seed|javascript|configs|none|none
 obsidian-theme-owner|$OBSIDIAN_THEME_MARKER|generated|text|configs|none|none
 obsidian-theme-manifest|$OBSIDIAN_THEME_DIR/manifest.json|generated|json|configs|jq|none
 obsidian-theme-css|$OBSIDIAN_THEME_DIR/theme.css|generated|css|configs|none|none
