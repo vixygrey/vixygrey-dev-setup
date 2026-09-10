@@ -10329,11 +10329,26 @@ OMP_RETIRED_EXTENSIONS=(
 )
 # config.yml is canonical. Preserve config.yaml when omp already uses that name.
 OMP_CONFIG_FILE="$OMP_DIR/config.yml"
+OMP_ENV_FILE="$OMP_DIR/.env"
 [[ -f "$OMP_DIR/config.yaml" && ! -f "$OMP_CONFIG_FILE" ]] && OMP_CONFIG_FILE="$OMP_DIR/config.yaml"
+
+# OMP loads provider credentials from this exact path after the process and project
+# environments. Seed blank entries once, then leave the credential file user-owned.
+if write_seed_once "$OMP_ENV_FILE" "paste your Anthropic and Gemini API keys into the blank entries" <<'OMP_ENV_CONF'
+# OMP provider credentials. Paste each key after the equals sign.
+ANTHROPIC_API_KEY=
+GEMINI_API_KEY=
+OMP_ENV_CONF
+then
+    if [[ "$DRY_RUN" != "true" ]]; then
+        chmod 600 "$OMP_ENV_FILE"
+        configured "omp provider key template seeded ($OMP_ENV_FILE)"
+    fi
+fi
 
 if [[ "$DRY_RUN" == "true" ]]; then
     info "[DRY RUN] Would write omp config -> $OMP_DIR (AGENTS.md, themes/dracula-sakura.json)"
-    info "[DRY RUN] Would merge omp settings -> $OMP_CONFIG_FILE (theme, model roles, fallbacks)"
+    info "[DRY RUN] Would merge omp settings -> $OMP_CONFIG_FILE (theme, model routing, provider settings)"
     info "[DRY RUN] Would retire obsolete omp skills and extensions"
     info "[DRY RUN] Would write the protected-paths guard -> $OMP_EXTENSIONS_DIR/protected-paths.ts"
 else
@@ -10720,10 +10735,12 @@ theme:
   # Both slots, so a light terminal background does not fall back to omp's
   # stock `light` theme and lose the palette entirely (#525).
   light: dracula-sakura
+# Use automatic reasoning for ordinary turns. Role suffixes below set fixed
+# levels where latency, cost, or depth has a clear priority.
+defaultThinkingLevel: auto
 
-# Nerd-font glyphs. This machine installs the nerd fonts and Ghostty is
-# configured with one, so the default `unicode` preset understates what the
-# terminal can draw.
+# Nerd-font glyphs. This machine installs the nerd fonts and configures Kitty
+# with one, so the default `unicode` preset understates what the terminal can draw.
 symbolPreset: nerd
 
 composer:
@@ -10758,11 +10775,20 @@ modelRoles:
   smol: google/gemini-3.1-flash-lite:minimal
   tiny: google/gemini-3.1-flash-lite:minimal
   commit: google/gemini-3.1-flash-lite:minimal
+# MiniMax is intentionally disabled and must not participate in model routing.
+disabledProviders:
+  - minimax-code
 # Anthropic never appears in a fallback chain. Gemini is the first hosted
 # fallback for ordinary work. The Vulkan-backed local Qwen coder is final in
 # every chain, so a second provider failure stays on this machine.
 retry:
   modelFallback: true
+  # Return to the primary model when its suppression window ends. Route away
+  # automatically before a coding-plan account spends its final 10 percent.
+  fallbackRevertPolicy: cooldown-expiry
+  usageAwareFallback: true
+  usageReservePct: 10
+  usageReservePolicy: auto
   fallbackChains:
     openai-codex/gpt-5.6-sol:
       - google/gemini-3.8-flash:medium
@@ -10794,6 +10820,8 @@ retry:
 searxng:
   endpoint: http://127.0.0.1:8080
 providers:
+  # Preserve each provider's supported prompt-cache behavior.
+  cacheRetention: auto
   webSearchOrder:
     - searxng
 OMP_CONFIG_CONF
@@ -10801,7 +10829,7 @@ OMP_CONFIG_CONF
         if yq eval-all 'select(fileIndex==0) * select(fileIndex==1)' \
             "$OMP_CONFIG_FILE" "$OMP_OURS" > "$OMP_TMP" 2>/dev/null && [[ -s "$OMP_TMP" ]]; then
             mv "$OMP_TMP" "$OMP_CONFIG_FILE"
-            configured "omp: theme + model routing merged ($OMP_CONFIG_FILE)"
+            configured "omp: theme + model routing + provider settings merged ($OMP_CONFIG_FILE)"
         else
             rm -f "$OMP_TMP"
             warn "omp: could not merge $OMP_CONFIG_FILE"
@@ -10812,12 +10840,8 @@ OMP_CONFIG_CONF
         warn "omp: yq missing — skipping config.yml merge"
     fi
 
-    # Auth is the user's. `google` reads GEMINI_API_KEY from the environment; nothing
-    # here writes a key, and there is no file to seed. Say so once rather than leaving
-    # a run that looks complete but cannot reach a model.
-    if [[ -z "${GEMINI_API_KEY:-}" ]]; then
-        info "omp: set GEMINI_API_KEY in your environment to reach the Gemini models above"
-    fi
+    # The seed above owns only the initial template. OMP reads any pasted values
+    # directly, while later setup runs leave the credential file byte-for-byte intact.
 fi
 
 # Run the Vulkan build as a login service. Port 8081 avoids the local SearXNG
@@ -10880,7 +10904,7 @@ LLAMA_PLIST_EOF
 fi
 unset LLAMA_SERVER LLAMA_MODEL LLAMA_PLIST LLAMA_LOG
 unset OMP_DIR OMP_THEME_DIR OMP_THEME_FILE OMP_SKILLS_DIR OMP_EXTENSIONS_DIR
-unset AGENTS_SKILLS OMP_RETIRED_SKILLS OMP_RETIRED_EXTENSIONS OMP_CONFIG_FILE
+unset AGENTS_SKILLS OMP_RETIRED_SKILLS OMP_RETIRED_EXTENSIONS OMP_CONFIG_FILE OMP_ENV_FILE
 
 
 fi  # configs
@@ -11581,6 +11605,7 @@ llm chat
 
 ### `omp` — Oh My Pi
 The primary coding agent includes LSP, DAP, subagents, memory, and workload-routed models. Hosted providers fall back to the local Vulkan runtime.
+Automatic reasoning handles ordinary turns. Usage-aware fallback preserves 10 percent of coding-plan quotas and returns to the primary model after cooldown.
 
 ```bash
 # start a session
@@ -11595,7 +11620,10 @@ omp -p "summarise the diff on this branch"
 
 > Tip: omp's config lives under `~/.omp/agent/`, not `~/.config`. It reads three scoped skills from `~/.agents/skills/`: `api-testing`, `d2-diagrams`, and `office-layout-check`. The `protected-paths.ts` extension guards native file mutations to sensitive paths. Its `AGENTS.md` outranks other user-level context files. Settings merge into `config.yml` because omp writes that file.
 >
-> Tip: `web_search` is built in with 23 backends, and this setup puts your local **SearXNG** instance at the head of the chain (`searxng.endpoint`). The keyless backends stay behind it, so search still works when the instance is down. It needs `GEMINI_API_KEY` in the environment to reach a model.
+> `web_search` includes 23 backends. This setup puts local **SearXNG** first through `searxng.endpoint`.
+> Keyless backends remain available if SearXNG stops.
+> Paste the API keys into `ANTHROPIC_API_KEY=` and `GEMINI_API_KEY=` in `~/.omp/agent/.env`.
+> OMP loads this file directly.
 >
 > The final fallback is `llama.cpp/qwen2.5-coder:14b`, served locally through Vulkan.
 

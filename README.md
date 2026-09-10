@@ -722,7 +722,8 @@ The script generates config files with sensible defaults:
 | `~/.omp/agent/extensions/protected-paths.ts` | omp | Blocks native file mutations to credentials, dependency trees, and repository metadata. Bash and Eval remain under native approval policies |
 | `~/.omp/agent/AGENTS.md` | omp | Global Oh My Pi instruction layer with house preferences and writing rules |
 | `~/.omp/agent/themes/dracula-sakura.json` | omp | Full Dracula-Sakura theme with all 66 required omp color tokens, including the thirteen status-line colors pi has no equivalent for |
-| `~/.omp/agent/config.yml` | omp | Merged because omp also writes this file. Codex handles normal work, Gemini handles vision and lightweight roles, and Claude Sonnet handles only `slow` and `plan`. Fallbacks never use Anthropic and end at local Qwen 2.5 Coder |
+| `~/.omp/agent/config.yml` | omp | Merged because OMP also writes this file. Uses automatic reasoning, workload routing, usage-aware fallback, provider caching, disabled MiniMax, and local Qwen last |
+| `~/.omp/agent/.env` | omp | User-owned seed with blank `ANTHROPIC_API_KEY` and `GEMINI_API_KEY` entries. Later runs leave it unchanged |
 | `~/Library/LaunchAgents/dev.vixygrey.llama-cpp.plist` | llama.cpp | Runs Qwen2.5 Coder 14B on port 8081 with the Vulkan backend |
 | `~/.config/nushell/env.nu` | nushell | Starship prompt, Homebrew paths |
 | `~/.config/kitty/kitty.conf` | Kitty | JetBrainsMono Nerd Font, Dracula-Sakura palette, compact padding, integrated titlebar |
@@ -915,6 +916,9 @@ OMP installs from the `can1357/tap` Homebrew tap as a prebuilt binary.
 The binary remains available to shells, git hooks, and launchd jobs without a separate runtime.
 
 OMP includes native tools, LSP operations, a DAP debugger, subagents, memory, and nine model roles.
+Automatic reasoning handles ordinary turns.
+Usage-aware fallback preserves 10 percent of coding-plan quotas.
+MiniMax Code is disabled. Provider prompt-cache retention stays on automatic defaults.
 The roles use Codex, Gemini, Claude Sonnet, and local Qwen 2.5 Coder.
 
 The local model is the final fallback for each hosted role.
@@ -937,9 +941,9 @@ dependency trees, and repository metadata. It checks resolved paths to catch sym
 escapes. It does not claim to sandbox Bash or Eval, which remain under omp approval
 policies.
 
-**Authentication is yours.** omp's `google` provider reads `GEMINI_API_KEY` from the
-environment; the setup never writes, reads, or echoes a key. Export it from wherever you
-keep secrets, then confirm with `omp config get modelRoles`.
+**Authentication is yours.** The setup seeds blank `ANTHROPIC_API_KEY` and `GEMINI_API_KEY` entries in `~/.omp/agent/.env` once.
+It never reads or overwrites an existing file.
+Paste each key after the matching equals sign. OMP loads this file directly.
 
 > `modelRoles` is a **record**, so it reads as a whole and not by sub-key.
 > `omp config get modelRoles.default` answers `Unknown setting`, which reports a

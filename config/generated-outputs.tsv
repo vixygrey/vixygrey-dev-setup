@@ -82,6 +82,7 @@ home-scripts-bin-setup-ssh|$HOME/Scripts/bin/setup-ssh|managed-script|shell|conf
 home-scripts-bin-export-brewfile|$HOME/Scripts/bin/export-brewfile|managed-script|text|configs|none|none
 omp-theme-file|$OMP_THEME_FILE|generated|text|configs|none|none
 omp-extensions-dir-protected-paths-ts|$OMP_EXTENSIONS_DIR/protected-paths.ts|generated|text|configs|none|none
+omp-env-file|$OMP_ENV_FILE|seed|dotenv|configs|bash|none
 zshrc|$ZSHRC|managed|shell|configs|bash|none
 micro-settings|$MICRO_CONFIG_DIR/settings.json|merged|json|configs|jq|none
 docker-daemon|$DOCKER_DAEMON|merged|json|configs|jq|none

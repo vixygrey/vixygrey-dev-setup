@@ -191,6 +191,7 @@ jobs:
           GH_CONF|yq eval '.' /tmp/generated
           NGROK_CONF|yq eval '.' /tmp/generated
           BORGMATIC_CONF|yq eval '.' /tmp/generated
+          OMP_ENV_CONF|bash -n /tmp/generated
           OMP_CONFIG_CONF|yq eval '.' /tmp/generated
           STARSHIP_CONF|python3 -c 'import tomllib; tomllib.load(open("/tmp/generated","rb"))'
           ATUIN_CONF|python3 -c 'import tomllib; tomllib.load(open("/tmp/generated","rb"))'
