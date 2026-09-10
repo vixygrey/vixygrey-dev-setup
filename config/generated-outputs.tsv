@@ -16,7 +16,6 @@ yt-dlp-config|$YT_DLP_CONFIG|managed|text|configs|none|none
 act-config|$ACT_CONFIG|managed|text|configs|none|none
 tflint-config|$TFLINT_CONFIG|managed|text|configs|none|none
 trippy-config|$TRIPPY_CONFIG|managed|text|configs|none|none
-mlr-config|$MLR_CONFIG|managed|text|configs|none|none
 gh-dash-config|$GH_DASH_CONFIG|managed|shell|configs|bash|none
 stern-config|$STERN_CONFIG|managed|text|configs|none|stern
 zellij-config|$ZELLIJ_CONFIG|managed|text|configs|none|zellij
@@ -26,14 +25,9 @@ yazi-config|$YAZI_CONFIG|managed|toml|configs|taplo|none
 yazi-theme|$YAZI_THEME|managed|toml|configs|taplo|yazi
 mpv-config|$MPV_CONFIG|managed|text|configs|none|none
 w3m-config|$W3M_CONFIG|managed|text|configs|none|none
-nushell-env|$NUSHELL_ENV|managed|shell|configs|bash|nu
-nushell-superseded|$NUSHELL_SUPERSEDED|superseded|shell|configs|bash|none
-nushell-config|$NUSHELL_CONFIG|managed|shell|configs|bash|none
 lnav-theme-dir-dracula-sakura-json|$LNAV_THEME_DIR/dracula-sakura.json|generated|json|configs|jq|lnav
 stu-root-dir-path-config-toml|$STU_ROOT_DIR_PATH/config.toml|managed|toml|configs|taplo|none
 home-config-e1s-config-yml|$HOME/.config/e1s/config.yml|managed|yaml|configs|yq|none
-lazyenv-config-dir-config-toml|$LAZYENV_CONFIG_DIR/config.toml|managed|toml|configs|taplo|lazyenv
-git-cliff-config|$GIT_CLIFF_CONFIG|managed|text|configs|none|git-cliff
 ssh-config|$SSH_CONFIG|managed|shell|configs|bash|ssh
 global-gitignore|$GLOBAL_GITIGNORE|managed|text|configs|none|none
 npmrc|$NPMRC|managed|text|configs|none|npm
@@ -65,10 +59,8 @@ aws-config|$AWS_CONFIG|managed|text|configs|none|none
 gh-config|$GH_CONFIG|managed|text|configs|none|gh
 pip-config|$PIP_CONFIG|managed|text|configs|none|pip
 gemrc|$GEMRC|managed|text|configs|none|gem
-pgcli-config|$PGCLI_CONFIG|managed|text|configs|none|none
 harlequin-config|$HARLEQUIN_CONFIG|managed|text|configs|none|harlequin
 harlequin-superseded|$HARLEQUIN_SUPERSEDED|superseded|text|configs|none|none
-myclirc|$MYCLIRC|managed|text|configs|none|none
 justfile-global|$JUSTFILE_GLOBAL|managed|text|configs|none|none
 ghostty-config-superseded|$GHOSTTY_CONFIG|superseded|text|configs|none|none
 kitty-config|$KITTY_CONFIG|managed|text|configs|none|kitty
@@ -92,11 +84,8 @@ herald-theme|$HERALD_THEME_FILE|generated|yaml|configs|yq|none
 herald-config|$HERALD_CONFIG|merged|yaml|configs|yq|none
 docker-daemon|$DOCKER_DAEMON|merged|json|configs|jq|none
 omp-config|$OMP_CONFIG_FILE|merged|yaml|configs|yq|omp
-clamav-freshclam|$CLAMAV_ETC/freshclam.conf|seed|text|always|none|none
-clamav-launch-agent|$FRESHCLAM_PLIST|seed|plist|always|plutil|none
 borgmatic-config|$BORGMATIC_CONFIG|seed|yaml|configs|yq|borgmatic
 ngrok-config|$NGROK_CONFIG|seed|yaml|configs|yq|ngrok
-caddy-config|$CADDY_CONFIG_DIR/Caddyfile|seed|text|configs|none|none
 gitconfig-work|$GITCONFIG_WORK|create-once|gitconfig|configs|git|none
 gitconfig-personal|$GITCONFIG_PERSONAL|create-once|gitconfig|configs|git|none
 omp-dir-agents-md|$OMP_DIR/AGENTS.md|generated|markdown|configs|none|none
@@ -115,3 +104,12 @@ retired-newsboat-config|$HOME/.newsboat/config|superseded|text|configs|none|none
 retired-newsboat-urls|$HOME/.newsboat/urls|superseded|text|configs|none|none
 retired-git-lfs-helper|$HOME/Scripts/bin/git-lfs-enable-repo|superseded|shell|configs|bash|none
 retired-zellij-dev-layout|$ZELLIJ_LAYOUTS/dev.kdl|superseded|kdl|configs|zellij|none
+retired-miller-config|$HOME/.mlrrc|superseded|text|configs|none|none
+retired-nushell-env|$HOME/.config/nushell/env.nu|superseded|shell|configs|bash|none
+retired-nushell-config|$HOME/.config/nushell/config.nu|superseded|shell|configs|bash|none
+retired-nushell-library-env|$HOME/Library/Application Support/nushell/env.nu|superseded|shell|configs|bash|none
+retired-nushell-library-config|$HOME/Library/Application Support/nushell/config.nu|superseded|shell|configs|bash|none
+retired-lazyenv-config|$HOME/Library/Application Support/lazyenv/config.toml|superseded|toml|configs|taplo|none
+retired-git-cliff-config|$HOME/.config/git-cliff/cliff.toml|superseded|toml|configs|taplo|none
+retired-pgcli-config|$HOME/.config/pgcli/config|superseded|text|configs|none|none
+retired-mycli-config|$HOME/.myclirc|superseded|text|configs|none|none

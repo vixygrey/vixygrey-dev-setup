@@ -354,20 +354,20 @@ declare -A CATEGORY_DESC=(
     [git]="Git, GitHub CLI, delta, lazygit, pre-commit framework (hooks + config: configs)"
     [aws]="AWS CLI, CDK, SAM, Granted, cfn-lint, e1s/e2c/stu/claws (TUIs), s5cmd, steampipe, dynein, iamlive"
     [iac]="OpenTofu (Terraform), tflint, terraform-docs, checkov, infracost"
-    [security]="detect-secrets, gitleaks, trivy, semgrep, ClamAV, Objective-See"
+    [security]="gitleaks, trivy, semgrep, Objective-See"
     [replacements]="eza, bat, fd, ripgrep, zoxide, btop, sd, dust, just, Yazi, fx, etc."
-    [data-processing]="yq, miller, csvkit, jc, jqp, pandoc, ffmpeg, ImageMagick"
-    [code-quality]="shellcheck, shfmt, actionlint, act, hadolint, ruff, prettier, commitizen"
+    [data-processing]="yq, csvkit, jc, jqp, pandoc, ImageMagick"
+    [code-quality]="shellcheck, shfmt, actionlint, act, hadolint, ruff, prettier"
     [perf-testing]="hyperfine, oha"
-    [dev-servers]="ngrok, miniserve, caddy"
-    [terminal-productivity]="leaf, nushell, topgrade, fastfetch, mprocs, Broot, taproom, qalc, lazyssh/rsync/npm, lazyenv, keyward, cheznav, has, kondo"
+    [dev-servers]="ngrok, miniserve"
+    [terminal-productivity]="leaf, topgrade, fastfetch, mprocs, Broot, qalc, lazyssh/rsync/npm, cheznav"
     [k8s-github]="stern, gh-dash"
-    [database]="duckdb, pgcli, mycli, lazysql, harlequin, usql, sq"
+    [database]="duckdb, harlequin, usql, dbmate"
     [containers]="lazydocker, dive, kubectl, k9s"
-    [api]="ATAC, grpcurl"
-    [networking]="mtr, bandwhich, nmap"
-    [dx]="fzf, starship, atuin, micro, Zed, Kitty, zellij, llm, omp"
-    [docs]="d2, Mermaid CLI"
+    [api]="ATAC"
+    [networking]="bandwhich, nmap, trippy"
+    [dx]="fzf, starship, atuin, micro, Zed, Kitty, zellij, omp"
+    [docs]="d2"
     [mac-system]="LuLu, Mullvad VPN, mullvad CLI, mullvad-tui"
     [mac-productivity]="Herald, LibreOffice, Vulkan llama.cpp"
     [mac-browsers]="Carbonyl, w3m, monolith"
@@ -392,15 +392,15 @@ declare -A CATEGORY_DESC=(
 # silently never appear, so the keys are validated against ALL_CATEGORIES below.
 declare -A CONFIG_LIVES_IN_CONFIGS=(
     [core]="mise, direnv, ~/.npmrc, pip, gemrc"
-    [git]="the global pre-commit hook, lazygit, gh, git-cliff, the commit template, global gitignore"
+    [git]="the global pre-commit hook, lazygit, gh, the commit template, global gitignore"
     [aws]="the AWS CLI config (\$HOME/.aws/config)"
     [iac]="tflint"
     [code-quality]="shellcheck, act, prettier, editorconfig"
     [replacements]="btop, ripgreprc, fdignore, aria2, Yazi"
-    [data-processing]="yt-dlp, miller, jqp"
-    [terminal-productivity]="leaf, nushell, topgrade, fastfetch, mprocs, Broot"
+    [data-processing]="yt-dlp, jqp"
+    [terminal-productivity]="leaf, topgrade, fastfetch, mprocs, Broot"
     [k8s-github]="stern, gh-dash"
-    [database]="pgcli, mycli, harlequin"
+    [database]="harlequin"
     [containers]="lazydocker, k9s (config + Dracula skin)"
     [networking]="trippy"
     [dx]="atuin, zellij, Kitty, Zed, omp (~/.omp/agent + ~/.agents/skills) — and starship, which is in the \`dracula\` category"
@@ -1230,8 +1230,8 @@ write_generated() {
 
 # write_seed_once <file> <why>   (content on stdin)
 # For files that are seeded ONCE and then left alone forever: a starter template the
-# user is expected to edit (borgmatic, Caddy), or a file a tool later writes a
-# credential into (ngrok's authtoken, ClamAV's mirror list). Unlike write_managed
+# user is expected to edit (borgmatic), or a file a tool later writes a credential
+# into (ngrok's authtoken). Unlike write_managed
 # there is no block to refresh on re-run — an existing file is ALWAYS left exactly as
 # it is, which is the deliberate, auditable version of a bare `if [[ ! -f ]]` guard
 # rather than an accident (#536). Honors DRY_RUN. Returns 0 when the file was written
@@ -1795,13 +1795,12 @@ if [[ "$UNINSTALL" == "true" ]]; then
     echo "# Remove the mise shim links that make node/npm/npx visible to git hooks:"
     echo "  rm -f ~/.local/bin/node ~/.local/bin/npm ~/.local/bin/npx"
     echo "  rm -f ~/.curlrc ~/.npmrc ~/.ripgreprc ~/.fdignore ~/.nanorc ~/.vimrc"
-    echo "  rm -f ~/.hushlogin ~/.gitmessage ~/.myclirc ~/.gemrc ~/.actrc ~/.mlrrc ~/.czrc ~/.tflint.hcl"
+    echo "  rm -f ~/.hushlogin ~/.gitmessage ~/.gemrc ~/.actrc ~/.tflint.hcl"
     echo "  rm -rf ~/.aria2 ~/.config/atuin ~/.config/ngrok"
     echo "  rm -rf ~/.config/yt-dlp ~/.config/gh-dash ~/.config/stern"
     echo "  rm -rf ~/.config/btop ~/.config/lazydocker ~/.config/mise"
-    echo "  rm -rf ~/.config/topgrade.toml ~/.config/fastfetch ~/.config/pgcli"
-    echo "  rm -rf ~/.config/direnv ~/.config/caddy ~/.config/kitty"
-    echo "  rm -rf ~/.config/broot ~/.config/zed ~/.herald"
+    echo "  rm -rf ~/.config/topgrade.toml ~/.config/fastfetch ~/.config/kitty"
+    echo "  rm -rf ~/.config/direnv ~/.config/broot ~/.config/zed ~/.herald"
     echo "  rm -f ~/.justfile ~/Media/photos/dracula-sakura.jpg"
     echo ""
     echo "# Remove Rust (installed via rustup):"
@@ -1937,10 +1936,10 @@ if [[ "$CLEANUP" == "true" ]]; then
         "cask:cursor:Cursor (AI editor):micro + omp:Cursor"
         "cask:kiro:Kiro:micro + omp:Kiro"
         "cask:bruno:Bruno:ATAC:Bruno"
-        "cask:dbeaver-community:DBeaver Community:harlequin + lazysql:DBeaver"
+        "cask:dbeaver-community:DBeaver Community:harlequin:DBeaver"
         "cask:cyberduck:Cyberduck:rclone:Cyberduck"
         "cask:google-drive:Google Drive:rclone:Google Drive"
-        "cask:drawio:draw.io:d2 + mermaid-cli:draw.io"
+        "cask:drawio:draw.io:d2:draw.io"
         "cask:notion:Notion:plain Markdown + reminders:Notion"
         "cask:notion-calendar:Notion Calendar:removed:Notion Calendar"
         "brew:cmus:cmus:cliamp"
@@ -1987,8 +1986,8 @@ if [[ "$CLEANUP" == "true" ]]; then
         "formula:nvm:nvm:mise"
         "formula:pyenv:pyenv:mise"
         "formula:httpie:HTTPie:xh"
-        "formula:git-secrets:git-secrets:gitleaks + detect-secrets"
-        "formula:trufflehog:trufflehog:gitleaks + detect-secrets"
+        "formula:git-secrets:git-secrets:gitleaks"
+        "formula:trufflehog:trufflehog:gitleaks"
         "cask:the-unarchiver:The Unarchiver:ouch"
         "cask:transmit:Transmit:rclone:Transmit"
         "cask:colima:colima:removed"
@@ -2013,6 +2012,41 @@ if [[ "$CLEANUP" == "true" ]]; then
         "cask:slack:Slack:removed"
         "cask:telegram:Telegram:removed"
         "cask:notion-mail:Notion Mail:removed (retired by Notion):Notion Mail"
+        # Retired in #555 after the default toolset audit. These entries make the
+        # removal reach machines that were provisioned before the install list shrank.
+        "npm:cdk-nag:cdk-nag global library:removed"
+        "formula:tree:tree:eza"
+        "formula:curlie:curlie:xh"
+        "formula:detect-secrets:detect-secrets:gitleaks"
+        "npm:@commitlint/cli:commitlint:project-local commit policy"
+        "npm:commitizen:commitizen:git template + omp"
+        "npm:cz-conventional-changelog:Commitizen conventional adapter:git template + omp"
+        "npm:npkill:npkill:removed"
+        "formula:nano:Homebrew nano:micro"
+        "cask:font-meslo-lg-nerd-font:MesloLGS Nerd Font:JetBrains Mono Nerd Font"
+        "cask:font-fira-code:Fira Code:JetBrains Mono"
+        "cask:font-fira-code-nerd-font:Fira Code Nerd Font:JetBrains Mono Nerd Font"
+        "cask:font-hack-nerd-font:Hack Nerd Font:JetBrains Mono Nerd Font"
+        "uv:llm:llm:omp"
+        "formula:pgcli:pgcli:harlequin + usql"
+        "formula:mycli:mycli:harlequin + usql"
+        "formula:lazysql:lazysql:harlequin"
+        "formula:neilotoole/sq/sq:sq:DuckDB + usql"
+        "formula:mtr:mtr:trippy"
+        "formula:watchman:Watchman:watchexec"
+        "formula:git-cliff:git-cliff:hand-written changelogs"
+        "npm:@mermaid-js/mermaid-cli:Mermaid CLI:d2"
+        "formula:caddy:Caddy:miniserve"
+        "formula:clamav:ClamAV:removed"
+        "formula:kdabir/tap/has:has:removed"
+        "formula:taproom:taproom:Homebrew CLI"
+        "cask:gateway-of-last-resort/tap/keyward:keyward:OpenSSH"
+        "formula:lazynop/tap/lazyenv:lazyenv:direnv"
+        "formula:nushell:Nushell:zsh + jq + yq"
+        "formula:kondo:kondo:removed"
+        "formula:miller:Miller:csvkit + DuckDB"
+        "formula:grpcurl:grpcurl:removed"
+        "formula:ffmpeg:ffmpeg:removed"
     )
 
     CLEANUP_COUNT=0
@@ -2042,6 +2076,8 @@ if [[ "$CLEANUP" == "true" ]]; then
                         info "Removing $display (replaced by $replacement)..."
                         if [[ "$name" == "ollama" || "$name" == "bendews/tap/apw" || "$name" == "FelixKratz/formulae/sketchybar" ]]; then
                             brew services stop "$name" >> "$LOG_FILE" 2>&1 || true
+                        elif [[ "$name" == "clamav" ]]; then
+                            launchctl unload "$HOME/Library/LaunchAgents/com.freshclam.update.plist" >> "$LOG_FILE" 2>&1 || true
                         fi
                         if [[ "$name" == "git-lfs" ]]; then
                             git lfs uninstall --skip-repo >> "$LOG_FILE" 2>&1 || true
@@ -2304,6 +2340,8 @@ if [[ "$CLEANUP" == "true" ]]; then
         "croft|$HOME/.config/croft|micro"
         "croft|$HOME/.cache/croft-build.noindex|micro"
         "sketchybar|$HOME/.config/sketchybar|removed"
+        "cz|$HOME/.czrc|git template + omp"
+        "freshclam|$HOME/Library/LaunchAgents/com.freshclam.update.plist|removed"
     )
     for entry in "${CONFIG_ORPHANS[@]}"; do
         _tool="${entry%%|*}"
@@ -2410,6 +2448,10 @@ if [[ "$CLEANUP" == "true" ]]; then
         "FelixKratz/formulae|SketchyBar"
         "bendews/tap|apw"
         "keith/formulae|reminders-cli"
+        "neilotoole/sq|sq"
+        "kdabir/tap|has"
+        "gateway-of-last-resort/tap|keyward"
+        "lazynop/tap|lazyenv"
     )
     for entry in "${DEPRECATED_TAPS[@]}"; do
         _tap="${entry%%|*}"
@@ -2542,15 +2584,6 @@ if [[ "$VERIFY" == "true" ]]; then
         # Asks lnav which theme it RESOLVED, not whether the file parses. A pass
         # means the fragment was found, loaded, and selected (#518).
         "validate|lnav|${XDG_CONFIG_HOME:-$HOME/.config}/lnav/configs/dev-setup/dracula-sakura.json|_verify_lnav"
-        # lazyenv is the only one of the #519 three that can answer without a TTY.
-        # `--check-config` prints "Config OK: <path>" and reports errors for a bad
-        # theme name, so a pass means it parsed AND accepted the theme.
-        #
-        # stu and e1s deliberately have no row. Both are TUIs with no validate mode,
-        # and without a TTY they panic in crossterm before config parsing is reached —
-        # a good config and a deliberately broken one produce the identical panic, so
-        # any row built on that would report nothing about the config (#519).
-        "validate|lazyenv|$HOME/Library/Application Support/lazyenv/config.toml|_verify_output_has '^Config OK' lazyenv --check-config"
         "validate|kitty|$HOME/.config/kitty/kitty.conf|_verify_kitty"
         "validate|zellij|$HOME/.config/zellij/config.kdl|_verify_output_has 'Well defined' zellij setup --check"
         # Yazi has no headless validator or command that reports its config path.
@@ -2561,21 +2594,12 @@ if [[ "$VERIFY" == "true" ]]; then
         "path|k9s|$HOME/.config/k9s/config.yaml|k9s info 2>/dev/null | sed 's/\x1b\[[0-9;]*m//g' | sed -n 's/^Config: *//p'"
         "path|mise|$HOME/.config/mise/config.toml|mise config ls 2>/dev/null | awk 'NR==1 {print \$1}' | sed \"s|^~|\$HOME|\""
         "path|lazygit|$HOME/.config/lazygit/config.yml|echo \"\$(lazygit --print-config-dir)/config.yml\""
-        "path|nu|$HOME/.config/nushell/env.nu|nu -c '\$nu.env-path' 2>/dev/null | tail -1"
         "path|atuin|$HOME/.config/atuin/config.toml|atuin info 2>/dev/null | awk -F'\"' '/client config:/ {print \$2}'"
         "path|bat|$(bat --config-file 2>/dev/null)|bat --config-file"
-        # These three were "unchecked" until #367 — the label was too pessimistic. topgrade
-        # and starship go through the helpers above because their exit codes cannot be
-        # trusted; git-cliff exits non-zero on a bad config, so it needs no helper. The
-        # topgrade row is the one that would have caught #366 the day it landed.
-        #
-        # git-cliff is given the path explicitly rather than left to resolve one. It
-        # legitimately prefers a ./cliff.toml, so a `path` row would pass or fail depending
-        # on which directory --verify was run from. This proves the file we write is valid,
-        # which is the part we control.
+        # These two were "unchecked" until #367. Their helpers inspect effective
+        # configuration because their exit codes alone cannot prove that the file loaded.
         "validate|starship|$HOME/.config/starship.toml|_verify_starship"
         "validate|topgrade|$HOME/.config/topgrade.toml|_verify_topgrade"
-        "validate|git-cliff|$HOME/.config/git-cliff/cliff.toml|git-cliff --config \"$HOME/.config/git-cliff/cliff.toml\" --context"
         "unchecked|trippy|$HOME/.config/trippy/trippy.toml|"
         "path|harlequin|$HOME/.harlequin.toml|_verify_harlequin_config"
         "unchecked|gh-dash|$HOME/.config/gh-dash/config.yml|"
@@ -2997,7 +3021,6 @@ else
 fi
 brew_install "jq" "jq (JSON processor)"
 brew_install "direnv" "direnv (per-project env vars)"
-brew_install "watchman" "Watchman (file watcher)"
 brew_install "cmake" "CMake"
 brew_install "pkgconf" "pkgconf (provides pkg-config; pkg-config was renamed to pkgconf in homebrew-core)"
 
@@ -3087,7 +3110,6 @@ brew_install "gnupg" "GnuPG (commit signing)"
 brew_install "pinentry-mac" "pinentry-mac (GPG passphrase)"
 brew_install "lazygit" "lazygit (terminal UI for git)"
 brew_install "git-absorb" "git-absorb (auto-fixup commits)"
-brew_install "git-cliff" "git-cliff (generate changelogs from conventional commits)"
 
 # pre-commit
 brew_install "pre-commit" "pre-commit (git hook framework)"
@@ -3134,9 +3156,8 @@ fi
 # AWS CDK (via npm)
 if installed npm; then
     npm_global_install "aws-cdk" "AWS CDK CLI"
-    npm_global_install "cdk-nag" "cdk-nag"
 else
-    progress; progress  # keep progress bar accurate when npm unavailable
+    progress  # keep progress bar accurate when npm unavailable
 fi
 
 # -- AWS TUIs (k9s-style, per service) --
@@ -3190,9 +3211,6 @@ banner "Security & Secrets"
 brew_install "age" "age (modern file encryption)"
 brew_install "sops" "sops (encrypt secrets in YAML/JSON, works with AWS KMS)"
 
-# detect-secrets (Yelp's pre-commit secret detection) — available as brew formula
-brew_install "detect-secrets" "detect-secrets (Yelp pre-commit secret detection)"
-
 # Code & dependency security
 brew_install "gitleaks" "gitleaks (fast git secret scanning — great for CI/pre-commit)"
 brew_install "trivy" "trivy (container & IaC vulnerability scanning)"
@@ -3202,56 +3220,6 @@ brew_install "cosign" "cosign (sign & verify container images)"
 # Network security
 brew_install "mkcert" "mkcert (local HTTPS certs for dev)"
 brew_install "ssh-audit" "ssh-audit (audit SSH server/client config)"
-
-# ClamAV (open-source antivirus)
-brew_install "clamav" "ClamAV (open-source antivirus)"
-# ClamAV ships no virus database and only *.conf.sample files, so `clamscan` fails with
-# "No supported database files" until freshclam.conf exists and `freshclam` has run.
-# Seed a minimal freshclam.conf and register a LaunchAgent that fetches the DB on load
-# (in the background, so setup isn't blocked on a ~250 MB download) and refreshes daily.
-# On-demand scanner — no resident clamd daemon. Both are pure create-once seeds — an
-# existing file may hold a hand-edited mirror or schedule — routed through
-# write_seed_once so a dry run reports them instead of silently skipping (#536).
-# `installed clamav` never matched: the formula ships clamscan/clamdscan/freshclam/
-# clamd, never a binary literally named `clamav` (CONVENTIONS.md "name the binary,
-# not the package"). This whole seed block has silently never run on a real machine
-# since it was written — found while migrating it to write_seed_once (#536).
-if installed clamscan; then
-    CLAMAV_ETC="$(brew --prefix)/etc/clamav"
-    ensure_dir "$CLAMAV_ETC"
-    if [[ -f "$CLAMAV_ETC/freshclam.conf.sample" ]]; then
-        _freshclam_seed="$(grep -v '^Example' "$CLAMAV_ETC/freshclam.conf.sample")"
-    else
-        _freshclam_seed='DatabaseMirror database.clamav.net'
-    fi
-    printf '%s\n' "$_freshclam_seed" | write_seed_once "$CLAMAV_ETC/freshclam.conf" \
-        "clamscan needs a virus database before it will run"
-    unset _freshclam_seed
-
-    FRESHCLAM_PLIST="$HOME/Library/LaunchAgents/com.freshclam.update.plist"
-    if write_seed_once "$FRESHCLAM_PLIST" "daily ClamAV database updater" <<FRESHCLAM_PLIST_EOF
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0">
-<dict>
-    <key>Label</key><string>com.freshclam.update</string>
-    <key>ProgramArguments</key>
-    <array>
-        <string>$(brew --prefix)/bin/freshclam</string>
-    </array>
-    <key>RunAtLoad</key><true/>
-    <key>StartCalendarInterval</key><dict><key>Hour</key><integer>3</integer><key>Minute</key><integer>30</integer></dict>
-</dict>
-</plist>
-FRESHCLAM_PLIST_EOF
-    then
-        if [[ "$DRY_RUN" != "true" ]]; then
-            launchctl load "$FRESHCLAM_PLIST" >> "$LOG_FILE" 2>&1 || true
-        fi
-        configured "ClamAV freshclam.conf seeded + daily DB updater registered (first fetch runs in background)"
-    fi
-fi
-
 # macOS hardening: FileVault
 if fdesetup status 2>/dev/null | grep -q "On"; then
     warn "FileVault is already enabled"
@@ -3352,16 +3320,12 @@ brew_install "gping" "gping (replaces ping — real-time latency graph)"
 
 # curl -> xh: colorized output, JSON shortcuts, HTTPie-like
 brew_install "xh" "xh (replaces curl — colorized, JSON-friendly)"
-brew_install "curlie" "curlie (curl with httpie-like output)"
 
 # dig -> doggo: colorized DNS, supports DoH/DoT (dog is abandoned, doggo is the maintained successor)
 brew_install "doggo" "doggo (replaces dig — colorized DNS, DoH support)"
 
 # wc -> scc: lines of code by language + COCOMO cost/effort + complexity estimates
 brew_install "scc" "scc (replaces wc for code — LOC by language, complexity + COCOMO cost)"
-
-# tree (enhanced built-in) - if not using eza --tree
-brew_install "tree" "tree (directory listing)"
 
 # watch -> viddy: modern watch with diff highlighting, history
 brew_install "viddy" "viddy (replaces watch — diff highlighting, history)"
@@ -3425,10 +3389,6 @@ banner "Data & File Processing"
 
 # yq: jq for YAML (essential for k8s/CDK)
 brew_install "yq" "yq (jq for YAML — essential for k8s/CDK work)"
-
-# miller: awk/sed/jq for CSV, JSON, tabular data
-brew_install "miller" "miller (awk/sed/jq for CSV, JSON, tabular data)"
-
 # csvkit: suite of CSV tools
 brew_install "csvkit" "csvkit (CSV tools — csvcut, csvgrep, csvstat)"
 
@@ -3453,10 +3413,6 @@ brew_install "imagemagick" "ImageMagick (image resize, convert, composite)"
 # poppler: PDF utilities — pdftoppm (PDF->PNG), pdftotext, pdfinfo. These tools
 # rasterize the PDFs LibreOffice produces for visual inspection.
 brew_install "poppler" "poppler (PDF tools — pdftoppm, pdftotext, pdfinfo)"
-
-# ffmpeg: video/audio processing
-brew_install "ffmpeg" "ffmpeg (video/audio processing swiss army knife)"
-
 # yt-dlp: video/audio downloader
 brew_install "yt-dlp" "yt-dlp (video/audio downloader)"
 
@@ -3543,32 +3499,6 @@ fi
 brew_install "typos-cli" "typos (source code spell checker — fast, low false positives)"
 brew_install "ast-grep" "ast-grep (structural code search/replace using AST)"
 
-# JS/TS workflow
-if installed npm; then
-    npm_global_install "npkill" "npkill (find and nuke node_modules folders — reclaim disk)"
-    npm_global_install "commitizen" "commitizen (interactive conventional commits)"
-    # Adapter for commitizen — without it (+ ~/.czrc below) `cz`/`git cz` errors with
-    # "cannot load your commitizen adapter". Installed into the same global root as
-    # commitizen so it resolves as a sibling.
-    npm_global_install "cz-conventional-changelog" "cz-conventional-changelog (commitizen adapter)"
-    # commitlint is PROJECT-SCOPED: its resolve-extends runs from the repo cwd, so a
-    # global config can't resolve @commitlint/config-conventional. Wire commitlint +
-    # config-conventional as per-project devDeps (e.g. via pre-commit/husky); no global
-    # config is shipped here — it wouldn't resolve.
-    npm_global_install "@commitlint/cli" "commitlint (conventional-commit linter — wire per-project)"
-else
-    progress; progress; progress; progress  # keep progress bar accurate when npm unavailable
-fi
-
-# commitizen adapter config — JSON, so written directly (write_managed would inject
-# comment markers and break the JSON). Points cz at the conventional-changelog adapter.
-if ! is_done "config:czrc"; then
-    if [[ "$DRY_RUN" != "true" ]]; then
-        printf '{ "path": "cz-conventional-changelog" }\n' > "$HOME/.czrc"
-        success "commitizen adapter wired (~/.czrc → cz-conventional-changelog)"
-    fi
-    mark_done "config:czrc"
-fi
 
 fi  # code-quality
 
@@ -3588,7 +3518,6 @@ banner "Dev Servers & Tunnels"
 
 brew_cask_install "ngrok" "ngrok (expose localhost to the internet)"
 brew_install "miniserve" "miniserve (instant file server from any directory)"
-brew_install "caddy" "caddy (modern web server with automatic HTTPS)"
 
 fi  # dev-servers
 
@@ -3611,39 +3540,24 @@ brew_install "watchexec" "watchexec (run commands on file changes — better ent
 brew_install "pv" "pv (pipe viewer — progress bars for pipes)"
 brew_install "parallel" "parallel (GNU parallel — run commands in parallel)"
 brew_install "gum" "gum (shell script UI toolkit — prompts, spinners, confirmations)"
-brew_install "nushell" "nushell (structured data shell — pipelines output tables)"
 brew_install "topgrade" "topgrade (update everything — brew, npm, pip, macOS, all at once)"
 brew_install "fastfetch" "fastfetch (quick system info display — faster neofetch)"
 brew_install "mprocs" "mprocs (TUI for running multiple dev processes)"
 brew_install "broot" "broot (directory tree and file-navigation TUI)"
-brew_install "nano" "nano (latest — better than macOS built-in)"
 brew_install "lnav" "lnav (advanced log file viewer — auto-format, SQL queries on logs)"
 brew_install "progress" "progress (coreutils progress viewer — cp, mv, dd, tar)"
 
 # -- Additional TUI/CLI tools (homebrew-core) --
-brew_install "taproom" "taproom (interactive Homebrew TUI — browse formulae & casks)"
 brew_install "lazyssh" "lazyssh (SSH connection manager TUI)"
 brew_install "lazyrsync" "lazyrsync (rsync TUI with reusable profiles)"
 brew_install "libqalculate" "qalc (powerful CLI calculator — units, live currency, variables)"
 
 # -- Additional TUI/CLI tools (third-party taps) --
 trust_tap jesseduffield/lazynpm
-brew_install "jesseduffield/lazynpm/lazynpm" "lazynpm (npm TUI — joins lazygit/lazydocker/lazysql)"
+brew_install "jesseduffield/lazynpm/lazynpm" "lazynpm (npm TUI — joins lazygit and lazydocker)"
 trust_tap djetelina/tap
 brew_install "djetelina/tap/cheznav" "cheznav (chezmoi dotfiles TUI — dual-pane add/apply/diff)"
-trust_tap kdabir/tap
-brew_install "has" "has (checks presence & versions of CLI tools)"
 
-# lazyenv — TUI for managing .env files across projects (diff/sync, secret masking,
-# .gitignore checks). Complements direnv (direnv loads; lazyenv edits/compares).
-trust_tap lazynop/tap
-brew_install "lazynop/tap/lazyenv" "lazyenv (TUI for .env files — diff/sync across projects, secret masking)"
-# keyward — TUI SSH-key manager + A–F security audit + encrypted key backups.
-trust_tap gateway-of-last-resort/tap
-brew_cask_install "gateway-of-last-resort/tap/keyward" "keyward (SSH-key manager + security audit — offline, single binary)"
-
-# kondo — interactive-ish cleanup tool for build/dependency cruft across many ecosystems.
-brew_install "kondo" "kondo (clean dependency/build cruft from projects)"
 
 fi  # terminal-productivity
 
@@ -3683,9 +3597,6 @@ if should_run "database"; then
 banner "Database & Data"
 
 brew_install "duckdb" "duckdb (local analytics database for CSV/JSON/Parquet)"
-brew_install "pgcli" "pgcli (auto-completing Postgres CLI)"
-brew_install "mycli" "mycli (auto-completing MySQL CLI)"
-brew_install "lazysql" "lazysql (TUI for databases — interactive SQL in terminal)"
 
 # harlequin (terminal SQL IDE — DuckDB/Postgres/MySQL, multi-tab, autocomplete)
 uv_tool_install 'harlequin[postgres,mysql,s3]' harlequin \
@@ -3694,13 +3605,8 @@ uv_tool_install 'harlequin[postgres,mysql,s3]' harlequin \
 # usql — not in Homebrew, install via Go (@latest intentionally unpinned).
 # go_install is DRY_RUN-aware and lands the binary in GOBIN (on PATH).
 go_install github.com/xo/usql@latest usql "usql (universal SQL CLI)"
-# Trust the tap explicitly. A fully qualified formula name is not sufficient on
-# a fresh machine when Homebrew requires trust for third-party taps.
-trust_tap neilotoole/sq
-brew_install "neilotoole/sq/sq" "sq (jq for databases — query SQLite, Postgres, CSV from one tool)"
 brew_install "dbmate" "dbmate (lightweight DB migrations)"
-# DBeaver (GUI) removed — TUI/CLI coverage: harlequin (SQL IDE), lazysql,
-# pgcli, mycli, usql, sq (all installed above).
+# DBeaver (GUI) remains replaced by harlequin, usql, and DuckDB.
 
 fi  # database
 
@@ -3727,7 +3633,6 @@ if should_run "api"; then
 banner "API Development"
 
 brew_install "atac" "ATAC (terminal API client — TUI + scriptable CLI, Postman import, git-friendly collections)"
-brew_install "grpcurl" "grpcurl (curl for gRPC)"
 
 fi  # api
 
@@ -3735,7 +3640,6 @@ fi  # api
 if should_run "networking"; then
 banner "Networking & Debugging"
 
-brew_install "mtr" "mtr (combines ping + traceroute)"
 brew_install "bandwhich" "bandwhich (real-time bandwidth by process)"
 brew_install "nmap" "nmap (network scanning)"
 brew_install "trippy" "trippy (modern traceroute TUI with charts)"
@@ -3796,25 +3700,12 @@ if [[ "$DRY_RUN" != "true" ]]; then
 fi
 
 # pi was retired in #513. omp replaces its agent runtime, web search, local model
-# discovery, and approval policies.
-# Oh My Pi (omp) is a prebuilt native binary with LSP, DAP, subagents, and
-# workload-routed model roles. The Homebrew tap keeps it available to shells, hooks,
-# and launchd without a separate JavaScript runtime.
+# discovery, approval policies, and one-shot prompt use.
+# Oh My Pi is a prebuilt native binary with LSP, DAP, subagents, and
+# workload-routed model roles. The Homebrew tap keeps it available to shells,
+# hooks, and launchd without a separate JavaScript runtime.
 trust_tap can1357/tap
 brew_install "can1357/tap/omp" "omp (Oh My Pi — workload-routed agent harness)"
-# Install llm as an isolated uv tool with the Anthropic plugin bundled. Homebrew's
-# llm is externally managed, so `llm install llm-anthropic` cannot upgrade llm to the
-# version the plugin needs. The uv environment also makes `llm models default` persist.
-uv_tool_install llm llm "llm (Simon Willison's CLI — one-shot prompts, plugins, embeddings) + Anthropic plugin" "llm installed via uv (Anthropic plugin bundled)" --with llm-anthropic
-
-# Point `llm` at Claude — its built-in default is OpenAI gpt-4o-mini,
-# so without this the bind routes to the wrong provider. Non-secret and scriptable;
-# only the API key stays manual (llm keys set anthropic).
-if [[ "$DRY_RUN" != "true" ]] && installed llm; then
-    llm models default anthropic/claude-sonnet-4-5 >> "$LOG_FILE" 2>&1 \
-        && success "llm default model set to Claude (anthropic/claude-sonnet-4-5)" \
-        || warn "Could not set llm default model (run: llm models default anthropic/claude-sonnet-4-5)"
-fi
 
 # Clipboard history
 # clipse — TUI clipboard manager (replaces Raycast clipboard history). Not on Homebrew.
@@ -3859,14 +3750,6 @@ if should_run "docs"; then
 banner "Documentation & Diagrams"
 
 brew_install "d2" "d2 (code-to-diagram scripting language)"
-
-if installed npm; then
-    npm_global_install "@mermaid-js/mermaid-cli" "Mermaid CLI (render diagrams from CLI)"
-else
-    progress  # keep progress bar accurate when npm unavailable
-fi
-
-# draw.io (GUI) removed — diagrams via d2 + mermaid-cli (installed above).
 
 fi  # docs
 
@@ -5207,11 +5090,7 @@ info "Installing development fonts..."
 
 brew_cask_install "font-jetbrains-mono" "JetBrains Mono (primary dev font)"
 brew_cask_install "font-jetbrains-mono-nerd-font" "JetBrains Mono Nerd Font (with icons)"
-brew_cask_install "font-meslo-lg-nerd-font" "MesloLGS Nerd Font (terminal icons)"
-brew_cask_install "font-fira-code" "Fira Code (ligature font)"
-brew_cask_install "font-fira-code-nerd-font" "Fira Code Nerd Font (with icons)"
 brew_cask_install "font-inter" "Inter (best UI font for web/design)"
-brew_cask_install "font-hack-nerd-font" "Hack Nerd Font (classic terminal font)"
 
 configured "Development fonts installed"
 
@@ -5340,36 +5219,8 @@ YTDLP_CONF
 
 # difftastic aliases already configured in git global settings above
 
-# ---- caddy config ----
-CADDY_CONFIG_DIR="$HOME/.config/caddy"
-if ! is_done "config:caddy"; then
-# Deliberately create-once (#277): a commented-out starting point ("uncomment and
-# adjust as needed") that the user is expected to edit into their own site config.
-# Refreshing it on every run would discard their edits. The template is used with an
-# explicit `caddy run --config ~/.config/caddy/Caddyfile`, which is what its own first
-# line documents. Routed through write_seed_once so a dry run reports it honestly and
-# the check is by FILE rather than by directory (#332, #536).
-if write_seed_once "$CADDY_CONFIG_DIR/Caddyfile" "uncomment and adjust into your own site config" <<'CADDY_CONF'
-# Caddy development server template
-# Usage: caddy run --config ~/.config/caddy/Caddyfile
-#
-# Uncomment and adjust as needed:
-
-# localhost:3000 {
-#     reverse_proxy localhost:8080
-#     tls internal
-# }
-
-# :8080 {
-#     root * /path/to/site
-#     file_server browse
-# }
-CADDY_CONF
-then
-    configured "Caddy config template created at $CADDY_CONFIG_DIR/Caddyfile"
-fi
-mark_done "config:caddy"
-fi
+# Caddy was removed from the setup (#555). Its create-once Caddyfile can contain
+# user changes, so normal runs and --cleanup leave that file untouched.
 
 # ---- act config (GitHub Actions local runner) ----
 ACT_CONFIG="$HOME/.actrc"
@@ -5453,19 +5304,9 @@ map-selected-color = "ff9fe3"
 TRIPPY_CONF
     configured "trippy Dracula-Sakura theme configured"
 
-# ---- miller config ----
-MLR_CONFIG="$HOME/.mlrrc"
-    info "Creating miller configuration..."
-    write_managed "$MLR_CONFIG" "#" <<'MLR_CONF'
-# miller (mlr) configuration
-# Default output format: pretty-printed table
---opprint
-# Use CSV for input by default
---icsv
-# Allow comments in data files
---skip-trivial-records
-MLR_CONF
-    configured "miller configured (CSV input, pretty table output)"
+# Retired tool configs are removed only when their managed blocks prove ownership.
+remove_superseded_managed "$HOME/.mlrrc" \
+    "miller was removed from the setup" "(#555)"
 
 # ---- retired asciinema config ----
 remove_superseded_managed "$HOME/.config/asciinema/config.toml" \
@@ -5878,128 +5719,16 @@ keep_cache_in_memory 0
 W3M_CONF
     configured "w3m configured (UTF-8, cookies off)"
 
-# ---- nushell config ----
-# nushell follows XDG as well, and is the one tool that said so out loud: with
-# XDG_CONFIG_HOME set it prints "Nushell will not move your configuration files from
-# ~/Library/Application Support/nushell" on every invocation, while loading nothing
-# from either place. `$nu.env-path` is the file it will actually read (#333).
-NUSHELL_ENV="$(XDG_CONFIG_HOME="$HOME/.config" nu -c '$nu.env-path' 2>/dev/null | tail -1)"
-NUSHELL_ENV="${NUSHELL_ENV:-$HOME/.config/nushell/env.nu}"
-NUSHELL_SUPERSEDED="$HOME/Library/Application Support/nushell/env.nu"
-# Same question for the config file, asked the same way rather than assumed.
-NUSHELL_CONFIG="$(XDG_CONFIG_HOME="$HOME/.config" nu -c '$nu.config-path' 2>/dev/null | tail -1)"
-NUSHELL_CONFIG="${NUSHELL_CONFIG:-$HOME/.config/nushell/config.nu}"
-    info "Creating nushell env config..."
-    write_managed "$NUSHELL_ENV" "#" <<'NUSHELL_ENV_CONF'
-# Nushell environment config
-
-# Use starship prompt if available
-if (which starship | is-not-empty) {
-    $env.STARSHIP_SHELL = "nu"
-    $env.PROMPT_COMMAND = { || starship prompt }
-    $env.PROMPT_INDICATOR = ""
-}
-
-# Homebrew paths
-$env.PATH = ($env.PATH | prepend "/opt/homebrew/bin" | prepend ($env.HOME + "/.local/bin"))
-NUSHELL_ENV_CONF
-    remove_superseded_managed "$NUSHELL_SUPERSEDED" \
-        "nushell reads $NUSHELL_ENV" "(#333)"
-    configured "nushell env configured (starship prompt, Homebrew paths)"
-
-    # -- Dracula-Sakura colours ---------------------------------------------------
-    # Until #518 this script wrote env.nu and never config.nu, so nushell ran with
-    # its stock colours while every other TUI carried the house palette.
-    #
-    # `$env.config.color_config` is the whole surface: `nu -c '$env.config.color_config
-    # | columns | length'` reports 68 keys. The ones below are the visible ones —
-    # the shape/type colours that every table cell goes through, plus the prompt and
-    # the reedline hints. Anything left unset keeps nushell's default rather than
-    # going unstyled, which is why this is not all 68.
-    #
-    # Two traps, both hit while writing this:
-    #
-    # `nu -c '...'` does NOT load config.nu. Reading a colour back that way returns
-    # nushell's default and looks exactly like a config the tool is ignoring. Check
-    # with `nu --config ~/.config/nushell/config.nu -c '$env.config.color_config.header'`
-    # instead, which reports the value this file actually sets.
-    #
-    # nushell accepts UNKNOWN colour keys in silence, so a typo is not an error, it
-    # is a line that does nothing. `date` and `shape_custom` were wrong here for
-    # exactly that reason until the keys were diffed against
-    # `nu -c '$env.config.color_config | columns'`. Do that after editing this block.
-    info "Creating nushell colour config..."
-    write_managed "$NUSHELL_CONFIG" "#" <<'NUSHELL_CONF'
-# Nushell colours — Dracula-Sakura
-
-$env.config.color_config = {
-    # Structural
-    separator: "#4b4963"
-    leading_trailing_space_bg: { attr: "n" }
-    header: { fg: "#ff9fe3" attr: "b" }
-    row_index: { fg: "#8a88c7" attr: "b" }
-    empty: "#9be7ff"
-    hints: "#8a88c7"
-    search_result: { fg: "#282a36" bg: "#fff0a8" }
-
-    # Types
-    bool: "#9be7ff"
-    int: "#d4b2ff"
-    float: "#d4b2ff"
-    string: "#f8f8f2"
-    nothing: "#8a88c7"
-    binary: "#d4b2ff"
-    duration: "#ffcf93"
-    filesize: "#8af7cf"
-    datetime: "#ffc2ec"
-    range: "#ffcf93"
-    cell-path: "#ddd2f7"
-    record: "#9be7ff"
-    list: "#9be7ff"
-    block: "#9be7ff"
-    closure: "#8af7cf"
-    glob: "#8af7cf"
-    shape_custom: "#8af7cf"
-
-    # Shapes — how the line you are typing is highlighted
-    shape_binary: { fg: "#d4b2ff" attr: "b" }
-    shape_bool: "#9be7ff"
-    shape_int: { fg: "#d4b2ff" attr: "b" }
-    shape_float: { fg: "#d4b2ff" attr: "b" }
-    shape_range: { fg: "#ffcf93" attr: "b" }
-    shape_string: "#fff0a8"
-    shape_string_interpolation: { fg: "#9be7ff" attr: "b" }
-    shape_record: { fg: "#9be7ff" attr: "b" }
-    shape_list: { fg: "#9be7ff" attr: "b" }
-    shape_table: { fg: "#d4b2ff" attr: "b" }
-    shape_block: { fg: "#9be7ff" attr: "b" }
-    shape_filepath: "#8af7cf"
-    shape_directory: "#8af7cf"
-    shape_globpattern: { fg: "#8af7cf" attr: "b" }
-    shape_external: "#ff9fe3"
-    shape_internalcall: { fg: "#8af7cf" attr: "b" }
-    shape_literal: "#9be7ff"
-    shape_operator: "#ff9fe3"
-    shape_pipe: { fg: "#ff9fe3" attr: "b" }
-    shape_redirection: { fg: "#d4b2ff" attr: "b" }
-    shape_signature: { fg: "#8af7cf" attr: "b" }
-    shape_flag: { fg: "#d4b2ff" attr: "b" }
-    shape_variable: "#ffcf93"
-    shape_vardecl: "#ffcf93"
-    shape_garbage: { fg: "#f8f8f2" bg: "#ff7aa8" attr: "b" }
-    shape_nothing: "#8a88c7"
-    shape_matching_brackets: { attr: "u" }
-    shape_closure: { fg: "#8af7cf" attr: "b" }
-    shape_datetime: { fg: "#ffc2ec" attr: "b" }
-    shape_keyword: { fg: "#ff9fe3" attr: "b" }
-    shape_externalarg: { fg: "#fff0a8" attr: "b" }
-    shape_raw_string: { fg: "#fff0a8" attr: "b" }
-    shape_match_pattern: "#8af7cf"
-    selection: { fg: "#282a36" bg: "#ff9fe3" }
-    semver: "#d4b2ff"
-}
-NUSHELL_CONF
-    configured "nushell Dracula-Sakura colours written ($NUSHELL_CONFIG)"
+# Nushell was removed from the setup. Clear only files whose managed blocks prove
+# ownership, including the superseded pre-XDG location (#333, #555).
+remove_superseded_managed "$HOME/.config/nushell/env.nu" \
+    "nushell was removed from the setup" "(#555)"
+remove_superseded_managed "$HOME/.config/nushell/config.nu" \
+    "nushell was removed from the setup" "(#555)"
+remove_superseded_managed "$HOME/Library/Application Support/nushell/env.nu" \
+    "nushell was removed from the setup" "(#555)"
+remove_superseded_managed "$HOME/Library/Application Support/nushell/config.nu" \
+    "nushell was removed from the setup" "(#555)"
 
 # ---- lnav Dracula-Sakura theme ----
 # lnav REWRITES ~/.config/lnav/config.json itself: one `:config` command makes it
@@ -6224,74 +5953,11 @@ E1S_CONF
     configured "e1s Dracula-Sakura colours written (~/.config/e1s/config.yml)"
 fi
 
-# ---- lazyenv Dracula theme ----
-# lazyenv ships 56 built-in themes and `dracula` is one of them, but exposes no
-# way to define a custom palette — so this selects the preset rather than
-# authoring the sakura variant. Recorded as such: it is Dracula, not
-# Dracula-Sakura, and that is the ceiling the tool offers (#519).
-#
-# It ignores XDG_CONFIG_HOME entirely. `lazyenv --check-config` reports the same
-# three search paths with and without the variable set, and the only per-user one
-# is under Library/Application Support. That makes lazyenv a deliberate Library
-# case like ngrok (#334), not a candidate for the ~/.config sweep in #333.
-LAZYENV_CONFIG_DIR="$HOME/Library/Application Support/lazyenv"
-if installed lazyenv; then
-    ensure_dir "$LAZYENV_CONFIG_DIR"
-    write_managed "$LAZYENV_CONFIG_DIR/config.toml" "#" <<'LAZYENV_CONF'
-theme = "dracula"
-LAZYENV_CONF
-    configured "lazyenv theme set to dracula ($LAZYENV_CONFIG_DIR/config.toml)"
-fi
-
-# ---- git-cliff config ----
-GIT_CLIFF_CONFIG_DIR="$HOME/.config/git-cliff"
-GIT_CLIFF_CONFIG="$GIT_CLIFF_CONFIG_DIR/cliff.toml"
-    info "Creating git-cliff config (conventional commits template)..."
-    write_managed "$GIT_CLIFF_CONFIG" "#" <<'GIT_CLIFF_CONF'
-# git-cliff configuration — conventional commits changelog
-
-[changelog]
-header = """
-# Changelog\n
-"""
-body = """
-{% if version %}\
-    ## [{{ version | trim_start_matches(pat="v") }}] - {{ timestamp | date(format="%Y-%m-%d") }}
-{% else %}\
-    ## [Unreleased]
-{% endif %}\
-{% for group, commits in commits | group_by(attribute="group") %}
-    ### {{ group | striptags | trim | upper_first }}
-    {% for commit in commits %}
-        - {% if commit.scope %}**{{ commit.scope }}**: {% endif %}\
-            {{ commit.message | upper_first }}\
-            {% if commit.breaking %} (**BREAKING**){% endif %}\
-    {% endfor %}
-{% endfor %}\n
-"""
-trim = true
-
-[git]
-conventional_commits = true
-filter_unconventional = true
-split_commits = false
-commit_parsers = [
-    { message = "^feat", group = "Features" },
-    { message = "^fix", group = "Bug Fixes" },
-    { message = "^perf", group = "Performance" },
-    { message = "^doc", group = "Documentation" },
-    { message = "^refactor", group = "Refactoring" },
-    { message = "^style", group = "Styling" },
-    { message = "^test", group = "Testing" },
-    { message = "^build", group = "Build" },
-    { message = "^ci", group = "CI/CD" },
-    { message = "^chore", group = "Miscellaneous" },
-]
-filter_commits = false
-tag_pattern = "v[0-9].*"
-sort_commits = "newest"
-GIT_CLIFF_CONF
-    configured "git-cliff configured (conventional commits, grouped changelog)"
+# Retired tool configs are removed only when their managed blocks prove ownership.
+remove_superseded_managed "$HOME/Library/Application Support/lazyenv/config.toml" \
+    "lazyenv was removed from the setup" "(#555)"
+remove_superseded_managed "$HOME/.config/git-cliff/cliff.toml" \
+    "git-cliff was removed from the setup" "(#555)"
 
 # ---- SSH config ----
 SSH_CONFIG="$HOME/.ssh/config"
@@ -7935,74 +7601,10 @@ gem: --no-document
 GEM_CONF
     configured "$HOME/.gemrc created (no docs on gem install)"
 
-# ---- pgcli config ----
-PGCLI_CONFIG_DIR="$HOME/.config/pgcli"
-PGCLI_CONFIG="$PGCLI_CONFIG_DIR/config"
-    info "Creating pgcli configuration..."
-    write_managed "$PGCLI_CONFIG" "#" <<'PGCLI_CONF'
-[main]
-# Multi-line mode (enter doesn't execute, use F5 or ctrl+enter)
-multi_line = True
-
-# Auto-expand tables if they fit
-auto_expand = True
-
-# Expanded output (like \x in psql)
-expand = False
-
-# Pager
-pager = bat --style=plain --paging=always
-
-# Prompt format
-prompt = '\u@\h:\d> '
-
-# History file
-log_file = ~/.config/pgcli/log
-history_file = ~/.config/pgcli/history
-
-# Enable destructive warning (DROP, DELETE, TRUNCATE, ALTER)
-destructive_warning = all
-
-# Syntax style. `dracula` is a real Pygments style and is present in this
-# install (`pygmentize -L styles`), so the house palette is available rather
-# than approximated — monokai stood in for it until #518.
-syntax_style = dracula
-
-# syntax_style colours the SQL. These colour the prompt-toolkit chrome around
-# it, which the Pygments style never touches: completion menu, toolbar, search.
-# Values are the Dracula-Sakura palette.
-[colors]
-completion-menu.completion.current = "bg:#ff9fe3 #282a36"
-completion-menu.completion = "bg:#323448 #f8f8f2"
-completion-menu.meta.completion.current = "bg:#d4b2ff #282a36"
-completion-menu.meta.completion = "bg:#2f3144 #ddd2f7"
-completion-menu.multi-column-meta = "bg:#2f3144 #ddd2f7"
-scrollbar.arrow = "bg:#282a36"
-scrollbar = "bg:#4b4963"
-selected = "#282a36 bg:#ff9fe3"
-search = "#8af7cf"
-search.current = "#282a36 bg:#8af7cf"
-bottom-toolbar = "bg:#323448 #ddd2f7"
-bottom-toolbar.off = "bg:#323448 #8a88c7"
-bottom-toolbar.on = "bg:#323448 #9be7ff"
-search-toolbar = "#f8f8f2"
-search-toolbar.text = "#f8f8f2"
-system-toolbar = "#f8f8f2"
-arg-toolbar = "#f8f8f2"
-arg-toolbar.text = "#f8f8f2"
-bottom-toolbar.transaction.valid = "bg:#323448 #8af7cf bold"
-bottom-toolbar.transaction.failed = "bg:#323448 #ff7aa8 bold"
-literal.string = "#fff0a8"
-literal.number = "#d4b2ff"
-keyword = "bold #ff9fe3"
-
-# Keyword casing
-keyword_casing = upper
-
-# Auto-completion
-smart_completion = True
-PGCLI_CONF
-    configured "pgcli configured (multi-line, auto-expand, destructive warnings, bat pager)"
+# Retired database client configs are removed only when their managed blocks
+# prove ownership. History files and other user data remain untouched.
+remove_superseded_managed "$HOME/.config/pgcli/config" \
+    "pgcli was removed from the setup" "(#555)"
 
 # ---- harlequin config ----
 # Harlequin does NOT read ~/.config (#366). Its own --help: "By default, Harlequin finds
@@ -8026,44 +7628,8 @@ HARLEQUIN_CONF
         "harlequin reads $HARLEQUIN_CONFIG" "(#366)"
     configured "harlequin configured (Dracula theme, vscode keymap)"
 
-# ---- mycli config ----
-MYCLIRC="$HOME/.myclirc"
-    info "Creating mycli configuration..."
-    write_managed "$MYCLIRC" "#" <<'MYCLI_CONF'
-[main]
-# Multi-line mode
-multi_line = True
-
-# Auto-expand tables
-auto_expand = True
-
-# Pager
-pager = bat --style=plain --paging=always
-
-# Prompt format
-prompt = '\u@\h:\d> '
-
-# Syntax style
-# `dracula` is a real Pygments style, verified present in this install (#518).
-syntax_style = dracula
-
-# Keyword casing
-keyword_casing = upper
-
-# Smart completion
-smart_completion = True
-
-# Destructive warning
-destructive_warning = True
-
-# Log and history
-log_file = ~/.mycli.log
-history_file = ~/.mycli-history
-
-# Wider output before wrapping
-wider_completion_menu = True
-MYCLI_CONF
-    configured "$HOME/.myclirc configured (multi-line, auto-expand, destructive warnings)"
+remove_superseded_managed "$HOME/.myclirc" \
+    "mycli was removed from the setup" "(#555)"
 
 # ---- just config (global justfile with common recipes) ----
 JUSTFILE_GLOBAL="$HOME/.justfile"
@@ -10681,7 +10247,7 @@ description: Create reproducible diagram artifacts with D2. Use when the user re
 
 # D2 diagrams
 
-Use inline Mermaid for conversation-only diagrams. Use D2 for persisted or rendered artifacts.
+Use D2 for persisted or rendered diagram artifacts.
 
 1. Write a focused `.d2` source file.
 2. Keep the source beside the rendered output.
@@ -10695,13 +10261,12 @@ d2 --layout elk architecture.d2 architecture.svg
 
 Use the default layout first. Use ELK only when the default layout tangles a dense graph.
 
-Use `mmdc` only when the user requests Mermaid source or Mermaid output.
 SKILL_D2
 
 write_generated "$AGENTS_SKILLS/api-testing/SKILL.md" <<'SKILL_API'
 ---
 name: api-testing
-description: Exercise HTTP and gRPC APIs from the terminal. Use for live requests, response diagnosis, or repeatable protocol assertions.
+description: Exercise HTTP APIs from the terminal. Use for live requests, response diagnosis, or repeatable protocol assertions.
 ---
 
 # API testing
@@ -10722,12 +10287,7 @@ HTTP 200
 jsonpath "$.data[0].id" exists
 ```
 
-Run durable checks with `hurl --test <file>`. Use `grpcurl` for gRPC discovery and requests.
-
-```bash
-grpcurl -plaintext localhost:50051 list
-grpcurl -d '{"id":1}' localhost:50051 svc.Users/Get
-```
+Run durable checks with `hurl --test <file>`.
 
 Reference secrets through environment variables. Do not store tokens in commands, fixtures, or checked-in files.
 SKILL_API
@@ -11593,7 +11153,6 @@ alias csvp="csvlook"
 alias ytdl="yt-dlp"
 alias ytmp3="yt-dlp -x --audio-format mp3"
 alias resize="magick mogrify -resize"
-alias ffq="ffmpeg -hide_banner -loglevel warning"
 alias md2pdf="pandoc -f markdown -t pdf"
 alias md2html="pandoc -f markdown -t html -s"
 alias md2docx="pandoc -f markdown -t docx"
@@ -11796,7 +11355,6 @@ echo "  [~/.config/mpv]         Video player (hardware accel, save position)"
 echo "  [Mullvad]               VPN app, bundled CLI, and source-built mullvad-tui"
 echo "  [~/Media/photos/dracula-sakura.jpg]  Dracula-Sakura wallpaper asset"
 echo "  [cliamp]                Music player (self-configured; point at ~/Media/music)"
-echo "  [~/.config/git-cliff]   Changelog generator (conventional commits)"
 echo "  [~/.justfile]           Global task runner recipes (run them with: gj --list)"
 echo "  [~/.config/brewfile]    Brewfile snapshot for reproducibility"
 echo "  [~/.config/micro]       micro — Dracula, on-screen key menu, house indent rules"
@@ -11815,7 +11373,7 @@ echo "  - cmd+space           open Spotlight (log out/in after migration)"
 echo "  - ff                  find and open a file"
 echo "  - rgf <pattern>       live code/content search    s <q>  Spotlight-index search"
 echo "  - clip                clipboard history (clipse)"
-echo "  - taproom             browse/install Homebrew;    k9s / lazydocker  containers"
+echo "  - k9s / lazydocker    inspect containers and clusters"
 echo ""
 info "Chezmoi quickstart (bring dotfiles under version control):"
 echo "  chezmoi init                          # Initialize"
@@ -11916,7 +11474,6 @@ Every binding is on screen: the **key menu** sits along the bottom, and there ar
 | Tool | Use |
 |------|-----|
 | `omp` | Primary coding agent with hosted roles and local Vulkan fallback |
-| `llm` | One-shot prompts and shell pipelines |
 | Zed + `omp acp` | OMP inside Zed's Agent Panel through Agent Client Protocol |
 | `llama-server` | Local Qwen2.5 Coder endpoint on `127.0.0.1:8081` |
 
@@ -11927,7 +11484,7 @@ Every binding is on screen: the **key menu** sits along the bottom, and there ar
 | `Ctrl + t` | fzf file finder · `Alt + c` fzf cd |
 | zellij `Ctrl + p` then `n` | New pane. zellij is **modal**: press a mode key, then act |
 | zellij mode keys | `Ctrl + p` pane · `Ctrl + t` tab · `Ctrl + n` resize · `Ctrl + s` scroll · `Ctrl + o` session · `Ctrl + g` lock (toggles) |
-| lazygit / lazydocker / lazysql / lazynpm / lazyssh / lazyrsync | Full-screen TUIs (arrows + on-screen keys) |
+| lazygit / lazydocker / lazynpm / lazyssh / lazyrsync | Full-screen TUIs (arrows + on-screen keys) |
 | `y` Yazi | File manager |
 | `br` Broot | Directory browser that keeps shell directory changes |
 | `mullvad-tui` | Terminal controller for the Mullvad VPN app and daemon |
@@ -11949,7 +11506,6 @@ The setup installs a Dracula-Sakura wallpaper at `~/Media/photos/dracula-sakura.
 - **Zed** provides a native project editor with OMP available through ACP.
 - **OMP** provides coding-agent tools, hosted model roles, and a local fallback.
 - **llama.cpp** serves Qwen2.5 Coder 14B through Vulkan on `127.0.0.1:8081`.
-- **llm** provides one-shot prompts and shell pipelines through its Anthropic plugin.
 
 ## Terminal and search
 - **Kitty** provides the GPU-accelerated terminal with the Dracula-Sakura theme.
@@ -11960,10 +11516,10 @@ The setup installs a Dracula-Sakura wallpaper at `~/Media/photos/dracula-sakura.
 - **atuin**, **starship**, **fzf**, and **zoxide** improve shell history, prompts, search, and navigation.
 
 ## Development workflow
-- **lazygit**, **gh**, **scc**, and **keyward** support GitHub workflows and repository maintenance.
-- **ATAC**, **xh**, **Hurl**, and **grpcurl** support API development.
-- **harlequin**, **pgcli**, **mycli**, **usql**, and **sq** provide database clients.
-- **d2** and **Mermaid** provide diagrams as code.
+- **lazygit**, **gh**, and **scc** support GitHub workflows and repository maintenance.
+- **ATAC**, **xh**, and **Hurl** support API development.
+- **harlequin** and **usql** provide database clients.
+- **d2** provides diagrams as code.
 - **LibreOffice** and **poppler** support visual checks of Office documents.
 - **Herald** provides terminal email and calendar access.
 
@@ -11977,7 +11533,7 @@ The setup installs a Dracula-Sakura wallpaper at `~/Media/photos/dracula-sakura.
 ## Infrastructure and security
 - **kubectl**, **k9s**, **stern**, and **dive** support container and cluster inspection.
 - **awscli**, **granted**, **OpenTofu**, **checkov**, and **trivy** support cloud infrastructure.
-- **gitleaks**, **detect-secrets**, **sops**, and **age** protect repository secrets.
+- **gitleaks**, **sops**, and **age** protect repository secrets.
 - **LuLu** provides the remaining graphical network security control.
 - **Mullvad VPN**, its bundled CLI, and **mullvad-tui** provide VPN control.
 
@@ -12052,20 +11608,6 @@ micro src/main.rs +42
 ```
 
 > Configured with the Dracula theme, the key menu on, 2-space indents (4 for Python, real tabs for Go and Makefiles), and trailing whitespace stripped on save. Change anything from inside the editor with `> set <option> <value>` — it persists to `~/.config/micro/settings.json`, and re-running the setup script merges new defaults without discarding your changes.
-
-### `llm` — LLM CLI
-Simon Willison's command-line tool for one-shot LLM prompts, piping text through models, and generating embeddings, without opening a chat UI. The Anthropic plugin ships with this setup and defaults to `anthropic/claude-sonnet-4-5`, and its plugin ecosystem covers most other providers too. It shines in shell pipelines — summarizing command output, transforming file contents, or scripting small AI steps into a larger workflow.
-
-```bash
-# one-shot prompt
-llm "explain the difference between TCP and UDP"
-# pipe a file through a prompt
-cat error.log | llm "what's the root cause of this error?"
-# start a multi-turn conversation
-llm chat
-```
-
-> Tip: Set your key once with `llm keys set anthropic`; after that the model is available to every `llm` invocation without extra flags.
 
 ### `omp` — Oh My Pi
 The primary coding agent includes LSP, DAP, subagents, memory, and workload-routed models. Hosted providers fall back to the local Vulkan runtime.
@@ -12174,20 +11716,6 @@ mprocs --npm
 
 > Tip: this setup writes a global `~/.config/mprocs/mprocs.yaml` with sane scrollback and per-process logging, while a project-local `mprocs.yaml` overrides it whenever you need a real stack definition.
 
-### `nu` — Nushell
-A shell where pipelines pass structured tables and typed data instead of raw text, so commands like filtering, sorting, and reformatting output work like a query language rather than a chain of `grep`/`awk`/`cut`. It's not the default login shell here — zsh still owns that — but it's the tool to reach for when you're wrangling CSV, JSON, or command output that plain text pipes make painful. Drop into it for a data-heavy task, then drop back out to zsh.
-
-```bash
-# start a nushell session
-nu
-# list files as a sortable table, filtered by size
-ls | where size > 1mb
-# parse JSON output and pull a field
-open package.json | get dependencies
-```
-
-> Tip: `open` auto-detects file type (JSON, TOML, CSV, etc.) and parses it into a table — no separate `jq`/`yq` needed inside nu.
-
 ### `direnv` — direnv
 Automatically loads and unloads environment variables per-directory based on an `.envrc` file, so project-specific secrets, API keys, or `PATH` additions apply only while you're inside that directory and vanish when you leave. It replaces manually sourcing `.env` files or juggling global exports for project-specific config. Use it for anything that needs local env vars — database URLs, per-project tool versions, feature flags — without leaking them into your global shell.
 
@@ -12229,18 +11757,6 @@ parallel -a urls.txt curl -O
 ```
 
 > Tip: `{}` is replaced with the full input and `{.}` with the input minus its extension — useful for generating output filenames.
-
-### `has` — has
-A tiny checker that tells you whether a given CLI tool is installed and, if so, which version — useful for verifying a machine or CI environment has the prerequisites a project expects before you dive into setup. It replaces manually running `<tool> --version` and eyeballing whether it errored. Reach for it at the start of onboarding a new machine or debugging "works on my machine" issues.
-
-```bash
-# check whether node is installed and its version
-has node
-# check multiple tools at once
-has node python go docker
-```
-
-> Tip: `has` exits non-zero if a tool is missing, so it's safe to use directly in a setup script's preflight check: `has docker || echo "install docker first"`.
 
 ### `topgrade` — Topgrade
 A single command that updates everything on the machine — Homebrew formulae and casks, npm/pnpm global packages, mise-managed runtimes, macOS system updates, shell plugins, and more — instead of remembering and running a dozen separate update commands. It replaces a personal checklist (or a stale update script) with one tool that knows how to detect and update each package manager it finds installed. Run it periodically as routine maintenance.
@@ -12474,30 +11990,6 @@ y ~/Downloads
 
 Press `q` to quit and change the parent shell directory. Press `Q` to quit without changing it.
 
-### `kondo` — Kondo
-A project cleanup CLI that finds generated dependency, build, and cache directories across many language ecosystems.
-
-```bash
-# preview what would be cleaned under the current directory
-kondo --dry-run
-# clean stale projects under ~/Code
-kondo ~/Code
-# only consider projects not touched for 3 months
-kondo --older 3M ~/Code
-```
-
-> Tip: treat `kondo` as a deliberate maintenance sweep, not a background cleaner — it is essentially a smart, prompt-driven `rm -rf` for build artifacts.
-
-### `npkill` — npkill
-Scans a directory tree for stray `node_modules` folders and lets you interactively select and delete them to reclaim disk space — a common problem after years of JS project churn. Use it periodically on `~/Code` to clean up old, abandoned project dependencies without deleting the projects themselves.
-
-```bash
-# scan the current directory for node_modules folders
-npkill
-# scan a specific directory
-npkill -d ~/Code
-```
-
 ### `ouch` — ouch
 A single tool for compressing and decompressing archives that auto-detects the format from the file extension, so you don't need to remember whether a given archive needs `tar`, `zip`, `unzip`, or `7z`. Reach for it as the default "just compress/extract this" command instead of picking the right tool per format.
 
@@ -12592,18 +12084,6 @@ watchexec -w src -- npm run build
 watchexec --clear -- npm test
 ```
 
-### `watchman` — watchman
-A background file-watching service that some JavaScript toolchains (React Native, Jest, Metro) use internally to detect file changes efficiently; you rarely invoke it by hand, but it's what's actually powering "watch mode" under the hood in those tools. You'd only touch it directly to debug a stuck watch or clear its state.
-
-```bash
-# start watching a project directory
-watchman watch ~/Code/my-app
-# list all directories currently being watched
-watchman watch-list
-# stop watching a directory
-watchman watch-del ~/Code/my-app
-```
-
 ### `trash` — trash
 A safe drop-in replacement for `rm` that moves files to the macOS Trash instead of permanently deleting them, so a mistyped command doesn't mean unrecoverable data loss. Use it as your default delete command for anything you're not 100% sure about — you can still empty the Trash normally when you're done.
 
@@ -12617,31 +12097,6 @@ trash -v old-project/
 ```
 
 > Tip: `trash` is aliased over `rm` in this setup — plain `rm` still works, but `trash` is the recoverable default.
-
-### `tree` — tree
-Prints a directory structure as a clean, indented ASCII tree, giving you an at-a-glance overview of a project's layout that's far easier to read than a flat `ls -R`. Use it to document a project structure, check what a scaffold generated, or quickly orient yourself in an unfamiliar repo.
-
-```bash
-# print the directory tree from the current location
-tree
-# limit the depth to 2 levels
-tree -L 2
-# include hidden files, excluding a specific directory
-tree -a -I 'node_modules'
-```
-
-### `nano` — nano
-A simple, beginner-friendly terminal text editor with on-screen keybinding hints, used as the quick fallback when you just need to edit a file without loading a full IDE. micro is the better default for this now; nano remains for muscle memory and remote boxes — a config tweak, a commit message, a quick note — where remembering modal commands would slow you down.
-
-```bash
-# open a file for editing
-nano file.txt
-# open a file at a specific line number
-nano +42 file.txt
-```
-
-> Tip: the key shortcuts are shown at the bottom of the screen — Ctrl+O saves, Ctrl+X exits.
-
 
 ## Data, Git & GitHub
 
@@ -12725,18 +12180,6 @@ jqp '.items[] | {name, id}' -f data.json
 
 > Tip: this setup writes `~/.jqp.yaml` with a Dracula-Sakura-flavored override layer on top of jqp's built-in Dracula theme, so it matches the rest of the terminal palette.
 
-### `miller` [mlr] — Record Processor for CSV/TSV/JSON
-Miller is like awk, sed, cut, and jq combined, but name-aware and format-aware across CSV, TSV, and JSON. It processes records by field name instead of column position, so scripts stay readable and survive reordered columns. Reach for it when you need to filter, join, or aggregate tabular data faster than pandas but with more structure than raw awk.
-
-```bash
-# convert CSV to JSON
-mlr --icsv --ojson cat data.csv
-# filter rows and keep only some columns
-mlr --csv filter '$amount > 100' then cut -f name,amount data.csv
-# compute grouped statistics
-mlr --csv stats1 -a sum,mean -f amount -g category data.csv
-```
-
 ### `csvkit` [csvcut/csvgrep/csvstat/csvjson] — CSV Utility Suite
 A suite of small Unix-style utilities for working with CSV files: cutting columns, grepping rows, computing summary stats, and converting to JSON or SQL. It brings classic Unix text-tool ergonomics to tabular data that plain grep/cut mangle because of quoting and commas. Reach for it for quick, composable CSV inspection without opening a spreadsheet.
 
@@ -12750,21 +12193,6 @@ csvgrep -c status -m active data.csv
 # convert CSV to JSON
 csvjson data.csv > data.json
 ```
-
-### `sq` — Database Swiss-Army Query Tool
-The "jq for databases" — sq queries SQLite, Postgres, MySQL, and even CSV/Excel files through one consistent interface and can output to JSON, CSV, or another database. It's the tool to reach for when you need to poke at a database from the terminal, or move data between a spreadsheet and a real database, without switching clients. Sources are registered once and referenced by a short `@handle`.
-
-```bash
-# register a CSV file as a queryable source
-sq add ./employees.csv --handle @emp
-# query it (SLQ syntax)
-sq '@emp | .name, .salary | .salary > 50000'
-# register and query a Postgres database
-sq add 'postgres://user@host/db' --handle @mydb
-sq '@mydb.users'
-```
-
-> Tip: `sq ls` lists all registered sources so you don't forget your handles.
 
 ### `git` — Version Control System
 The distributed version control system underlying the whole trunk-based workflow — branches, commits, merges, and history. In this setup it's configured with delta as the diff pager, difftastic available for structural diffs, and commit signing enabled. Every change here starts with a feature branch and ends in a squash-merged PR.
@@ -12826,18 +12254,6 @@ difft old.py new.py
 git difftool --extcmd=difft HEAD~1
 ```
 
-### `git-cliff` [git cliff] — Changelog Generator
-Generates a changelog automatically from conventional-commit history, grouping entries by type (feat, fix, chore, etc.) instead of hand-writing release notes. It relies on the commit message discipline this workflow already enforces, so a changelog is basically free. Run it before cutting a release or to preview what a release would contain.
-
-```bash
-# generate a full changelog
-git cliff -o CHANGELOG.md
-# preview only unreleased commits
-git cliff --unreleased
-# generate a changelog for a specific tag range
-git cliff v1.0.0..v1.2.0
-```
-
 ### `git-absorb` [git absorb] — Automatic Fixup Commits
 Automatically figures out which earlier commit your currently staged changes belong to and creates a matching `fixup!` commit, instead of you manually hunting through history and running `git commit --fixup`. It's built for the "oops, small fix belongs in an earlier commit on this branch" moment before a PR is opened. Follow it with an autosquash rebase to actually fold the fixups in.
 
@@ -12848,40 +12264,6 @@ git absorb
 git absorb --dry-run
 # fold the fixup commits into their targets
 git rebase -i --autosquash main
-```
-
-### `commitizen` [cz] — Conventional Commit Prompt
-An interactive command-line prompt that walks you through writing a properly formatted conventional commit — type, scope, description — instead of you recalling the exact syntax. It removes the guesswork of `type(scope): description` formatting and keeps commit history consistent across a team. Use it in place of `git commit` whenever you want a guided commit.
-
-```bash
-# launch the interactive commit prompt
-cz commit
-# shorthand for the same thing
-cz c
-```
-
-### cz-conventional-changelog — Commitizen Adapter
-Not a standalone command — this is the adapter package that defines the actual conventional-commit prompt format (types, scopes, breaking-change questions) that `cz` uses under the hood. It's installed as a dependency and wired into `commitizen` via config, not invoked directly. You'd only touch this when configuring or swapping which commit convention `cz` prompts for.
-
-```json
-// package.json — points commitizen at this adapter
-{
-  "config": {
-    "commitizen": {
-      "path": "cz-conventional-changelog"
-    }
-  }
-}
-```
-
-### `commitlint` — Commit Message Linter
-Lints commit messages against the conventional-commit spec, rejecting anything that doesn't match `type(scope): description` before it lands in history. It's typically wired into a git `commit-msg` hook so bad messages are caught at commit time rather than in review. Use it to enforce the same convention `commitizen` helps you write.
-
-```bash
-# lint the most recent commit
-npx commitlint --from HEAD~1 --to HEAD
-# lint a commit message file (used inside a commit-msg hook)
-npx commitlint --edit "$1"
 ```
 
 ### `pre-commit` — Git Hook Framework
@@ -12948,20 +12330,6 @@ xh -v POST httpbin.org/post foo=bar
 
 > Tip: use `:=` instead of `=` for non-string JSON values, e.g. `xh POST url active:=true count:=3`.
 
-### `curlie` — curl with HTTPie Ergonomics
-Wraps `curl` to add HTTPie-style colorized output and shorthand syntax, while still exposing curl's full flag set underneath. It's the middle ground when you need curl's power (custom certs, proxies, obscure options) but want nicer, more readable output than raw curl gives you.
-
-```bash
-# simple GET with colorized output
-curlie example.com
-# verbose request/response with headers
-curlie -v example.com
-# HTTPie-style POST with key=value body
-curlie POST example.com/api key=value
-# full curl flags still work
-curlie -X PUT example.com/api -d '{"a":1}' -H 'Content-Type: application/json'
-```
-
 ### `hurl` — HTTP Requests as Testable Text Files
 Runs and tests HTTP requests written in plain-text `.hurl` files, chaining multiple requests and asserting on status codes, headers, and body/JSON content. Because tests are just text files, they version well in git and drop straight into CI — no client library or GUI required.
 
@@ -12974,20 +12342,6 @@ hurl --test api-tests.hurl
 hurl --variable base_url=https://staging.example.com api.hurl
 # run a whole test suite and generate an HTML report
 hurl --test --report-html report/ tests/*.hurl
-```
-
-### `grpcurl` — curl for gRPC
-Lets you list services and methods, describe message schemas, and invoke gRPC endpoints from the shell — the gRPC equivalent of curl for REST. Works via server reflection when available, or against local `.proto` files otherwise. Use it to poke at a gRPC service during development without writing a client.
-
-```bash
-# list all services exposed by a server (needs reflection enabled)
-grpcurl -plaintext localhost:50051 list
-# describe a service's methods and message types
-grpcurl -plaintext localhost:50051 describe mypackage.MyService
-# call a method with a JSON payload
-grpcurl -plaintext -d '{"id": 1}' localhost:50051 mypackage.MyService/GetItem
-# no reflection available: point at local proto files instead
-grpcurl -plaintext -import-path ./protos -proto myservice.proto localhost:50051 list
 ```
 
 ### `atac` — Terminal API Client
@@ -13056,20 +12410,6 @@ mkcert localhost
 mkcert localhost 127.0.0.1 myapp.local
 ```
 
-### `caddy` — Web Server with Automatic HTTPS
-A modern web server that provisions and renews TLS certificates automatically. Beyond production use, it doubles as a zero-config static file server and reverse proxy for local development — no config file needed for the common cases.
-
-```bash
-# serve a directory of static files
-caddy file-server --root /path/to/files --listen :8080
-# reverse-proxy one local port to another
-caddy reverse-proxy --from localhost:80 --to localhost:8000
-# run using a Caddyfile
-caddy run --config Caddyfile
-# format a Caddyfile in place
-caddy fmt Caddyfile --overwrite
-```
-
 ### `carbonyl` — Chromium in the Terminal
 A real Chromium browser rendered entirely inside the terminal, including images, CSS, JavaScript, and video. Unlike `w3m`, it renders actual web pages rather than just text, which makes it useful for quickly checking how a page looks over SSH or in a headless environment.
 
@@ -13104,18 +12444,6 @@ trip example.com --unprivileged
 sudo trip example.com -p tcp -P 443
 # generate a one-shot pretty text report instead of the live TUI
 sudo trip example.com -m pretty
-```
-
-### `mtr` — Combined Ping + Traceroute
-Continuously updates a live view combining ping and traceroute, showing per-hop latency, jitter, and packet loss so you can pinpoint which hop on a route is causing problems. Needs raw sockets (`sudo`), and on this setup it lives in `/usr/sbin` rather than the default `PATH`.
-
-```bash
-# live interactive report (needs sudo)
-sudo mtr example.com
-# generate a fixed-count text report instead of the live view
-sudo mtr --report --report-cycles 10 example.com
-# use TCP instead of ICMP (helps when ICMP is filtered)
-sudo mtr --tcp example.com
 ```
 
 ### `gping` — Ping with a Live Graph
@@ -13192,20 +12520,6 @@ lazyssh
 
 > Tip: press `a` inside the TUI to add a new host profile through a guided form (alias, host/IP, user, port, identity file) — there's no CLI flag for adding hosts, it's TUI-only.
 
-### `keyward` — Offline SSH Key Manager
-A single-binary, keyboard-driven TUI (with scriptable CLI commands) for discovering, inspecting, generating, rotating, and auditing SSH keys and `~/.ssh/config` — with no daemon and no network access. Use the CLI subcommands in scripts or CI, and the TUI for everyday interactive key management.
-
-```bash
-# launch the interactive TUI
-keyward
-# run a security audit, failing CI on critical findings
-keyward audit --fail-on=critical
-# list discovered keys as JSON
-keyward list --json
-# write an encrypted backup of ~/.ssh
-keyward backup --out ~/Archive/ssh-backup.tar.age
-```
-
 ### `duckdb` — Local Analytics Database
 An in-process analytical SQL engine for local data work — query CSV, JSON, and Parquet directly with SQL, join files together, and run serious aggregations without provisioning a server. It fills the gap between text-first tools like `jq`/`mlr` and a full external database, and pairs especially well with `harlequin` for a richer interactive surface.
 
@@ -13232,34 +12546,8 @@ harlequin -a mysql -h localhost -p 3306 -U user --database mydb
 
 > Tip: run `harlequin --help` after installing an adapter — each one adds its own connection flags.
 
-### `pgcli` — Postgres CLI
-A drop-in replacement for `psql` with auto-completion, syntax highlighting, and smarter multi-line editing. It knows Postgres table/column names as you type, which makes ad hoc querying much faster than the stock client. Use it any time you're working directly against a Postgres database from the terminal.
-
-```bash
-# connect with a full connection URL
-pgcli postgres://user@localhost:5432/mydb
-# connect with discrete flags, like psql
-pgcli -h localhost -U myuser -d mydb
-# connect to a non-default port
-pgcli -h localhost -U myuser -d mydb -p 5433
-```
-
-> Tip: it supports the same `\d`, `\dt`, `\l` meta-commands you already know from `psql`.
-
-### `mycli` — MySQL CLI
-The MySQL/MariaDB sibling of `pgcli` — a `mysql` client replacement with auto-completion, syntax highlighting, and smart pagination. It's the tool to reach for whenever you're running ad hoc queries against MySQL or MariaDB and want a friendlier interactive experience than the stock client.
-
-```bash
-# connect the same way you would with the mysql client
-mycli -u root -h 127.0.0.1 mydb
-# connect via a connection URL
-mycli mysql://user:pass@localhost/mydb
-# connect to a remote host on a custom port
-mycli -u myuser -h db.example.com -P 3307 mydb
-```
-
 ### `usql` — Universal SQL CLI
-One CLI that speaks to nearly any database — Postgres, MySQL, SQLite, SQL Server, and more — through a single consistent interface and connection-URL syntax. It's handy when you bounce between different database engines and don't want to context-switch between `psql`, `mycli`, etc. Use it for quick cross-engine scripting or when a project's DB type isn't fixed.
+One CLI that speaks to many databases through one consistent connection URL and command interface. Use it for cross-engine scripts and quick queries.
 
 ```bash
 # connect to Postgres
@@ -13268,18 +12556,6 @@ usql pg://user@localhost/mydb
 usql sqlite:./local.db
 # run one query non-interactively and exit
 usql pg://user@localhost/mydb -c "select count(*) from users;"
-```
-
-### `lazysql` — Lazy SQL TUI
-A keyboard-driven, `lazygit`-style TUI for browsing tables and running queries interactively, supporting Postgres, MySQL, and SQLite. It's a good middle ground between a full SQL IDE and a bare CLI client when you mainly want to poke around a schema and run quick queries with the mouse out of the loop. Connections can be saved for reuse instead of retyping a URL each time.
-
-```bash
-# connect directly with a connection URL
-lazysql postgres://user:pass@localhost:5432/mydb
-# connect to a local SQLite database
-lazysql sqlite:///path/to/local.db
-# open in read-only mode to browse safely
-lazysql --read-only postgres://user:pass@localhost:5432/mydb
 ```
 
 ### `dbmate` — Database Migrations
@@ -13439,19 +12715,6 @@ cdk diff
 # deploy a specific stack
 cdk deploy MyStack
 ```
-
-### `cdk-nag` — CDK Nag
-A library (not a standalone command) that you wire into a CDK app to run curated best-practice and compliance rule packs — like AWS Solutions or NIST 800-53 — against every construct during `cdk synth`. It catches insecure or non-compliant infrastructure patterns before they're ever deployed, acting like a linter for your CDK-defined resources. Add it early in a project so violations surface as you build, not after an audit.
-
-```typescript
-import { Aspects } from 'aws-cdk-lib';
-import { AwsSolutionsChecks } from 'cdk-nag';
-
-// apply the AWS Solutions rule pack to every construct in the app
-Aspects.of(app).add(new AwsSolutionsChecks({ verbose: true }));
-```
-
-> Tip: findings show up as `cdk synth` warnings/errors — suppress specific, reviewed exceptions with `NagSuppressions` rather than disabling the whole check.
 
 ### `sam` — AWS SAM CLI
 Builds, locally tests, and deploys AWS serverless applications (Lambda, API Gateway, Step Functions, etc.) defined with the Serverless Application Model. Its standout feature is local invocation and API emulation — you can run a Lambda function or an entire API locally in a Docker container before ever deploying. Use it for serverless projects where fast local iteration matters.
@@ -13665,18 +12928,6 @@ gitleaks detect --source . --report-path gitleaks-report.json
 
 > Tip: `gitleaks protect --staged` is the one to wire into a pre-commit hook — `detect` scans history, which is too slow to run on every commit.
 
-### `detect-secrets` — detect-secrets
-Yelp's secret scanner builds a baseline file of known/allowed secrets, then flags anything new that looks like a credential on future scans — useful for adopting scanning in an existing repo without drowning in old false positives. It's commonly wired into pre-commit to block newly introduced secrets. Reach for it when you want a living, auditable baseline rather than a full history scan.
-
-```bash
-# generate an initial baseline of existing "secrets"
-detect-secrets scan > .secrets.baseline
-# re-scan and update the baseline against new findings
-detect-secrets scan --baseline .secrets.baseline
-# interactively review/label flagged findings
-detect-secrets audit .secrets.baseline
-```
-
 ### `semgrep` — Semgrep
 A fast static analysis tool that finds bugs and security issues by matching simple, code-like pattern rules across dozens of languages — no deep AST expertise needed to write or read a rule. It's a lighter-weight alternative to heavier SAST tools, backed by a large community ruleset for OWASP-style issues. Use it in CI or before a PR to catch injection risks and common mistakes automatically.
 
@@ -13716,18 +12967,6 @@ sops secrets.yaml
 ```
 
 > Tip: define your age recipient or KMS key once in a `.sops.yaml` at the repo root so `sops` picks it up automatically instead of passing `--age`/`--kms` every time.
-
-### `clamscan` — ClamAV
-An open-source antivirus engine for on-demand scanning of files and directories — not a real-time monitor, but useful for checking downloads, USB drives, or a suspicious folder against known malware signatures. Update the virus database with `freshclam` before scanning since ClamAV is only as good as its definitions. Reach for it for a quick, free malware check without a commercial AV subscription.
-
-```bash
-# update the virus definition database
-freshclam
-# scan a directory recursively, reporting only infected files
-clamscan -r -i ~/Downloads
-# scan and move infected files into quarantine
-clamscan -r --move=~/quarantine ~/Downloads
-```
 
 ### LuLu — Outbound Firewall
 LuLu is a free, open-source macOS outbound firewall that watches for and blocks unexpected outbound network connections — the reverse of most firewalls, which focus on inbound traffic. It alerts the first time an app tries to phone home, letting you allow or block it, which is useful for catching malware, trackers, or apps being unexpectedly chatty. There's no CLI; everything happens through its menu-bar icon and the alert popups it shows when a new connection is attempted.
@@ -13906,18 +13145,6 @@ tsx script.ts
 tsx watch server.ts
 ```
 
-### `taproom` — Taproom
-An interactive terminal UI for Homebrew: browse, search, and inspect formulae and casks (description, version, dependencies, install counts) and run install/upgrade/uninstall actions directly from the list, instead of memorizing `brew` subcommands. Reach for it when exploring what's installed or available, rather than for one-off `brew` commands you already know by heart.
-
-```bash
-# launch the TUI
-taproom
-# launch and force a refresh of cached formula/cask data
-taproom --invalidate-cache
-# launch with an initial filter applied
-taproom --filters installed
-```
-
 ### `cheznav` — cheznav
 A dual-pane terminal UI for chezmoi: your home directory on one side, chezmoi-managed dotfiles on the other, with synced selection between them so you can visually add, diff, and apply dotfiles instead of remembering `chezmoi add`/`chezmoi apply` paths. Handy for a quick visual sanity check before applying changes. Requires chezmoi itself to already be set up.
 
@@ -14037,18 +13264,6 @@ d2 --layout elk architecture.d2 architecture.png
 
 > Tip: `d2 fmt architecture.d2` reformats the source file in place.
 
-### `mmdc` — Mermaid CLI
-Renders Mermaid diagram definitions (flowcharts, sequence diagrams, gantt charts) to SVG, PNG, or PDF without a browser — the same syntax GitHub and Notion render inline in Markdown. Use it to turn a `.mmd` file (or Mermaid fences inside a Markdown doc) into a static image for docs, slides, or emails.
-
-```bash
-# render a flowchart definition to SVG
-mmdc -i flow.mmd -o flow.svg
-# extract and render every mermaid fence in a Markdown file
-mmdc -i README.md -o diagrams
-# render with a dark theme and transparent background
-mmdc -i flow.mmd -o flow.png -t dark -b transparent
-```
-
 ### `pandoc` — Universal Document Converter
 The Swiss-army knife of document conversion: it moves content between Markdown, HTML, Word (docx), PDF, LaTeX, EPUB, and dozens of other formats. It's the backbone of a terminal-first writing workflow — reach for it any time you need to turn a Markdown note into something you can send someone who doesn't live in a terminal.
 
@@ -14121,18 +13336,6 @@ magick input.heic output.png
 magick input.jpg -resize 800x output.jpg
 # batch-resize every PNG in a directory
 magick mogrify -resize 50% *.png
-```
-
-### `ffmpeg` — Audio/Video Processor
-The universal media processor: transcode between formats, trim clips, extract audio, adjust resolution, and pretty much anything else involving audio or video — all scriptable from the terminal, no GUI editor required.
-
-```bash
-# transcode a video to a smaller H.264 mp4
-ffmpeg -i input.mov -c:v libx264 -crf 23 output.mp4
-# extract the audio track as mp3
-ffmpeg -i input.mp4 -vn -c:a libmp3lame output.mp3
-# trim a clip from 00:01:00 for 30 seconds
-ffmpeg -i input.mp4 -ss 00:01:00 -t 30 -c copy clip.mp4
 ```
 
 ### `oxipng` — Lossless PNG Optimizer
@@ -14288,20 +13491,6 @@ A terminal UI for npm projects — browsing and running scripts, inspecting and 
 lazynpm
 ```
 
-### `lazyenv` — TUI for .env Files
-A terminal UI for managing `.env` files across projects: browse variables, diff and sync values between environments, and mask secrets on screen so they're not shown in cleartext by default. It complements `direnv` — `direnv` auto-loads variables, `lazyenv` is for editing and comparing them.
-
-```bash
-# open the TUI scanning the current directory
-lazyenv
-# scan a specific project recursively
-lazyenv ~/Code/myapp --recursive
-# reveal secret values in cleartext at startup
-lazyenv --show-all
-```
-
-> Tip: it checks `.gitignore` by default and backs up the file before its first save — pass `--no-git-check`/`--no-backup` to skip either.
-
 ### `lazyrsync` — TUI for rsync
 A terminal UI over `rsync`, built around reusable sync "profiles" so you don't have to re-type long `rsync` invocations for the same source/destination pairs. Define a profile once, then run or inspect it from the TUI or a one-shot command.
 
@@ -14395,12 +13584,11 @@ OMP uses these servers for completion, diagnostics, and symbol navigation:
 ### Build and runtime dependencies
 These packages support builds and local inference:
 `cmake`, `ninja`, `pkgconf`, `vulkan-loader`, `molten-vk`, `shaderc`,
-`coreutils`, `findutils`, `gawk`, `gnu-sed`, `gnu-tar`, `gnupg`,
-`pinentry-mac`, and `watchman`.
+`coreutils`, `findutils`, `gawk`, `gnu-sed`, `gnu-tar`, `gnupg`, and
+`pinentry-mac`.
 
 ### Fonts
-The terminal and editors use JetBrains Mono, Fira Code, Hack Nerd Font,
-MesloLGS Nerd Font, Inter, and Atkinson Hyperlegible.
+The terminal and editors use JetBrains Mono, JetBrains Mono Nerd Font, and Inter.
 
 ---
 

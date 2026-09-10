@@ -181,8 +181,6 @@ jobs:
           LNAV_THEME_CONF|jq empty /tmp/generated
           PRETTIER_CONF|jq empty /tmp/generated
           MICRO_CONF|jq empty /tmp/generated
-          PGCLI_CONF|python3 -c 'import configparser; configparser.ConfigParser().read("/tmp/generated")'
-          MYCLI_CONF|python3 -c 'import configparser; configparser.ConfigParser().read("/tmp/generated")'
           LAZYGIT_CONF|yq eval '.' /tmp/generated
           K9S_DRACULA|yq eval '.' /tmp/generated
           GHDASH_CONF|yq eval '.' /tmp/generated
@@ -199,7 +197,6 @@ jobs:
           MISE_CONF|python3 -c 'import tomllib; tomllib.load(open("/tmp/generated","rb"))'
           TOPGRADE_CONF|python3 -c 'import tomllib; tomllib.load(open("/tmp/generated","rb"))'
           TRIPPY_CONF|python3 -c 'import tomllib; tomllib.load(open("/tmp/generated","rb"))'
-          GIT_CLIFF_CONF|python3 -c 'import tomllib; tomllib.load(open("/tmp/generated","rb"))'
           HARLEQUIN_CONF|python3 -c 'import tomllib; tomllib.load(open("/tmp/generated","rb"))'
           CHECKS
 

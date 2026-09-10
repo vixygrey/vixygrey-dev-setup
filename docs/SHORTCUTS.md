@@ -79,7 +79,6 @@ Quick reference for all **209+ shortcuts** configured by the setup scripts.
 | `ytdl` | `yt-dlp` | Download video |
 | `ytmp3` | `yt-dlp -x --audio-format mp3` | Download audio as MP3 |
 | `resize` | `magick mogrify -resize` | Resize images |
-| `ffq` | `ffmpeg -hide_banner -loglevel warning` | Quiet ffmpeg |
 | `md2pdf` | `pandoc -f markdown -t pdf` | Markdown to PDF |
 | `md2html` | `pandoc -f markdown -t html -s` | Markdown to HTML |
 | `md2docx` | `pandoc -f markdown -t docx` | Markdown to Word |
@@ -399,16 +398,15 @@ omits the plugin that draws them.
 
 ---
 
-### e1s and lazysql
+### e1s
 
-*Source: upstream READMEs.*
+*Source: upstream README.*
 
-Both ship an in-app keymap that is the authoritative reference, and both are best read there:
+The in-app keymap is the authoritative reference.
 
 | Tool | Help key |
 |------|----------|
 | `e1s` (ECS browser) | `?` |
-| `lazysql` | `?` — upstream states "For a list of keyboard shortcuts press `?`" |
 
 ---
 
@@ -572,18 +570,14 @@ section survived for years.
 
 | Tool | Help key | What was checked |
 |------|----------|------------------|
-| `lazysql` | `?` | upstream README: "For a list of keyboard shortcuts press `?`" |
 | `e1s` | `?` | upstream README key-bindings section |
 | `btop` | in-app | 1,593-line README, no keymap; `--help` has none |
 | `atuin` | in-app | docs keybinds page 404s; `--help` "key" hits are about encryption keys |
 | `fx` | in-app | README defers to fx.wtf, which publishes no keybindings page |
 | `gh-dash`, `atac` | in-app | READMEs and `man atac` carry no keymap |
 | `viddy`, `mprocs` | in-app | no man page; upstream repo renamed, docs not reachable |
-| `pgcli`, `mycli` | in-app | no man page; both use standard readline editing |
 | `w3m`, `bandwhich` | in-app | man pages carry no keybindings section |
 
-`kondo` is deliberately absent from every table: it is a CLI with a confirmation prompt, not
-a TUI, so it has no keymap at all.
 
 ---
 

@@ -380,9 +380,8 @@ EOF
 }
 
 # ---------------------------------------------------------------------------
-# #536: create-once seed files (borgmatic, Caddy, ngrok, ClamAV) were each a
-# bespoke `if [[ ! -f ]]` block with no shared contract and no dry-run report.
-# write_seed_once is the explicit, auditable version of that guard.
+# #536: create-once seed files used bespoke guards with no shared contract or
+# dry-run report. write_seed_once is the explicit, auditable version of that guard.
 # ---------------------------------------------------------------------------
 
 @test "write_seed_once: creates a missing file and returns 0 (#536)" {

@@ -162,9 +162,6 @@ and prefer tagged release artifacts with the published SHA256 checksum.
 | **pnpm** | Fast, disk-efficient npm alternative |
 | **jq** | Lightweight command-line JSON processor |
 | **direnv** | Per-directory environment variables (auto-loads `.envrc`) |
-| **lazyenv** | TUI for `.env` files across projects -- diff/sync, secret masking, `.gitignore` checks (complements direnv) |
-| **keyward** | TUI SSH-key manager + A–F security audit + encrypted backups (offline, single binary) |
-| **watchman** | File watching service (used by React Native, Jest, etc.) |
 | **cmake** | Cross-platform build system generator |
 | **pkg-config** | Helper tool for compiling libraries |
 
@@ -181,7 +178,6 @@ and prefer tagged release artifacts with the published SHA256 checksum.
 | **pinentry-mac** | macOS keychain integration for GPG passphrases |
 | **lazygit** | Terminal UI for git -- visualize branches, stage hunks interactively |
 | **git-absorb** | Auto-fixup commits -- automatically amends the right commit |
-| **git-cliff** | Generate changelogs from conventional commits |
 | **pre-commit** | Git hook framework -- run linters/formatters before each commit |
 
 ---
@@ -192,7 +188,6 @@ and prefer tagged release artifacts with the published SHA256 checksum.
 |------|-------------|
 | **aws-cli v2** | Official AWS command-line interface |
 | **aws-cdk** | AWS Cloud Development Kit -- infrastructure as TypeScript/Python code |
-| **cdk-nag** | CDK rule packs for security and best-practice compliance |
 | **aws-sam-cli** | AWS Serverless Application Model -- local Lambda testing |
 | **cfn-lint** | CloudFormation template linter |
 | **session-manager-plugin** | SSH-less access to EC2 instances via AWS SSM |
@@ -225,7 +220,6 @@ and prefer tagged release artifacts with the published SHA256 checksum.
 
 | Tool | Description |
 |------|-------------|
-| **detect-secrets** | Yelp's pre-commit hook for catching secrets before they're committed |
 | **gitleaks** | Fast git secret scanning -- great for CI and pre-commit hooks |
 | **age** | Modern, simple file encryption (replaces GPG for file encryption) |
 | **sops** | Encrypt secrets in YAML/JSON files -- integrates with AWS KMS |
@@ -234,7 +228,6 @@ and prefer tagged release artifacts with the published SHA256 checksum.
 | **cosign** | Sign and verify container images and artifacts |
 | **mkcert** | Create locally-trusted HTTPS certificates for development |
 | **ssh-audit** | Audit SSH server and client configuration for security |
-| **clamav** | Open-source antivirus engine -- on-demand malware scanning |
 
 ---
 
@@ -260,7 +253,6 @@ Faster, prettier, smarter replacements for standard Unix utilities.
 | `ps` | **procs** | Sortable process list with tree view, Docker-aware |
 | `ping` | **gping** | Real-time latency graph for multiple hosts |
 | `curl` | **xh** | Colorized HTTP client with JSON shortcuts |
-| `curl` | **curlie** | curl with httpie-like output formatting |
 | `dig` | **doggo** | Colorized DNS lookup with DoH/DoT support |
 | `wc` (code) | **scc** | Count lines of code by language + complexity + COCOMO cost estimate |
 | `watch` | **viddy** | Modern watch with diff highlighting and history |
@@ -269,7 +261,6 @@ Faster, prettier, smarter replacements for standard Unix utilities.
 | `tar`/`unzip`/`7z` | **ouch** | Universal archive tool -- auto-detects format from extension |
 | `rm` | **trash** | Moves files to macOS Trash instead of permanent delete |
 | `rsync` | **rsync** (latest) | Updated rsync with better progress and Apple metadata |
-| `tree` | **tree** | Directory listing in tree format |
 | `make` | **just** | Modern task runner -- simpler syntax, no tab weirdness |
 | file manager | **Yazi** | Fast terminal file manager with previews, fuzzy search, and bulk operations |
 | `jq` (interactive) | **fx** | Interactive JSON viewer/processor for exploring large JSON |
@@ -283,7 +274,6 @@ Faster, prettier, smarter replacements for standard Unix utilities.
 | Tool | Description |
 |------|-------------|
 | **yq** | jq for YAML -- parse and manipulate YAML files (essential for k8s/CDK) |
-| **miller (mlr)** | awk/sed/jq for CSV, JSON, and tabular data |
 | **csvkit** | Suite of CSV tools -- csvcut, csvgrep, csvstat, csvlook |
 | **jc** | Convert many classic CLI outputs into JSON so they pipe cleanly into `jq` and automation |
 | **jqp** | Interactive jq playground / TUI -- explore JSON while iterating on jq filters |
@@ -291,7 +281,6 @@ Faster, prettier, smarter replacements for standard Unix utilities.
 | **tectonic** | Self-contained LaTeX/PDF engine so pandoc can render PDFs (`pandoc in.md -o out.pdf --pdf-engine=tectonic`) -- a bare Mac has no PDF engine |
 | **poppler** | PDF tools -- `pdftoppm` (PDF→PNG), `pdftotext`, `pdfinfo` |
 | **imagemagick** | Image manipulation CLI -- resize, convert, composite, watermark |
-| **ffmpeg** | Video/audio processing swiss army knife |
 | **yt-dlp** | Video/audio downloader for YouTube and hundreds of other sites |
 | **surge** | TUI download manager (MIT) -- a browser extension captures browser-started downloads and routes them to a background daemon (port 1700). Complements aria2 (aria2 = scriptable CLI; surge = interactive + browser capture) |
 
@@ -309,9 +298,6 @@ Faster, prettier, smarter replacements for standard Unix utilities.
 | **typos** | Source code spell checker -- fast, low false positives |
 | **ast-grep** | Structural code search/replace using AST -- like semgrep but interactive |
 | **ruff** | Extremely fast Python linter and formatter -- replaces flake8+black+isort |
-| **npkill** | Find and delete node_modules folders to reclaim disk space |
-| **commitizen** | Interactive conventional commit message generator |
-| **commitlint** | Enforce conventional commit message format |
 
 ---
 
@@ -331,7 +317,6 @@ Faster, prettier, smarter replacements for standard Unix utilities.
 |------|-------------|
 | **ngrok** | Expose localhost to the internet for webhooks and demos |
 | **miniserve** | Instant file server from any directory -- one command |
-| **caddy** | Modern web server with automatic HTTPS |
 
 ---
 
@@ -346,15 +331,12 @@ Faster, prettier, smarter replacements for standard Unix utilities.
 | **pv** | Pipe viewer -- add progress bars to any piped command |
 | **parallel** | GNU parallel -- run commands in parallel across multiple cores |
 | **gum** | Shell script UI toolkit -- pretty prompts, spinners, confirmations |
-| **nushell** | Structured data shell -- pipelines output tables, not strings |
 | **topgrade** | Update everything at once -- brew, npm, pip, macOS, all in one command |
 | **fastfetch** | Quick system info display -- faster neofetch replacement |
-| **nano** (latest) | Upgraded nano with syntax highlighting |
+| **nano** | macOS fallback editor, configured with syntax highlighting |
 | **lnav** | Advanced log file viewer -- auto-format, SQL queries on logs |
 | **qalc** | Powerful terminal calculator (units, currencies, variables) |
-| **has** | Check for the presence/version of CLIs on PATH |
 | **lazyssh** | TUI SSH connection manager |
-| **kondo** | Clean dependency/build cruft from software projects across many ecosystems |
 
 ---
 
@@ -372,14 +354,9 @@ Faster, prettier, smarter replacements for standard Unix utilities.
 | Tool | Description |
 |------|-------------|
 | **duckdb** | Local analytical SQL database -- query CSV/JSON/Parquet and ad hoc datasets with SQL |
-| **pgcli** | Auto-completing PostgreSQL CLI with syntax highlighting |
-| **mycli** | Auto-completing MySQL CLI with syntax highlighting |
-| **lazysql** | TUI for databases -- interactive SQL queries in terminal |
-| **harlequin** | Terminal SQL IDE -- multi-tab, autocomplete, DuckDB/Postgres/MySQL/S3 |
+| **harlequin** | Terminal SQL IDE -- multi-tab, autocomplete, DuckDB/Postgres/MySQL/S3; replaced the DBeaver GUI |
 | **usql** | Universal SQL CLI -- connects to Postgres, MySQL, SQLite, and more |
-| **sq** | jq for databases -- query SQLite, Postgres, CSV from one tool |
 | **dbmate** | Lightweight, framework-agnostic database migration tool |
-| **harlequin / lazysql** | Terminal SQL IDE + DB TUI (replaced the DBeaver GUI); plus pgcli, mycli, usql, sq |
 
 ---
 
@@ -399,7 +376,6 @@ Faster, prettier, smarter replacements for standard Unix utilities.
 | Tool | Description |
 |------|-------------|
 | **ATAC** | Terminal API client (TUI + scriptable CLI) -- Postman import, git-friendly JSON/YAML collections; replaced the Bruno GUI |
-| **grpcurl** | curl for gRPC services |
 
 ---
 
@@ -407,7 +383,6 @@ Faster, prettier, smarter replacements for standard Unix utilities.
 
 | Tool | Description |
 |------|-------------|
-| **mtr** | Combines ping and traceroute into a single diagnostic tool |
 | **bandwhich** | Real-time bandwidth usage by process, connection, and host |
 | **nmap** | Network scanner -- discover hosts and services |
 | **trippy** | Modern traceroute TUI with real-time charts and hop statistics |
@@ -426,7 +401,6 @@ Faster, prettier, smarter replacements for standard Unix utilities.
 | **mise** | Universal version manager -- Node, Python, Go, Ruby all in one (replaces nvm + pyenv + rbenv) |
 | **micro** | The `$EDITOR` -- git/gh/lazygit commit messages, leaf's Ctrl+E, quick edits. Non-modal, on-screen key menu (`Ctrl+G` for help), Dracula theme |
 | **Zed** | Fast native editor with Dracula-Sakura defaults and OMP in the Agent Panel through ACP |
-| **llm** | Simon Willison's CLI -- one-shot prompts, plugin ecosystem, SQLite logging, embeddings. Installed via `uv tool` with the Anthropic plugin; default model `anthropic/claude-sonnet-4-5` |
 | **omp** | Oh My Pi coding agent with LSP, DAP, subagents, and role-based routing across Codex, Gemini, Claude Sonnet, and local llama.cpp |
 | **chezmoi** | Dotfile manager -- backup and restore configs across machines |
 | **mitmproxy** | Free HTTP debugging proxy -- inspect and modify API calls from any app |
@@ -443,9 +417,7 @@ Faster, prettier, smarter replacements for standard Unix utilities.
 
 | Tool | Description |
 |------|-------------|
-| **d2** | Code-to-diagram scripting language -- declarative diagrams as code |
-| **Mermaid CLI** | Render Mermaid diagrams (flowcharts, sequences, ERDs) from CLI |
-| **d2 / Mermaid** | Diagrams as code in the terminal (replaced the draw.io GUI) |
+| **d2** | Diagrams as code in the terminal. This tool replaced the draw.io GUI. |
 
 ---
 
@@ -455,11 +427,7 @@ Faster, prettier, smarter replacements for standard Unix utilities.
 |------|-------------|
 | **JetBrains Mono** | Primary development font with ligatures |
 | **JetBrains Mono Nerd Font** | JetBrains Mono with patched icons for terminal tools |
-| **MesloLGS Nerd Font** | Classic terminal font with icons for starship/eza |
-| **Fira Code** | Popular ligature font -- alternative to JetBrains Mono |
-| **Fira Code Nerd Font** | Fira Code with patched icons |
 | **Inter** | Best UI font for web and design work |
-| **Hack Nerd Font** | Clean monospace font with icons |
 
 ---
 
@@ -540,12 +508,9 @@ Applied consistently across the machine, with built-in Dracula variants kept whe
 | **zellij** | Dracula-Sakura theme in the config |
 | **omp** | Full Dracula-Sakura custom theme in `~/.omp/agent/themes/dracula-sakura.json`, selected through `theme.dark` in `config.yml` |
 | **lnav** | Full Dracula-Sakura `theme-def` (151 values) as a config fragment in `~/.config/lnav/configs/dev-setup/`, selected with lnav's own `:config` |
-| **nushell** | 59 `color_config` keys in `config.nu` — types, shapes, and the reedline chrome |
 | **atuin** | 15-token theme in `~/.config/atuin/themes/dracula-sakura.toml` |
-| **pgcli / mycli** | `syntax_style = dracula`, plus a `[colors]` block for the prompt-toolkit chrome the Pygments style does not reach |
 | **stu** | 19 `ui.theme.*` keys in `~/.stu/config.toml` (hex, via Ratatouille's colour serde) |
 | **e1s** | 11 hex colour overrides in `~/.config/e1s/config.yml` |
-| **lazyenv** | built-in `dracula` preset — it ships 56 themes but offers no way to define a palette, so this is Dracula rather than Dracula-Sakura |
 | **claws** | Built-in `dracula` theme via `claws --theme dracula` alias |
 | **miniserve** | `--color-scheme-dark dracula` in the `serve` alias |
 | **vivid** | Dracula-themed LS_COLORS for file type coloring |
@@ -562,10 +527,10 @@ acceptance of a valid one meant anything.
 
 | Tool | Why not |
 |------|---------|
-| `duf`, `taproom` | preset flags only (`dark\|light\|ansi`, `auto\|light\|dark`) — no palette, and no Dracula among them |
+| `duf` | preset flags only (`dark\|light\|ansi`) with no custom palette |
 | `fx` | numbered built-in themes via `FX_THEME="0"`; no custom theme definition |
 | `procs` | indexed color only (`Color256`), so the palette can only use nearest terminal indices |
-| `atac`, `lazysql`, `viddy`, `kondo`, `cheznav`, `lazynpm`, `lazyrsync`, `lazyssh` | no theming found in their help or configuration schemas |
+| `atac`, `viddy`, `cheznav`, `lazynpm`, `lazyrsync`, `lazyssh` | no theming found in their help or configuration schemas |
 | `mullvad-tui`, Mullvad VPN | Both clients use fixed application colors and expose no theme configuration |
 
 `stu` and `e1s` are themed but carry **no `--verify` row**. Both are TUIs with no
@@ -720,7 +685,6 @@ The script generates config files with sensible defaults:
 | `~/.config/gh-dash/config.yml` | gh-dash | PR/issue sections, Dracula-Sakura theme |
 | `~/.config/stern/config.yaml` | stern | 50 tail lines, 5m lookback, timestamps |
 | `~/Library/Application Support/ngrok/ngrok.yml` | ngrok | Base config (add authtoken). ngrok's real macOS path — **not** `~/.config/ngrok`, which it never reads; a stranded copy there is removed on the next run |
-| `~/.config/caddy/Caddyfile` | Caddy | Development server template |
 | `~/.config/micro/settings.json` | micro | Dracula (`dracula-tc`), the $EDITOR for git/gh/lazygit and leaf's Ctrl+Ents, auto-format on save (ruff for Python, taplo/marksman/TS/CSS/bash/yaml servers, rust-analyzer, gopls) |
 | `~/.config/zed/settings.json` | Zed | House fonts, Dracula-Sakura overrides, editor defaults, and an `omp acp` external agent |
 | `~/.herald/conf.yaml` | Herald | User-owned account config with `theme.name` merged to select Dracula-Sakura |
@@ -729,7 +693,6 @@ The script generates config files with sensible defaults:
 | _(cliamp)_ | cliamp | Music player — self-configured on first run (point at `~/Media/music`) |
 | `~/.config/zellij/config.kdl` | zellij | Dracula-Sakura theme, compact layout, mouse, Ctrl-a prefix |
 | `~/.config/mpv/mpv.conf` | mpv | Hardware accel, save position, screenshots to ~/Screenshots |
-| `~/.config/git-cliff/cliff.toml` | git-cliff | Conventional commits changelog template |
 | `~/.jqp.yaml` | jqp | Dracula base theme with Dracula-Sakura color overrides |
 | `~/.agents/skills/*` | omp | Symlinks to three scoped shared skills: `api-testing`, `d2-diagrams`, and `office-layout-check` |
 | `~/.omp/agent/extensions/protected-paths.ts` | omp | Blocks native file mutations to credentials, dependency trees, and repository metadata. Bash and Eval remain under native approval policies |
@@ -738,7 +701,6 @@ The script generates config files with sensible defaults:
 | `~/.omp/agent/config.yml` | omp | Merged because OMP also writes this file. Uses automatic reasoning, workload routing, usage-aware fallback, provider caching, disabled MiniMax, and local Qwen last |
 | `~/.omp/agent/.env` | omp | User-owned seed with blank `ANTHROPIC_API_KEY` and `GEMINI_API_KEY` entries. Later runs leave it unchanged |
 | `~/Library/LaunchAgents/dev.vixygrey.llama-cpp.plist` | llama.cpp | Runs Qwen2.5 Coder 14B on port 8081 with the Vulkan backend |
-| `~/.config/nushell/env.nu` | nushell | Starship prompt, Homebrew paths |
 | `~/.config/kitty/kitty.conf` | Kitty | JetBrainsMono Nerd Font, Dracula-Sakura palette, compact padding, integrated titlebar |
 | `~/.config/yazi/yazi.toml` | Yazi | Natural sorting, hidden files, symlink targets, previews |
 | `~/.config/yazi/theme.toml` | Yazi | Dracula-Sakura interface and file-type palette |
@@ -749,7 +711,6 @@ The script generates config files with sensible defaults:
 | `~/.config/btop/` | btop | Dracula-Sakura theme with full color palette |
 | `~/.config/lazydocker/` | lazydocker | Dracula-Sakura theme, timestamps, compose support |
 | `~/.config/pip/pip.conf` | pip | Require virtualenv, no telemetry |
-| `~/.config/pgcli/config` | pgcli | Multi-line, auto-expand, destructive warnings, bat pager |
 | `~/.harlequin.toml` | harlequin | Built-in Dracula theme, vscode keymap, file tree on |
 | `~/.config/gh/config.yml` | GitHub CLI | SSH protocol, micro editor, delta pager, aliases (co, pv, pc, pl, il, pm, rel) |
 | `~/.aws/config` | AWS CLI | Default region, json output, bat pager, auto-prompt, SSO template |
@@ -761,20 +722,16 @@ The script generates config files with sensible defaults:
 | `~/.config/leaf/config.toml` | leaf | Ctrl+E hands off to micro at the current line |
 | `~/.config/trippy/trippy.toml` | trippy | Dracula-Sakura theme-colors |
 | `~/.tflint.hcl` | tflint | Recommended preset + AWS ruleset (fetched via `tflint --init`) |
-| `~/.czrc` | commitizen | Points `cz` at the cz-conventional-changelog adapter |
 | `~/.actrc` | act | Ubuntu images, container reuse, `--container-architecture linux/amd64` |
-| `~/.mlrrc` | miller | Pretty-print output, CSV I/O defaults |
 | `~/.ripgreprc` | ripgrep | Smart-case, hidden files, custom type definitions |
 | `~/.w3m/config` | w3m | UTF-8, cookies off, colors, proxy-from-env |
 | `~/.zshenv` | Shell | mise activation for all shell types (login + non-login) — coverage. mise is activated **again** at the end of `~/.zshrc` for *precedence*: `.zshenv` runs first, so everything prepended afterwards (`brew shellenv`, gnubin, `~/.local/bin`, `$PNPM_HOME`) would otherwise outrank it |
 | `~/.actrc` | act | Medium Ubuntu images, container reuse |
-| `~/.mlrrc` | miller | CSV input, pretty table output |
 | `~/.hushlogin` | Terminal | Suppresses "Last login" message |
 | `~/.ripgreprc` | ripgrep | Smart case, hidden files, ignore patterns, custom types (web, config, doc, style) |
 | `~/.fdignore` | fd | Global ignore patterns (node_modules, .git, dist, etc.) |
 | `~/.vimrc` | vim | Line numbers, clipboard, mouse, Dracula colors, space leader, persistent undo |
 | `~/.nanorc` | nano | Line numbers, auto-indent, mouse, syntax highlighting |
-| `~/.myclirc` | mycli | Multi-line, auto-expand, destructive warnings |
 | `~/.gemrc` | Ruby | No docs on gem install |
 | `~/.config/lazygit/config.yml` | lazygit | Dracula-Sakura theme, delta pager, nerd fonts, auto-fetch, micro editor (`hx`), rounded borders |
 | `~/.config/k9s/skins/dracula.yaml` | k9s | Full Dracula-Sakura-colored skin |
@@ -860,7 +817,6 @@ All aliases are auto-written to `~/.zshrc`:
 | `md2html` | `pandoc -f markdown -t html -s` | Markdown to HTML |
 | `md2docx` | `pandoc -f markdown -t docx` | Markdown to Word |
 | `resize` | `magick mogrify -resize` | Resize images |
-| `ffq` | `ffmpeg -hide_banner ...` | Quiet ffmpeg |
 | `par` | `parallel` | Run in parallel |
 | `lint-sh` | `shellcheck` | Lint shell scripts |
 | `fmt-sh` | `shfmt -w -i 4` | Format shell scripts |
@@ -913,7 +869,7 @@ Python uses `ty` and `basedpyright` for type analysis. Ruff provides linting and
 
 ### AI agents
 
-**Oh My Pi** (`omp`) is the primary coding agent. The `llm` command provides short, one-shot prompts.
+**Oh My Pi** (`omp`) is the primary coding agent.
 
 The setup also builds llama.cpp from source with Vulkan enabled and Metal disabled.
 The login service exposes Qwen2.5 Coder 14B at `http://127.0.0.1:8081`.
@@ -922,7 +878,6 @@ The login service exposes Qwen2.5 Coder 14B at `http://127.0.0.1:8081`.
 omp
 omp config get modelRoles
 curl -s http://127.0.0.1:8081/v1/models | jq
-llm "Summarize this repository"
 ```
 
 OMP installs from the `can1357/tap` Homebrew tap as a prebuilt binary.
@@ -983,7 +938,7 @@ Paste each key after the matching equals sign. OMP loads this file directly.
 | `ff` | Find a file and open it |
 | `rgf <q>` / `s <q>` | Search file content or the Spotlight index |
 | `clip` | Clipboard history (clipse) |
-| `taproom` · `k9s` · `lazydocker` | Homebrew · Kubernetes · Docker TUIs |
+| `k9s` · `lazydocker` | Kubernetes · Docker TUIs |
 
 See `~/Desktop/KEYBOARD_SHORTCUTS.md` (generated on setup) for the full list.
 
