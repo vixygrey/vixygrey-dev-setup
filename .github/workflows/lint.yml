@@ -173,7 +173,6 @@ jobs:
           FASTFETCH_CONF|jq empty /tmp/generated
           MPROCS_CONF|yq eval '.' /tmp/generated
           JQP_CONF|yq eval '.' /tmp/generated
-          K9S_CFG|yq eval '.' /tmp/generated
           GEM_CONF|yq eval '.' /tmp/generated
           GHOSTTY_PLIST_EOF|python3 -c 'import plistlib, sys; plistlib.load(open("/tmp/generated","rb"))'
           OMP_THEME_CONF|jq empty /tmp/generated
@@ -182,9 +181,7 @@ jobs:
           PRETTIER_CONF|jq empty /tmp/generated
           MICRO_CONF|jq empty /tmp/generated
           LAZYGIT_CONF|yq eval '.' /tmp/generated
-          K9S_DRACULA|yq eval '.' /tmp/generated
           GHDASH_CONF|yq eval '.' /tmp/generated
-          STERN_CONF|yq eval '.' /tmp/generated
           LAZYDOCKER_CONF|yq eval '.' /tmp/generated
           GH_CONF|yq eval '.' /tmp/generated
           NGROK_CONF|yq eval '.' /tmp/generated

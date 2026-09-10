@@ -17,7 +17,6 @@ A single setup script that installs and configures **220+ tools** with **60+ con
 
 ## Documentation
 
-- [Guide](docs/GUIDE.md) -- daily workflow, tool usage, and setup walkthrough
 - [Shortcuts](docs/SHORTCUTS.md) -- keyboard shortcuts and shell aliases reference
 
 ## Project structure
@@ -192,7 +191,7 @@ and prefer tagged release artifacts with the published SHA256 checksum.
 | **cfn-lint** | CloudFormation template linter |
 | **session-manager-plugin** | SSH-less access to EC2 instances via AWS SSM |
 | **granted** | Fast multi-account AWS SSO credential switching |
-| **e1s** | ECS TUI -- clusters/services/tasks, exec, logs, port-forward ("k9s for ECS") |
+| **e1s** | ECS TUI -- clusters, services, tasks, exec, logs, and port forwarding |
 | **e2c** | EC2 TUI -- start/stop/reboot/terminate, metrics, SSH (young project; via `go install`) |
 | **stu** | S3 TUI -- browse/preview/download buckets |
 | **claws** | Broad all-AWS TUI with a managed palette and a read-only shell default |
@@ -207,11 +206,8 @@ and prefer tagged release artifacts with the published SHA256 checksum.
 
 | Tool | Description |
 |------|-------------|
-| **OpenTofu** | Open-source Terraform alternative -- multi-cloud infrastructure as code |
-| **tflint** | Terraform/OpenTofu linter -- catches errors before apply |
 | **terraform-docs** | Auto-generate module README sections from variables and outputs |
 | **checkov** | IaC static analysis -- Terraform, CloudFormation, Kubernetes, Dockerfile |
-| **infracost** | Cost estimation for Terraform changes before apply |
 | _tfsec_ | _Folded into `trivy config` -- not installed separately_ |
 
 ---
@@ -222,7 +218,6 @@ and prefer tagged release artifacts with the published SHA256 checksum.
 |------|-------------|
 | **gitleaks** | Fast git secret scanning -- great for CI and pre-commit hooks |
 | **age** | Modern, simple file encryption (replaces GPG for file encryption) |
-| **sops** | Encrypt secrets in YAML/JSON files -- integrates with AWS KMS |
 | **trivy** | Vulnerability scanner for containers, filesystems, and IaC |
 | **semgrep** | Static analysis tool -- finds bugs and security issues in code |
 | **cosign** | Sign and verify container images and artifacts |
@@ -333,8 +328,6 @@ The generated OMP policy selects Pyright for Python type intelligence and Ruff f
 
 | Tool | Description |
 |------|-------------|
-| **hyperfine** | Command-line benchmarking tool -- compare execution times |
-| **oha** | HTTP load testing tool written in Rust -- fast and simple |
 | **hurl** | Run HTTP requests from plain text files -- curl meets test runner |
 
 ---
@@ -361,7 +354,6 @@ The generated OMP policy selects Pyright for Python type intelligence and Ruff f
 | **broot** | Directory tree and file-navigation TUI with the shell-integrated `br` launcher |
 | **watchexec** | Run commands on file changes -- supports globs, debouncing, process groups |
 | **pv** | Pipe viewer -- add progress bars to any piped command |
-| **parallel** | GNU parallel -- run commands in parallel across multiple cores |
 | **gum** | Shell script UI toolkit -- pretty prompts, spinners, confirmations |
 | **topgrade** | Update everything at once -- brew, npm, pip, macOS, all in one command |
 | **fastfetch** | Quick system info display -- faster neofetch replacement |
@@ -375,11 +367,10 @@ The generated OMP policy selects Pyright for Python type intelligence and Ruff f
 
 ---
 
-## Kubernetes & GitHub Extras
+## GitHub Extras
 
 | Tool | Description |
 |------|-------------|
-| **stern** | Multi-pod log tailing for Kubernetes |
 | **gh-dash** | GitHub dashboard in the terminal -- PRs, issues, notifications |
 
 ---
@@ -395,15 +386,13 @@ The generated OMP policy selects Pyright for Python type intelligence and Ruff f
 
 ---
 
-## Containers & Orchestration
+## Containers
 
 | Tool | Description |
 |------|-------------|
 | **Docker Desktop** | Docker engine, Compose, Buildx, and the macOS virtual machine runtime |
 | **lazydocker** | Terminal UI for Docker -- manage containers, images, volumes |
 | **dive** | Explore Docker image layers -- find what's taking up space |
-| **kubectl** | Kubernetes CLI for managing clusters |
-| **k9s** | Terminal UI for Kubernetes -- navigate clusters with keyboard |
 
 ---
 
@@ -419,7 +408,6 @@ The generated OMP policy selects Pyright for Python type intelligence and Ruff f
 
 | Tool | Description |
 |------|-------------|
-| **bandwhich** | Real-time bandwidth usage by process, connection, and host |
 | **nmap** | Network scanner -- discover hosts and services |
 | **trippy** | Modern traceroute TUI with real-time charts and hop statistics |
 
@@ -442,7 +430,6 @@ The generated OMP policy selects Pyright for Python type intelligence and Ruff f
 | **omp** | Oh My Pi coding agent with LSP, DAP, subagents, and role-based routing across Codex, Gemini, Claude Sonnet, and local llama.cpp |
 | **Bigpowers** | OMP plugin with workflow skills, slash commands, and git safety guards |
 | **chezmoi** | Dotfile manager -- backup and restore configs across machines |
-| **mitmproxy** | Free HTTP debugging proxy -- inspect and modify API calls from any app |
 | **Kitty** | Fast GPU-accelerated terminal with native macOS support |
 | **zellij** | Modern terminal multiplexer -- discoverable UI, layouts, Rust-based |
 | **Spotlight + `ff`/`rgf`/`s`** | Global application search plus terminal file and content search. Clipse provides clipboard history |
@@ -456,7 +443,7 @@ The generated OMP policy selects Pyright for Python type intelligence and Ruff f
 
 | Tool | Description |
 |------|-------------|
-| **d2** | Diagrams as code in the terminal. This tool replaced the draw.io GUI. |
+| **d2** | Diagrams as code in the terminal for reproducible, reviewable architecture diagrams |
 
 ---
 
@@ -486,7 +473,7 @@ The generated OMP policy selects Pyright for Python type intelligence and Ruff f
 | App | Description |
 |-----|-------------|
 | **LibreOffice** | Headless office suite for validation and conversion of `.pptx`, `.xlsx`, and `.docx` files |
-| **Thunderbird** | Email, calendar, contacts, and RSS with seeded mail defaults and Dracula-Sakura profile styling |
+| **Draw.io** | Desktop diagram editor with local file support and a command-line launcher |
 | **Herald** | Terminal email and calendar client with a local Dracula-Sakura theme |
 | **Obsidian** | Local Markdown knowledge base with a managed Dracula-Sakura theme in each registered vault |
 | **rclone** | SFTP/S3/cloud file transfer from the terminal (replaced the Cyberduck GUI) |
@@ -546,12 +533,10 @@ Applied consistently across the machine, with built-in Dracula variants kept whe
 | **Chawan** | True-color display defaults in `~/.config/chawan/config.toml` |
 | **Posting** | Native custom theme in `~/.local/share/posting/themes/dracula-sakura.yaml` |
 | **Obsidian** | Full per-vault CSS theme with dark plum surfaces and Sakura accent colors |
-| **Thunderbird** | Built-in dark base with a profile-level Dracula-Sakura `userChrome.css` stylesheet |
 | **jqp** | Dracula base theme with Dracula-Sakura override colors in `~/.jqp.yaml` |
 | **fzf** | Dracula colors in `FZF_DEFAULT_OPTS` |
 | **Starship** | Dracula-Sakura palette in `starship.toml` |
 | **lazygit** | Dracula-Sakura color scheme in config |
-| **k9s** | Dracula skin recolored to the Dracula-Sakura house palette |
 | **leaf** | Terminal Markdown previewer (runs on defaults) |
 | **gh-dash** | Dracula-Sakura border, text, and selection colors |
 | **btop** | Full Dracula-Sakura theme with custom color palette |
@@ -744,7 +729,6 @@ The script generates config files with sensible defaults:
 | `~/.config/starship.toml` | Starship | Rich two-line prompt with a Dracula-Sakura palette, OS icon, git status with counts, Node/Python/Rust/Go/Docker/AWS/Terraform versions, battery warning, time, Nerd Font icons |
 | `~/.config/yt-dlp/config` | yt-dlp | Best quality mp4, aria2c downloader, metadata, subtitles |
 | `~/.config/gh-dash/config.yml` | gh-dash | PR/issue sections, Dracula-Sakura theme |
-| `~/.config/stern/config.yaml` | stern | 50 tail lines, 5m lookback, timestamps |
 | `~/Library/Application Support/ngrok/ngrok.yml` | ngrok | Base config (add authtoken). ngrok's real macOS path — **not** `~/.config/ngrok`, which it never reads; a stranded copy there is removed on the next run |
 | `~/.config/micro/settings.json` | micro | Dracula (`dracula-tc`), the $EDITOR for git/gh/lazygit and leaf's Ctrl+Ents, auto-format on save (ruff for Python, taplo/marksman/TS/CSS/bash/yaml servers, rust-analyzer, gopls) |
 | `~/.config/zed/settings.json` | Zed | House fonts, Dracula-Sakura overrides, editor defaults, and an `omp acp` external agent |
@@ -752,8 +736,6 @@ The script generates config files with sensible defaults:
 | `~/Library/Application Support/emeraldian/themes/dracula-sakura.toml` | Emeraldian | Native Dracula-Sakura interface, Markdown, syntax, and graph theme |
 | `~/.config/croft/config.json` | Croft | Format on save, selection whitespace, copy on select, 20k terminal scrollback, and whole-project diagnostics |
 | `~/.config/croft/extensions/dracula-sakura/extension.toml` | Croft | Native Dracula-Sakura interface, syntax, terminal, and tab theme |
-| `[each Thunderbird profile]/user.js` | Thunderbird | Seeded dark theme, delayed read marking, spell check before send, and disabled start page |
-| `[each Thunderbird profile]/chrome/` | Thunderbird | Seeded stylesheet import plus the refreshed Dracula-Sakura palette |
 | `~/.herald/conf.yaml` | Herald | User-owned account config with `theme.name` merged to select Dracula-Sakura |
 | `~/.herald/themes/dracula-sakura.yaml` | Herald | Managed Dracula-Sakura role palette |
 | `~/.config/eilmeldung/config.toml` | eilmeldung | Managed Dracula-Sakura palette, rounded borders, Nerd Font icons, and the macOS URL opener |
@@ -791,10 +773,8 @@ The script generates config files with sensible defaults:
 | `~/.config/brewfile/Brewfile` | Homebrew | Snapshot of all installed packages with descriptions |
 | `~/.justfile` | just | 26 global task-runner recipes (system, git, Docker, network, cleanup, info) |
 | `~/.shellcheckrc` | shellcheck | External sources, disabled false positives |
-| `~/.config/k9s/config.yaml` + skin | k9s | Dracula skin recolored to the Dracula-Sakura house palette (edit-resource uses your `$EDITOR`) |
 | `~/.config/leaf/config.toml` | leaf | Ctrl+E hands off to micro at the current line |
 | `~/.config/trippy/trippy.toml` | trippy | Dracula-Sakura theme-colors |
-| `~/.tflint.hcl` | tflint | Recommended preset + AWS ruleset (fetched via `tflint --init`) |
 | `~/.actrc` | act | Ubuntu images, container reuse, `--container-architecture linux/amd64` |
 | `~/.ripgreprc` | ripgrep | Smart-case, hidden files, custom type definitions |
 | `~/.config/claws/config.yaml` | Claws | Dracula-Sakura palette, dashboard startup, no automatic config rewrites |
@@ -810,7 +790,6 @@ The script generates config files with sensible defaults:
 | `~/.nanorc` | nano | Line numbers, auto-indent, mouse, syntax highlighting |
 | `~/.gemrc` | Ruby | No docs on gem install |
 | `~/.config/lazygit/config.yml` | lazygit | Dracula-Sakura theme, delta pager, nerd fonts, auto-fetch, micro editor (`hx`), rounded borders |
-| `~/.config/k9s/skins/dracula.yaml` | k9s | Full Dracula-Sakura-colored skin |
 | `~/.local/bin/*` | mise | Links non-Python mise shims for git hooks, launchd jobs, editors, and non-zsh shells |
 
 ---
@@ -819,7 +798,7 @@ The script generates config files with sensible defaults:
 
 | Category | Changes |
 |----------|---------|
-| **Dock** | Auto-hide, small icons, no recent applications, scale minimization, no delay, and unchanged pins |
+| **Dock** | Small icons, no recent applications, scale minimization, no delay, and unchanged pins |
 | **Screensaver** | 45min idle, display sleep at 2hr (charger) / 1h15m (battery) |
 | **Screenshots** | PNG format, saved to `~/Screenshots`, no shadow, no thumbnail |
 | **Keyboard** | Fast key repeat (2/15), no press-and-hold, no auto-correct/capitalize/smart quotes/dashes/periods |
@@ -860,7 +839,6 @@ All aliases are auto-written to `~/.zshrc`:
 | `watch` | `viddy` | Watch command output |
 | `hexdump` | `hexyl` | Hex viewer |
 | `rm` | `trash` | Safe delete (Trash) |
-| `make` | `just` | Task runner |
 | `y` | `yazi` | File manager with directory changes preserved after exit |
 | `ff` / `rgf` / `s` | find / grep / mdfind | Terminal file and content search |
 | `clip` | `clipse` | Clipboard-history TUI |
@@ -868,15 +846,11 @@ All aliases are auto-written to `~/.zshrc`:
 | `f` | `fd` | Fast find |
 | `dft` | `difft` | Syntax-aware diff |
 | `dl` | `aria2c` | Fast download |
-| `wget` | `aria2c` | Fast download |
-| `pip` | `uv pip` | Fast Python packages |
 | `venv` | `uv venv` | Fast virtualenv creation |
 | `pyrun` | `uv run` | Run Python with uv |
 | `gj` | `just --justfile ~/.justfile` | Global justfile recipes |
 | `lg` | `lazygit` | Git UI |
 | `lzd` | `lazydocker` | Docker UI |
-| `k` | `kubectl` | Kubernetes |
-| `klog` | `stern` | K8s pod logs |
 | `md` | `leaf` | Markdown viewer |
 | `serve` | `miniserve ...` | Quick file server |
 | `ghd` | `gh dash` | GitHub dashboard |
@@ -888,13 +862,10 @@ All aliases are auto-written to `~/.zshrc`:
 | `prog` | `progress -m` | Monitor progress of running coreutils |
 | `ytdl` | `yt-dlp` | Download video |
 | `ytmp3` | `yt-dlp -x --audio-format mp3` | Download audio |
-| `bench` | `hyperfine` | Benchmark commands |
-| `loadtest` | `oha` | HTTP load test |
 | `md2pdf` | `pandoc -f markdown -t pdf` | Markdown to PDF |
 | `md2html` | `pandoc -f markdown -t html -s` | Markdown to HTML |
 | `md2docx` | `pandoc -f markdown -t docx` | Markdown to Word |
 | `resize` | `magick mogrify -resize` | Resize images |
-| `par` | `parallel` | Run in parallel |
 | `lint-sh` | `shellcheck` | Lint shell scripts |
 | `fmt-sh` | `shfmt -w -i 4` | Format shell scripts |
 | `csvp` | `csvlook` | Pretty-print CSV |
@@ -915,7 +886,7 @@ All aliases are auto-written to `~/.zshrc`:
 
 | Feature | Description |
 |---------|-------------|
-| **Zsh completions** | kubectl, gh, aws auto-completions loaded |
+| **Zsh completions** | gh and aws auto-completions loaded |
 | **GPG_TTY** | Set in zshrc for commit signing to work |
 | **ulimit increase** | `ulimit -n 65536` in zprofile for Node.js/webpack/vite |
 | **vivid LS_COLORS** | Dracula-themed file type coloring via `vivid generate dracula` |
@@ -1017,7 +988,7 @@ Paste each key after the matching equals sign. OMP loads this file directly.
 | `ff` | Find a file and open it |
 | `rgf <q>` / `s <q>` | Search file content or the Spotlight index |
 | `clip` | Clipboard history (clipse) |
-| `k9s` · `lazydocker` | Kubernetes · Docker TUIs |
+| `lazydocker` | Docker TUI |
 
 See `~/Desktop/KEYBOARD_SHORTCUTS.md` (generated on setup) for the full list.
 

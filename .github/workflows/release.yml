@@ -25,7 +25,6 @@ jobs:
           ARCHIVE="vixygrey-dev-setup-macos-${VERSION}.zip"
           mkdir -p build/macos
           cp scripts/setup-dev-tools-mac.sh build/macos/
-          cp docs/GUIDE.md build/macos/
           cp docs/SHORTCUTS.md build/macos/
           cp README.md LICENSE build/macos/
           mkdir -p build/macos/assets/wallpapers

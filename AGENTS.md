@@ -301,7 +301,7 @@ Releases are hand-prepared in a PR, then **a tag push triggers the GitHub releas
    ```bash
    git tag -a vX.Y.Z -m "Release X.Y.Z" && git push origin vX.Y.Z
    ```
-5. `.github/workflows/release.yml` (trigger: `push` tags `v*`) builds `vixygrey-dev-setup-macos-vX.Y.Z.zip` (the script + `docs/GUIDE.md` + `docs/SHORTCUTS.md` + `README.md` + `LICENSE`) and publishes the GitHub Release with **auto-generated** notes (a PR list). The hand-written `CHANGELOG.md` is the canonical human changelog; the release-page notes are the auto PR summary.
+5. `.github/workflows/release.yml` (trigger: `push` tags `v*`) builds `vixygrey-dev-setup-macos-vX.Y.Z.zip` (the script + `docs/SHORTCUTS.md` + `README.md` + `LICENSE`) and publishes the GitHub Release with **auto-generated** notes (a PR list). The hand-written `CHANGELOG.md` is the canonical human changelog; the release-page notes are the auto PR summary.
 
 ## Environment gotchas
 

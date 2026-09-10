@@ -6,18 +6,18 @@ atuin-config|$ATUIN_CONFIG|managed|text|configs|none|atuin
 atuin-config-dir-themes-dracula-sakura-toml|$ATUIN_CONFIG_DIR/themes/dracula-sakura.toml|generated|toml|configs|taplo|none
 lazygit-config|$LAZYGIT_CONFIG|managed|text|configs|none|lazygit
 lazygit-superseded|$LAZYGIT_SUPERSEDED|superseded|text|configs|none|none
-k9s-skin|$K9S_SKIN|managed|text|configs|none|none
-k9s-main-config|$K9S_MAIN_CONFIG|managed|text|configs|none|k9s
-k9s-superseded-dir-skins-dracula-yaml|$K9S_SUPERSEDED_DIR/skins/dracula.yaml|superseded|yaml|configs|yq|none
-k9s-superseded-dir-config-yaml|$K9S_SUPERSEDED_DIR/config.yaml|superseded|yaml|configs|yq|none
+k9s-skin|$HOME/.config/k9s/skins/dracula.yaml|superseded|yaml|configs|yq|none
+k9s-main-config|$HOME/.config/k9s/config.yaml|superseded|yaml|configs|yq|none
+k9s-library-skin|$HOME/Library/Application Support/k9s/skins/dracula.yaml|superseded|yaml|configs|yq|none
+k9s-library-config|$HOME/Library/Application Support/k9s/config.yaml|superseded|yaml|configs|yq|none
 shellcheck-rc|$SHELLCHECK_RC|managed|shell|configs|bash|none
 leaf-config|$LEAF_CONFIG|managed|text|configs|none|none
 yt-dlp-config|$YT_DLP_CONFIG|managed|text|configs|none|none
 act-config|$ACT_CONFIG|managed|text|configs|none|none
-tflint-config|$TFLINT_CONFIG|managed|text|configs|none|none
+tflint-config|$HOME/.tflint.hcl|superseded|text|configs|none|none
 trippy-config|$TRIPPY_CONFIG|managed|text|configs|none|none
 gh-dash-config|$GH_DASH_CONFIG|managed|shell|configs|bash|none
-stern-config|$STERN_CONFIG|managed|text|configs|none|stern
+stern-config|$HOME/.config/stern/config.yaml|superseded|yaml|configs|yq|none
 zellij-config|$ZELLIJ_CONFIG|managed|text|configs|none|zellij
 yazi-config|$YAZI_CONFIG|managed|toml|configs|taplo|none
 yazi-theme|$YAZI_THEME|managed|toml|configs|taplo|yazi
@@ -89,9 +89,6 @@ emeraldian-config|$EMERALDIAN_CONFIG|seed|toml|configs|taplo|emeraldian
 linecast-config|$HOME/.config/linecast/config.json|superseded|json|configs|jq|none
 croft-theme|$CROFT_THEME|generated|toml|configs|taplo|croft
 croft-config|$CROFT_CONFIG|merged|json|configs|jq|croft
-thunderbird-theme|$THUNDERBIRD_THEME|generated|css|configs|none|none
-thunderbird-user-chrome|$THUNDERBIRD_USER_CHROME|seed|css|configs|none|none
-thunderbird-user-js|$THUNDERBIRD_USER_JS|seed|javascript|configs|none|none
 obsidian-theme-owner|$OBSIDIAN_THEME_MARKER|generated|text|configs|none|none
 obsidian-theme-manifest|$OBSIDIAN_THEME_DIR/manifest.json|generated|json|configs|jq|none
 obsidian-theme-css|$OBSIDIAN_THEME_DIR/theme.css|generated|css|configs|none|none

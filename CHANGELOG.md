@@ -24,6 +24,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - Added Emeraldian, Watchtower, and Linecast with supported defaults and Dracula-Sakura styling where available (#569).
 - Added Caligula, Nerdlog, and Chawan with private defaults and supported Dracula-Sakura styling (#572).
 - Added Bigpowers as an enabled OMP plugin with Bun-backed installation and verification (#576).
+- Added Draw.io as the local desktop diagram editor (#578).
 
 ### Changed
 
@@ -41,6 +42,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - The terminal welcome now displays the managed Dracula-Sakura fastfetch dashboard and disables OMP word completion hints (#561).
 - Replaced ATAC with Posting and added a custom Dracula-Sakura theme for the HTTP client (#572).
 - Added Sakura color overrides and a read-only shell default for Claws (#572).
+- Stopped changing the Dock auto-hide preference (#578).
 
 ### Removed
 
@@ -63,6 +65,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - Removed w3m and its generated configuration in favor of Chawan (#572).
 - Removed Linecast and stopped merging defaults into its user-owned settings file (#572).
 - Removed the remaining Claude Code credential protection, skill-link migration, shell guards, and private-note templates (#574).
+- Removed kubectl, k9s, stern, bandwhich, OpenTofu, tflint, Infracost, and Thunderbird (#578).
+- Removed mitmproxy, GNU parallel, sops, hyperfine, and oha after usage audits (#578).
+- Removed `docs/GUIDE.md` from the repository and release archive (#578).
 
 ### Fixed
 
