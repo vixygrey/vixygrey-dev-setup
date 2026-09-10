@@ -665,6 +665,48 @@ EOF
     [ "$output" = '{"schema":"https://example.test/mcp-schema.json","personal":"https://example.test/mcp","disabled":["personal-disabled","bigpowers-mcp"]}' ]
 }
 
+@test "disable_omp_mcp_server: empty config fails closed without false success (#580)" {
+    run run_with_helpers '
+        mcp_file="$HOME/.omp/agent/mcp.json"
+        mkdir -p "$(dirname "$mcp_file")"
+        touch "$mcp_file"
+        disable_omp_mcp_server "$mcp_file" "bigpowers-mcp"
+        rc=$?
+        printf "rc=%s\nbytes=%s\n" "$rc" "$(wc -c < "$mcp_file" | tr -d " ")"
+    '
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"rc=1"* ]]
+    [[ "$output" == *"bytes=0"* ]]
+}
+
+@test "disable_omp_mcp_server: malformed config remains byte-for-byte unchanged (#580)" {
+    run run_with_helpers '
+        mcp_file="$HOME/.omp/agent/mcp.json"
+        mkdir -p "$(dirname "$mcp_file")"
+        printf "%s\n" "{ invalid JSON" > "$mcp_file"
+        before="$(shasum -a 256 "$mcp_file")"
+        disable_omp_mcp_server "$mcp_file" "bigpowers-mcp"
+        rc=$?
+        after="$(shasum -a 256 "$mcp_file")"
+        printf "rc=%s\nsame=%s\n" "$rc" "$([[ "$before" == "$after" ]] && echo yes || echo no)"
+    '
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"rc=1"* ]]
+    [[ "$output" == *"same=yes"* ]]
+}
+
+@test "disable_omp_mcp_server: dry run reports and writes nothing (#580)" {
+    run run_with_helpers '
+        export DRY_RUN=true
+        mcp_file="$HOME/.omp/agent/mcp.json"
+        disable_omp_mcp_server "$mcp_file" "bigpowers-mcp"
+        test -e "$mcp_file" && echo WROTE || echo CLEAN
+    '
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"[DRY RUN] Would disable OMP MCP server: bigpowers-mcp"* ]]
+    [[ "$output" == *"CLEAN"* ]]
+}
+
 @test "run_remote_installer: executes the downloaded installer through the requested runner (#430)" {
     run run_with_helpers '
         export LOG_FILE="$HOME/log"
