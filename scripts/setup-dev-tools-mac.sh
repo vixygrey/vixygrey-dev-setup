@@ -360,16 +360,16 @@ declare -A CATEGORY_DESC=(
     [code-quality]="shellcheck, shfmt, actionlint, act, hadolint, ruff, prettier, commitizen"
     [perf-testing]="hyperfine, oha"
     [dev-servers]="ngrok, miniserve, caddy"
-    [terminal-productivity]="leaf, watchexec, gum, nushell, topgrade, fastfetch, mprocs, taproom, qalc, lazyssh/rsync/npm, lazyenv, keyward, cheznav, has, kondo"
+    [terminal-productivity]="leaf, nushell, topgrade, fastfetch, mprocs, Broot, taproom, qalc, lazyssh/rsync/npm, lazyenv, keyward, cheznav, has, kondo"
     [k8s-github]="stern, gh-dash"
     [database]="duckdb, pgcli, mycli, lazysql, harlequin, usql, sq"
     [containers]="lazydocker, dive, kubectl, k9s"
     [api]="ATAC, grpcurl"
     [networking]="mtr, bandwhich, nmap"
-    [dx]="fzf, starship, atuin, micro, Kitty, zellij, llm, omp"
+    [dx]="fzf, starship, atuin, micro, Zed, Kitty, zellij, llm, omp"
     [docs]="d2, Mermaid CLI"
-    [mac-system]="LuLu"
-    [mac-productivity]="LibreOffice, Vulkan llama.cpp"
+    [mac-system]="LuLu, Mullvad VPN, mullvad CLI, mullvad-tui"
+    [mac-productivity]="Herald, LibreOffice, Vulkan llama.cpp"
     [mac-browsers]="Carbonyl, w3m, monolith"
     [mac-media]="mpv, oxipng, jpegoptim, cliamp"
     [mac-cloud]="rclone, borg"
@@ -398,15 +398,15 @@ declare -A CONFIG_LIVES_IN_CONFIGS=(
     [code-quality]="shellcheck, act, prettier, editorconfig"
     [replacements]="btop, ripgreprc, fdignore, aria2, Yazi"
     [data-processing]="yt-dlp, miller, jqp"
-    [terminal-productivity]="leaf, nushell, topgrade, fastfetch, mprocs"
+    [terminal-productivity]="leaf, nushell, topgrade, fastfetch, mprocs, Broot"
     [k8s-github]="stern, gh-dash"
     [database]="pgcli, mycli, harlequin"
     [containers]="lazydocker, k9s (config + Dracula skin)"
     [networking]="trippy"
-    [dx]="atuin, zellij, Kitty, omp (~/.omp/agent + ~/.agents/skills) — and starship, which is in the \`dracula\` category"
+    [dx]="atuin, zellij, Kitty, Zed, omp (~/.omp/agent + ~/.agents/skills) — and starship, which is in the \`dracula\` category"
     [mac-media]="mpv"
     [mac-browsers]="w3m"
-    [mac-productivity]="llama.cpp service"
+    [mac-productivity]="Herald, llama.cpp service"
 )
 
 # Loud default: a key here that is not a real category is a notice that can never
@@ -1801,6 +1801,7 @@ if [[ "$UNINSTALL" == "true" ]]; then
     echo "  rm -rf ~/.config/btop ~/.config/lazydocker ~/.config/mise"
     echo "  rm -rf ~/.config/topgrade.toml ~/.config/fastfetch ~/.config/pgcli"
     echo "  rm -rf ~/.config/direnv ~/.config/caddy ~/.config/kitty"
+    echo "  rm -rf ~/.config/broot ~/.config/zed ~/.herald"
     echo "  rm -f ~/.justfile ~/Media/photos/dracula-sakura.jpg"
     echo ""
     echo "# Remove Rust (installed via rustup):"
@@ -1809,6 +1810,8 @@ if [[ "$UNINSTALL" == "true" ]]; then
     echo "# Remove tools not managed by Homebrew:"
     echo "  rm -f ~/.local/bin/llama-cli ~/.local/bin/llama-server"
     echo "  rm -rf ~/.local/share/llama.cpp-vulkan ~/.local/share/llama.cpp"
+    echo "  rm -f ~/.local/bin/mullvad-tui"
+    echo "  rm -rf ~/.local/share/mullvad-tui"
     echo "  launchctl bootout gui/\$(id -u) ~/Library/LaunchAgents/dev.vixygrey.llama-cpp.plist 2>/dev/null || true"
     echo "  rm -f ~/Library/LaunchAgents/dev.vixygrey.llama-cpp.plist"
     echo ""
@@ -1892,7 +1895,6 @@ if [[ "$CLEANUP" == "true" ]]; then
         "formula:ikebastuz/wiper/wiper:wiper:removed"
         "formula:glab:glab:removed"
         "formula:doxx:doxx:removed"
-        "cask:mullvad-vpn:Mullvad VPN:removed:Mullvad VPN"
         "formula:oven-sh/bun/bun:bun:removed"
         "formula:dhth/tap/bmm:bmm:removed"
         "uv:manly:manly:removed"
@@ -1900,7 +1902,6 @@ if [[ "$CLEANUP" == "true" ]]; then
         "cask:gitkraken-cli:GitKraken CLI:removed"
         "formula:dhth/tap/act3:act3:removed"
         "npm:@antfu/ni:ni:removed"
-        "formula:broot:broot:removed"
         "formula:asciinema:asciinema:removed"
         "formula:jordond/tap/jolt:jolt:removed"
         "cask:visual-studio-code:Visual Studio Code:micro:Visual Studio Code"
@@ -1911,7 +1912,6 @@ if [[ "$CLEANUP" == "true" ]]; then
         "cask:pearcleaner:Pearcleaner:removed:Pearcleaner"
         "formula:dockutil:dockutil:removed"
         "formula:terminal-notifier:terminal-notifier:removed"
-        "formula:herald-email/herald/herald:herald:removed"
         "cask:shottr:Shottr:removed:Shottr"
         "cask:skim:Skim:removed:Skim"
         "formula:p7zip:p7zip:removed"
@@ -2010,7 +2010,6 @@ if [[ "$CLEANUP" == "true" ]]; then
         "cask:imageoptim:ImageOptim:oxipng + jpegoptim (CLI)"
         "cask:keka:Keka:ouch"
         "formula:entr:entr:watchexec"
-        "cask:zed:Zed:micro:Zed"
         "cask:slack:Slack:removed"
         "cask:telegram:Telegram:removed"
         "cask:notion-mail:Notion Mail:removed (retired by Notion):Notion Mail"
@@ -2061,7 +2060,7 @@ if [[ "$CLEANUP" == "true" ]]; then
                     else
                         info "Removing $display (replaced by $replacement)..."
                         case "$name" in
-                            claude|mullvad-vpn|gitkraken-cli|visual-studio-code|pearcleaner|shottr|skim|orbstack)
+                            claude|gitkraken-cli|visual-studio-code|pearcleaner|shottr|skim|orbstack)
                                 _cask_remove=(brew uninstall --cask --zap "$name")
                                 ;;
                             *)
@@ -2180,7 +2179,6 @@ if [[ "$CLEANUP" == "true" ]]; then
         "Visual Studio Code|$HOME/.vscode"
         "Visual Studio Code|$HOME/Library/Application Support/Code"
         "Claude|$HOME/Library/Application Support/Claude"
-        "Mullvad VPN|$HOME/Library/Application Support/Mullvad VPN"
         "Pearcleaner|$HOME/Library/Application Support/Pearcleaner"
         "Shottr|$HOME/Library/Application Support/Shottr"
         "Skim|$HOME/Library/Application Support/Skim"
@@ -2289,14 +2287,12 @@ if [[ "$CLEANUP" == "true" ]]; then
         "gk|$HOME/.local/share/GitKrakenCLI|removed"
         "gk|$HOME/.local/share/gk|removed"
         "gk|$HOME/.gitkraken|removed"
-        "broot|$HOME/.config/broot|removed"
         "asciinema|$HOME/.config/asciinema|removed"
         "jolt|$HOME/.config/jolt|removed"
         "copilot|$HOME/.copilot|omp"
         "turbo|$HOME/.cache/turbo|removed"
         "aichat|$HOME/.config/aichat|removed"
         "lighthouse|$HOME/.cache/lighthouse|removed"
-        "herald|$HOME/.herald|removed"
         "newsboat|$HOME/.newsboat|removed"
         "gws|$HOME/.config/gws|removed"
         "gcloud|$HOME/.config/gcloud|removed"
@@ -2411,7 +2407,6 @@ if [[ "$CLEANUP" == "true" ]]; then
         "dhth/tap|act3 and bmm"
         "jordond/tap|jolt"
         "ikebastuz/wiper|wiper"
-        "herald-email/herald|herald"
         "FelixKratz/formulae|SketchyBar"
         "bendews/tap|apw"
         "keith/formulae|reminders-cli"
@@ -3620,6 +3615,7 @@ brew_install "nushell" "nushell (structured data shell — pipelines output tabl
 brew_install "topgrade" "topgrade (update everything — brew, npm, pip, macOS, all at once)"
 brew_install "fastfetch" "fastfetch (quick system info display — faster neofetch)"
 brew_install "mprocs" "mprocs (TUI for running multiple dev processes)"
+brew_install "broot" "broot (directory tree and file-navigation TUI)"
 brew_install "nano" "nano (latest — better than macOS built-in)"
 brew_install "lnav" "lnav (advanced log file viewer — auto-format, SQL queries on logs)"
 brew_install "progress" "progress (coreutils progress viewer — cp, mv, dd, tar)"
@@ -3765,6 +3761,7 @@ brew_install "atuin" "atuin (replaces shell history — SQLite-backed, searchabl
 # Editors and terminals. micro is the editor for git messages, quick edits, and
 # full project work. It is nonmodal and keeps its key menu visible.
 brew_install "micro" "micro (non-modal terminal editor — \$EDITOR for git; on-screen key menu)"
+brew_cask_install "zed" "Zed (fast native code editor)"
 
 brew_cask_install "kitty" "Kitty (fast GPU-accelerated terminal)"
 brew_install "zellij" "zellij (modern terminal multiplexer — discoverable UI, layouts)"
@@ -3879,6 +3876,52 @@ banner "Mac Apps — System & Utilities"
 
 # UniFi Identity Endpoint removed (dropped from setup).
 brew_cask_install "lulu" "LuLu (outbound firewall)"
+# The app package also installs the supported `mullvad` CLI at /usr/local/bin.
+brew_cask_install "mullvad-vpn" "Mullvad VPN (privacy-focused VPN with bundled CLI)"
+
+# mullvad-tui publishes Linux packages only. Build the pinned source on macOS
+# against the exact Mullvad app submodule revision recorded by its release.
+progress
+MULLVAD_TUI_VERSION="v0.10.1"
+MULLVAD_TUI_COMMIT="b65adc39029c888e78777c759c3a717f4d3d3f4d"
+MULLVAD_TUI_BUILD_ID="$MULLVAD_TUI_VERSION@$MULLVAD_TUI_COMMIT"
+MULLVAD_TUI_BIN="$HOME/.local/bin/mullvad-tui"
+MULLVAD_TUI_STATE_DIR="$HOME/.local/share/mullvad-tui"
+MULLVAD_TUI_MARKER="$MULLVAD_TUI_STATE_DIR/.dev-setup-build"
+
+if [[ -x "$MULLVAD_TUI_BIN" ]] &&
+   [[ "$(/bin/cat "$MULLVAD_TUI_MARKER" 2>/dev/null || true)" == "$MULLVAD_TUI_BUILD_ID" ]]; then
+    warn "mullvad-tui $MULLVAD_TUI_VERSION — already installed"
+elif [[ -x "$MULLVAD_TUI_BIN" && ! -f "$MULLVAD_TUI_MARKER" ]]; then
+    warn "mullvad-tui already exists outside dev-setup — leaving it alone"
+elif [[ "$DRY_RUN" == "true" ]]; then
+    info "[DRY RUN] Would build mullvad-tui $MULLVAD_TUI_VERSION from pinned source"
+elif ! installed cargo || ! installed git; then
+    error "mullvad-tui needs cargo and git, but one is unavailable"
+else
+    _mullvad_tui_tmp="$(mktemp -d)"
+    _mullvad_tui_src="$_mullvad_tui_tmp/mullvad-tui"
+    info "Building mullvad-tui $MULLVAD_TUI_VERSION..."
+    if git clone --branch "$MULLVAD_TUI_VERSION" --depth 1 \
+           https://github.com/d10n/mullvad-tui.git "$_mullvad_tui_src" >> "$LOG_FILE" 2>&1 &&
+       [[ "$(git -C "$_mullvad_tui_src" rev-parse HEAD 2>/dev/null)" == "$MULLVAD_TUI_COMMIT" ]] &&
+       git -C "$_mullvad_tui_src" submodule update --init --depth 1 \
+           mullvadvpn-app >> "$LOG_FILE" 2>&1 &&
+       cargo build --release --locked -p mullvad-tui \
+           --manifest-path "$_mullvad_tui_src/Cargo.toml" >> "$LOG_FILE" 2>&1; then
+        mkdir -p "$(dirname "$MULLVAD_TUI_BIN")" "$MULLVAD_TUI_STATE_DIR"
+        cp "$_mullvad_tui_src/target/release/mullvad-tui" "$MULLVAD_TUI_BIN"
+        chmod 755 "$MULLVAD_TUI_BIN"
+        printf '%s\n' "$MULLVAD_TUI_BUILD_ID" > "$MULLVAD_TUI_MARKER"
+        success "mullvad-tui $MULLVAD_TUI_VERSION installed"
+    else
+        error "Failed to build mullvad-tui $MULLVAD_TUI_VERSION (check $LOG_FILE)"
+    fi
+    rm -rf "$_mullvad_tui_tmp"
+    unset _mullvad_tui_tmp _mullvad_tui_src
+fi
+unset MULLVAD_TUI_VERSION MULLVAD_TUI_COMMIT MULLVAD_TUI_BUILD_ID
+unset MULLVAD_TUI_BIN MULLVAD_TUI_STATE_DIR MULLVAD_TUI_MARKER
 
 # No Quick Look plugins. QLMarkdown and QLStephen were dropped in 7.11.0 — Finder
 # preview is not part of this workflow (files get read in the terminal), qlstephen was
@@ -3891,6 +3934,9 @@ fi  # mac-system
 # =============================================================================
 if should_run "mac-productivity"; then
 banner "Mac Apps — Productivity"
+# Herald core mail and calendar features need no AI runtime or API key.
+trust_tap herald-email/herald
+brew_install "herald-email/herald/herald" "Herald (terminal email and calendar)"
 
 # llama.cpp replaces Ollama as the local OMP provider. Homebrew's llama.cpp bottle
 # enables Metal on macOS, so build the pinned release from source with Vulkan only.
@@ -4980,6 +5026,165 @@ else
     unset _micro_merge_status
 fi
 unset MICRO_DEFAULTS
+
+# ---- Zed editor config ----
+# Zed reads this JSON from the XDG config root on macOS. Merge defaults below
+# existing settings so local editor choices win. The Oh My Pi ACP entry connects
+# Zed's Agent Panel to the same OMP runtime, auth, models, tools, and instructions.
+ZED_CONFIG="$HOME/.config/zed/settings.json"
+info "Configuring Zed (Dracula-Sakura, house fonts, editor defaults)..."
+ZED_DEFAULTS=$(cat <<'ZED_CONF'
+{
+  "ui_font_family": "Inter",
+  "ui_font_size": 15,
+  "buffer_font_family": "JetBrains Mono",
+  "buffer_font_size": 14,
+  "buffer_line_height": "comfortable",
+  "buffer_font_features": {
+    "calt": true,
+    "liga": true
+  },
+  "tab_size": 2,
+  "hard_tabs": false,
+  "format_on_save": "on",
+  "autosave": "on_focus_change",
+  "relative_line_numbers": true,
+  "scrollbar": {
+    "show": "auto",
+    "cursors": true,
+    "git_diff": true,
+    "search_results": true,
+    "selected_symbol": true
+  },
+  "indent_guides": {
+    "enabled": true,
+    "coloring": "indent_aware"
+  },
+  "inlay_hints": {
+    "enabled": true
+  },
+  "git": {
+    "inline_blame": {
+      "enabled": true
+    }
+  },
+  "terminal": {
+    "font_family": "JetBrainsMono Nerd Font",
+    "font_size": 13,
+    "blinking": "on"
+  },
+  "agent_servers": {
+    "Oh My Pi": {
+      "type": "custom",
+      "command": "omp",
+      "args": ["acp"],
+      "env": {}
+    }
+  },
+  "theme": {
+    "mode": "dark",
+    "light": "One Light",
+    "dark": "One Dark"
+  },
+  "theme_overrides": {
+    "One Dark": {
+      "background": "#282a36ff",
+      "surface.background": "#2f3144ff",
+      "elevated_surface.background": "#323448ff",
+      "border": "#4b4963ff",
+      "border.focused": "#d4b2ffff",
+      "element.hover": "#3b3d52ff",
+      "element.active": "#4b4963ff",
+      "element.selected": "#4b4963ff",
+      "text": "#f8f8f2ff",
+      "text.muted": "#a297cbff",
+      "text.placeholder": "#8a88c7ff",
+      "text.accent": "#ff9fe3ff",
+      "icon": "#ddd2f7ff",
+      "icon.muted": "#a297cbff",
+      "icon.accent": "#ff9fe3ff",
+      "status_bar.background": "#282a36ff",
+      "title_bar.background": "#282a36ff",
+      "title_bar.inactive_background": "#2f3144ff",
+      "toolbar.background": "#282a36ff",
+      "tab_bar.background": "#2f3144ff",
+      "tab.inactive_background": "#2f3144ff",
+      "tab.active_background": "#282a36ff",
+      "search.match_background": "#fff0a866",
+      "search.active_match_background": "#ff9fe366",
+      "panel.background": "#2f3144ff",
+      "editor.foreground": "#f8f8f2ff",
+      "editor.background": "#282a36ff",
+      "editor.gutter.background": "#282a36ff",
+      "editor.active_line.background": "#323448bf",
+      "editor.line_number": "#6272a4ff",
+      "editor.active_line_number": "#ffc2ecff",
+      "terminal.background": "#282a36ff",
+      "terminal.foreground": "#f8f8f2ff",
+      "terminal.bright_foreground": "#ffffffff",
+      "terminal.dim_foreground": "#a297cbff",
+      "terminal.ansi.black": "#282a36ff",
+      "terminal.ansi.bright_black": "#6272a4ff",
+      "terminal.ansi.red": "#ff7aa8ff",
+      "terminal.ansi.bright_red": "#ff94b8ff",
+      "terminal.ansi.green": "#8af7cfff",
+      "terminal.ansi.bright_green": "#a8ffdcff",
+      "terminal.ansi.yellow": "#ffcf93ff",
+      "terminal.ansi.bright_yellow": "#fff0a8ff",
+      "terminal.ansi.blue": "#9be7ffff",
+      "terminal.ansi.bright_blue": "#b9eeffff",
+      "terminal.ansi.magenta": "#ff9fe3ff",
+      "terminal.ansi.bright_magenta": "#ffc2ecff",
+      "terminal.ansi.cyan": "#8af7cfff",
+      "terminal.ansi.bright_cyan": "#9be7ffff",
+      "terminal.ansi.white": "#f8f8f2ff",
+      "terminal.ansi.bright_white": "#ffffffff",
+      "error": "#ff7aa8ff",
+      "warning": "#ffcf93ff",
+      "success": "#8af7cfff",
+      "info": "#9be7ffff",
+      "accents": [
+        "#ff9fe3ff",
+        "#d4b2ffff",
+        "#9be7ffff",
+        "#8af7cfff",
+        "#ffcf93ff",
+        "#ff7aa8ff"
+      ],
+      "syntax": {
+        "boolean": { "color": "#d4b2ffff" },
+        "comment": { "color": "#6272a4ff", "font_style": "italic" },
+        "comment.doc": { "color": "#8a88c7ff", "font_style": "italic" },
+        "constant": { "color": "#d4b2ffff" },
+        "function": { "color": "#8af7cfff" },
+        "keyword": { "color": "#ff9fe3ff" },
+        "number": { "color": "#d4b2ffff" },
+        "operator": { "color": "#ff9fe3ff" },
+        "property": { "color": "#ff7aa8ff" },
+        "punctuation": { "color": "#ddd2f7ff" },
+        "string": { "color": "#fff0a8ff" },
+        "type": { "color": "#9be7ffff" },
+        "variable": { "color": "#f8f8f2ff" },
+        "variable.parameter": { "color": "#ffcf93ff" }
+      }
+    }
+  }
+}
+ZED_CONF
+)
+if merge_json_defaults "$ZED_CONFIG" <<< "$ZED_DEFAULTS"; then
+    [[ "$DRY_RUN" == "true" ]] \
+        || success "Zed settings merged (Dracula-Sakura defaults and OMP ACP added; your changes kept)"
+else
+    _zed_merge_status=$?
+    if [[ "$_zed_merge_status" -eq 2 ]]; then
+        warn "Zed settings exist but jq is missing — not merging new defaults"
+    else
+        warn "Could not merge Zed settings — left unchanged: $ZED_CONFIG"
+    fi
+    unset _zed_merge_status
+fi
+unset ZED_DEFAULTS
 
 # Croft was retired in #542. Its merged user config can contain personal edits,
 # so only the explicit --cleanup path moves ~/.config/croft to the Trash.
@@ -7036,11 +7241,104 @@ proc_log:
 MPROCS_CONF
     configured "mprocs configured (scrollback, pane width, per-proc logs)"
 
-# ---- retired broot config ----
-remove_superseded_managed "$HOME/.config/broot/conf.hjson" \
-    "broot was removed from the setup" "(#542)"
-remove_superseded_managed "$HOME/.config/broot/skins/dracula-sakura.hjson" \
-    "broot was removed from the setup" "(#542)"
+# ---- broot config + Dracula-Sakura skin ----
+BROOT_CONFIG_DIR="$HOME/.config/broot"
+BROOT_CONF="$BROOT_CONFIG_DIR/conf.hjson"
+BROOT_SKIN="$BROOT_CONFIG_DIR/skins/dracula-sakura.hjson"
+    info "Creating broot configuration..."
+    write_managed "$BROOT_CONF" "#" <<'BROOT_CONF_HJSON'
+imports: [
+  "skins/dracula-sakura.hjson"
+]
+
+default_flags: "-g"
+BROOT_CONF_HJSON
+    write_managed "$BROOT_SKIN" "#" <<'BROOT_SKIN_HJSON'
+syntax_theme: MochaDark
+
+skin: {
+    default: rgb(248, 248, 242) none / rgb(221, 210, 247) rgb(40, 42, 54)
+    tree: rgb(138, 136, 199) none / rgb(98, 114, 164) none
+    parent: rgb(155, 231, 255) none bold / rgb(155, 231, 255) rgb(40, 42, 54) italic
+    file: none none / none none
+    directory: rgb(212, 178, 255) none bold / rgb(212, 178, 255) none
+    exe: rgb(138, 247, 207) none
+    link: rgb(255, 207, 147) none
+    pruning: rgb(162, 151, 203) none italic
+    perm__: rgb(162, 151, 203) none
+    perm_r: rgb(255, 207, 147) none
+    perm_w: rgb(255, 122, 168) none
+    perm_x: rgb(138, 247, 207) none
+    owner: rgb(155, 231, 255) none
+    group: rgb(212, 178, 255) none
+    count: rgb(255, 159, 227) rgb(50, 52, 72)
+    dates: rgb(162, 151, 203) none
+    sparse: rgb(255, 122, 168) none italic
+    content_extract: rgb(255, 122, 168) none italic
+    content_match: rgb(255, 240, 168) rgb(75, 73, 99) bold
+    git_branch: rgb(255, 159, 227) none
+    git_insertions: rgb(138, 247, 207) none
+    git_deletions: rgb(255, 122, 168) none
+    git_status_current: rgb(162, 151, 203) none
+    git_status_modified: rgb(255, 207, 147) none
+    git_status_staged: rgb(138, 247, 207) none
+    git_status_new: rgb(155, 231, 255) none bold
+    git_status_ignored: rgb(98, 114, 164) none
+    git_status_conflicted: rgb(255, 122, 168) none
+    git_status_other: rgb(255, 122, 168) none
+    selected_line: none rgb(75, 73, 99) / none rgb(50, 52, 72)
+    char_match: rgb(255, 240, 168) none bold
+    file_error: rgb(255, 122, 168) none
+    flag_label: rgb(162, 151, 203) none
+    flag_value: rgb(255, 159, 227) none bold
+    input: rgb(248, 248, 242) rgb(47, 49, 68) / rgb(221, 210, 247) rgb(47, 49, 68)
+    status_error: rgb(248, 248, 242) rgb(74, 48, 64)
+    status_job: rgb(40, 42, 54) rgb(255, 207, 147)
+    status_normal: rgb(162, 151, 203) rgb(47, 49, 68) / none none
+    status_italic: rgb(212, 178, 255) rgb(47, 49, 68) italic / none none
+    status_bold: rgb(255, 159, 227) rgb(47, 49, 68) bold / none none
+    status_code: rgb(248, 248, 242) rgb(47, 49, 68) / none none
+    status_ellipsis: rgb(248, 248, 242) rgb(47, 49, 68) bold / none none
+    purpose_normal: none none
+    purpose_italic: rgb(155, 231, 255) none italic
+    purpose_bold: rgb(155, 231, 255) none bold
+    purpose_ellipsis: none none
+    scrollbar_track: rgb(50, 52, 72) none / rgb(50, 52, 72) none
+    scrollbar_thumb: rgb(106, 93, 134) none / rgb(106, 93, 134) none
+    help_paragraph: none none
+    help_bold: rgb(255, 207, 147) none bold
+    help_italic: rgb(212, 178, 255) none italic
+    help_code: rgb(138, 247, 207) rgb(50, 52, 72)
+    help_headers: rgb(255, 194, 236) none bold
+    help_table_border: rgb(98, 114, 164) none
+    preview_title: rgb(248, 248, 242) rgb(40, 42, 54) / rgb(221, 210, 247) rgb(40, 42, 54)
+    preview: rgb(248, 248, 242) none / rgb(221, 210, 247) none
+    preview_line_number: rgb(138, 136, 199) rgb(40, 42, 54) / rgb(138, 136, 199) none
+    preview_separator: rgb(98, 114, 164) none / rgb(98, 114, 164) none
+    preview_match: none rgb(255, 240, 168) bold
+    diff_line_number: rgb(138, 136, 199) rgb(50, 52, 72)
+    diff_added: rgb(248, 248, 242) rgb(35, 59, 54)
+    diff_removed: rgb(248, 248, 242) rgb(74, 48, 64)
+    hex_null: rgb(138, 136, 199) none
+    hex_ascii_graphic: rgb(255, 207, 147) none
+    hex_ascii_whitespace: rgb(138, 247, 207) none
+    hex_ascii_other: rgb(155, 231, 255) none
+    hex_non_ascii: rgb(255, 122, 168) none
+    staging_area_title: rgb(248, 248, 242) rgb(40, 42, 54) / rgb(221, 210, 247) rgb(40, 42, 54)
+    mode_command_mark: rgb(40, 42, 54) rgb(255, 159, 227) bold
+    good_to_bad_0: rgb(138, 247, 207)
+    good_to_bad_1: rgb(138, 247, 207)
+    good_to_bad_2: rgb(155, 231, 255)
+    good_to_bad_3: rgb(212, 178, 255)
+    good_to_bad_4: rgb(255, 207, 147)
+    good_to_bad_5: rgb(255, 207, 147)
+    good_to_bad_6: rgb(255, 159, 227)
+    good_to_bad_7: rgb(255, 159, 227)
+    good_to_bad_8: rgb(255, 122, 168)
+    good_to_bad_9: rgb(255, 122, 168)
+}
+BROOT_SKIN_HJSON
+    configured "broot configured (Dracula-Sakura skin, git-aware defaults)"
 
 # ---- jqp config ----
 JQP_CONFIG="$HOME/.jqp.yaml"
@@ -8067,6 +8365,132 @@ CLIPSE_PLIST_EOF
     fi
 fi
 mark_done "config:clipse"
+
+# ---- email + calendar (herald) ----
+# Herald owns account, server, and credential data. This block manages only a local
+# theme asset and the `theme.name` selection. All other config values stay user-owned.
+HERALD_CONFIG_DIR="$HOME/.herald"
+HERALD_CONFIG="$HERALD_CONFIG_DIR/conf.yaml"
+HERALD_THEME_FILE="$HERALD_CONFIG_DIR/themes/dracula-sakura.yaml"
+    info "Writing herald Dracula-Sakura theme..."
+    write_generated "$HERALD_THEME_FILE" <<'HERALD_THEME_CONF'
+version: 1
+name: dracula-sakura
+display_name: Dracula Sakura
+inherits: herald-dark
+roles:
+  text.primary:
+    fg: "#f8f8f2"
+  text.muted:
+    fg: "#ddd2f7"
+  text.dim:
+    fg: "#a297cb"
+  chrome.title_bar:
+    fg: "#ffc2ec"
+    bg: "#282a36"
+    bold: true
+  chrome.tab_active:
+    fg: "#282a36"
+    bg: "#ff9fe3"
+    bold: true
+  chrome.tab_inactive:
+    fg: "#ddd2f7"
+    bg: "#323448"
+  chrome.status_bar:
+    fg: "#f8f8f2"
+    bg: "#2f3144"
+  chrome.hint_bar:
+    fg: "#ddd2f7"
+    bg: "#323448"
+  chrome.table_header:
+    fg: "#9be7ff"
+    bg: "#2f3144"
+    bold: true
+  focus.panel_border:
+    fg: "#4b4963"
+  focus.panel_border_focused:
+    fg: "#d4b2ff"
+  focus.selection_active:
+    fg: "#282a36"
+    bg: "#ff9fe3"
+    bold: true
+  focus.selection_inactive:
+    fg: "#f8f8f2"
+    bg: "#4b4963"
+  focus.visual_selection:
+    fg: "#282a36"
+    bg: "#d4b2ff"
+  metadata.label:
+    fg: "#a297cb"
+  metadata.sender:
+    fg: "#8af7cf"
+    bold: true
+  metadata.date:
+    fg: "#ddd2f7"
+  metadata.subject:
+    fg: "#fff0a8"
+    bold: true
+  metadata.tag:
+    fg: "#9be7ff"
+    bold: true
+  severity.info:
+    fg: "#9be7ff"
+  severity.success:
+    fg: "#8af7cf"
+  severity.warning:
+    fg: "#ffcf93"
+  severity.error:
+    fg: "#ff7aa8"
+  severity.destructive:
+    fg: "#fff5f5"
+    bg: "#7a2844"
+    bold: true
+  compose.accent:
+    fg: "#ff9fe3"
+  compose.attachment:
+    fg: "#9be7ff"
+  contacts.keyword_search:
+    fg: "#ff9fe3"
+  contacts.company:
+    fg: "#ddd2f7"
+  rules.title:
+    fg: "#ffc2ec"
+    bold: true
+  rules.selected:
+    fg: "#282a36"
+    bg: "#ff9fe3"
+HERALD_THEME_CONF
+    configured "herald theme asset written (Dracula-Sakura)"
+
+if [[ "$DRY_RUN" == "true" ]]; then
+    if [[ -f "$HERALD_CONFIG" ]]; then
+        info "[DRY RUN] Would set herald theme.name to dracula-sakura in $HERALD_CONFIG"
+    else
+        info "[DRY RUN] Would seed $HERALD_CONFIG with theme.name = dracula-sakura"
+    fi
+else
+    mkdir -p "$HERALD_CONFIG_DIR"
+    if [[ ! -f "$HERALD_CONFIG" ]]; then
+        printf 'theme:\n  name: dracula-sakura\n' > "$HERALD_CONFIG"
+        chmod 600 "$HERALD_CONFIG"
+        configured "herald config seeded (theme only; accounts remain unconfigured)"
+    elif installed yq; then
+        _herald_mode="$(stat -f '%Lp' "$HERALD_CONFIG" 2>/dev/null || true)"
+        _herald_tmp="$(mktemp)"
+        if yq eval '.theme.name = "dracula-sakura"' "$HERALD_CONFIG" > "$_herald_tmp" 2>/dev/null; then
+            mv "$_herald_tmp" "$HERALD_CONFIG"
+            [[ -n "$_herald_mode" ]] && chmod "$_herald_mode" "$HERALD_CONFIG" 2>/dev/null || true
+            configured "herald config merged (theme.name set; account data left untouched)"
+        else
+            rm -f "$_herald_tmp"
+            warn "Could not merge the herald theme name — left unchanged: $HERALD_CONFIG"
+        fi
+        unset _herald_mode _herald_tmp
+    else
+        warn "Could not merge the herald theme name because yq is unavailable"
+    fi
+fi
+# `herald --demo` previews the TUI without account or AI configuration.
 
 
 # ---- direnv config ----
@@ -11076,8 +11500,8 @@ unset _cachedir
 # and dies with "No virtual environment found" — and the quiet ones are worse:
 # `ps aux` and `dig +short` silently ignore the argument and return
 # differently-shaped output that looks correct. A human notices; a script or an AI
-# agent parses the garbage. The TUI launchers (lg, lzd, hq, y, n, clip, claws) and
-# the fzf-backed a/ff/rgf simply block when no terminal is attached.
+# agent parses the garbage. The TUI launchers (br, lg, lzd, hq, y, n, clip,
+# claws) and the fzf-backed a/ff/rgf simply block when no terminal is attached.
 #
 # Coding agents run commands through a non-interactive shell that still sources
 # this file, so they inherit these aliases without a guard. Gate on interactivity,
@@ -11113,6 +11537,20 @@ y() {
   IFS= read -r -d '' cwd < "$tmp" || true
   [[ "$cwd" != "$PWD" && -d "$cwd" ]] && builtin cd -- "$cwd"
   /bin/rm -f -- "$tmp"
+}
+# Broot's generated launcher applies `cd` and other shell commands in this shell.
+function br {
+    local cmd cmd_file code
+    cmd_file=$(mktemp)
+    if broot --outcmd "$cmd_file" "$@"; then
+        cmd=$(<"$cmd_file")
+        command rm -f "$cmd_file"
+        eval "$cmd"
+    else
+        code=$?
+        command rm -f "$cmd_file"
+        return "$code"
+    fi
 }
 alias jx="fx"          # fx interactive JSON viewer
 
@@ -11329,9 +11767,12 @@ echo "  [~/.aria2/aria2.conf]   16 connections, auto-resume"
 echo "  [~/.config/starship]    Dracula-Sakura prompt"
 echo "  [~/.config/atuin]       Fuzzy search, local-only"
 echo "  [~/.config/mprocs]      Multi-process TUI defaults + per-proc logs"
+echo "  [~/.config/broot]       Broot git-aware defaults and Dracula-Sakura skin"
 echo "  [~/.jqp.yaml]           jq playground theme overrides"
 echo "  [~/.omp/agent]          Oh My Pi settings, model routing, theme, protected-path guard"
 echo "  [~/.agents/skills]      Curated skills Oh My Pi reads natively"
+echo "  [~/.config/zed]         Zed house fonts, Dracula-Sakura theme, and OMP ACP agent"
+echo "  [~/.herald]             Herald email/calendar config and Dracula-Sakura theme"
 echo "  [llama.cpp]             Vulkan local model server on 127.0.0.1:8081"
 echo "  [~/.local/share/llama.cpp]  Verified Qwen2.5 Coder GGUF model"
 echo "  [leaf]                  Terminal Markdown previewer (live watch, fuzzy picker, Mermaid)"
@@ -11340,6 +11781,7 @@ echo "  [~/.config/gh-dash]     GitHub dashboard, Dracula-Sakura theme"
 echo "  [~/.config/stern]       K8s log tailing"
 echo "  [~/.config/zellij]      Modern terminal multiplexer with Dracula-Sakura theme"
 echo "  [~/.config/mpv]         Video player (hardware accel, save position)"
+echo "  [Mullvad]               VPN app, bundled CLI, and source-built mullvad-tui"
 echo "  [~/Media/photos/dracula-sakura.jpg]  Dracula-Sakura wallpaper asset"
 echo "  [cliamp]                Music player (self-configured; point at ~/Media/music)"
 echo "  [~/.config/git-cliff]   Changelog generator (conventional commits)"
@@ -11409,6 +11851,9 @@ Complete the manual permissions, credentials, and account steps after the script
 - [ ] Run `atuin register` to enable optional encrypted shell-history synchronization.
 - [ ] Run `infracost auth login` before you use infrastructure cost estimates.
 - [ ] Run `ngrok config add-authtoken <TOKEN>` before you create public tunnels.
+- [ ] Run `herald --demo`, then run `herald` to configure email and calendar accounts.
+- [ ] Run `mullvad account login <ACCOUNT_NUMBER>`, then open `mullvad-tui`.
+- [ ] Open Zed's Agent Panel and select **Oh My Pi** to confirm the `omp acp` connection.
 
 ## Services and storage
 - [ ] Run `surge service install`, then pair the browser extension with `surge service token`.
@@ -11460,6 +11905,7 @@ Every binding is on screen: the **key menu** sits along the bottom, and there ar
 |------|-----|
 | `omp` | Primary coding agent with hosted roles and local Vulkan fallback |
 | `llm` | One-shot prompts and shell pipelines |
+| Zed + `omp acp` | OMP inside Zed's Agent Panel through Agent Client Protocol |
 | `llama-server` | Local Qwen2.5 Coder endpoint on `127.0.0.1:8081` |
 
 ## Terminal multiplexer & tools
@@ -11471,6 +11917,8 @@ Every binding is on screen: the **key menu** sits along the bottom, and there ar
 | zellij mode keys | `Ctrl + p` pane · `Ctrl + t` tab · `Ctrl + n` resize · `Ctrl + s` scroll · `Ctrl + o` session · `Ctrl + g` lock (toggles) |
 | lazygit / lazydocker / lazysql / lazynpm / lazyssh / lazyrsync | Full-screen TUIs (arrows + on-screen keys) |
 | `y` Yazi | File manager |
+| `br` Broot | Directory browser that keeps shell directory changes |
+| `mullvad-tui` | Terminal controller for the Mullvad VPN app and daemon |
 | `cliamp` | Terminal music player (Winamp-style) — playback, EQ, cycle visualizers |
 | `atac` | API client TUI (or `atac request send <coll>/<req>` headless) |
 
@@ -11486,6 +11934,7 @@ The setup installs a Dracula-Sakura wallpaper at `~/Media/photos/dracula-sakura.
 
 ## Editor and AI
 - **micro** is the primary editor for files and commit messages.
+- **Zed** provides a native project editor with OMP available through ACP.
 - **OMP** provides coding-agent tools, hosted model roles, and a local fallback.
 - **llama.cpp** serves Qwen2.5 Coder 14B through Vulkan on `127.0.0.1:8081`.
 - **llm** provides one-shot prompts and shell pipelines through its Anthropic plugin.
@@ -11495,6 +11944,7 @@ The setup installs a Dracula-Sakura wallpaper at `~/Media/photos/dracula-sakura.
 - **Spotlight** provides global application, file, and web search.
 - **zellij** provides panes, tabs, and persistent terminal sessions.
 - `ff`, `rgf`, `s`, and `clip` provide file, search, and clipboard access.
+- **Broot** provides tree navigation through the directory-changing `br` launcher.
 - **atuin**, **starship**, **fzf**, and **zoxide** improve shell history, prompts, search, and navigation.
 
 ## Development workflow
@@ -11503,6 +11953,7 @@ The setup installs a Dracula-Sakura wallpaper at `~/Media/photos/dracula-sakura.
 - **harlequin**, **pgcli**, **mycli**, **usql**, and **sq** provide database clients.
 - **d2** and **Mermaid** provide diagrams as code.
 - **LibreOffice** and **poppler** support visual checks of Office documents.
+- **Herald** provides terminal email and calendar access.
 
 ## Data, media, and storage
 - **Yazi** provides file management, previews, and bulk tasks.
@@ -11516,6 +11967,7 @@ The setup installs a Dracula-Sakura wallpaper at `~/Media/photos/dracula-sakura.
 - **awscli**, **granted**, **OpenTofu**, **checkov**, and **trivy** support cloud infrastructure.
 - **gitleaks**, **detect-secrets**, **sops**, and **age** protect repository secrets.
 - **LuLu** provides the remaining graphical network security control.
+- **Mullvad VPN**, its bundled CLI, and **mullvad-tui** provide VPN control.
 
 ## Configuration flow
 The script writes managed configuration under `~/.config` and tool-specific directories.
@@ -13865,6 +14317,48 @@ echo "a,b,c" | choose -f ',' 0
 > Tip: `choose -1` (a negative index) grabs the last field on each line.
 
 
+## Restored Workstation Tools
+
+### `br` (Broot)
+Broot displays a searchable directory tree with previews and Git state.
+The `br` wrapper applies directory changes to the parent shell.
+
+```bash
+br
+br ~/Code
+```
+
+### `herald`
+Herald provides email and calendar workflows in the terminal.
+Its core features do not require an AI provider.
+
+```bash
+herald --demo
+herald
+```
+
+### `mullvad` and `mullvad-tui`
+The Mullvad app bundles the supported `mullvad` CLI.
+The script builds `mullvad-tui` v0.10.1 from pinned source for macOS.
+
+```bash
+mullvad account login <ACCOUNT_NUMBER>
+mullvad status
+mullvad-tui
+```
+
+Mullvad uses fixed application colors and exposes no theme setting.
+
+### Zed and Oh My Pi
+Zed uses Inter for its interface and JetBrains Mono for code.
+The script installs both fonts and applies Dracula-Sakura theme overrides.
+The Agent Panel starts OMP through the configured `omp acp` server.
+
+```bash
+zed .
+omp acp --help
+```
+
 ## GUI apps & under-the-hood
 
 These are the deliberate GUI survivors — apps kept because a terminal equivalent
@@ -14232,13 +14726,6 @@ if [[ "$DRY_RUN" == "true" ]]; then
     echo -e "${YELLOW}${BOLD}  This was a dry run — no changes were made.${NC}"
     echo -e "${YELLOW}  Run without --dry-run to install everything.${NC}"
     echo ""
-else
-    # macOS notification: success or failure summary
-    if [[ ${#FAILED_ITEMS[@]} -gt 0 ]]; then
-        notify_failure "${INSTALL_FAILED} item(s) failed — see $ERROR_LOG"
-    else
-        notify_success "Installed $INSTALL_SUCCESS, configured $INSTALL_CONFIGURED, skipped $INSTALL_SKIPPED in ${MINUTES}m ${SECONDS_REMAINING}s"
-    fi
 fi
 
 # All work is done; everything below is a convenience prompt. Release the lock HERE

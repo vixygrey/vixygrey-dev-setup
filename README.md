@@ -341,6 +341,7 @@ Faster, prettier, smarter replacements for standard Unix utilities.
 |------|-------------|
 | **leaf** | Terminal Markdown previewer -- live watch, fuzzy picker, Mermaid/LaTeX, inline mode |
 | **mprocs** | TUI for running multiple dev processes side by side -- frontend/backend/worker/watchers in one terminal surface |
+| **broot** | Directory tree and file-navigation TUI with the shell-integrated `br` launcher |
 | **watchexec** | Run commands on file changes -- supports globs, debouncing, process groups |
 | **pv** | Pipe viewer -- add progress bars to any piped command |
 | **parallel** | GNU parallel -- run commands in parallel across multiple cores |
@@ -424,6 +425,7 @@ Faster, prettier, smarter replacements for standard Unix utilities.
 | **atuin** | Replaces shell history with SQLite-backed, fuzzy-searchable database |
 | **mise** | Universal version manager -- Node, Python, Go, Ruby all in one (replaces nvm + pyenv + rbenv) |
 | **micro** | The `$EDITOR` -- git/gh/lazygit commit messages, leaf's Ctrl+E, quick edits. Non-modal, on-screen key menu (`Ctrl+G` for help), Dracula theme |
+| **Zed** | Fast native editor with Dracula-Sakura defaults and OMP in the Agent Panel through ACP |
 | **llm** | Simon Willison's CLI -- one-shot prompts, plugin ecosystem, SQLite logging, embeddings. Installed via `uv tool` with the Anthropic plugin; default model `anthropic/claude-sonnet-4-5` |
 | **omp** | Oh My Pi coding agent with LSP, DAP, subagents, and role-based routing across Codex, Gemini, Claude Sonnet, and local llama.cpp |
 | **chezmoi** | Dotfile manager -- backup and restore configs across machines |
@@ -467,6 +469,7 @@ Faster, prettier, smarter replacements for standard Unix utilities.
 | App | Description |
 |-----|-------------|
 | **LuLu** | Free open-source outbound firewall -- see what phones home |
+| **Mullvad VPN** | Privacy-focused VPN app with the bundled `mullvad` CLI and source-built `mullvad-tui` |
 
 ---
 
@@ -475,6 +478,7 @@ Faster, prettier, smarter replacements for standard Unix utilities.
 | App | Description |
 |-----|-------------|
 | **LibreOffice** | Headless office suite for validation and conversion of `.pptx`, `.xlsx`, and `.docx` files |
+| **Herald** | Terminal email and calendar client with a local Dracula-Sakura theme |
 | **rclone** | SFTP/S3/cloud file transfer from the terminal (replaced the Cyberduck GUI) |
 
 ---
@@ -519,6 +523,9 @@ Applied consistently across the machine, with built-in Dracula variants kept whe
 | **delta** | Dracula syntax theme for git diffs |
 | **Kitty** | Full 16-color Dracula-Sakura palette in `kitty.conf` |
 | **Yazi** | Dracula-Sakura manager, status, dialog, mode, and file-type colors in `theme.toml` |
+| **broot** | Full Dracula-Sakura skin in `~/.config/broot/skins/dracula-sakura.hjson` |
+| **Herald** | Full role-based Dracula-Sakura theme in `~/.herald/themes/dracula-sakura.yaml` |
+| **Zed** | Dracula-Sakura interface, syntax, and terminal colors through supported `theme_overrides` |
 | **jqp** | Dracula base theme with Dracula-Sakura override colors in `~/.jqp.yaml` |
 | **fzf** | Dracula colors in `FZF_DEFAULT_OPTS` |
 | **Starship** | Dracula-Sakura palette in `starship.toml` |
@@ -559,6 +566,7 @@ acceptance of a valid one meant anything.
 | `fx` | numbered built-in themes via `FX_THEME="0"`; no custom theme definition |
 | `procs` | indexed color only (`Color256`), so the palette can only use nearest terminal indices |
 | `atac`, `lazysql`, `viddy`, `kondo`, `cheznav`, `lazynpm`, `lazyrsync`, `lazyssh` | no theming found in their help or configuration schemas |
+| `mullvad-tui`, Mullvad VPN | Both clients use fixed application colors and expose no theme configuration |
 
 `stu` and `e1s` are themed but carry **no `--verify` row**. Both are TUIs with no
 validate mode, and without a TTY they panic inside crossterm before config parsing
@@ -705,6 +713,8 @@ The script generates config files with sensible defaults:
 | `~/.aria2/aria2.conf` | aria2 | 16 connections, auto-resume, BitTorrent, 64MB cache |
 | `~/.config/atuin/config.toml` | atuin | Fuzzy search, local-only, compact style, enter=paste (not execute), history filter (ls/cd/clear/exit), secrets filter |
 | `~/.config/mprocs/mprocs.yaml` | mprocs | 5k scrollback, wider proc list, per-process logs under the config dir |
+| `~/.config/broot/conf.hjson` | broot | Dracula-Sakura skin import and git-aware defaults |
+| `~/.config/broot/skins/dracula-sakura.hjson` | broot | Full terminal palette for browser, preview, status, git, and diff surfaces |
 | `~/.config/starship.toml` | Starship | Rich two-line prompt with a Dracula-Sakura palette, OS icon, git status with counts, Node/Python/Rust/Go/Docker/AWS/Terraform versions, battery warning, time, Nerd Font icons |
 | `~/.config/yt-dlp/config` | yt-dlp | Best quality mp4, aria2c downloader, metadata, subtitles |
 | `~/.config/gh-dash/config.yml` | gh-dash | PR/issue sections, Dracula-Sakura theme |
@@ -712,6 +722,9 @@ The script generates config files with sensible defaults:
 | `~/Library/Application Support/ngrok/ngrok.yml` | ngrok | Base config (add authtoken). ngrok's real macOS path — **not** `~/.config/ngrok`, which it never reads; a stranded copy there is removed on the next run |
 | `~/.config/caddy/Caddyfile` | Caddy | Development server template |
 | `~/.config/micro/settings.json` | micro | Dracula (`dracula-tc`), the $EDITOR for git/gh/lazygit and leaf's Ctrl+Ents, auto-format on save (ruff for Python, taplo/marksman/TS/CSS/bash/yaml servers, rust-analyzer, gopls) |
+| `~/.config/zed/settings.json` | Zed | House fonts, Dracula-Sakura overrides, editor defaults, and an `omp acp` external agent |
+| `~/.herald/conf.yaml` | Herald | User-owned account config with `theme.name` merged to select Dracula-Sakura |
+| `~/.herald/themes/dracula-sakura.yaml` | Herald | Managed Dracula-Sakura role palette |
 | `~/Media/photos/dracula-sakura.jpg` | Wallpaper | Bundled Dracula-Sakura wallpaper asset copied onto every provisioned machine |
 | _(cliamp)_ | cliamp | Music player — self-configured on first run (point at `~/Media/music`) |
 | `~/.config/zellij/config.kdl` | zellij | Dracula-Sakura theme, compact layout, mouse, Ctrl-a prefix |

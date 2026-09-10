@@ -14,6 +14,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - Added generated-output inventory checks for verification and parser coverage (#534).
 - Added an omp protected-path extension for native mutations to credentials, dependency trees, and repository metadata (#540).
 - Added an OMP provider-key template for Anthropic and Gemini credentials (#548).
+- Restored Herald, Broot, Mullvad VPN, `mullvad-tui`, and Zed with Dracula-Sakura styling where supported (#550).
+- Added Oh My Pi to Zed as an Agent Client Protocol server through `omp acp` (#550).
 
 ### Changed
 
@@ -47,6 +49,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - ClamAV seed files now use the installed `clamscan` binary check (#536).
 - Existing JSON merges now preserve malformed files without mutation (#533).
 - Removed Anthropic models from every omp fallback chain (#538).
+- Removed stale completion notifier calls that failed after successful real runs (#551).
 
 ## [7.23.0] - 2026-09-09
 
