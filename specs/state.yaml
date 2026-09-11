@@ -21,15 +21,15 @@ project:
 
 status:
   summary: >-
-    Issue 613 gates Homebrew diagnostics to new installations, package failures,
-    or the explicit --doctor flag. Issues 612 and 614 remain merged.
+    Issue 619 batches compatible Homebrew formula installs and falls back to
+    individual installs when a batch fails. Issues 613 and 614 remain merged.
 
 git:
-  branch: perf/615-brew-doctor-policy
-  hash: 79e559a
+  branch: perf/619-brew-batching
+  hash: 2580c84
 
 handoff:
-  last_step_completed: "Implemented issue 613 Homebrew doctor policy"
+  last_step_completed: "Implemented issue 619 Homebrew formula batching"
   open_decisions: []
   required_reading:
     - CONVENTIONS.md
