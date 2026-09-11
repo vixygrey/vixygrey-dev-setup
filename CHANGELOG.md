@@ -13,7 +13,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - Added runtime profiling for setup phases and installation helpers (#612).
 - Gate Homebrew metadata refreshes to once per day, with `--update-brew` for an explicit refresh (#614).
 - Gate Homebrew diagnostics to new installations, package failures, or `--doctor` (#613).
-- Batch compatible Homebrew formula installs while preserving individual fallback reporting (#619).
+- Batch compatible Homebrew formula and cask installs while preserving individual fallback reporting (#619).
 
 ### Removed
 

@@ -21,15 +21,16 @@ project:
 
 status:
   summary: >-
-    Issue 619 batches compatible Homebrew formula installs and falls back to
-    individual installs when a batch fails. Issues 613 and 614 remain merged.
+    Issue 619 batches compatible Homebrew formula and cask installs and falls
+    back to individual installs when a batch fails. Issues 613 and 614 remain
+    merged.
 
 git:
-  branch: perf/619-brew-batching
-  hash: 2580c84
+  branch: perf/619-brew-cask-batching
+  hash: b22a3b4
 
 handoff:
-  last_step_completed: "Implemented issue 619 Homebrew formula batching"
+  last_step_completed: "Implemented issue 619 Homebrew formula and cask batching"
   open_decisions: []
   required_reading:
     - CONVENTIONS.md
