@@ -1,30 +1,35 @@
 ## Target
 
-The Kiro extension declarations and the merged Kiro settings in `scripts/setup-dev-tools-mac.sh`.
+Bigpowers provisioning, OMP plugin state, generated documentation, and project scaffold language.
 
-## Dependents (5)
+## Dependents (8)
 
-- `--list` reads each `kiro_extension_install` declaration.
-- The progress counter counts each extension declaration.
-- The `dx` category installs Kiro and its extensions.
-- The `configs` category merges Kiro defaults into the user settings file.
-- `just preflight` checks helper behavior and generated JSON syntax.
+- `scripts/setup-dev-tools-mac.sh`: plugin installation helper and declaration.
+- `scripts/setup-dev-tools-mac.sh`: installed configuration verification target.
+- `scripts/setup-dev-tools-mac.sh`: OMP MCP denylist migration.
+- `scripts/setup-dev-tools-mac.sh`: generated project scaffold copy.
+- `scripts/setup-dev-tools-mac.sh`: generated machine reference copy.
+- `tests/helpers.bats`: plugin installation and MCP denylist behavior.
+- `README.md`: active tool inventory and OMP description.
+- `~/.omp/plugins`: installed plugin package, lock entry, and registry state.
 
 ## Affected Stories
 
-- Issue 594: Provision the installed Kiro extension set and defaults.
+- Issue #576: original OMP plugin installation.
+- Issue #580: redundant Bigpowers MCP server suppression.
+- Issue #596: complete removal from provisioning and the current machine.
 
 ## Test Coverage
 
-- `tests/helpers.bats` covers extension installation and dry-run behavior.
-- `tests/helpers.bats` covers the Kiro defaults merge and user-value preservation.
-- The generated-config CI job parses the Kiro settings JSON.
-- Gap: Kiro does not provide a headless validator for extension settings.
+- `tests/helpers.bats`: OMP plugin lifecycle and atomic MCP JSON updates.
+- `tests/generated-config.bats`: generated scaffold and configuration parsing.
+- `just dry-run`: complete generator behavior without machine mutation.
+- Gap: OMP supplies no isolated plugin root flag for an end-to-end uninstall check.
 
 ## Risk: Medium
 
-The settings merge is shared and user-owned. Invalid keys can fail silently, but local extension manifests provide the current schemas.
+The removal crosses package state, user-owned JSON, generated references, and existing-machine delivery.
 
 ## Recommended action
 
-Proceed with schema-derived defaults. Keep the existing defaults-first merge so that user values win.
+Proceed with a normal-run plugin retirement, an atomic denylist cleanup, focused helper checks, and a live uninstall on this machine.

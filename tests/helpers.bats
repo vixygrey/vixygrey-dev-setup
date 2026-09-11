@@ -698,12 +698,12 @@ EOF
     [[ "$output" == *"[DRY RUN] Would install Kiro extension: CodeLLDB"* ]]
 }
 
-@test "omp_plugin_install: installs once when the plugin is absent (#576)" {
+@test "retire_omp_plugin: uninstalls an installed plugin once (#596)" {
     run run_with_helpers '
         export LOG_FILE="$HOME/setup.log"
         export ERROR_LOG="$HOME/error.log"
         mkdir -p "$HOME/bin"
-        mkdir -p "$STATE_DIR"
+        touch "$HOME/plugin-installed"
         cat > "$HOME/bin/omp" <<"EOF"
 #!/usr/bin/env bash
 if [[ "$1 $2" == "plugin list" ]]; then
@@ -712,51 +712,50 @@ if [[ "$1 $2" == "plugin list" ]]; then
   else
     printf "{\"npm\":[]}\n"
   fi
-elif [[ "$1 $2 $3" == "plugin install bigpowers" ]]; then
-  touch "$HOME/plugin-installed"
-  printf "install\n" >> "$HOME/install.log"
+elif [[ "$1 $2 $3" == "plugin uninstall bigpowers" ]]; then
+  rm -f "$HOME/plugin-installed"
+  printf "uninstall\n" >> "$HOME/uninstall.log"
 fi
 EOF
-        printf "#!/usr/bin/env bash\nexit 0\n" > "$HOME/bin/bun"
-        chmod +x "$HOME/bin/omp" "$HOME/bin/bun"
+        chmod +x "$HOME/bin/omp"
         export PATH="$HOME/bin:$PATH"
 
-        omp_plugin_install bigpowers bigpowers "Bigpowers"
-        omp_plugin_install bigpowers bigpowers "Bigpowers"
+        retire_omp_plugin bigpowers "Bigpowers"
+        retire_omp_plugin bigpowers "Bigpowers"
         printf "installed=%s calls=%s\n" \
           "$([[ -f "$HOME/plugin-installed" ]] && echo yes || echo no)" \
-          "$(/usr/bin/wc -l < "$HOME/install.log" | tr -d " ")"
+          "$(/usr/bin/wc -l < "$HOME/uninstall.log" | tr -d " ")"
     '
     [ "$status" -eq 0 ]
-    [[ "$output" == *"installed=yes calls=1"* ]]
+    [[ "$output" == *"installed=no calls=1"* ]]
 }
 
-@test "omp_plugin_install: dry-run does not invoke the plugin manager (#576)" {
+@test "retire_omp_plugin: dry-run does not invoke the plugin manager (#596)" {
     run run_with_helpers '
         export LOG_FILE="$HOME/setup.log"
         export ERROR_LOG="$HOME/error.log"
         mkdir -p "$HOME/bin"
+        touch "$HOME/plugin-installed"
         cat > "$HOME/bin/omp" <<"EOF"
 #!/usr/bin/env bash
 if [[ "$1 $2" == "plugin list" ]]; then
-  printf "{\"npm\":[]}\n"
-elif [[ "$1 $2" == "plugin install" ]]; then
-  touch "$HOME/plugin-installed"
+  printf "{\"npm\":[{\"name\":\"bigpowers\",\"enabled\":true}]}\n"
+elif [[ "$1 $2" == "plugin uninstall" ]]; then
+  rm -f "$HOME/plugin-installed"
 fi
 EOF
-        printf "#!/usr/bin/env bash\nexit 0\n" > "$HOME/bin/bun"
-        chmod +x "$HOME/bin/omp" "$HOME/bin/bun"
+        chmod +x "$HOME/bin/omp"
         export PATH="$HOME/bin:$PATH"
         DRY_RUN=true
 
-        omp_plugin_install bigpowers bigpowers "Bigpowers"
-        [[ ! -e "$HOME/plugin-installed" ]]
+        retire_omp_plugin bigpowers "Bigpowers"
+        [[ -f "$HOME/plugin-installed" ]]
     '
     [ "$status" -eq 0 ]
-    [[ "$output" == *"[DRY RUN] Would install: Bigpowers"* ]]
+    [[ "$output" == *"[DRY RUN] Would uninstall retired OMP plugin: Bigpowers"* ]]
 }
 
-@test "disable_omp_mcp_server: preserves user config and is idempotent (#580)" {
+@test "remove_omp_mcp_denylist_entry: preserves user config and is idempotent (#596)" {
     run run_with_helpers '
         mcp_file="$HOME/.omp/agent/mcp.json"
         mkdir -p "$(dirname "$mcp_file")"
@@ -769,11 +768,11 @@ EOF
       "url": "https://example.test/mcp"
     }
   },
-  "disabledServers": ["personal-disabled"]
+  "disabledServers": ["personal-disabled", "bigpowers-mcp"]
 }
 EOF
-        disable_omp_mcp_server "$mcp_file" "bigpowers-mcp"
-        disable_omp_mcp_server "$mcp_file" "bigpowers-mcp"
+        remove_omp_mcp_denylist_entry "$mcp_file" "bigpowers-mcp"
+        remove_omp_mcp_denylist_entry "$mcp_file" "bigpowers-mcp"
         jq -c "{
           schema: .[\"\$schema\"],
           personal: .mcpServers.personal.url,
@@ -781,48 +780,45 @@ EOF
         }" "$mcp_file"
     '
     [ "$status" -eq 0 ]
-    [ "$output" = '{"schema":"https://example.test/mcp-schema.json","personal":"https://example.test/mcp","disabled":["personal-disabled","bigpowers-mcp"]}' ]
+    [ "$output" = '{"schema":"https://example.test/mcp-schema.json","personal":"https://example.test/mcp","disabled":["personal-disabled"]}' ]
 }
 
-@test "disable_omp_mcp_server: empty config fails closed without false success (#580)" {
+@test "remove_omp_mcp_denylist_entry: removes an empty denylist key (#596)" {
     run run_with_helpers '
         mcp_file="$HOME/.omp/agent/mcp.json"
         mkdir -p "$(dirname "$mcp_file")"
-        touch "$mcp_file"
-        disable_omp_mcp_server "$mcp_file" "bigpowers-mcp"
-        rc=$?
-        printf "rc=%s\nbytes=%s\n" "$rc" "$(wc -c < "$mcp_file" | tr -d " ")"
+        printf "%s\n" "{\"disabledServers\":[\"bigpowers-mcp\"]}" > "$mcp_file"
+        remove_omp_mcp_denylist_entry "$mcp_file" "bigpowers-mcp"
+        jq -c . "$mcp_file"
     '
     [ "$status" -eq 0 ]
-    [[ "$output" == *"rc=1"* ]]
-    [[ "$output" == *"bytes=0"* ]]
+    [ "$output" = '{}' ]
 }
 
-@test "disable_omp_mcp_server: malformed config remains byte-for-byte unchanged (#580)" {
+@test "remove_omp_mcp_denylist_entry: malformed config remains unchanged (#596)" {
     run run_with_helpers '
         mcp_file="$HOME/.omp/agent/mcp.json"
         mkdir -p "$(dirname "$mcp_file")"
         printf "%s\n" "{ invalid JSON" > "$mcp_file"
         before="$(shasum -a 256 "$mcp_file")"
-        disable_omp_mcp_server "$mcp_file" "bigpowers-mcp"
+        remove_omp_mcp_denylist_entry "$mcp_file" "bigpowers-mcp"
         rc=$?
         after="$(shasum -a 256 "$mcp_file")"
         printf "rc=%s\nsame=%s\n" "$rc" "$([[ "$before" == "$after" ]] && echo yes || echo no)"
     '
     [ "$status" -eq 0 ]
-    [[ "$output" == *"rc=1"* ]]
-    [[ "$output" == *"same=yes"* ]]
+    [[ "$output" == *$'rc=1\nsame=yes' ]]
 }
 
-@test "disable_omp_mcp_server: dry run reports and writes nothing (#580)" {
+@test "remove_omp_mcp_denylist_entry: dry-run writes nothing (#596)" {
     run run_with_helpers '
         export DRY_RUN=true
         mcp_file="$HOME/.omp/agent/mcp.json"
-        disable_omp_mcp_server "$mcp_file" "bigpowers-mcp"
+        remove_omp_mcp_denylist_entry "$mcp_file" "bigpowers-mcp"
         test -e "$mcp_file" && echo WROTE || echo CLEAN
     '
     [ "$status" -eq 0 ]
-    [[ "$output" == *"[DRY RUN] Would disable OMP MCP server: bigpowers-mcp"* ]]
+    [[ "$output" == *"[DRY RUN] Would remove OMP MCP denylist entry: bigpowers-mcp"* ]]
     [[ "$output" == *"CLEAN"* ]]
 }
 

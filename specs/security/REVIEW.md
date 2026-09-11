@@ -4,35 +4,34 @@ Status: PASS
 
 Date: 2026-09-11
 
-Branch: `feature/594-kiro-extensions`
+Branch: `feature/596-remove-bigpowers`
 
 ## Scope
 
-This review covers issue #594. The change installs 36 Kiro registry extensions and adds defaults for 35 configurable extensions.
+This review covers issue #596. The change retires the Bigpowers OMP plugin and removes its stale MCP denylist entry.
 
 ## Data Flow
 
-The extension identifiers and generated settings are repository constants.
+The retired plugin name and MCP server name are repository constants.
 
-The script passes each fixed identifier as one argument to `kiro --install-extension`.
+`retire_omp_plugin` reads OMP's registry before it passes the fixed plugin name to the native uninstall command.
 
-`merge_json_defaults` parses the generated defaults and existing user settings with `jq`.
+`remove_omp_mcp_denylist_entry` parses the user-owned JSON with `jq`.
 
-The defaults-first merge preserves user values. The final filter reasserts only the generated Dracula-Sakura theme name.
+The JSON update removes one exact string. It preserves MCP definitions and all unrelated denylist entries.
 
-No setting contains a credential, account identifier, profile name, network endpoint, or project path.
+The helper leaves malformed files unchanged. It does not create a missing file.
 
 ## Assessment
 
 | Area | Result | Evidence |
 |---|---|---|
-| Command injection | PASS | Extension identifiers are fixed quoted arguments. No user value enters a command string. |
+| Command injection | PASS | The quoted uninstall argument is a repository constant. |
 | Path traversal | PASS | This change adds no path derived from user input. |
-| Unsafe deserialization | PASS | `jq` rejects malformed settings before replacement. |
-| User data loss | PASS | The recursive merge preserves user values and nested language settings. |
-| Supply chain | PASS | Kiro installs the explicit registry identifiers through its native extension command. |
+| Unsafe deserialization | PASS | `jq` validates the object, array, and entry types before replacement. |
+| User data loss | PASS | The update removes one exact denylist value and preserves unrelated data. |
+| Supply chain | PASS | The generator stops installing the third-party package and its dedicated runtime. |
 | Secrets exposure | PASS | The diff contains no credential, private key, or account value. |
-| External content | PASS | XML remote resources and Markdown preview scripts are disabled by default. |
 
 ## Findings
 
@@ -40,8 +39,9 @@ No security finding reached confidence 8 of 10. No unresolved HIGH finding exist
 
 ## Verification
 
-- The generated configuration smoke check passed with 136 extension settings.
-- All 136 extension settings matched the installed extension manifests.
-- The live inventory matched all 36 declarations.
+- Six focused retirement checks passed.
+- The live OMP registry reports no plugins.
+- The installed OMP package manifest contains no plugin dependency.
+- The active MCP configuration is an empty object.
 - `just preflight` passed with 95 checks.
 - `just verify` reported zero failures.

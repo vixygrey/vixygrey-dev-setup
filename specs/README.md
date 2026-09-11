@@ -7,8 +7,7 @@ This directory holds **evolving state**. `CONVENTIONS.md` holds **normative rule
 When a fact is a standing rule, it belongs in one of those two files. See `CONVENTIONS.md`
 section 18 for the boundary.
 
-Most files here are written by a bigpowers skill rather than by hand. The owning skill is
-named in each file.
+Workflow tools and maintainers update these files. The owning workflow is named in each file.
 
 | Path | Holds | Written by |
 |---|---|---|

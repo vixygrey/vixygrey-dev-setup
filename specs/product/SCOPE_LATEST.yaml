@@ -1,25 +1,30 @@
 # What is in and out of scope for the current initiative.
 # Written by the `scope-work` skill (planning spine step 1 of 3).
 in_scope:
-  - Install all active registry extensions reported by Kiro on this machine.
-  - Add schema-valid defaults for extensions that expose configuration settings.
-  - Preserve user settings through the existing defaults-first merge.
-  - Update focused checks and user documentation.
+  - Stop installing and verifying the Bigpowers OMP plugin.
+  - Uninstall the plugin during normal setup runs on provisioned machines.
+  - Remove the stale Bigpowers MCP denylist entry without changing unrelated settings.
+  - Remove active Bigpowers references from generated documents and project scaffolds.
+  - Remove the installed plugin and stale denylist entry from this workstation.
+  - Update focused checks, user documentation, and the changelog.
 out_of_scope:
-  - Install orphaned extension directories that Kiro does not report as active.
-  - Store credentials, profiles, project paths, or other machine-specific values.
-  - Replace the generator-owned Dracula-Sakura extension with a registry package.
+  - Delete project specifications or architecture records that remain useful without Bigpowers.
+  - Rewrite historical changelog entries, closed bug records, or issue history.
+  - Delete unrelated first-party skills under ~/.agents/skills.
+  - Remove user-owned OMP configuration, sessions, credentials, or unrelated plugins.
 success_criteria:
-  - The dx category declares all 36 active registry extensions.
-  - The configs category merges curated defaults without replacing user values.
-  - Every configured key exists in an installed extension manifest.
-  - The repository preflight and focused Kiro checks pass.
+  - A normal setup run removes Bigpowers when OMP reports the plugin as installed.
+  - The setup script does not install or verify Bigpowers.
+  - The MCP cleanup removes only bigpowers-mcp from disabledServers.
+  - Active documentation and generated scaffolds do not require Bigpowers.
+  - OMP reports no installed Bigpowers plugin on this workstation.
+  - The repository preflight and installed configuration verification pass.
 
 notes:
   prior_art:
-    verdict: extend
+    verdict: replace
     findings:
-      - Kiro exposes Code OSS extension installation and listing commands.
-      - The existing helper already handles idempotency and dry-run behavior.
-      - Local extension manifests define configuration keys, types, enums, and defaults.
-      - The existing Kiro JSON merge preserves user settings and owns only the house theme.
+      - OMP provides a native plugin uninstall command.
+      - The plugin package lives only in the OMP user plugin root on this workstation.
+      - The legacy global npm copy is already absent and remains in cleanup history.
+      - The existing JSON helper pattern supports an atomic denylist migration.

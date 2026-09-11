@@ -318,7 +318,6 @@ Releases are hand-prepared in a PR, then **a tag push triggers the GitHub releas
 ## What the script provisions for OMP
 
 - **Skills:** `api-testing`, `d2-diagrams`, `inspect-machine`, and `office-layout-check` under `~/.agents/skills/`.
-- **Plugin:** Bigpowers under `~/.omp/plugins/`, enabled through OMP's plugin registry.
 - **Agent configuration:** managed instructions, theme, model roles, fallbacks, and the protected-paths extension under `~/.omp/agent/`.
 - **Local fallback:** llama.cpp with Qwen2.5 Coder 14B on port 8081 through the Vulkan backend.
 
