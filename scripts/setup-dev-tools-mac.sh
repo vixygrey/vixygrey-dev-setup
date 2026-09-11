@@ -1611,8 +1611,7 @@ kiro_extension_install() {
     else
         info "Installing Kiro extension: $name..."
         if kiro --install-extension "$extension" >> "$LOG_FILE" 2>&1; then
-            _kiro_extensions_ready=""
-            _KIRO_EXTENSIONS=""
+            _KIRO_EXTENSIONS="${_KIRO_EXTENSIONS}${_KIRO_EXTENSIONS:+$'\n'}$extension"
             success "$name installed in Kiro"
         else
             error "Failed to install Kiro extension: $name"
@@ -4046,10 +4045,44 @@ brew_install "micro" "micro (non-modal terminal editor — \$EDITOR for git; on-
 cargo_install "croft-software" croft \
     "Croft (VS Code-style terminal IDE)" --locked
 brew_cask_install "kiro" "Kiro (agent-centric native code editor)"
-
-# Kiro uses the Code OSS extension command-line interface.
+# Kiro uses the Code OSS extension command-line interface. This list mirrors the
+# active registry extensions on the maintainer's Kiro installation (#594).
+kiro_extension_install "amazonwebservices.aws-toolkit-vscode" "AWS Toolkit"
+kiro_extension_install "charliermarsh.ruff" "Ruff"
+kiro_extension_install "christian-kohler.path-intellisense" "Path Intellisense"
+kiro_extension_install "coenraads.bracket-pair-colorizer-2" "Bracket Pair Colorizer 2"
+kiro_extension_install "davidanson.vscode-markdownlint" "markdownlint"
+kiro_extension_install "dbaeumer.vscode-eslint" "ESLint"
+kiro_extension_install "dotnetdev-kr-custom.csharp" "C#"
+kiro_extension_install "ecmel.vscode-html-css" "HTML CSS Support"
+kiro_extension_install "editorconfig.editorconfig" "EditorConfig"
+kiro_extension_install "esbenp.prettier-vscode" "Prettier"
+kiro_extension_install "formulahendry.auto-rename-tag" "Auto Rename Tag"
+kiro_extension_install "gruntfuggly.todo-tree" "Todo Tree"
+kiro_extension_install "llvm-vs-code-extensions.lldb-dap" "LLDB DAP"
+kiro_extension_install "mhutchie.git-graph" "Git Graph"
+kiro_extension_install "mikestead.dotenv" "DotENV"
+kiro_extension_install "ms-azuretools.vscode-containers" "Container Tools"
+kiro_extension_install "ms-dotnettools.vscode-dotnet-runtime" ".NET Install Tool"
+kiro_extension_install "ms-pyright.pyright" "Pyright"
+kiro_extension_install "ms-python.debugpy" "Python Debugger"
+kiro_extension_install "ms-python.python" "Python"
+kiro_extension_install "ms-python.vscode-python-envs" "Python Environments"
+kiro_extension_install "oderwat.indent-rainbow" "indent-rainbow"
+kiro_extension_install "redhat.vscode-xml" "XML"
+kiro_extension_install "redhat.vscode-yaml" "YAML"
+kiro_extension_install "ritwickdey.liveserver" "Live Server"
+kiro_extension_install "rust-lang.rust" "Rust"
+kiro_extension_install "rust-lang.rust-analyzer" "rust-analyzer"
+kiro_extension_install "shardulm94.trailing-spaces" "Trailing Spaces"
+kiro_extension_install "shd101wyy.markdown-preview-enhanced" "Markdown Preview Enhanced"
+kiro_extension_install "streetsidesoftware.code-spell-checker" "Code Spell Checker"
+kiro_extension_install "stylelint.vscode-stylelint" "Stylelint"
 kiro_extension_install "tamasfe.even-better-toml" "Even Better TOML"
+kiro_extension_install "timonwong.shellcheck" "ShellCheck"
+kiro_extension_install "usernamehw.errorlens" "Error Lens"
 kiro_extension_install "vadimcn.vscode-lldb" "CodeLLDB"
+kiro_extension_install "zignd.html-css-class-completion" "CSS Class IntelliSense"
 
 brew_cask_install "kitty" "Kitty (fast GPU-accelerated terminal)"
 brew_install "zellij" "zellij (modern terminal multiplexer — discoverable UI, layouts)"
@@ -5623,7 +5656,195 @@ KIRO_DEFAULTS=$(cat <<'KIRO_CONF'
   "git.openRepositoryInParentFolders": "never",
   "telemetry.telemetryLevel": "off",
   "security.workspace.trust.enabled": true,
+  "aws.telemetry": false,
+  "aws.cloudformation.telemetry.enabled": false,
+  "aws.cloudformation.hover.enabled": true,
+  "aws.cloudformation.completion.enabled": true,
+  "aws.cloudformation.diagnostics.cfnLint.enabled": true,
+  "aws.cloudformation.diagnostics.cfnLint.lintOnChange": true,
+  "aws.cloudformation.diagnostics.cfnGuard.enabled": true,
+  "aws.cloudformation.diagnostics.cfnGuard.validateOnChange": true,
+  "aws.cloudformation.diagnostics.cfnGuard.enabledRulePacks": ["wa-Security-Pillar"],
+  "aws.samcli.enableCodeLenses": true,
+  "ruff.nativeServer": "on",
+  "ruff.lint.enable": true,
+  "ruff.organizeImports": true,
+  "ruff.fixAll": true,
+  "ruff.importStrategy": "fromEnvironment",
+  "ruff.showNotifications": "onError",
+  "path-intellisense.extensionOnImport": true,
+  "path-intellisense.autoSlashAfterDirectory": true,
+  "path-intellisense.showHiddenFiles": false,
+  "bracket-pair-colorizer-2.colors": [
+    "#FF9FE3",
+    "#D4B2FF",
+    "#9BE7FF",
+    "#8AF7CF",
+    "#FFCF93"
+  ],
+  "bracket-pair-colorizer-2.unmatchedScopeColor": "#FF7AA8",
+  "bracket-pair-colorizer-2.highlightActiveScope": true,
+  "markdownlint.run": "onType",
+  "markdownlint.config": {
+    "MD013": {
+      "line_length": 100,
+      "code_blocks": false,
+      "tables": false
+    }
+  },
+  "eslint.enable": true,
+  "eslint.run": "onType",
+  "eslint.format.enable": false,
+  "dotnet.formatting.organizeImportsOnFormat": true,
+  "dotnet.backgroundAnalysis.analyzerDiagnosticsScope": "openFiles",
+  "dotnet.navigation.navigateToDecompiledSources": true,
+  "csharp.debug.justMyCode": true,
+  "csharp.format.enable": true,
+  "omnisharp.enableEditorConfigSupport": true,
+  "omnisharp.enableDecompilationSupport": true,
+  "css.autoValidation": "Never",
+  "editorconfig.generateAuto": false,
+  "editorconfig.showMenuEntry": true,
+  "prettier.enable": true,
+  "prettier.requireConfig": false,
+  "prettier.useEditorConfig": true,
+  "prettier.printWidth": 100,
+  "prettier.endOfLine": "lf",
+  "auto-rename-tag.activationOnLanguage": [
+    "html",
+    "xml",
+    "javascript",
+    "javascriptreact",
+    "typescriptreact",
+    "vue",
+    "svelte"
+  ],
+  "todo-tree.general.tags": [
+    "BUG",
+    "FIXME",
+    "HACK",
+    "TODO",
+    "XXX",
+    "[ ]",
+    "[x]"
+  ],
+  "todo-tree.filtering.excludeGlobs": [
+    "**/.git/**",
+    "**/node_modules/**",
+    "**/vendor/**",
+    "**/dist/**",
+    "**/build/**"
+  ],
+  "todo-tree.tree.showCountsInTree": true,
+  "todo-tree.highlights.customHighlight": {
+    "BUG": {"icon": "bug", "foreground": "#FF7AA8"},
+    "FIXME": {"icon": "flame", "foreground": "#FF7AA8"},
+    "HACK": {"icon": "tools", "foreground": "#FFCF93"},
+    "TODO": {"icon": "check", "foreground": "#9BE7FF"}
+  },
+  "lldb-dap.captureSessionLogs": false,
+  "lldb-dap.disableASLR": false,
+  "lldb-dap.enableAutoVariableSummaries": true,
+  "git-graph.repository.fetchAndPrune": true,
+  "git-graph.repository.fetchAndPruneTags": true,
+  "git-graph.repository.onLoad.showCheckedOutBranch": true,
+  "git-graph.graph.colours": [
+    "#FF9FE3",
+    "#D4B2FF",
+    "#9BE7FF",
+    "#8AF7CF",
+    "#FFCF93",
+    "#FF7AA8"
+  ],
+  "containers.images.checkForOutdatedImages": false,
+  "containers.networks.showBuiltInNetworks": false,
+  "containers.enableComposeLanguageService": true,
+  "dotnetAcquisitionExtension.enableTelemetry": false,
+  "dotnetAcquisitionExtension.enablePreviewFeatures": false,
+  "python.analysis.autoImportCompletions": true,
+  "python.analysis.diagnosticMode": "openFilesOnly",
+  "python.analysis.typeCheckingMode": "standard",
+  "debugpy.debugJustMyCode": true,
+  "debugpy.showPythonInlineValues": true,
+  "python.defaultInterpreterPath": "python",
+  "python.languageServer": "Default",
+  "python.experiments.enabled": false,
+  "python.testing.promptToConfigure": false,
+  "python-envs.defaultEnvManager": "ms-python.python:venv",
+  "python-envs.defaultPackageManager": "ms-python.python:pip",
+  "python-envs.terminal.autoActivationType": "command",
+  "python-envs.alwaysUseUv": true,
+  "indentRainbow.colors": [
+    "rgba(255,159,227,0.08)",
+    "rgba(212,178,255,0.08)",
+    "rgba(155,231,255,0.08)",
+    "rgba(138,247,207,0.08)"
+  ],
+  "indentRainbow.errorColor": "rgba(255,122,168,0.35)",
+  "indentRainbow.tabmixColor": "rgba(255,207,147,0.35)",
+  "redhat.telemetry.enabled": false,
+  "xml.downloadExternalResources.enabled": false,
+  "xml.format.enabled": true,
+  "xml.format.maxLineWidth": 100,
+  "xml.validation.enabled": true,
+  "xml.validation.disallowDocTypeDecl": true,
+  "yaml.format.enable": true,
+  "yaml.format.printWidth": 100,
+  "yaml.validate": true,
+  "yaml.hover": true,
+  "yaml.completion": true,
+  "yaml.schemaStore.enable": true,
+  "liveServer.settings.port": 5500,
+  "liveServer.settings.host": "127.0.0.1",
+  "liveServer.settings.useLocalIp": false,
+  "liveServer.settings.cors": false,
+  "rust-client.autoStartRls": false,
+  "rust-client.disableRustup": true,
+  "rust-analyzer.check.command": "clippy",
+  "rust-analyzer.check.workspace": true,
+  "rust-analyzer.cargo.allTargets": true,
+  "rust-analyzer.procMacro.enable": true,
+  "rust-analyzer.inlayHints.closingBraceHints.minLines": 20,
+  "rust-analyzer.runnables.extraTestBinaryArgs": ["--nocapture"],
+  "trailing-spaces.trimOnSave": true,
+  "trailing-spaces.showStatusBarMessage": false,
+  "trailing-spaces.backgroundColor": "rgba(255,122,168,0.25)",
+  "markdown-preview-enhanced.scrollSync": true,
+  "markdown-preview-enhanced.liveUpdate": true,
+  "markdown-preview-enhanced.previewColorScheme": "editorColorScheme",
+  "markdown-preview-enhanced.mathRenderingOption": "KaTeX",
+  "markdown-preview-enhanced.mermaidTheme": "dark",
+  "markdown-preview-enhanced.enableScriptExecution": false,
+  "markdown-preview-enhanced.enablePreviewScripts": false,
+  "markdown-preview-enhanced.d2Path": "d2",
+  "cSpell.useGitignore": true,
+  "cSpell.language": "en",
+  "cSpell.diagnosticLevel": "Information",
+  "cSpell.minWordLength": 4,
+  "stylelint.enable": true,
+  "stylelint.run": "onType",
+  "stylelint.validate": ["css", "scss", "sass", "less", "postcss"],
+  "evenBetterToml.taplo.bundled": true,
+  "evenBetterToml.taplo.configFile.enabled": true,
+  "evenBetterToml.schema.enabled": true,
+  "evenBetterToml.schema.links": false,
+  "evenBetterToml.formatter.columnWidth": 100,
+  "evenBetterToml.formatter.trailingNewline": true,
+  "shellcheck.enable": true,
+  "shellcheck.enableQuickFix": true,
+  "shellcheck.run": "onType",
+  "shellcheck.useWorkspaceRootAsCwd": true,
+  "errorLens.enabled": true,
+  "errorLens.messageMaxChars": 180,
+  "errorLens.messageBackgroundMode": "message",
+  "errorLens.gutterIconsEnabled": true,
+  "lldb.consoleMode": "commands",
+  "lldb.evaluationTimeout": 5,
+  "lldb.showDisassembly": "auto",
+  "lldb.dereferencePointers": true,
+  "html-css-class-completion.enableEmmetSupport": true,
   "[markdown]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
     "editor.wordWrap": "on",
     "editor.quickSuggestions": {
       "comments": "off",
@@ -5632,14 +5853,60 @@ KIRO_DEFAULTS=$(cat <<'KIRO_CONF'
     }
   },
   "[python]": {
-    "editor.tabSize": 4
+    "editor.defaultFormatter": "charliermarsh.ruff",
+    "editor.tabSize": 4,
+    "editor.codeActionsOnSave": {
+      "source.fixAll.ruff": "explicit",
+      "source.organizeImports.ruff": "explicit"
+    }
   },
   "[go]": {
     "editor.tabSize": 4,
     "editor.insertSpaces": false
   },
   "[rust]": {
+    "editor.defaultFormatter": "rust-lang.rust-analyzer",
     "editor.tabSize": 4
+  },
+  "[toml]": {
+    "editor.defaultFormatter": "tamasfe.even-better-toml"
+  },
+  "[yaml]": {
+    "editor.defaultFormatter": "redhat.vscode-yaml"
+  },
+  "[xml]": {
+    "editor.defaultFormatter": "redhat.vscode-xml"
+  },
+  "[csharp]": {
+    "editor.defaultFormatter": "dotnetdev-kr-custom.csharp",
+    "editor.tabSize": 4
+  },
+  "[javascript]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "[javascriptreact]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "[typescript]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "[typescriptreact]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "[json]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "[jsonc]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "[html]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "[css]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "[scss]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
   }
 }
 KIRO_CONF

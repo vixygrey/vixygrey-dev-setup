@@ -1,15 +1,25 @@
 # What is in and out of scope for the current initiative.
 # Written by the `scope-work` skill (planning spine step 1 of 3).
-in_scope: []
-out_of_scope: []
-success_criteria: []
+in_scope:
+  - Install all active registry extensions reported by Kiro on this machine.
+  - Add schema-valid defaults for extensions that expose configuration settings.
+  - Preserve user settings through the existing defaults-first merge.
+  - Update focused checks and user documentation.
+out_of_scope:
+  - Install orphaned extension directories that Kiro does not report as active.
+  - Store credentials, profiles, project paths, or other machine-specific values.
+  - Replace the generator-owned Dracula-Sakura extension with a registry package.
+success_criteria:
+  - The dx category declares all 36 active registry extensions.
+  - The configs category merges curated defaults without replacing user values.
+  - Every configured key exists in an installed extension manifest.
+  - The repository preflight and focused Kiro checks pass.
 
 notes:
   prior_art:
     verdict: extend
     findings:
-      - The generator already installs rust-analyzer, yaml-language-server, jq, and fx.
-      - Homebrew provides bottles for the four requested Cargo subcommands without runtime dependencies.
-      - Kiro supports extension installation through its Code OSS command-line interface.
-      - Rustup provides Miri as a nightly toolchain component.
-      - npm publishes MCP Inspector as @modelcontextprotocol/inspector with the mcp-inspector command.
+      - Kiro exposes Code OSS extension installation and listing commands.
+      - The existing helper already handles idempotency and dry-run behavior.
+      - Local extension manifests define configuration keys, types, enums, and defaults.
+      - The existing Kiro JSON merge preserves user settings and owns only the house theme.
