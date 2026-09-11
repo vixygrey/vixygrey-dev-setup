@@ -1397,45 +1397,6 @@ merge_json_defaults() {
     return 1
 }
 
-# remove_omp_mcp_denylist_entry <mcp-file> <server-name>
-# Removes one retired server from OMP's user denylist without changing definitions
-# or other disabled servers. Invalid JSON fails closed (#596).
-remove_omp_mcp_denylist_entry() {
-    local file="$1" server="$2"
-    local current tmp
-    [[ "$server" =~ ^[A-Za-z0-9_.:-]+$ ]] || return 1
-    if [[ "$DRY_RUN" == "true" ]]; then
-        info "[DRY RUN] Would remove OMP MCP denylist entry: $server"
-        return 0
-    fi
-    [[ -f "$file" ]] || return 0
-    command -v jq &>/dev/null || return 2
-    current="$(mktemp)"
-    tmp="$(mktemp)"
-    cat "$file" > "$current"
-    if jq -e --arg server "$server" '
-        if type != "object" then
-            error("OMP MCP config must be an object")
-        elif (.disabledServers != null and (.disabledServers | type) != "array") then
-            error("disabledServers must be an array")
-        elif all((.disabledServers // [])[]; type == "string") then
-            .disabledServers = ((.disabledServers // []) | map(select(. != $server)))
-            | if .disabledServers == [] then del(.disabledServers) else . end
-        else
-            error("disabledServers entries must be strings")
-        end
-    ' "$current" > "$tmp" 2>/dev/null; then
-        if cmp -s "$tmp" "$file"; then
-            rm -f "$current" "$tmp"
-            return 0
-        fi
-        mv "$tmp" "$file"
-        rm -f "$current"
-        return 0
-    fi
-    rm -f "$current" "$tmp"
-    return 1
-}
 
 # normalize_editor_jsonc <input> <output>
 # Code OSS editors can rewrite settings with trailing commas. Remove only commas
@@ -1678,26 +1639,6 @@ kiro_extension_install() {
     fi
 }
 
-# retire_omp_plugin <plugin-name> <display-name>
-# Removes a plugin that this generator formerly installed. The live registry
-# proves ownership before the uninstall changes OMP's package root (#596).
-retire_omp_plugin() {
-    local plugin="$1" name="$2" plugins=""
-    installed omp || return 0
-    plugins="$(omp plugin list --json 2>> "$LOG_FILE")" || return 1
-    [[ "$plugins" =~ \"name\"[[:space:]]*:[[:space:]]*\"$plugin\" ]] || return 0
-    if [[ "$DRY_RUN" == "true" ]]; then
-        info "[DRY RUN] Would uninstall retired OMP plugin: $name"
-        return 0
-    fi
-    info "Uninstalling retired OMP plugin: $name..."
-    if omp plugin uninstall "$plugin" >> "$LOG_FILE" 2>&1; then
-        success "$name removed from OMP"
-    else
-        error "Failed to uninstall retired OMP plugin: $name"
-        return 1
-    fi
-}
 
 
 # go_install <import-path@ver> <cmd-name> <description>
@@ -2150,7 +2091,6 @@ if [[ "$CLEANUP" == "true" ]]; then
         "formula:bendews/tap/apw:apw:removed"
         "formula:keith/formulae/reminders-cli:reminders-cli:removed"
         "npm:@anthropic-ai/claude-code:Claude Code CLI:omp"
-        "npm:bigpowers:bigpowers (global copy):OMP plugin"
         "formula:bun:Bun (former OMP plugin runtime):removed"
         "formula:ikebastuz/wiper/wiper:wiper:removed"
         "formula:glab:glab:removed"
@@ -4301,7 +4241,6 @@ go_install golang.org/x/tools/gopls@latest gopls "gopls (Go language server)"
 # OMP ships as a prebuilt native binary.
 trust_tap can1357/tap
 brew_install "can1357/tap/omp" "omp (Oh My Pi — workload-routed agent harness)"
-retire_omp_plugin "bigpowers" "Bigpowers"
 
 # Clipboard history
 # clipse — TUI clipboard manager (replaces Raycast clipboard history). Not on Homebrew.
@@ -11952,7 +11891,6 @@ OMP_RETIRED_EXTENSIONS=(
 # config.yml is canonical. Preserve config.yaml when omp already uses that name.
 OMP_CONFIG_FILE="$OMP_DIR/config.yml"
 OMP_ENV_FILE="$OMP_DIR/.env"
-OMP_MCP_FILE="$OMP_DIR/mcp.json"
 OMP_LSP_FILE="$OMP_DIR/lsp.yml"
 [[ -f "$OMP_DIR/config.yaml" && ! -f "$OMP_CONFIG_FILE" ]] && OMP_CONFIG_FILE="$OMP_DIR/config.yaml"
 
@@ -11976,7 +11914,6 @@ if [[ "$DRY_RUN" == "true" ]]; then
     info "[DRY RUN] Would write omp LSP policy -> $OMP_LSP_FILE"
     info "[DRY RUN] Would retire obsolete omp skills and extensions"
     info "[DRY RUN] Would write the protected-paths guard -> $OMP_EXTENSIONS_DIR/protected-paths.ts"
-    info "[DRY RUN] Would remove Bigpowers' stale MCP denylist entry (#596)"
 else
     mkdir -p "$OMP_THEME_DIR" "$OMP_SKILLS_DIR" "$OMP_EXTENSIONS_DIR" "$AGENTS_SKILLS"
     for _skill in "${OMP_RETIRED_SKILLS[@]}"; do
@@ -12492,13 +12429,6 @@ OMP_CONFIG_CONF
         warn "omp: yq missing — skipping config.yml merge"
     fi
 
-    # The retired plugin no longer discovers this server. Remove only its stale
-    # denylist entry and preserve every user definition and unrelated entry.
-    if remove_omp_mcp_denylist_entry "$OMP_MCP_FILE" "bigpowers-mcp"; then
-        configured "omp: retired Bigpowers MCP denylist entry removed"
-    else
-        warn "omp: could not update $OMP_MCP_FILE"
-    fi
 
     # The seed above owns only the initial template. OMP reads any pasted values
     # directly, while later setup runs leave the credential file byte-for-byte intact.

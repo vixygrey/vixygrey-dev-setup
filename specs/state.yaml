@@ -21,15 +21,15 @@ project:
 
 status:
   summary: >-
-    The generator and this workstation use GPT-5.6-Luna for the default OMP role.
-    Specialized roles, retry policy, and provider-to-local fallbacks remain unchanged.
+    Bigpowers provisioning and generated OMP migration code are removed. The setup
+    retains the OMP runtime and the remaining model routing and provider settings.
 
 git:
-  branch: feature/598-luna-default
-  hash: 3f4431e
+  branch: chore/610-remove-bigpowers
+  hash: b08d3a6
 
 handoff:
-  last_step_completed: "Implemented and verified issue 598"
+  last_step_completed: "Implemented and verified issue 610"
   open_decisions: []
   required_reading:
     - CONVENTIONS.md
