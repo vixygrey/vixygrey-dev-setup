@@ -6,6 +6,12 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 > Release notes for 7.0.0–7.1.1 live in [GitHub Releases](https://github.com/vixygrey/vixygrey-dev-setup/releases) (auto-generated). This file resumes hand-written notes at 7.2.0.
 
+## [Unreleased]
+
+### Added
+
+- Added four Cargo tools, Miri, MCP Inspector, and two Kiro extensions for Rust and TOML development (#592).
+
 ## [8.0.0] - 2026-09-11
 
 Version 8.0.0 rebuilds the workstation around OMP, local Vulkan inference, and a smaller set of maintained tools.
@@ -1449,6 +1455,7 @@ Minor release rolling up two follow-up PRs to v4.0.0: a tool-discoverability aud
 - Document all new tools in `GUIDE-MACOS.md`, `GUIDE-LINUX.md`, `GUIDE-WINDOWS.md` with usage examples (#5)
 - Update `SHORTCUTS-*.md` with new alias rows and a "Terminal Apps" section (#5)
 
+[Unreleased]: https://github.com/vixygrey/vixygrey-dev-setup/compare/v8.0.0...HEAD
 [8.0.0]: https://github.com/vixygrey/vixygrey-dev-setup/compare/v7.23.0...v8.0.0
 [7.23.0]: https://github.com/vixygrey/vixygrey-dev-setup/compare/v7.22.0...v7.23.0
 [7.22.0]: https://github.com/vixygrey/vixygrey-dev-setup/compare/v7.21.0...v7.22.0

@@ -161,6 +161,7 @@ and prefer tagged release artifacts with the published SHA256 checksum.
 | **Rust** | Rust toolchain via rustup (rustc, cargo, etc.) |
 | **pnpm** | Fast, disk-efficient npm alternative |
 | **jq** | Lightweight command-line JSON processor |
+| **Miri** | Nightly Rust interpreter for undefined behavior checks |
 | **direnv** | Per-directory environment variables (auto-loads `.envrc`) |
 | **cmake** | Cross-platform build system generator |
 | **pkg-config** | Helper tool for compiling libraries |
@@ -426,7 +427,7 @@ The generated OMP policy selects Pyright for Python type intelligence and Ruff f
 | **Bun** | Package manager used by OMP to install and update plugin packages |
 | **micro** | The `$EDITOR` -- git/gh/lazygit commit messages, leaf's Ctrl+E, quick edits. Non-modal, on-screen key menu (`Ctrl+G` for help), Dracula theme |
 | **Croft** | VS Code-style terminal IDE with LSP, debugging, source control, PDF previews, and a Dracula-Sakura theme |
-| **Kiro** | Native agent-centric editor with practical defaults and a named Dracula-Sakura theme |
+| **Kiro** | Native agent-centric editor with Dracula-Sakura, Even Better TOML, and CodeLLDB extensions |
 | **omp** | Oh My Pi coding agent with LSP, DAP, subagents, and role-based routing across Codex, Gemini, Claude Sonnet, and local llama.cpp |
 | **Bigpowers** | OMP plugin with workflow skills, slash commands, and git safety guards |
 | **chezmoi** | Dotfile manager -- backup and restore configs across machines |
@@ -435,6 +436,11 @@ The generated OMP policy selects Pyright for Python type intelligence and Ruff f
 | **Spotlight + `ff`/`rgf`/`s`** | Global application search plus terminal file and content search. Clipse provides clipboard history |
 | **TypeScript** | Typed JavaScript -- installed globally for scripts and tooling |
 | **tsx** | Run TypeScript files directly without a build step |
+| **cargo-watch** | Run Cargo commands after source changes |
+| **cargo-nextest** | Fast Rust test runner with clearer output |
+| **cargo-expand** | Show Rust source after macro expansion |
+| **cargo-edit** | Manage Cargo dependencies from the command line |
+| **MCP Inspector** | Inspect and debug Model Context Protocol servers |
 
 ---
 
