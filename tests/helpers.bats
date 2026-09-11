@@ -1182,3 +1182,46 @@ EOF
     [[ "$output" == *$'# personal comment\ntheme = "dracula-sakura"\n[ui]'* ]]
     [[ "$output" == *"show_hints = false"* ]]
 }
+
+@test "node_version_at_least enforces the MCP Inspector engine floor (#600)" {
+    run run_with_helpers '
+        mkdir -p "$HOME/bin"
+        cat > "$HOME/bin/node" <<"EOF"
+#!/usr/bin/env bash
+printf "%s\n" "$NODE_VERSION"
+EOF
+        chmod +x "$HOME/bin/node"
+        export PATH="$HOME/bin:$PATH"
+        export NODE_VERSION=v22.18.0
+        node_version_at_least 22.19.0 && echo TOO_OLD || echo TOO_OLD_REJECTED
+        export NODE_VERSION=v22.19.0
+        node_version_at_least 22.19.0 && echo FLOOR_ACCEPTED || echo FLOOR_REJECTED
+        export NODE_VERSION=v24.18.1
+        node_version_at_least 22.19.0 && echo NEWER_ACCEPTED || echo NEWER_REJECTED
+    '
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"TOO_OLD_REJECTED"* ]]
+    [[ "$output" == *"FLOOR_ACCEPTED"* ]]
+    [[ "$output" == *"NEWER_ACCEPTED"* ]]
+}
+
+@test "sudo_run adds non-interactive mode under --no-prompt (#600)" {
+    run run_with_helpers '
+        sudo() { printf "sudo %s\n" "$*" > "$HOME/sudo.log"; [[ "$1" == "-n" ]]; }
+        NO_PROMPT=true
+        sudo_run true
+        cat "$HOME/sudo.log"
+    '
+    [ "$status" -eq 0 ]
+    [ "$output" = "sudo -n true" ]
+}
+
+@test "should_run skips privileged work even when --only selects it (#600)" {
+    run run_with_helpers '
+        ONLY_CATEGORIES=(macos-defaults)
+        PRIVILEGED_WORK_SKIPPED=true
+        should_run macos-defaults && echo RUN || echo SKIP
+    '
+    [ "$status" -eq 0 ]
+    [ "$output" = "SKIP" ]
+}
