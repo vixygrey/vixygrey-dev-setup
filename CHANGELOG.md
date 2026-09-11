@@ -27,7 +27,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - Fixed MCP Inspector installation by enforcing its Node.js 22.19.0 engine requirement (#600).
 - Fixed MCP Inspector installation by pinning a release with resolvable npm dependencies (#602).
 - Fixed `--no-prompt` so unavailable administrator access skips privileged work without prompting (#600).
-- Fixed `source ~/.zshrc` after an interactive reload by removing the stale `rm` alias before defining the non-interactive wrapper (#604).
+- Fixed zsh reload parsing, restored the default `rm` command, and prevented repeated gopls and Leaf completion installation (#606).
 
 ## [8.0.0] - 2026-09-11
 

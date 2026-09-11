@@ -3823,16 +3823,32 @@ if should_run "terminal-productivity"; then
 banner "Terminal Productivity"
 
 brew_install "leaf-markdown-viewer" "leaf (terminal Markdown previewer — live watch, fuzzy picker, Mermaid/LaTeX, inline mode)"
-# leaf shell completions: `leaf --auto-complete` auto-detects the login shell
-# (from $SHELL) and installs completions; a shell restart activates them. One-time.
-if [[ "$DRY_RUN" != "true" ]] && command -v leaf &>/dev/null && ! is_done "config:leaf-completions"; then
-    if leaf --auto-complete >> "$LOG_FILE" 2>&1; then
+# Leaf installs completions into this path. Generate the file without letting Leaf
+# append an unmanaged source line to ~/.zshrc; the managed shell block loads it.
+LEAF_COMPLETION="$HOME/.local/share/leaf/completions/_leaf"
+if [[ "$DRY_RUN" == "true" ]]; then
+    if [[ -s "$LEAF_COMPLETION" ]]; then
+        warn "[DRY RUN] leaf shell completions already installed"
+    else
+        info "[DRY RUN] Would install leaf shell completions"
+    fi
+elif [[ -s "$LEAF_COMPLETION" ]]; then
+    warn "leaf shell completions already installed"
+elif command -v leaf &>/dev/null; then
+    info "Installing leaf shell completions..."
+    mkdir -p "$(dirname "$LEAF_COMPLETION")"
+    LEAF_COMPLETION_TMP="$(mktemp "$(dirname "$LEAF_COMPLETION")/.leaf.XXXXXX")"
+    if leaf --auto-complete zsh:dump > "$LEAF_COMPLETION_TMP" 2>> "$LOG_FILE" &&
+       [[ -s "$LEAF_COMPLETION_TMP" ]]; then
+        mv "$LEAF_COMPLETION_TMP" "$LEAF_COMPLETION"
         success "leaf shell completions installed (restart shell to activate)"
     else
+        rm -f "$LEAF_COMPLETION_TMP"
         warn "Could not install leaf completions (run manually: leaf --auto-complete)"
     fi
-    mark_done "config:leaf-completions"
+    unset LEAF_COMPLETION_TMP
 fi
+unset LEAF_COMPLETION
 brew_install "watchexec" "watchexec (run commands on file changes — better entr)"
 brew_install "pv" "pv (pipe viewer — progress bars for pipes)"
 brew_install "gum" "gum (shell script UI toolkit — prompts, spinners, confirmations)"
@@ -4278,12 +4294,7 @@ fi
 unset OMNISHARP_VERSION OMNISHARP_PREFIX OMNISHARP_APP OMNISHARP_BIN OMNISHARP_LINK
 unset OMNISHARP_ASSET OMNISHARP_SHA256 OMNISHARP_URL _omnisharp_resolved
 
-if [[ "$DRY_RUN" != "true" ]]; then
-    if installed go; then
-        info "Installing gopls..."
-        go install golang.org/x/tools/gopls@latest >> "$LOG_FILE" 2>&1 || warn "Could not install gopls"
-    fi
-fi
+go_install golang.org/x/tools/gopls@latest gopls "gopls (Go language server)"
 
 # pi was retired in #513. omp replaces its agent runtime, web search, local model
 # discovery, approval policies, and one-shot prompt use.
@@ -12702,6 +12713,10 @@ autoload -Uz bashcompinit && bashcompinit   # bash-style complete (aws_completer
 _compcache() { local f="$_cachedir/comp_$1"; shift; [[ -r "$f" ]] || "$@" > "$f" 2>/dev/null; [[ -r "$f" ]] && source "$f"; }
 command -v gh            &>/dev/null && _compcache gh gh completion -s zsh
 command -v aws_completer &>/dev/null && complete -C aws_completer aws
+# Leaf writes its completion script through the setup block. It must load after
+# compinit, which defines the compdef command that the script uses.
+[[ -r "$HOME/.local/share/leaf/completions/_leaf" ]] &&
+    source "$HOME/.local/share/leaf/completions/_leaf"
 unset -f _compcache
 unset _cachedir
 
@@ -12715,9 +12730,8 @@ unset _cachedir
 # replacements immediately below.
 #
 # That same reasoning applies throughout: none of the replacements accept the flags
-# the original takes. `du -sh` prints dust's help text, `rm -rf` is rejected by
-# trash, `top -l1` is an unknown argument, `pip install X` becomes `uv pip install`
-# and dies with "No virtual environment found" — and the quiet ones are worse:
+# the original takes. `du -sh` prints dust's help text, `top -l1` is an unknown
+# argument, and `pip install X` becomes `uv pip install X` and dies with "No virtual environment found".
 # `ps aux` and `dig +short` silently ignore the argument and return
 # differently-shaped output that looks correct. A human notices; a script or an AI
 # agent parses the garbage. The TUI launchers (br, lg, lzd, hq, y, n, clip,
@@ -12727,6 +12741,9 @@ unset _cachedir
 # this file, so they inherit these aliases without a guard. Gate on interactivity,
 # plus the agent variable as a backstop for an agent that invokes `zsh -i`.
 # Gating the section also covers aliases added later.
+# Remove the legacy managed alias on reload. Do not change a user-defined alias.
+[[ "$(alias rm 2>/dev/null)" == "rm=trash" ]] && unalias rm
+
 if [[ -o interactive && -z "$AI_AGENT" ]]; then
     alias ls="eza --icons"
     alias ll="eza -la --icons --git"
@@ -12741,7 +12758,6 @@ if [[ -o interactive && -z "$AI_AGENT" ]]; then
     alias dig="doggo"
     alias watch="viddy"
     alias hexdump="hexyl"
-    alias rm="trash"
 
 # Short aliases for modern tools (don't override builtins)
 alias f="fd"           # fd (fast find)
@@ -12872,35 +12888,6 @@ alias brewsnap="export-brewfile"
 alias update="topgrade"
 alias sysinfo="fastfetch"
 
-else
-    # ---- Non-interactive / agent shell ------------------------------------
-    # Everything above is an interactive convenience and stays out of here, so
-    # `pip`, `wget`, `du`, `ps` and friends resolve to the real binaries. The
-    # replacements do not accept the originals' flags — `pip install X` becomes
-    # `uv pip install X` and dies with "No virtual environment found", `wget
-    # -qO- URL` throws — and the TUI launchers (lg, lzd, hq, y, n, clip, claws)
-    # would block a shell with no terminal attached.
-    #
-    # A prior interactive source can leave the `rm` alias active in this shell.
-    # Remove it before parsing the function, or zsh treats `rm()` as alias text.
-    unalias rm 2>/dev/null || true
-    rm() {
-        local -a paths
-        local arg endopts=0
-        for arg in "$@"; do
-            if (( endopts )); then
-                paths+=("$arg")
-            elif [[ "$arg" == "--" ]]; then
-                endopts=1
-            elif [[ "$arg" == -* ]]; then
-                continue
-            else
-                paths+=("$arg")
-            fi
-        done
-        (( ${#paths[@]} )) || return 0
-        command trash "${paths[@]}"
-    }
 fi
 
 # -- mise, last word on PATH --------------------------------------------------
