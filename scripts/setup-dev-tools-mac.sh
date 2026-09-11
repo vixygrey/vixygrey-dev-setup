@@ -940,6 +940,10 @@ ensure_mcp_inspector_node() {
         _mise_node_bin="$(dirname "$_mise_node")"
         export PATH="$_mise_node_bin:$PATH"
         hash -r 2>/dev/null || true
+        # npm_global_install may have snapshotted another Node installation before
+        # this function selected the MCP Inspector runtime.
+        _npm_snapshot_ready=
+        _NPM_GLOBALS=
     fi
     unset _mise_node _mise_node_bin
     node_version_at_least "22.19.0"
@@ -2756,11 +2760,11 @@ if [[ "$CLEANUP" == "true" ]]; then
     for entry in "${DEPRECATED_TAPS[@]}"; do
         _tap="${entry%%|*}"
         _why="${entry#*|}"
-        if ! brew tap 2>/dev/null | grep -qix "$_tap"; then
+        if ! brew tap 2>/dev/null | grep -ix "$_tap" >/dev/null; then
             ((CLEANUP_SKIPPED++))
             continue
         fi
-        if brew list --full-name 2>/dev/null | grep -qi "^${_tap}/"; then
+        if brew list --full-name 2>/dev/null | grep -i "^${_tap}/" >/dev/null; then
             info "Keeping tap $_tap — still provides installed packages"
             ((CLEANUP_SKIPPED++))
             continue
@@ -4165,11 +4169,11 @@ brew_install "cargo-nextest" "cargo-nextest (fast Rust test runner)"
 brew_install "cargo-expand" "cargo-expand (show macro-expanded Rust source)"
 brew_install "cargo-edit" "cargo-edit (Cargo dependency commands)"
 
+if [[ "$MCP_INSPECTOR_NODE_READY" == "true" ]] && ! ensure_mcp_inspector_node; then
+    error "MCP Inspector requires Node.js 22.19.0 or newer (check $LOG_FILE)"
+    MCP_INSPECTOR_NODE_READY=false
+fi
 if installed npm; then
-    if [[ "$MCP_INSPECTOR_NODE_READY" == "true" ]] && ! ensure_mcp_inspector_node; then
-        error "MCP Inspector requires Node.js 22.19.0 or newer (check $LOG_FILE)"
-        MCP_INSPECTOR_NODE_READY=false
-    fi
     npm_global_install "typescript-language-server" "TypeScript and JavaScript language server"
     npm_global_install "vscode-langservers-extracted" "HTML, CSS, JSON, and ESLint language servers"
     npm_global_install "bash-language-server" "Bash language server"
@@ -4177,7 +4181,10 @@ if installed npm; then
     npm_global_install "pyright" "Pyright language server"
     npm_global_install "@biomejs/biome" "Biome linter and language server"
     if [[ "$MCP_INSPECTOR_NODE_READY" == "true" ]]; then
-        npm_global_install "@modelcontextprotocol/inspector" "MCP Inspector"
+        # Inspector 2.6.0 requests hono@^4.13.7, which is not published. Pin
+        # the last known-good release and resolve its dependencies before the
+        # Vite 8.3.0 metadata introduced the same unavailable-version failure.
+        npm_global_install "@modelcontextprotocol/inspector@2.5.0" "MCP Inspector" "--before=2026-09-08"
     else
         progress
     fi
