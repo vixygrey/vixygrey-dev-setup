@@ -12881,10 +12881,9 @@ else
     # -qO- URL` throws — and the TUI launchers (lg, lzd, hq, y, n, clip, claws)
     # would block a shell with no terminal attached.
     #
-    # One deliberate exception: dropping rm="trash" would make agent deletions
-    # permanent. Keep the recoverable-delete net but tolerate the flags trash
-    # rejects — strip options, pass the paths. `--` ends option parsing, as with
-    # real rm; with no paths left it is a no-op rather than an error.
+    # A prior interactive source can leave the `rm` alias active in this shell.
+    # Remove it before parsing the function, or zsh treats `rm()` as alias text.
+    unalias rm 2>/dev/null || true
     rm() {
         local -a paths
         local arg endopts=0
