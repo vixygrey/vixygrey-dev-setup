@@ -203,6 +203,8 @@ INTERACTIVE=false
 NO_PROMPT=false
 SKIP_CATEGORIES=()
 ONLY_CATEGORIES=()
+MCP_INSPECTOR_NODE_READY=true
+PRIVILEGED_WORK_SKIPPED=false
 
 # prompt_ask <prompt> <answer-when-no-prompt>   (answer on stdout)
 # Ask, or take the given answer without blocking when --no-prompt is set. Every
@@ -839,6 +841,12 @@ if [[ "$INTERACTIVE" == "true" && "$NO_PROMPT" == "true" ]]; then
     exit 1
 fi
 
+# Homebrew 6 defaults to confirmation prompts for installs. Disable them when
+# --no-prompt promises an unattended run.
+if [[ "$NO_PROMPT" == "true" ]]; then
+    export HOMEBREW_NO_ASK=1
+fi
+
 # -- Interactive mode (must run before validation, populates ONLY_CATEGORIES) --
 if [[ "$INTERACTIVE" == "true" ]]; then
     if [[ ${#ONLY_CATEGORIES[@]} -gt 0 ]] || [[ ${#SKIP_CATEGORIES[@]} -gt 0 ]]; then
@@ -867,6 +875,7 @@ config_split_notice
 # -- Category filtering -------------------------------------------------------
 should_run() {
     local category="$1"
+    [[ "$category" == "macos-defaults" && "$PRIVILEGED_WORK_SKIPPED" == "true" ]] && return 1
 
     # If --only is set, only run matching categories
     if [[ ${#ONLY_CATEGORIES[@]} -gt 0 ]]; then
@@ -886,6 +895,56 @@ should_run() {
 
 # -- Utility functions --------------------------------------------------------
 installed() { command -v "$1" &>/dev/null; }
+# Run a command with administrator privileges without allowing an unexpected
+# password prompt when --no-prompt is active.
+sudo_run() {
+    if [[ "$NO_PROMPT" == "true" ]]; then
+        sudo -n "$@"
+    else
+        sudo "$@"
+    fi
+}
+
+# node_version_at_least <required-version>
+# Return success when the active Node.js version meets the required semver floor.
+node_version_at_least() {
+    local required="$1" current
+    local req_major req_minor req_patch cur_major cur_minor cur_patch
+    current="$(node --version 2>/dev/null)" || return 1
+    current="${current#v}"
+    IFS=. read -r cur_major cur_minor cur_patch <<< "$current"
+    IFS=. read -r req_major req_minor req_patch <<< "$required"
+    cur_major="${cur_major:-0}"
+    cur_minor="${cur_minor:-0}"
+    cur_patch="${cur_patch:-0}"
+    req_major="${req_major:-0}"
+    req_minor="${req_minor:-0}"
+    req_patch="${req_patch:-0}"
+    (( 10#$cur_major > 10#$req_major ||
+       (10#$cur_major == 10#$req_major && 10#$cur_minor > 10#$req_minor) ||
+       (10#$cur_major == 10#$req_major && 10#$cur_minor == 10#$req_minor &&
+        10#$cur_patch >= 10#$req_patch) ))
+}
+
+# ensure_mcp_inspector_node
+# Make the Node.js engine required by MCP Inspector available through mise.
+ensure_mcp_inspector_node() {
+    [[ "$DRY_RUN" == "true" ]] && return 0
+    node_version_at_least "22.19.0" && return 0
+    installed mise || return 1
+    info "Installing Node.js 22.19.0 or newer for MCP Inspector..."
+    mise install node@22.19.0 >> "$LOG_FILE" 2>&1 &&
+        mise use --global node@22.19.0 >> "$LOG_FILE" 2>&1 || return 1
+    _mise_node="$(mise which node 2>/dev/null || true)"
+    if [[ -n "$_mise_node" ]]; then
+        _mise_node_bin="$(dirname "$_mise_node")"
+        export PATH="$_mise_node_bin:$PATH"
+        hash -r 2>/dev/null || true
+    fi
+    unset _mise_node _mise_node_bin
+    node_version_at_least "22.19.0"
+}
+
 
 # _verify_output_has <extended-regex> <cmd> [args...]
 # Test a command's output against a pattern WITHOUT a pipe. Used by --verify.
@@ -1892,6 +1951,9 @@ preflight() {
         fi
     elif sudo -n true 2>/dev/null; then
         checked "Admin privileges available"
+    elif [[ "$NO_PROMPT" == "true" ]]; then
+        warn "Skipping privileged work — --no-prompt prevents a sudo password prompt"
+        PRIVILEGED_WORK_SKIPPED=true
     else
         info "Admin privileges are needed for:"
         while IFS= read -r reason; do
@@ -1907,7 +1969,6 @@ preflight() {
         SUDO_KEEPALIVE_PID=$!
     fi
 
-    # Homebrew health check (warn early if there are issues)
     if command -v brew &>/dev/null; then
         if ! brew doctor >> "$LOG_FILE" 2>&1; then
             warn "brew doctor found issues (may cause install failures — see $LOG_FILE)"
@@ -2317,16 +2378,21 @@ if [[ "$CLEANUP" == "true" ]]; then
                                 continue
                             fi
                         fi
+                        # Homebrew records a fully-qualified cask but removes it by
+                        # its short token. This matters for custom casks that share
+                        # a basename with a core cask.
+                        _cask_token="${name##*/}"
                         case "$name" in
                             claude|gitkraken-cli|visual-studio-code|pearcleaner|shottr|skim|orbstack)
-                                _cask_remove=(brew uninstall --cask --zap "$name")
+                                _cask_remove=(brew uninstall --cask --zap "$_cask_token")
                                 ;;
                             *)
-                                _cask_remove=(brew uninstall --cask "$name")
+                                _cask_remove=(brew uninstall --cask "$_cask_token")
                                 ;;
                         esac
                         if "${_cask_remove[@]}" >> "$LOG_FILE" 2>&1; then success "$display removed"; else error "Failed to remove $display"; fi
-                        unset _cask_remove
+                        unset _cask_remove _cask_token
+
                         ((CLEANUP_COUNT++))
                     fi
                 elif [[ -d "/Applications/$appname.app" ]]; then
@@ -2338,7 +2404,7 @@ if [[ "$CLEANUP" == "true" ]]; then
                         if installed trash; then
                             trash "/Applications/$appname.app" >> "$LOG_FILE" 2>&1 && success "$display trashed" || error "Failed to remove $display"
                         else
-                            sudo rm -rf "/Applications/$appname.app" 2>/dev/null && success "$display removed" || error "Failed to remove $display"
+                            sudo_run rm -rf "/Applications/$appname.app" 2>/dev/null && success "$display removed" || error "Failed to remove $display"
                         fi
                         ((CLEANUP_COUNT++))
                     fi
@@ -2353,7 +2419,7 @@ if [[ "$CLEANUP" == "true" ]]; then
                         info "[DRY RUN] Would remove: $display (replaced by $replacement)"
                     else
                         info "Removing $display (replaced by $replacement)..."
-                        sudo rm -rf "/Applications/$appname.app" 2>/dev/null || true
+                        sudo_run rm -rf "/Applications/$appname.app" 2>/dev/null || true
                         ((CLEANUP_COUNT++))
                         success "$display removed"
                     fi
@@ -2362,7 +2428,7 @@ if [[ "$CLEANUP" == "true" ]]; then
                         info "[DRY RUN] Would remove: $display (replaced by $replacement)"
                     else
                         info "Removing $display (replaced by $replacement)..."
-                        sudo rm -rf "/Applications/$appname.app" 2>/dev/null || true
+                        sudo_run rm -rf "/Applications/$appname.app" 2>/dev/null || true
                         ((CLEANUP_COUNT++))
                         success "$display removed"
                     fi
@@ -4100,13 +4166,21 @@ brew_install "cargo-expand" "cargo-expand (show macro-expanded Rust source)"
 brew_install "cargo-edit" "cargo-edit (Cargo dependency commands)"
 
 if installed npm; then
+    if [[ "$MCP_INSPECTOR_NODE_READY" == "true" ]] && ! ensure_mcp_inspector_node; then
+        error "MCP Inspector requires Node.js 22.19.0 or newer (check $LOG_FILE)"
+        MCP_INSPECTOR_NODE_READY=false
+    fi
     npm_global_install "typescript-language-server" "TypeScript and JavaScript language server"
     npm_global_install "vscode-langservers-extracted" "HTML, CSS, JSON, and ESLint language servers"
     npm_global_install "bash-language-server" "Bash language server"
     npm_global_install "yaml-language-server" "YAML language server"
     npm_global_install "pyright" "Pyright language server"
     npm_global_install "@biomejs/biome" "Biome linter and language server"
-    npm_global_install "@modelcontextprotocol/inspector" "MCP Inspector"
+    if [[ "$MCP_INSPECTOR_NODE_READY" == "true" ]]; then
+        npm_global_install "@modelcontextprotocol/inspector" "MCP Inspector"
+    else
+        progress
+    fi
 else
     progress; progress; progress; progress; progress; progress; progress  # keep progress bar accurate when npm unavailable
 fi
@@ -7920,8 +7994,8 @@ configured "Misc macOS defaults configured"
 # -- Screensaver & display sleep timing --
 # Screensaver kicks in at 45 min, display sleep at 2hr (charger) / 1hr 15min (battery)
 defaults -currentHost write com.apple.screensaver idleTime -int 2700 2>/dev/null || true
-sudo pmset -c displaysleep 120 2>/dev/null || true  # charger: 2 hours
-sudo pmset -b displaysleep 75 2>/dev/null || true   # battery: 1hr 15min
+sudo_run pmset -c displaysleep 120 2>/dev/null || true  # charger: 2 hours
+sudo_run pmset -b displaysleep 75 2>/dev/null || true   # battery: 1hr 15min
 configured "Screensaver at 45min, display sleep at 2hr (charger) / 1h15m (battery)"
 
 # Restart Dock to apply all Dock/Mission Control changes
@@ -10975,7 +11049,7 @@ defaults write com.apple.desktopservices DSDontWriteUSBStores -bool true
 chflags nohidden ~/Library 2>/dev/null || true
 
 # Show the /Volumes folder
-sudo chflags nohidden /Volumes 2>/dev/null || true
+sudo_run chflags nohidden /Volumes 2>/dev/null || true
 
 # Expand save panel by default
 defaults write NSGlobalDomain NSNavPanelExpandedStateForSaveMode -bool true
@@ -11116,13 +11190,13 @@ else
     info "Enabling Touch ID for sudo..."
     # sudo_local is the Apple-recommended way (survives macOS updates)
     if [[ ! -f "$SUDO_TOUCHID" ]]; then
-        sudo bash -c 'cat > /etc/pam.d/sudo_local <<EOF
+        sudo_run bash -c 'cat > /etc/pam.d/sudo_local <<EOF
 # sudo_local: local config for sudo (survives macOS updates)
 auth       sufficient     pam_tid.so
 EOF'
         configured "Touch ID for sudo enabled (use fingerprint instead of password)"
     else
-        sudo bash -c 'echo "auth       sufficient     pam_tid.so" >> /etc/pam.d/sudo_local'
+        sudo_run bash -c 'echo "auth       sufficient     pam_tid.so" >> /etc/pam.d/sudo_local'
         configured "Touch ID for sudo enabled"
     fi
 fi
@@ -11141,15 +11215,15 @@ while IFS= read -r service; do
         if echo "$current_dns" | grep -q "1.1.1.1"; then
             warn "DNS already configured for $service"
         else
-            sudo networksetup -setdnsservers "$service" 1.1.1.1 1.0.0.1 9.9.9.9 8.8.8.8
+            sudo_run networksetup -setdnsservers "$service" 1.1.1.1 1.0.0.1 9.9.9.9 8.8.8.8
             DNS_SET=true
         fi
     fi
 done <<< "$NETWORK_SERVICES"
 if [[ "$DNS_SET" == "true" ]]; then
     # Flush DNS cache
-    sudo dscacheutil -flushcache 2>/dev/null || true
-    sudo killall -HUP mDNSResponder 2>/dev/null || true
+    sudo_run dscacheutil -flushcache 2>/dev/null || true
+    sudo_run killall -HUP mDNSResponder 2>/dev/null || true
     configured "DNS set to Cloudflare (1.1.1.1) + Quad9 (9.9.9.9) + Google (8.8.8.8)"
 fi
 
@@ -11253,11 +11327,11 @@ configured "Trackpad preferences captured (tap-to-click off, two-finger secondar
 # success. The machine ended at 30 on both power sources while the run claimed
 # 2 hours (#508). Display sleep is owned by the earlier block; this one owns
 # halfdim, which is a genuinely separate setting.
-sudo pmset -a halfdim 1 2>/dev/null || true
+sudo_run pmset -a halfdim 1 2>/dev/null || true
 configured "Half-brightness step before display sleep enabled"
 
 # ---- Disable startup sound ----
-sudo nvram StartupMute=%01 2>/dev/null || true
+sudo_run nvram StartupMute=%01 2>/dev/null || true
 configured "Startup sound disabled"
 
 # ---- Reduce transparency (slight performance boost, easier to read) ----
@@ -11272,7 +11346,7 @@ configured "Bluetooth shown in menu bar"
 # Marked applied-once, because the matching -get needs admin to read and would
 # therefore cost the password the sudo predicate exists to avoid (#502). Mark
 # only on success, so a run that never obtained sudo does not claim it.
-if sudo systemsetup -setusingnetworktime on 2>/dev/null; then
+if sudo_run systemsetup -setusingnetworktime on 2>/dev/null; then
     priv_mark "systemsetup:networktime"
     configured "Network time enabled (timezone auto-detected)"
 else

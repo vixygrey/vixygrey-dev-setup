@@ -27,9 +27,14 @@ case "$*" in
     "list --cask surgedm/tap/surge")
         [[ -e "$TEST_TMP/surgedm-installed" ]]
         ;;
-    "uninstall --cask surgedm/tap/surge")
+    "uninstall --cask surge")
         printf '%s\n' "$*" >> "$TEST_TMP/operations"
         rm "$TEST_TMP/surgedm-installed"
+        ;;
+    "uninstall --cask surgedm/tap/surge")
+        # Homebrew accepts the qualified name for lookup but removes the
+        # installed cask by its short token.
+        exit 1
         ;;
     "tap")
         printf '%s\n' "surgedm/tap"
@@ -71,8 +76,8 @@ SURGE
     run cat "$test_tmp/operations"
     [ "$status" -eq 0 ]
     [[ "$output" == *"service service uninstall"* ]]
-    [[ "$output" == *"uninstall --cask surgedm/tap/surge"* ]]
-    [[ $'\n'"$output"$'\n' != *$'\nuninstall --cask surge\n'* ]]
+    [[ "$output" == *"uninstall --cask surge"* ]]
+    [[ "$output" != *"uninstall --cask surgedm/tap/surge"* ]]
     [[ "$output" != *"trash "* ]]
     [[ "$output" == *"untrust $HOME/.config untrust --tap surgedm/tap"* ]]
     [[ "$output" == *"untrust unset untrust --tap surgedm/tap"* ]]
