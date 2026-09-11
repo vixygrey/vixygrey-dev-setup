@@ -7,7 +7,6 @@
 workflow_mode: team-pr
 
 active_phase: sustain
-active_flow: release_branch
 
 
 metrics:
@@ -22,8 +21,8 @@ project:
 
 status:
   summary: >-
-    Issue #589 is implemented and verified on feature/replace-zed-with-kiro.
+    Issue #589 is complete through PR #590.
     Kiro replaces Zed with a local Dracula-Sakura theme and merged editor defaults.
 
 handoff:
-  next_skill: release-branch
+  next_skill: survey-context
