@@ -21,15 +21,15 @@ project:
 
 status:
   summary: >-
-    Issue 614 gates Homebrew metadata refreshes to once per day and adds an
-    explicit --update-brew override. Issue 613 profiling remains merged.
+    Issue 613 gates Homebrew diagnostics to new installations, package failures,
+    or the explicit --doctor flag. Issues 612 and 614 remain merged.
 
 git:
-  branch: perf/614-brew-update-policy
-  hash: ed47289
+  branch: perf/615-brew-doctor-policy
+  hash: 79e559a
 
 handoff:
-  last_step_completed: "Implemented issue 614 Homebrew update policy"
+  last_step_completed: "Implemented issue 613 Homebrew doctor policy"
   open_decisions: []
   required_reading:
     - CONVENTIONS.md

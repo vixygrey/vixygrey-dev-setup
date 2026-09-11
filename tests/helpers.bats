@@ -55,6 +55,33 @@ run_with_helpers() {
     [[ "$output" == *"[DRY RUN] Would: brew update"* ]]
     [ ! -e "$HOME/homebrew-updated-at" ]
 }
+@test "brew_doctor_needed: skips converged runs and honors explicit requests" {
+    run run_with_helpers '
+        export DRY_RUN=false
+        BREW_DOCTOR_RAN=false
+        BREW_INSTALLED_THIS_RUN=false
+        INSTALL_FAILED=0
+        brew_doctor_needed && exit 1
+        FORCE_BREW_DOCTOR=true
+        brew_doctor_needed
+    '
+    [ "$status" -eq 0 ]
+}
+
+@test "brew_doctor_needed: runs after a package failure but not in dry-run" {
+    run run_with_helpers '
+        export DRY_RUN=false
+        BREW_DOCTOR_RAN=false
+        BREW_INSTALLED_THIS_RUN=false
+        FORCE_BREW_DOCTOR=false
+        INSTALL_FAILED=1
+        brew_doctor_needed
+        DRY_RUN=true
+        ! brew_doctor_needed
+    '
+    [ "$status" -eq 0 ]
+}
+
 
 
 @test "_trim_blank_edges: drops leading and trailing blank lines, keeps inner blanks" {

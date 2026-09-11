@@ -31,7 +31,7 @@ fi
 # Run:      chmod +x setup-dev-tools-mac.sh && ./setup-dev-tools-mac.sh
 # Flags:    --dry-run, --no-prompt, --list, --list-categories, --only <cats>,
 #           --skip <cats>, --interactive/-i, --resume, --cleanup, --verify,
-#           --update-brew, --uninstall, --version, --help
+#           --update-brew, --doctor, --uninstall, --version, --help
 # =============================================================================
 
 SCRIPT_VERSION="8.1.0"
@@ -237,8 +237,11 @@ RESUME=false
 UNINSTALL=false
 CLEANUP=false
 FORCE_BREW_UPDATE=false
+FORCE_BREW_DOCTOR=false
 INTERACTIVE=false
 NO_PROMPT=false
+BREW_INSTALLED_THIS_RUN=false
+BREW_DOCTOR_RAN=false
 SKIP_CATEGORIES=()
 ONLY_CATEGORIES=()
 MCP_INSPECTOR_NODE_READY=true
@@ -296,6 +299,24 @@ brew_update_if_due() {
         success "Homebrew metadata updated"
     else
         warn "Homebrew metadata update failed — continuing with the existing index"
+    fi
+}
+
+brew_doctor_needed() {
+    [[ "$DRY_RUN" != "true" ]] || return 1
+    [[ "$BREW_DOCTOR_RAN" != "true" ]] || return 1
+    [[ "$FORCE_BREW_DOCTOR" == "true" ]] \
+        || [[ "$BREW_INSTALLED_THIS_RUN" == "true" ]] \
+        || (( INSTALL_FAILED > 0 ))
+}
+
+run_brew_doctor() {
+    BREW_DOCTOR_RAN=true
+    info "Running brew doctor..."
+    if brew doctor >> "$LOG_FILE" 2>&1; then
+        checked "Homebrew healthy (brew doctor passed)"
+    else
+        warn "brew doctor found issues (may cause install failures — see $LOG_FILE)"
     fi
 }
 
@@ -754,7 +775,7 @@ show_help() {
     echo "  --dry-run           Preview what would be installed (no changes)"
     echo "  --resume            Skip items that succeeded in a previous run"
     echo "  --uninstall         Show commands to remove everything (no changes made)"
-    echo "  --update-brew       Force a Homebrew metadata refresh (default: once per day)"
+    echo "  --doctor            Run Homebrew diagnostics even when no package failed"
     echo "  --verify            Check supported generated config with installed consumers"
     echo "                      and report unchecked inventory rows. CI proves syntax."
     echo "                      Only a machine with each tool can prove path usage."
@@ -828,6 +849,10 @@ while [[ $# -gt 0 ]]; do
             ;;
         --update-brew)
             FORCE_BREW_UPDATE=true
+            shift
+            ;;
+        --doctor)
+            FORCE_BREW_DOCTOR=true
             shift
             ;;
         --resume)
@@ -1998,10 +2023,10 @@ preflight() {
     fi
 
     if command -v brew &>/dev/null; then
-        if ! brew doctor >> "$LOG_FILE" 2>&1; then
-            warn "brew doctor found issues (may cause install failures — see $LOG_FILE)"
+        if brew_doctor_needed; then
+            run_brew_doctor
         else
-            checked "Homebrew healthy (brew doctor passed)"
+            info "Skipping brew doctor — use --doctor, or rerun after a package failure"
         fi
     fi
 
@@ -3217,6 +3242,7 @@ if ! installed brew; then
         if [[ -f /opt/homebrew/bin/brew ]]; then
             eval "$(/opt/homebrew/bin/brew shellenv)"
         fi
+        BREW_INSTALLED_THIS_RUN=true
         success "Homebrew installed"
     else
         error "Failed to install Homebrew (${REMOTE_INSTALLER_ERROR:-unknown error})"
@@ -15521,11 +15547,10 @@ if [[ "$DRY_RUN" == "false" ]]; then
     success "Brew cleanup complete"
 
     # Brew doctor
-    info "Running brew doctor..."
-    if brew doctor >> "$LOG_FILE" 2>&1; then
-        success "Brew doctor: no issues found"
+    if brew_doctor_needed; then
+        run_brew_doctor
     else
-        warn "Brew doctor found issues (check log for details)"
+        info "Skipping brew doctor — no new Homebrew install or package failure"
     fi
 else
     info "[DRY RUN] Skipping verification"
