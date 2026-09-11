@@ -18,11 +18,11 @@ teardown() {
     rm -rf "$TEST_TMP"
 }
 
-@test "omp routing reserves Anthropic for slow and plan, with Vulkan Qwen fallback (#538, #548)" {
+@test "omp routing uses Luna by default and preserves specialized roles and local fallbacks (#598)" {
     run ruby -ryaml -e '
         config = YAML.safe_load(File.read(ARGV.fetch(0)))
         expected = {
-          "default" => "openai-codex/gpt-5.6-sol",
+          "default" => "openai-codex/gpt-5.6-luna",
           "task" => "openai-codex/gpt-5.6-sol",
           "vision" => "google/gemini-3.8-flash:medium",
           "slow" => "anthropic/claude-sonnet-5:high",
@@ -38,6 +38,7 @@ teardown() {
         fallbacks = chains.values.flatten
         abort "Anthropic entered a fallback chain" if fallbacks.any? { |model| model.start_with?("anthropic/") }
         abort "a chain lost the local final fallback" unless chains.values.all? { |chain| chain.last == "llama.cpp/qwen2.5-coder:14b" }
+        abort "Luna does not fall back to Gemini first" unless chains.fetch("openai-codex/gpt-5.6-luna").first == "google/gemini-3.8-flash:medium"
         abort "Codex does not fall back to Gemini first" unless chains.fetch("openai-codex/gpt-5.6-sol").first == "google/gemini-3.8-flash:medium"
 
         abort "ordinary turns do not use automatic reasoning" unless config.fetch("defaultThinkingLevel") == "auto"
