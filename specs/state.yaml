@@ -21,15 +21,15 @@ project:
 
 status:
   summary: >-
-    Runtime profiling now reports setup phase and installation-helper durations. The
-    OMP runtime and remaining model routing and provider settings are unchanged.
+    Issue 614 gates Homebrew metadata refreshes to once per day and adds an
+    explicit --update-brew override. Issue 613 profiling remains merged.
 
 git:
-  branch: perf/613-profile-setup
-  hash: fca4e4e
+  branch: perf/614-brew-update-policy
+  hash: ed47289
 
 handoff:
-  last_step_completed: "Started issue 613 implementation"
+  last_step_completed: "Implemented issue 614 Homebrew update policy"
   open_decisions: []
   required_reading:
     - CONVENTIONS.md

@@ -31,6 +31,31 @@ run_with_helpers() {
         source "$SETUP_SCRIPT"
         '"$1"
 }
+@test "brew_update_if_due: skips recent metadata" {
+    run run_with_helpers '
+        export LOG_FILE="$HOME/setup.log"
+        export DRY_RUN=true
+        BREW_UPDATE_STATE="$HOME/homebrew-updated-at"
+        touch "$BREW_UPDATE_STATE"
+        brew_update_if_due
+    '
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"Skipping Homebrew update"* ]]
+}
+
+@test "brew_update_if_due: dry-run reports stale metadata" {
+    run run_with_helpers '
+        export LOG_FILE="$HOME/setup.log"
+        export DRY_RUN=true
+        BREW_UPDATE_STATE="$HOME/homebrew-updated-at"
+        FORCE_BREW_UPDATE=true
+        brew_update_if_due
+    '
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"[DRY RUN] Would: brew update"* ]]
+    [ ! -e "$HOME/homebrew-updated-at" ]
+}
+
 
 @test "_trim_blank_edges: drops leading and trailing blank lines, keeps inner blanks" {
     run run_with_helpers 'printf "a\n\nb\n\n" > "$HOME/in"; _trim_blank_edges "$HOME/in" > "$HOME/out"; cat "$HOME/out"'

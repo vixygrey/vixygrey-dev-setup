@@ -31,7 +31,7 @@ fi
 # Run:      chmod +x setup-dev-tools-mac.sh && ./setup-dev-tools-mac.sh
 # Flags:    --dry-run, --no-prompt, --list, --list-categories, --only <cats>,
 #           --skip <cats>, --interactive/-i, --resume, --cleanup, --verify,
-#           --uninstall, --version, --help
+#           --update-brew, --uninstall, --version, --help
 # =============================================================================
 
 SCRIPT_VERSION="8.1.0"
@@ -236,7 +236,7 @@ DRY_RUN=false
 RESUME=false
 UNINSTALL=false
 CLEANUP=false
-VERIFY=false
+FORCE_BREW_UPDATE=false
 INTERACTIVE=false
 NO_PROMPT=false
 SKIP_CATEGORIES=()
@@ -265,6 +265,39 @@ prompt_ask() {
 # -- State file for --resume --------------------------------------------------
 STATE_DIR="$HOME/.local/share/dev-setup"
 STATE_FILE="$STATE_DIR/completed-items.txt"
+BREW_UPDATE_INTERVAL=86400
+BREW_UPDATE_STATE="$STATE_DIR/homebrew-updated-at"
+
+_brew_update_age() {
+    local updated now
+    updated="$(stat -f %m "$BREW_UPDATE_STATE" 2>/dev/null || true)"
+    [[ "$updated" =~ ^[0-9]+$ ]] || updated="$(stat -c %Y "$BREW_UPDATE_STATE" 2>/dev/null || true)"
+    [[ "$updated" =~ ^[0-9]+$ ]] || return 1
+    now="$(date +%s)"
+    printf '%s\n' "$((now - updated))"
+}
+
+brew_update_if_due() {
+    local age
+    if [[ "$FORCE_BREW_UPDATE" == "true" ]] || [[ ! -e "$BREW_UPDATE_STATE" ]]; then
+        age="stale"
+    else
+        age="$(_brew_update_age || echo stale)"
+    fi
+    if [[ "$age" != "stale" ]] && (( age < BREW_UPDATE_INTERVAL )); then
+        info "Skipping Homebrew update — metadata refreshed ${age}s ago"
+        return 0
+    fi
+    if [[ "$DRY_RUN" == "true" ]]; then
+        info "[DRY RUN] Would: brew update"
+    elif brew update; then
+        mkdir -p "$STATE_DIR"
+        touch "$BREW_UPDATE_STATE"
+        success "Homebrew metadata updated"
+    else
+        warn "Homebrew metadata update failed — continuing with the existing index"
+    fi
+}
 
 mark_done() {
     # A preview must not poison a later `--resume` by recording work it only named.
@@ -721,7 +754,7 @@ show_help() {
     echo "  --dry-run           Preview what would be installed (no changes)"
     echo "  --resume            Skip items that succeeded in a previous run"
     echo "  --uninstall         Show commands to remove everything (no changes made)"
-    echo "  --cleanup           Remove tools from previous versions no longer in this script"
+    echo "  --update-brew       Force a Homebrew metadata refresh (default: once per day)"
     echo "  --verify            Check supported generated config with installed consumers"
     echo "                      and report unchecked inventory rows. CI proves syntax."
     echo "                      Only a machine with each tool can prove path usage."
@@ -791,6 +824,10 @@ while [[ $# -gt 0 ]]; do
             ;;
         --dry-run)
             DRY_RUN=true
+            shift
+            ;;
+        --update-brew)
+            FORCE_BREW_UPDATE=true
             shift
             ;;
         --resume)
@@ -3154,7 +3191,6 @@ unset _c
 if [[ "$_prereqs_skipped" != "true" ]]; then
 banner "Prerequisites"
 
-# Xcode Command Line Tools (required for git, homebrew, compilers, etc.)
 if xcode-select -p &>/dev/null; then
     warn "Xcode Command Line Tools already installed"
 else
@@ -3188,12 +3224,7 @@ if ! installed brew; then
     fi
 else
     warn "Homebrew already installed"
-    if [[ "$DRY_RUN" == "true" ]]; then
-        info "[DRY RUN] Would: brew update"
-    else
-        info "Updating Homebrew..."
-        brew update
-    fi
+    brew_update_if_due
 fi
 
 # Prevent brew from auto-updating on every install (we already updated above)
