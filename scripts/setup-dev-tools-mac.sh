@@ -1589,6 +1589,36 @@ _ensure_brew_snapshot() {
 _brew_has_formula() { _ensure_brew_snapshot; [[ "$_BREW_FORMULAE" == *" ${1##*/} "* ]]; }
 _brew_has_cask()    { _ensure_brew_snapshot; [[ "$_BREW_CASKS"    == *" ${1##*/} "* ]]; }
 
+brew_install_batch() {
+    local entry formula name
+    local -a pending_formulas=() pending_names=()
+    _ensure_brew_snapshot
+    for entry in "$@"; do
+        formula="${entry%%|*}"
+        name="${entry#*|}"
+        [[ "$name" == "$entry" ]] && name="$formula"
+        is_done "brew:$formula" && continue
+        _brew_has_formula "$formula" && continue
+        pending_formulas+=("$formula")
+        pending_names+=("$name")
+    done
+    ((${#pending_formulas[@]} > 0)) || return 0
+    [[ "$DRY_RUN" == "true" ]] && return 0
+    info "Installing Homebrew formula batch (${#pending_formulas[@]} formulae)..."
+    if brew install "${pending_formulas[@]}" >> "$LOG_FILE" 2>&1; then
+        local i
+        for i in "${!pending_formulas[@]}"; do
+            formula="${pending_formulas[$i]}"
+            success "${pending_names[$i]} installed"
+            _BREW_FORMULAE="$_BREW_FORMULAE${formula##*/} "
+            mark_done "brew:$formula"
+        done
+    else
+        warn "Homebrew formula batch failed — retrying formulae individually"
+        return 1
+    fi
+}
+
 brew_install() { _time_install_helper brew _brew_install "$@"; }
 _brew_install() {
     local formula="$1"
@@ -3257,6 +3287,12 @@ fi
 export HOMEBREW_NO_AUTO_UPDATE=1
 
 # GNU coreutils (Linux-compatible sed, tar, awk, grep for script portability)
+brew_install_batch \
+    "coreutils|coreutils (GNU core utilities)" \
+    "gnu-sed|gnu-sed (Linux-compatible sed)" \
+    "gnu-tar|gnu-tar (Linux-compatible tar)" \
+    "gawk|gawk (GNU awk)" \
+    "findutils|findutils (GNU find, xargs)" || true
 brew_install "coreutils" "coreutils (GNU core utilities)"
 brew_install "gnu-sed" "gnu-sed (Linux-compatible sed)"
 brew_install "gnu-tar" "gnu-tar (Linux-compatible tar)"
@@ -3466,6 +3502,15 @@ fi  # core
 if should_run "git"; then
 banner "Git & GitHub"
 
+brew_install_batch \
+    "git|Git" \
+    "gh|GitHub CLI" \
+    "git-delta|delta (better git diffs)" \
+    "gnupg|GnuPG (commit signing)" \
+    "pinentry-mac|pinentry-mac (GPG passphrase)" \
+    "lazygit|lazygit (terminal UI for git)" \
+    "git-absorb|git-absorb (auto-fixup commits)" \
+    "pre-commit|pre-commit (git hook framework)" || true
 brew_install "git" "Git"
 brew_install "gh" "GitHub CLI"
 brew_install "git-delta" "delta (better git diffs)"
@@ -3564,6 +3609,12 @@ if should_run "security"; then
 banner "Security & Secrets"
 
 # Secret management
+brew_install_batch \
+    "age|age (modern file encryption)" \
+    "gitleaks|gitleaks (fast git secret scanning — great for CI/pre-commit)" \
+    "trivy|trivy (container & IaC vulnerability scanning)" \
+    "semgrep|semgrep (static analysis — bugs & security issues)" \
+    "cosign|cosign (sign & verify container images)" || true
 brew_install "age" "age (modern file encryption)"
 cargo_install "chamber-tui" chamber \
     "chamber (local encrypted secrets manager and TUI)" --locked
@@ -3624,6 +3675,12 @@ echo "  (upgrades for standard macOS/Unix utilities)"
 echo ""
 
 # ls -> eza (formerly exa): icons, git status, tree view, colors
+brew_install_batch \
+    "eza|eza (replaces ls — icons, git status, tree view)" \
+    "bat|bat (replaces cat — syntax highlighting, line numbers)" \
+    "fd|fd (replaces find — faster, simpler syntax)" \
+    "ripgrep|ripgrep (replaces grep — 10x faster, .gitignore aware)" \
+    "zoxide|zoxide (replaces cd — smart frecency-based jumping)" || true
 brew_install "eza" "eza (replaces ls — icons, git status, tree view)"
 
 # cat -> bat: syntax highlighting, line numbers, git integration, paging
@@ -3656,6 +3713,29 @@ fi
 brew_install "tlrc" "tlrc (official tldr client — replaces man with examples)"
 
 # top/htop -> btop: modern resource monitor with graphs
+brew_install_batch \
+    "btop|btop (replaces top/htop — graphs, mouse support)" \
+    "sd|sd (replaces sed — intuitive find & replace)" \
+    "choose-rust|choose (replaces cut/awk — simpler syntax)" \
+    "dust|dust (replaces du — visual disk usage tree)" \
+    "duf|duf (replaces df — colorful disk usage table)" \
+    "procs|procs (replaces ps — sortable, tree view, docker-aware)" \
+    "gping|gping (replaces ping — real-time latency graph)" \
+    "xh|xh (replaces curl — colorized, JSON-friendly)" \
+    "doggo|doggo (replaces dig — colorized DNS, DoH support)" \
+    "scc|scc (replaces wc for code — LOC by language, complexity + COCOMO cost)" \
+    "viddy|viddy (replaces watch — diff highlighting, history)" \
+    "rsync|rsync (latest — better cp/mv for large transfers)" \
+    "hexyl|hexyl (replaces hexdump — colorized hex viewer)" \
+    "aria2|aria2 (replaces curl/wget for downloads — multi-connection, BitTorrent)" \
+    "ouch|ouch (universal archive tool — compress/decompress any format)" \
+    "trash|trash (replaces rm — moves to macOS Trash, recoverable)" \
+    "difftastic|difftastic (replaces diff for code — syntax-aware structural diffs)" \
+    "vivid|vivid (LS_COLORS generator — colorize file listings by type)" \
+    "just|just (replaces make — simpler task runner, no tab issues)" \
+    "yazi|Yazi (terminal file manager with previews and bulk tasks)" \
+    "fx|fx (interactive JSON viewer — better than jq for exploring)" \
+    "jnv|jnv (interactive JSON navigator with jq filtering)" || true
 brew_install "btop" "btop (replaces top/htop — graphs, mouse support)"
 
 # sed -> sd: simpler regex syntax, string-literal mode, faster
@@ -3730,6 +3810,16 @@ if should_run "data-processing"; then
 banner "Data & File Processing"
 
 # yq: jq for YAML (essential for k8s/CDK)
+brew_install_batch \
+    "yq|yq (jq for YAML — essential for k8s/CDK work)" \
+    "csvkit|csvkit (CSV tools — csvcut, csvgrep, csvstat)" \
+    "jc|jc (convert command output into JSON for jq/automation)" \
+    "jqp|jqp (interactive jq playground / JSON TUI)" \
+    "pandoc|pandoc (universal document converter — md, pdf, docx, html)" \
+    "tectonic|tectonic (self-contained LaTeX/PDF engine)" \
+    "imagemagick|ImageMagick (image resize, convert, composite)" \
+    "poppler|poppler (PDF tools — pdftoppm, pdftotext, pdfinfo)" \
+    "yt-dlp|yt-dlp (video/audio downloader)" || true
 brew_install "yq" "yq (jq for YAML — essential for k8s/CDK work)"
 # csvkit: suite of CSV tools
 brew_install "csvkit" "csvkit (CSV tools — csvcut, csvgrep, csvstat)"
@@ -3764,6 +3854,13 @@ fi  # data-processing
 if should_run "code-quality"; then
 banner "Code Quality"
 
+brew_install_batch \
+    "shellcheck|shellcheck (shell script linter)" \
+    "shfmt|shfmt (shell script formatter)" \
+    "actionlint|actionlint (GitHub Actions workflow linter)" \
+    "act|act (run GitHub Actions locally)" \
+    "hadolint|hadolint (Dockerfile linter — catches bad practices)" \
+    "ruff|ruff (fast Python linter+formatter — replaces flake8+black+isort)" || true
 brew_install "shellcheck" "shellcheck (shell script linter)"
 brew_install "shfmt" "shfmt (shell script formatter)"
 brew_install "actionlint" "actionlint (GitHub Actions workflow linter)"

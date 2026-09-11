@@ -81,6 +81,23 @@ run_with_helpers() {
     '
     [ "$status" -eq 0 ]
 }
+@test "brew_install_batch: installs pending formulae in one Homebrew command" {
+    run run_with_helpers '
+        export LOG_FILE="$HOME/setup.log"
+        export DRY_RUN=false
+        STATE_DIR="$HOME/state"
+        STATE_FILE="$STATE_DIR/completed-items.txt"
+        mkdir -p "$STATE_DIR" "$HOME/bin"
+        printf "%s\n" "#!/usr/bin/env bash" "if [[ \"\$1\" == \"list\" ]]; then" "    exit 0" "fi" "printf \"%s\\n\" \"\$*\" >> \"\$HOME/brew-commands\"" > "$HOME/bin/brew"
+        chmod +x "$HOME/bin/brew"
+        PATH="$HOME/bin:$PATH"
+        brew_install_batch "foo|Foo" "bar|Bar"
+        cat "$HOME/brew-commands"
+    '
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"install foo bar"* ]]
+}
+
 
 
 
