@@ -25,6 +25,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 - Fixed SurgeDM cleanup by removing its short cask token before untapping the retired tap (#600).
 - Fixed MCP Inspector installation by enforcing its Node.js 22.19.0 engine requirement (#600).
+- Fixed MCP Inspector installation by pinning a release with resolvable npm dependencies (#602).
 - Fixed `--no-prompt` so unavailable administrator access skips privileged work without prompting (#600).
 
 ## [8.0.0] - 2026-09-11

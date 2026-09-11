@@ -84,3 +84,50 @@ SURGE
     [ -d "$HOME/Library/Application Support/surge" ]
 
 }
+@test "cleanup untaps SurgeDM when no retired cask is installed (#600)" {
+    test_tmp="$(mktemp -d)"
+    TEST_TMP_DIR="$test_tmp"
+    stub="$test_tmp/bin"
+    mkdir -p "$stub" "$test_tmp/home"
+
+    cat > "$stub/brew" <<'BREW'
+#!/usr/bin/env bash
+case "$*" in
+    "list --cask surgedm/tap/surge")
+        exit 1
+        ;;
+    "tap")
+        printf '%s\n' \
+            "homebrew/cask" \
+            "homebrew/core" \
+            "surgedm/tap"
+        ;;
+    "list --full-name")
+        printf '%s\n' "homebrew/cask/surge"
+        ;;
+    "untap surgedm/tap")
+        printf '%s\n' "$*" >> "$TEST_TMP/operations"
+        ;;
+    "untrust --tap surgedm/tap")
+        ;;
+    "autoremove --dry-run"|"autoremove"|"cleanup")
+        ;;
+    *)
+        exit 1
+        ;;
+esac
+BREW
+
+    for command in npm uv cargo mas; do
+        printf '#!/usr/bin/env bash\nexit 1\n' > "$stub/$command"
+    done
+    chmod +x "$stub"/*
+
+    export TEST_TMP="$test_tmp"
+    export HOME="$test_tmp/home"
+    export PATH="$stub:$PATH"
+    run bash "$SETUP_SCRIPT" --cleanup --no-prompt
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"surgedm/tap untapped and untrusted"* ]]
+    [[ "$(cat "$test_tmp/operations")" == *"untap surgedm/tap"* ]]
+}
