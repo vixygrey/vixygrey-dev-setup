@@ -6,11 +6,11 @@
 # See AGENTS.md, "Commits, PRs, CHANGELOG".
 workflow_mode: team-pr
 
-active_phase: sustain
+active_phase: review
 
 
 metrics:
-  story_start: "2026-09-10T23:12:45Z"
+  story_start: "2026-09-11T04:02:25Z"
 
 
 project:
@@ -21,8 +21,17 @@ project:
 
 status:
   summary: >-
-    Version 8.0.0 release metadata is complete.
-    The release compares v7.23.0 through v8.0.0.
+    Issue 592 adds the missing Rust, Kiro, and MCP development tools.
+    The focused dry runs, preflight, and installed configuration verification pass.
+
+git:
+  branch: feature/592-rust-mcp-tools
+  hash: 338d1b6
 
 handoff:
-  next_skill: survey-context
+  last_step_completed: "Implemented and verified issue 592"
+  open_decisions: []
+  required_reading:
+    - CONVENTIONS.md
+    - specs/product/SCOPE_LATEST.yaml
+  next_skill: audit-code

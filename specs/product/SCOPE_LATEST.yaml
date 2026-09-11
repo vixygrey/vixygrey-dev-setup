@@ -3,3 +3,13 @@
 in_scope: []
 out_of_scope: []
 success_criteria: []
+
+notes:
+  prior_art:
+    verdict: extend
+    findings:
+      - The generator already installs rust-analyzer, yaml-language-server, jq, and fx.
+      - Homebrew provides bottles for the four requested Cargo subcommands without runtime dependencies.
+      - Kiro supports extension installation through its Code OSS command-line interface.
+      - Rustup provides Miri as a nightly toolchain component.
+      - npm publishes MCP Inspector as @modelcontextprotocol/inspector with the mcp-inspector command.

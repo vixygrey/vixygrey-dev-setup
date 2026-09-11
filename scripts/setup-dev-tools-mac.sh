@@ -170,14 +170,12 @@ managed_note() { printf '%s\t%s\n' "$1" "$2" >> "$MANAGED_STATE"; }
 managed_list() { [[ -s "$MANAGED_STATE" ]] && awk -F'\t' -v k="$1" '$1 == k { print $2 }' "$MANAGED_STATE" | sort -u; }
 
 # Dynamic total — count all install calls in this script so the progress bar stays accurate
-# when tools are added or removed. Counts brew_install, brew_cask_install,
-# npm_global_install, go_install, and uv_tool_install, including conditionals.
-# A new install helper MUST be added to this pattern or its calls run un-counted and the
-# bar overshoots 100%.
-# Count all install calls + standalone progress calls for accurate progress bar
+# when tools are added or removed. A new install helper MUST be added to this pattern,
+# or its calls run uncounted and the progress bar overshoots 100%.
+# Count all install calls plus standalone progress calls for an accurate progress bar.
 # Note: `grep -c` prints "0" AND exits 1 on zero matches, so `|| echo 0` would append
-# a SECOND "0" ("0\n0") and break the arithmetic. Use `|| true` + a default instead.
-_INSTALL_CALLS=$(grep -cE '^\s*(brew_install|brew_cask_install|npm_global_install|omp_plugin_install|go_install|uv_tool_install|cargo_install) ' "$0" 2>/dev/null || true)
+# a SECOND "0" ("0\n0") and break the arithmetic. Use `|| true` plus a default instead.
+_INSTALL_CALLS=$(grep -cE '^\s*(brew_install|brew_cask_install|npm_global_install|kiro_extension_install|omp_plugin_install|go_install|uv_tool_install|cargo_install|rustup_component_install) ' "$0" 2>/dev/null || true)
 _PROGRESS_CALLS=$(grep -cE '^\s*progress\s*$' "$0" 2>/dev/null || true)
 INSTALL_TOTAL=$(( ${_INSTALL_CALLS:-0} + ${_PROGRESS_CALLS:-0} ))
 [[ "$INSTALL_TOTAL" -eq 0 ]] && INSTALL_TOTAL=200
@@ -805,7 +803,7 @@ while [[ $# -gt 0 ]]; do
             ;;
         --list)
             echo ""
-            echo -e "${BOLD}Declared Homebrew and npm packages:${NC}"
+            echo -e "${BOLD}Declared packages and editor extensions:${NC}"
             echo ""
             echo -e "${CYAN}Homebrew formulae:${NC}"
             grep -E '^\s*brew_install ' "$0" | sed 's/.*brew_install "\([^"]*\)".*/  \1/' | sort
@@ -816,10 +814,14 @@ while [[ $# -gt 0 ]]; do
             echo -e "${CYAN}npm global packages:${NC}"
             grep -E '^\s*npm_global_install ' "$0" | sed 's/.*npm_global_install "\([^"]*\)".*/  \1/' | sort
             echo ""
+            echo -e "${CYAN}Kiro extensions:${NC}"
+            grep -E '^\s*kiro_extension_install ' "$0" | sed 's/.*kiro_extension_install "\([^"]*\)".*/  \1/' | sort
+            echo ""
             _f=$(grep -cE '^\s*brew_install ' "$0")
             _c=$(grep -cE '^\s*brew_cask_install ' "$0")
             _n=$(grep -cE '^\s*npm_global_install ' "$0")
-            echo -e "${DIM}Total: ${_f} formulae, ${_c} casks, ${_n} npm packages ($((_f + _c + _n)) package declarations)${NC}"
+            _k=$(grep -cE '^\s*kiro_extension_install ' "$0")
+            echo -e "${DIM}Total: ${_f} formulae, ${_c} casks, ${_n} npm packages, ${_k} Kiro extensions ($((_f + _c + _n + _k)) declarations)${NC}"
             exit 0
             ;;
         *)
@@ -1584,6 +1586,40 @@ npm_global_install() {
     fi
 }
 
+_KIRO_EXTENSIONS=""
+_kiro_extensions_ready=""
+_ensure_kiro_extension_snapshot() {
+    [[ -n "$_kiro_extensions_ready" ]] && return 0
+    _KIRO_EXTENSIONS="$(kiro --list-extensions 2>/dev/null || true)"
+    _kiro_extensions_ready=1
+}
+
+# kiro_extension_install <extension-id> <display-name>
+# Installs a registry extension through Kiro's Code OSS command-line interface.
+kiro_extension_install() {
+    local extension="$1" name="${2:-$1}"
+    progress
+    if ! installed kiro; then
+        warn "Skipping $name — Kiro not installed"
+        return 0
+    fi
+    _ensure_kiro_extension_snapshot
+    if printf '%s\n' "$_KIRO_EXTENSIONS" | grep -Fxiq "$extension"; then
+        warn "$name already installed in Kiro"
+    elif [[ "$DRY_RUN" == "true" ]]; then
+        info "[DRY RUN] Would install Kiro extension: $name"
+    else
+        info "Installing Kiro extension: $name..."
+        if kiro --install-extension "$extension" >> "$LOG_FILE" 2>&1; then
+            _kiro_extensions_ready=""
+            _KIRO_EXTENSIONS=""
+            success "$name installed in Kiro"
+        else
+            error "Failed to install Kiro extension: $name"
+        fi
+    fi
+}
+
 # omp_plugin_install <package-spec> <plugin-name> <display-name>
 # Installs an OMP plugin into the user plugin root. OMP records the package as
 # enabled, then loads its manifest-declared extensions, skills, and prompts.
@@ -1689,6 +1725,24 @@ cargo_install() {
         error "Failed to install $name via cargo"
     fi
     progress
+}
+
+# rustup_component_install <toolchain> <component> <probe-command> <display-name>
+# Installs a component and its toolchain together so a fresh machine needs one run.
+rustup_component_install() {
+    local toolchain="$1" component="$2" probe="$3" name="$4"
+    progress
+    if ! installed rustup; then
+        warn "Skipping $name — rustup not installed"
+    elif rustup which "$probe" --toolchain "$toolchain" &>/dev/null; then
+        warn "$name already installed for the $toolchain Rust toolchain"
+    elif [[ "$DRY_RUN" == "true" ]]; then
+        info "[DRY RUN] Would install: $name for the $toolchain Rust toolchain"
+    elif rustup toolchain install "$toolchain" --component "$component" >> "$LOG_FILE" 2>&1; then
+        success "$name installed for the $toolchain Rust toolchain"
+    else
+        error "Failed to install $name for the $toolchain Rust toolchain"
+    fi
 }
 
 # run_remote_installer <label> <url> <optional-sha256> <runner>... [-- <script-args...>]
@@ -3272,6 +3326,9 @@ fi
 mark_done "install:rust"
 fi
 
+# Miri is available only as a nightly rustup component.
+rustup_component_install nightly miri cargo-miri Miri
+
 
 # pnpm
 progress
@@ -3990,6 +4047,10 @@ cargo_install "croft-software" croft \
     "Croft (VS Code-style terminal IDE)" --locked
 brew_cask_install "kiro" "Kiro (agent-centric native code editor)"
 
+# Kiro uses the Code OSS extension command-line interface.
+kiro_extension_install "tamasfe.even-better-toml" "Even Better TOML"
+kiro_extension_install "vadimcn.vscode-lldb" "CodeLLDB"
+
 brew_cask_install "kitty" "Kitty (fast GPU-accelerated terminal)"
 brew_install "zellij" "zellij (modern terminal multiplexer — discoverable UI, layouts)"
 
@@ -4028,6 +4089,12 @@ brew_install "rust-analyzer" "rust-analyzer (Rust language server)"
 brew_install "lua-language-server" "Lua language server"
 brew_install "docker-language-server" "Docker language server"
 
+# Native bottles avoid compiling these Cargo subcommands during setup.
+brew_install "cargo-watch" "cargo-watch (run Cargo commands when sources change)"
+brew_install "cargo-nextest" "cargo-nextest (fast Rust test runner)"
+brew_install "cargo-expand" "cargo-expand (show macro-expanded Rust source)"
+brew_install "cargo-edit" "cargo-edit (Cargo dependency commands)"
+
 if installed npm; then
     npm_global_install "typescript-language-server" "TypeScript and JavaScript language server"
     npm_global_install "vscode-langservers-extracted" "HTML, CSS, JSON, and ESLint language servers"
@@ -4035,8 +4102,9 @@ if installed npm; then
     npm_global_install "yaml-language-server" "YAML language server"
     npm_global_install "pyright" "Pyright language server"
     npm_global_install "@biomejs/biome" "Biome linter and language server"
+    npm_global_install "@modelcontextprotocol/inspector" "MCP Inspector"
 else
-    progress; progress; progress; progress; progress; progress  # keep progress bar accurate when npm unavailable
+    progress; progress; progress; progress; progress; progress; progress  # keep progress bar accurate when npm unavailable
 fi
 
 # Ruff already comes from code-quality. Its `ruff server` command is the

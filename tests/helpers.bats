@@ -581,6 +581,108 @@ EOF
     [[ "$output" == *"file=kept"* ]]
 }
 
+@test "rustup_component_install: installs a missing toolchain and component together (#592)" {
+    run run_with_helpers '
+        export LOG_FILE="$HOME/setup.log"
+        export ERROR_LOG="$HOME/error.log"
+        mkdir -p "$HOME/bin"
+        cat > "$HOME/bin/rustup" <<"EOF"
+#!/usr/bin/env bash
+if [[ "$1" == "which" ]]; then
+  [[ -f "$HOME/miri-installed" ]]
+elif [[ "$1 $2 $3 $4 $5" == "toolchain install nightly --component miri" ]]; then
+  touch "$HOME/miri-installed"
+  printf "install\n" >> "$HOME/install.log"
+fi
+EOF
+        chmod +x "$HOME/bin/rustup"
+        export PATH="$HOME/bin:$PATH"
+
+        rustup_component_install nightly miri cargo-miri Miri
+        rustup_component_install nightly miri cargo-miri Miri
+        printf "installed=%s calls=%s\n" \
+          "$([[ -f "$HOME/miri-installed" ]] && echo yes || echo no)" \
+          "$(/usr/bin/wc -l < "$HOME/install.log" | tr -d " ")"
+    '
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"installed=yes calls=1"* ]]
+}
+
+@test "rustup_component_install: dry-run preserves an absent toolchain (#592)" {
+    run run_with_helpers '
+        export LOG_FILE="$HOME/setup.log"
+        export ERROR_LOG="$HOME/error.log"
+        mkdir -p "$HOME/bin"
+        cat > "$HOME/bin/rustup" <<"EOF"
+#!/usr/bin/env bash
+if [[ "$1" == "which" ]]; then
+  exit 1
+elif [[ "$1 $2" == "toolchain install" ]]; then
+  touch "$HOME/miri-installed"
+fi
+EOF
+        chmod +x "$HOME/bin/rustup"
+        export PATH="$HOME/bin:$PATH"
+        DRY_RUN=true
+
+        rustup_component_install nightly miri cargo-miri Miri
+        [[ ! -e "$HOME/miri-installed" ]]
+    '
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"[DRY RUN] Would install: Miri for the nightly Rust toolchain"* ]]
+}
+
+@test "kiro_extension_install: installs once when the extension is absent (#592)" {
+    run run_with_helpers '
+        export LOG_FILE="$HOME/setup.log"
+        export ERROR_LOG="$HOME/error.log"
+        mkdir -p "$HOME/bin"
+        cat > "$HOME/bin/kiro" <<"EOF"
+#!/usr/bin/env bash
+if [[ "$1" == "--list-extensions" ]]; then
+  [[ -f "$HOME/extension-installed" ]] && printf "tamasfe.even-better-toml\n"
+elif [[ "$1 $2" == "--install-extension tamasfe.even-better-toml" ]]; then
+  touch "$HOME/extension-installed"
+  printf "install\n" >> "$HOME/install.log"
+fi
+EOF
+        chmod +x "$HOME/bin/kiro"
+        export PATH="$HOME/bin:$PATH"
+
+        kiro_extension_install tamasfe.even-better-toml "Even Better TOML"
+        kiro_extension_install tamasfe.even-better-toml "Even Better TOML"
+        printf "installed=%s calls=%s\n" \
+          "$([[ -f "$HOME/extension-installed" ]] && echo yes || echo no)" \
+          "$(/usr/bin/wc -l < "$HOME/install.log" | tr -d " ")"
+    '
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"installed=yes calls=1"* ]]
+}
+
+@test "kiro_extension_install: dry-run does not invoke Kiro installation (#592)" {
+    run run_with_helpers '
+        export LOG_FILE="$HOME/setup.log"
+        export ERROR_LOG="$HOME/error.log"
+        mkdir -p "$HOME/bin"
+        cat > "$HOME/bin/kiro" <<"EOF"
+#!/usr/bin/env bash
+if [[ "$1" == "--list-extensions" ]]; then
+  exit 0
+elif [[ "$1" == "--install-extension" ]]; then
+  touch "$HOME/extension-installed"
+fi
+EOF
+        chmod +x "$HOME/bin/kiro"
+        export PATH="$HOME/bin:$PATH"
+        DRY_RUN=true
+
+        kiro_extension_install vadimcn.vscode-lldb "CodeLLDB"
+        [[ ! -e "$HOME/extension-installed" ]]
+    '
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"[DRY RUN] Would install Kiro extension: CodeLLDB"* ]]
+}
+
 @test "omp_plugin_install: installs once when the plugin is absent (#576)" {
     run run_with_helpers '
         export LOG_FILE="$HOME/setup.log"
