@@ -6,7 +6,7 @@
 # See AGENTS.md, "Commits, PRs, CHANGELOG".
 workflow_mode: team-pr
 
-active_phase: review
+active_phase: implementation
 
 
 metrics:
@@ -21,15 +21,15 @@ project:
 
 status:
   summary: >-
-    Bigpowers provisioning and generated OMP migration code are removed. The setup
-    retains the OMP runtime and the remaining model routing and provider settings.
+    Runtime profiling now reports setup phase and installation-helper durations. The
+    OMP runtime and remaining model routing and provider settings are unchanged.
 
 git:
-  branch: chore/610-remove-bigpowers
-  hash: b08d3a6
+  branch: perf/613-profile-setup
+  hash: fca4e4e
 
 handoff:
-  last_step_completed: "Implemented and verified issue 610"
+  last_step_completed: "Started issue 613 implementation"
   open_decisions: []
   required_reading:
     - CONVENTIONS.md
