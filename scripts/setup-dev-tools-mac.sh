@@ -367,7 +367,7 @@ declare -A CATEGORY_DESC=(
     [containers]="Docker Desktop, lazydocker, dive"
     [api]="Posting"
     [networking]="nmap, trippy"
-    [dx]="fzf, starship, atuin, micro, Zed, Kitty, zellij, omp, language servers"
+    [dx]="fzf, starship, atuin, micro, Kiro, Kitty, zellij, omp, language servers"
     [docs]="d2"
     [mac-system]="LuLu, Mullvad VPN, mullvad CLI, mullvad-tui"
     [mac-productivity]="Draw.io, Obsidian, Herald, LibreOffice, Vulkan llama.cpp"
@@ -404,7 +404,7 @@ declare -A CONFIG_LIVES_IN_CONFIGS=(
     [database]="harlequin"
     [containers]="Docker daemon, lazydocker"
     [networking]="trippy"
-    [dx]="atuin, zellij, Kitty, Zed, Croft, omp (~/.omp/agent + ~/.omp/plugins + ~/.agents/skills) — and starship, which is in the \`dracula\` category"
+    [dx]="atuin, zellij, Kitty, Kiro, Croft, omp (~/.omp/agent + ~/.omp/plugins + ~/.agents/skills) — and starship, which is in the \`dracula\` category"
     [mac-media]="mpv, spotatui"
     [mac-browsers]="Chawan"
     [mac-productivity]="Obsidian vault themes, Herald, llama.cpp service"
@@ -1376,11 +1376,11 @@ disable_omp_mcp_server() {
     return 1
 }
 
-# normalize_zed_jsonc <input> <output>
-# Zed rewrites settings with trailing commas. Remove only commas immediately
-# before a closing object or array, then require jq to accept the result.
-# Comments and all other JSONC syntax fail closed.
-normalize_zed_jsonc() {
+# normalize_editor_jsonc <input> <output>
+# Code OSS editors can rewrite settings with trailing commas. Remove only commas
+# immediately before a closing object or array, then require jq to accept the
+# result. Comments and all other JSONC syntax fail closed.
+normalize_editor_jsonc() {
     local input="$1" output="$2"
     command -v perl &>/dev/null || return 1
     command -v jq &>/dev/null || return 1
@@ -1958,8 +1958,10 @@ if [[ "$UNINSTALL" == "true" ]]; then
     echo "  rm -rf ~/.config/yt-dlp ~/.config/gh-dash ~/.config/stern"
     echo "  rm -rf ~/.config/btop ~/.config/lazydocker ~/.config/mise"
     echo "  rm -rf ~/.config/topgrade.toml ~/.config/fastfetch ~/.config/kitty"
-    echo "  rm -rf ~/.config/direnv ~/.config/broot ~/.config/zed ~/.herald"
+    echo "  rm -rf ~/.config/direnv ~/.config/broot ~/.herald"
     echo "  rm -f ~/.justfile ~/Media/photos/dracula-sakura.jpg"
+    echo "  rm -f ~/Library/Application\\ Support/Kiro/User/settings.json"
+    echo "  rm -rf ~/.kiro/extensions/vixygrey.dracula-sakura-*"
     echo ""
     echo "# Remove Rust (installed via rustup):"
     echo "  rustup self uninstall"
@@ -2065,6 +2067,8 @@ if [[ "$CLEANUP" == "true" ]]; then
         "formula:jordond/tap/jolt:jolt:removed"
         "cask:visual-studio-code:Visual Studio Code:micro:Visual Studio Code"
         "npm:@github/copilot:GitHub Copilot CLI:omp"
+        # Replaced by Kiro in #589. User-owned files under ~/.config/zed stay.
+        "cask:zed:Zed:Kiro:Zed"
         "formula:aichat:aichat:removed"
         "npm:turbo:Turborepo:removed"
         "npm:lighthouse:Lighthouse CLI:removed"
@@ -2092,7 +2096,6 @@ if [[ "$CLEANUP" == "true" ]]; then
         "cask:font-sketchybar-app-font:SketchyBar app font:removed"
         "formula:blueutil:blueutil:removed"
         "cask:cursor:Cursor (AI editor):micro + omp:Cursor"
-        "cask:kiro:Kiro:micro + omp:Kiro"
         "cask:bruno:Bruno:Posting:Bruno"
         "cask:dbeaver-community:DBeaver Community:harlequin:DBeaver"
         "cask:cyberduck:Cyberduck:rclone:Cyberduck"
@@ -2394,8 +2397,6 @@ if [[ "$CLEANUP" == "true" ]]; then
     # Remove only paths for retired apps after the matching app bundle is absent.
     # Prefer Trash so each removal stays recoverable.
     ORPHANED_EDITOR_DIRS=(
-        "Kiro|$HOME/.kiro"
-        "Kiro|$HOME/Library/Application Support/Kiro"
         "Cursor|$HOME/.cursor"
         "Cursor|$HOME/Library/Application Support/Cursor"
         "Visual Studio Code|$HOME/.vscode"
@@ -2801,6 +2802,10 @@ if [[ "$VERIFY" == "true" ]]; then
         "validate|lnav|${XDG_CONFIG_HOME:-$HOME/.config}/lnav/configs/dev-setup/dracula-sakura.json|_verify_lnav"
         "validate|kitty|$HOME/.config/kitty/kitty.conf|_verify_kitty"
         "validate|zellij|$HOME/.config/zellij/config.kdl|_verify_output_has 'Well defined' zellij setup --check"
+        # Kiro exposes no headless config validator. CI parses the settings,
+        # extension manifest, and theme files.
+        "unchecked|Kiro settings|$HOME/Library/Application Support/Kiro/User/settings.json|"
+        "unchecked|Kiro theme|$HOME/.kiro/extensions/vixygrey.dracula-sakura-1.0.0/themes/dracula-sakura-color-theme.json|"
         # Yazi has no headless validator or command that reports its config path.
         # Both TOML files carry official schema links for editor validation.
         "unchecked|yazi|$HOME/.config/yazi/theme.toml|"
@@ -3979,11 +3984,11 @@ brew_install "atuin" "atuin (replaces shell history — SQLite-backed, searchabl
 # mise already installed in core section
 
 # Editors and terminals. micro handles quick edits and commit messages. Croft
-# provides the terminal IDE, while Zed provides the native graphical editor.
+# provides the terminal IDE, while Kiro provides the native graphical editor.
 brew_install "micro" "micro (non-modal terminal editor — \$EDITOR for git; on-screen key menu)"
 cargo_install "croft-software" croft \
     "Croft (VS Code-style terminal IDE)" --locked
-brew_cask_install "zed" "Zed (fast native code editor)"
+brew_cask_install "kiro" "Kiro (agent-centric native code editor)"
 
 brew_cask_install "kitty" "Kitty (fast GPU-accelerated terminal)"
 brew_install "zellij" "zellij (modern terminal multiplexer — discoverable UI, layouts)"
@@ -5219,217 +5224,411 @@ else
 fi
 unset MICRO_DEFAULTS
 
-# ---- Zed editor config ----
-# Zed reads settings and local themes from the XDG config root on macOS.
-# The named theme appears in the picker; settings keep local editor choices.
-# The Oh My Pi ACP entry connects Zed's Agent Panel to the same OMP runtime,
-# authentication, models, tools, and instructions.
-ZED_CONFIG_DIR="$HOME/.config/zed"
-ZED_CONFIG="$ZED_CONFIG_DIR/settings.json"
-ZED_THEME="$ZED_CONFIG_DIR/themes/dracula-sakura.json"
-info "Configuring Zed (Dracula-Sakura, house fonts, editor defaults)..."
-ZED_THEME_JSON=$(cat <<'ZED_THEME_CONF'
-{
-  "$schema": "https://zed.dev/schema/themes/v0.2.0.json",
-  "name": "Dracula-Sakura",
-  "author": "vixygrey-dev-setup",
-  "themes": [
-    {
-      "name": "Dracula-Sakura",
-      "appearance": "dark",
-      "style": {
-        "background": "#282a36ff",
-        "surface.background": "#2f3144ff",
-        "elevated_surface.background": "#323448ff",
-        "border": "#4b4963ff",
-        "border.focused": "#d4b2ffff",
-        "element.hover": "#3b3d52ff",
-        "element.active": "#4b4963ff",
-        "element.selected": "#4b4963ff",
-        "text": "#f8f8f2ff",
-        "text.muted": "#a297cbff",
-        "text.placeholder": "#8a88c7ff",
-        "text.accent": "#ff9fe3ff",
-        "icon": "#ddd2f7ff",
-        "icon.muted": "#a297cbff",
-        "icon.accent": "#ff9fe3ff",
-        "status_bar.background": "#282a36ff",
-        "title_bar.background": "#282a36ff",
-        "title_bar.inactive_background": "#2f3144ff",
-        "toolbar.background": "#282a36ff",
-        "tab_bar.background": "#2f3144ff",
-        "tab.inactive_background": "#2f3144ff",
-        "tab.active_background": "#282a36ff",
-        "search.match_background": "#fff0a866",
-        "search.active_match_background": "#ff9fe366",
-        "panel.background": "#2f3144ff",
-        "editor.foreground": "#f8f8f2ff",
-        "editor.background": "#282a36ff",
-        "editor.gutter.background": "#282a36ff",
-        "editor.active_line.background": "#323448bf",
-        "editor.line_number": "#6272a4ff",
-        "editor.active_line_number": "#ffc2ecff",
-        "terminal.background": "#282a36ff",
-        "terminal.foreground": "#f8f8f2ff",
-        "terminal.bright_foreground": "#ffffffff",
-        "terminal.dim_foreground": "#a297cbff",
-        "terminal.ansi.black": "#282a36ff",
-        "terminal.ansi.bright_black": "#6272a4ff",
-        "terminal.ansi.red": "#ff7aa8ff",
-        "terminal.ansi.bright_red": "#ff94b8ff",
-        "terminal.ansi.green": "#8af7cfff",
-        "terminal.ansi.bright_green": "#a8ffdcff",
-        "terminal.ansi.yellow": "#ffcf93ff",
-        "terminal.ansi.bright_yellow": "#fff0a8ff",
-        "terminal.ansi.blue": "#9be7ffff",
-        "terminal.ansi.bright_blue": "#b9eeffff",
-        "terminal.ansi.magenta": "#ff9fe3ff",
-        "terminal.ansi.bright_magenta": "#ffc2ecff",
-        "terminal.ansi.cyan": "#8af7cfff",
-        "terminal.ansi.bright_cyan": "#9be7ffff",
-        "terminal.ansi.white": "#f8f8f2ff",
-        "terminal.ansi.bright_white": "#ffffffff",
-        "error": "#ff7aa8ff",
-        "warning": "#ffcf93ff",
-        "success": "#8af7cfff",
-        "info": "#9be7ffff",
-        "accents": [
-          "#ff9fe3ff",
-          "#d4b2ffff",
-          "#9be7ffff",
-          "#8af7cfff",
-          "#ffcf93ff",
-          "#ff7aa8ff"
-        ],
-        "syntax": {
-          "boolean": { "color": "#d4b2ffff" },
-          "comment": { "color": "#6272a4ff", "font_style": "italic" },
-          "comment.doc": { "color": "#8a88c7ff", "font_style": "italic" },
-          "constant": { "color": "#d4b2ffff" },
-          "function": { "color": "#8af7cfff" },
-          "keyword": { "color": "#ff9fe3ff" },
-          "number": { "color": "#d4b2ffff" },
-          "operator": { "color": "#ff9fe3ff" },
-          "property": { "color": "#ff7aa8ff" },
-          "punctuation": { "color": "#ddd2f7ff" },
-          "string": { "color": "#fff0a8ff" },
-          "type": { "color": "#9be7ffff" },
-          "variable": { "color": "#f8f8f2ff" },
-          "variable.parameter": { "color": "#ffcf93ff" }
-        }
-      }
-    }
-  ]
-}
-ZED_THEME_CONF
-)
-write_generated "$ZED_THEME" <<< "$ZED_THEME_JSON"
-configured "Zed Dracula-Sakura theme written (~/.config/zed/themes/dracula-sakura.json)"
+# ---- Kiro editor config ----
+# Kiro is based on Code OSS. It reads user settings from the standard macOS
+# Application Support path and scans local extensions under ~/.kiro/extensions.
+# The local theme extension avoids a registry dependency and gives the house
+# palette a stable name in Kiro's theme picker.
+KIRO_CONFIG_DIR="$HOME/Library/Application Support/Kiro/User"
+KIRO_CONFIG="$KIRO_CONFIG_DIR/settings.json"
+KIRO_EXTENSION_DIR="$HOME/.kiro/extensions/vixygrey.dracula-sakura-1.0.0"
+KIRO_EXTENSION_MANIFEST="$KIRO_EXTENSION_DIR/package.json"
+KIRO_THEME="$KIRO_EXTENSION_DIR/themes/dracula-sakura-color-theme.json"
+info "Configuring Kiro (Dracula-Sakura, house fonts, editor defaults)..."
 
-ZED_DEFAULTS=$(cat <<'ZED_CONF'
+KIRO_EXTENSION_JSON=$(cat <<'KIRO_EXTENSION_CONF'
 {
-  "ui_font_family": "Inter",
-  "ui_font_size": 15,
-  "buffer_font_family": "JetBrains Mono",
-  "buffer_font_size": 14,
-  "buffer_line_height": "comfortable",
-  "buffer_font_features": {
-    "calt": true,
-    "liga": true
+  "name": "dracula-sakura",
+  "displayName": "Dracula-Sakura",
+  "description": "Dark plum, rose, lilac, cyan, and mint theme from vixygrey-dev-setup.",
+  "version": "1.0.0",
+  "publisher": "vixygrey",
+  "engines": {
+    "vscode": "^1.80.0"
   },
-  "tab_size": 2,
-  "hard_tabs": false,
-  "format_on_save": "on",
-  "autosave": "on_focus_change",
-  "relative_line_numbers": true,
-  "scrollbar": {
-    "show": "auto",
-    "cursors": true,
-    "git_diff": true,
-    "search_results": true,
-    "selected_symbol": true
-  },
-  "indent_guides": {
-    "enabled": true,
-    "coloring": "indent_aware"
-  },
-  "inlay_hints": {
-    "enabled": true
-  },
-  "git": {
-    "inline_blame": {
-      "enabled": true
-    }
-  },
-  "terminal": {
-    "font_family": "JetBrainsMono Nerd Font",
-    "font_size": 13,
-    "blinking": "on"
-  },
-  "agent_servers": {
-    "Oh My Pi": {
-      "type": "custom",
-      "command": "omp",
-      "args": ["acp"],
-      "env": {}
-    }
-  },
-  "theme": {
-    "mode": "dark",
-    "light": "One Light",
-    "dark": "Dracula-Sakura"
+  "categories": [
+    "Themes"
+  ],
+  "contributes": {
+    "themes": [
+      {
+        "label": "Dracula-Sakura",
+        "uiTheme": "vs-dark",
+        "path": "./themes/dracula-sakura-color-theme.json"
+      }
+    ]
   }
 }
-ZED_CONF
+KIRO_EXTENSION_CONF
+)
+write_generated "$KIRO_EXTENSION_MANIFEST" <<< "$KIRO_EXTENSION_JSON"
+
+KIRO_THEME_JSON=$(cat <<'KIRO_THEME_CONF'
+{
+  "$schema": "vscode://schemas/color-theme",
+  "name": "Dracula-Sakura",
+  "type": "dark",
+  "semanticHighlighting": true,
+  "colors": {
+    "foreground": "#F8F8F2",
+    "descriptionForeground": "#A297CB",
+    "disabledForeground": "#77748F",
+    "focusBorder": "#D4B2FF",
+    "errorForeground": "#FF7AA8",
+    "icon.foreground": "#DDD2F7",
+    "selection.background": "#4B4963",
+    "textLink.foreground": "#9BE7FF",
+    "textLink.activeForeground": "#B9EEFF",
+    "textBlockQuote.background": "#2F3144",
+    "textBlockQuote.border": "#D4B2FF",
+    "textCodeBlock.background": "#232531",
+    "button.background": "#FF9FE3",
+    "button.foreground": "#282A36",
+    "button.hoverBackground": "#FFC2EC",
+    "input.background": "#232531",
+    "input.foreground": "#F8F8F2",
+    "input.border": "#4B4963",
+    "input.placeholderForeground": "#8A88C7",
+    "inputOption.activeBorder": "#D4B2FF",
+    "dropdown.background": "#2F3144",
+    "dropdown.foreground": "#F8F8F2",
+    "dropdown.border": "#4B4963",
+    "badge.background": "#D4B2FF",
+    "badge.foreground": "#282A36",
+    "progressBar.background": "#FF9FE3",
+    "titleBar.activeBackground": "#282A36",
+    "titleBar.activeForeground": "#F8F8F2",
+    "titleBar.inactiveBackground": "#2F3144",
+    "titleBar.inactiveForeground": "#A297CB",
+    "activityBar.background": "#282A36",
+    "activityBar.foreground": "#F8F8F2",
+    "activityBar.inactiveForeground": "#8A88C7",
+    "activityBarBadge.background": "#FF9FE3",
+    "activityBarBadge.foreground": "#282A36",
+    "sideBar.background": "#2F3144",
+    "sideBar.foreground": "#DDD2F7",
+    "sideBar.border": "#3B3D52",
+    "sideBarTitle.foreground": "#F8F8F2",
+    "sideBarSectionHeader.background": "#323448",
+    "sideBarSectionHeader.foreground": "#FFC2EC",
+    "list.activeSelectionBackground": "#4B4963",
+    "list.activeSelectionForeground": "#FFFFFF",
+    "list.inactiveSelectionBackground": "#3B3D52",
+    "list.inactiveSelectionForeground": "#F8F8F2",
+    "list.hoverBackground": "#3B3D52",
+    "list.hoverForeground": "#FFFFFF",
+    "list.highlightForeground": "#FF9FE3",
+    "tree.indentGuidesStroke": "#4B4963",
+    "editorGroup.border": "#3B3D52",
+    "editorGroupHeader.tabsBackground": "#2F3144",
+    "tab.activeBackground": "#282A36",
+    "tab.activeForeground": "#F8F8F2",
+    "tab.activeBorderTop": "#FF9FE3",
+    "tab.inactiveBackground": "#2F3144",
+    "tab.inactiveForeground": "#A297CB",
+    "tab.hoverBackground": "#3B3D52",
+    "editor.background": "#282A36",
+    "editor.foreground": "#F8F8F2",
+    "editorLineNumber.foreground": "#6272A4",
+    "editorLineNumber.activeForeground": "#FFC2EC",
+    "editorCursor.foreground": "#FF9FE3",
+    "editor.selectionBackground": "#4B4963",
+    "editor.inactiveSelectionBackground": "#3B3D52",
+    "editor.selectionHighlightBackground": "#D4B2FF33",
+    "editor.wordHighlightBackground": "#9BE7FF22",
+    "editor.wordHighlightStrongBackground": "#FF9FE333",
+    "editor.lineHighlightBackground": "#323448BF",
+    "editorWhitespace.foreground": "#4B4963",
+    "editorIndentGuide.background1": "#3B3D52",
+    "editorIndentGuide.activeBackground1": "#8A88C7",
+    "editorBracketHighlight.foreground1": "#FF9FE3",
+    "editorBracketHighlight.foreground2": "#D4B2FF",
+    "editorBracketHighlight.foreground3": "#9BE7FF",
+    "editorBracketHighlight.foreground4": "#8AF7CF",
+    "editorBracketHighlight.foreground5": "#FFCF93",
+    "editorBracketHighlight.foreground6": "#FF7AA8",
+    "editorGutter.addedBackground": "#8AF7CF",
+    "editorGutter.modifiedBackground": "#9BE7FF",
+    "editorGutter.deletedBackground": "#FF7AA8",
+    "editorError.foreground": "#FF7AA8",
+    "editorWarning.foreground": "#FFCF93",
+    "editorInfo.foreground": "#9BE7FF",
+    "editorHint.foreground": "#8AF7CF",
+    "editorWidget.background": "#2F3144",
+    "editorWidget.foreground": "#F8F8F2",
+    "editorWidget.border": "#4B4963",
+    "editorSuggestWidget.selectedBackground": "#4B4963",
+    "peekView.border": "#D4B2FF",
+    "peekViewEditor.background": "#232531",
+    "peekViewResult.background": "#2F3144",
+    "peekViewResult.selectionBackground": "#4B4963",
+    "peekViewTitle.background": "#323448",
+    "diffEditor.insertedTextBackground": "#8AF7CF22",
+    "diffEditor.removedTextBackground": "#FF7AA822",
+    "diffEditor.insertedLineBackground": "#8AF7CF11",
+    "diffEditor.removedLineBackground": "#FF7AA811",
+    "panel.background": "#282A36",
+    "panel.border": "#4B4963",
+    "panelTitle.activeBorder": "#FF9FE3",
+    "panelTitle.activeForeground": "#F8F8F2",
+    "panelTitle.inactiveForeground": "#8A88C7",
+    "statusBar.background": "#282A36",
+    "statusBar.foreground": "#F8F8F2",
+    "statusBar.debuggingBackground": "#FF7AA8",
+    "statusBar.debuggingForeground": "#282A36",
+    "statusBar.noFolderBackground": "#2F3144",
+    "terminal.background": "#282A36",
+    "terminal.foreground": "#F8F8F2",
+    "terminal.ansiBlack": "#282A36",
+    "terminal.ansiBrightBlack": "#6272A4",
+    "terminal.ansiRed": "#FF7AA8",
+    "terminal.ansiBrightRed": "#FF94B8",
+    "terminal.ansiGreen": "#8AF7CF",
+    "terminal.ansiBrightGreen": "#A8FFDC",
+    "terminal.ansiYellow": "#FFCF93",
+    "terminal.ansiBrightYellow": "#FFF0A8",
+    "terminal.ansiBlue": "#9BE7FF",
+    "terminal.ansiBrightBlue": "#B9EEFF",
+    "terminal.ansiMagenta": "#FF9FE3",
+    "terminal.ansiBrightMagenta": "#FFC2EC",
+    "terminal.ansiCyan": "#8AF7CF",
+    "terminal.ansiBrightCyan": "#9BE7FF",
+    "terminal.ansiWhite": "#F8F8F2",
+    "terminal.ansiBrightWhite": "#FFFFFF",
+    "terminalCursor.foreground": "#FF9FE3",
+    "notifications.background": "#2F3144",
+    "notifications.foreground": "#F8F8F2",
+    "notifications.border": "#4B4963",
+    "notificationLink.foreground": "#9BE7FF",
+    "gitDecoration.addedResourceForeground": "#8AF7CF",
+    "gitDecoration.modifiedResourceForeground": "#9BE7FF",
+    "gitDecoration.deletedResourceForeground": "#FF7AA8",
+    "gitDecoration.untrackedResourceForeground": "#A8FFDC",
+    "gitDecoration.ignoredResourceForeground": "#77748F",
+    "minimap.background": "#282A36",
+    "scrollbar.shadow": "#00000055",
+    "scrollbarSlider.background": "#6272A455",
+    "scrollbarSlider.hoverBackground": "#8A88C777",
+    "scrollbarSlider.activeBackground": "#D4B2FF88"
+  },
+  "tokenColors": [
+    {
+      "scope": ["comment", "punctuation.definition.comment"],
+      "settings": { "foreground": "#6272A4", "fontStyle": "italic" }
+    },
+    {
+      "scope": ["string", "string.quoted", "markup.inline.raw"],
+      "settings": { "foreground": "#FFF0A8" }
+    },
+    {
+      "scope": ["constant.numeric", "constant.language", "constant.character"],
+      "settings": { "foreground": "#D4B2FF" }
+    },
+    {
+      "scope": ["keyword", "storage", "storage.type", "storage.modifier"],
+      "settings": { "foreground": "#FF9FE3" }
+    },
+    {
+      "scope": ["entity.name.function", "support.function", "meta.function-call"],
+      "settings": { "foreground": "#8AF7CF" }
+    },
+    {
+      "scope": ["entity.name.type", "entity.name.class", "support.type", "support.class"],
+      "settings": { "foreground": "#9BE7FF" }
+    },
+    {
+      "scope": ["variable.parameter", "meta.function.parameters"],
+      "settings": { "foreground": "#FFCF93", "fontStyle": "italic" }
+    },
+    {
+      "scope": ["variable.other.property", "support.variable.property"],
+      "settings": { "foreground": "#FF7AA8" }
+    },
+    {
+      "scope": ["entity.name.tag", "punctuation.definition.tag"],
+      "settings": { "foreground": "#FF9FE3" }
+    },
+    {
+      "scope": ["entity.other.attribute-name"],
+      "settings": { "foreground": "#8AF7CF" }
+    },
+    {
+      "scope": ["markup.heading", "markup.heading entity.name"],
+      "settings": { "foreground": "#FFC2EC", "fontStyle": "bold" }
+    },
+    {
+      "scope": ["markup.bold"],
+      "settings": { "foreground": "#FFCF93", "fontStyle": "bold" }
+    },
+    {
+      "scope": ["markup.italic"],
+      "settings": { "foreground": "#D4B2FF", "fontStyle": "italic" }
+    },
+    {
+      "scope": ["markup.inserted"],
+      "settings": { "foreground": "#8AF7CF" }
+    },
+    {
+      "scope": ["markup.deleted"],
+      "settings": { "foreground": "#FF7AA8" }
+    },
+    {
+      "scope": ["invalid", "invalid.illegal"],
+      "settings": { "foreground": "#FFFFFF", "background": "#FF7AA8" }
+    }
+  ],
+  "semanticTokenColors": {
+    "class": "#9BE7FF",
+    "enum": "#9BE7FF",
+    "interface": "#9BE7FF",
+    "struct": "#9BE7FF",
+    "type": "#9BE7FF",
+    "typeParameter": "#D4B2FF",
+    "function": "#8AF7CF",
+    "method": "#8AF7CF",
+    "property": "#FF7AA8",
+    "enumMember": "#D4B2FF",
+    "variable": "#F8F8F2",
+    "parameter": { "foreground": "#FFCF93", "italic": true },
+    "keyword": "#FF9FE3",
+    "string": "#FFF0A8",
+    "number": "#D4B2FF",
+    "comment": { "foreground": "#6272A4", "italic": true }
+  }
+}
+KIRO_THEME_CONF
+)
+write_generated "$KIRO_THEME" <<< "$KIRO_THEME_JSON"
+configured "Kiro Dracula-Sakura theme extension written (~/.kiro/extensions/vixygrey.dracula-sakura-1.0.0)"
+
+KIRO_DEFAULTS=$(cat <<'KIRO_CONF'
+{
+  "workbench.colorTheme": "Dracula-Sakura",
+  "workbench.preferredDarkColorTheme": "Dracula-Sakura",
+  "workbench.iconTheme": "vs-seti",
+  "workbench.startupEditor": "none",
+  "workbench.tree.indent": 16,
+  "window.autoDetectColorScheme": false,
+  "window.commandCenter": true,
+  "editor.fontFamily": "'JetBrains Mono', Menlo, Monaco, monospace",
+  "editor.fontSize": 14,
+  "editor.fontLigatures": true,
+  "editor.fontWeight": "400",
+  "editor.lineHeight": 22,
+  "editor.minimap.enabled": false,
+  "editor.renderWhitespace": "selection",
+  "editor.renderControlCharacters": true,
+  "editor.smoothScrolling": true,
+  "editor.cursorBlinking": "smooth",
+  "editor.cursorSmoothCaretAnimation": "on",
+  "editor.formatOnSave": true,
+  "editor.formatOnPaste": true,
+  "editor.tabSize": 2,
+  "editor.insertSpaces": true,
+  "editor.detectIndentation": true,
+  "editor.wordWrap": "bounded",
+  "editor.wordWrapColumn": 100,
+  "editor.rulers": [100],
+  "editor.linkedEditing": true,
+  "editor.stickyScroll.enabled": true,
+  "editor.stickyScroll.maxLineCount": 3,
+  "editor.inlayHints.enabled": "onUnlessPressed",
+  "editor.bracketPairColorization.enabled": true,
+  "editor.guides.bracketPairs": "active",
+  "editor.guides.indentation": true,
+  "editor.suggest.preview": true,
+  "files.autoSave": "onFocusChange",
+  "files.trimTrailingWhitespace": true,
+  "files.trimFinalNewlines": true,
+  "files.insertFinalNewline": true,
+  "files.hotExit": "onExitAndWindowClose",
+  "diffEditor.ignoreTrimWhitespace": false,
+  "explorer.confirmDelete": true,
+  "explorer.confirmDragAndDrop": true,
+  "terminal.integrated.defaultProfile.osx": "zsh",
+  "terminal.integrated.fontFamily": "JetBrainsMono Nerd Font",
+  "terminal.integrated.fontSize": 13,
+  "terminal.integrated.cursorStyle": "line",
+  "terminal.integrated.cursorBlinking": true,
+  "terminal.integrated.scrollback": 20000,
+  "git.autofetch": true,
+  "git.openRepositoryInParentFolders": "never",
+  "telemetry.telemetryLevel": "off",
+  "security.workspace.trust.enabled": true,
+  "[markdown]": {
+    "editor.wordWrap": "on",
+    "editor.quickSuggestions": {
+      "comments": "off",
+      "strings": "off",
+      "other": "off"
+    }
+  },
+  "[python]": {
+    "editor.tabSize": 4
+  },
+  "[go]": {
+    "editor.tabSize": 4,
+    "editor.insertSpaces": false
+  },
+  "[rust]": {
+    "editor.tabSize": 4
+  }
+}
+KIRO_CONF
 )
 
-# Zed rewrites settings as JSONC with trailing commas. Normalize that specific
-# syntax before the JSON merge. Files with comments or other unsupported syntax
-# still fail closed and remain byte-for-byte unchanged.
-ZED_MERGE_FILE="$ZED_CONFIG"
-ZED_JSONC_TMP=""
-if [[ "$DRY_RUN" != "true" && -f "$ZED_CONFIG" ]] && installed jq &&
-   ! jq -e . "$ZED_CONFIG" &>/dev/null; then
-    ZED_JSONC_TMP="$(mktemp)"
-    if normalize_zed_jsonc "$ZED_CONFIG" "$ZED_JSONC_TMP"; then
-        ZED_MERGE_FILE="$ZED_JSONC_TMP"
+# Kiro can rewrite settings as JSONC with trailing commas. Normalize that
+# specific syntax before the JSON merge. Other JSONC syntax fails closed.
+KIRO_MERGE_FILE="$KIRO_CONFIG"
+KIRO_JSONC_TMP=""
+if [[ "$DRY_RUN" != "true" && -f "$KIRO_CONFIG" ]] && installed jq &&
+   ! jq -e . "$KIRO_CONFIG" &>/dev/null; then
+    KIRO_JSONC_TMP="$(mktemp)"
+    if normalize_editor_jsonc "$KIRO_CONFIG" "$KIRO_JSONC_TMP"; then
+        KIRO_MERGE_FILE="$KIRO_JSONC_TMP"
     else
-        rm -f "$ZED_JSONC_TMP"
-        ZED_JSONC_TMP=""
+        rm -f "$KIRO_JSONC_TMP"
+        KIRO_JSONC_TMP=""
     fi
 fi
 
-# Migrate only the exact One Dark override emitted before #565. A changed override
-# is a user choice and stays untouched. The settings merge then preserves all other
-# local values while new installations select the named theme.
-ZED_SETTINGS_FILTER="."
-if [[ "$DRY_RUN" != "true" && -f "$ZED_MERGE_FILE" ]] && installed jq; then
-    ZED_THEME_STYLE="$(jq -c '.themes[0].style' <<< "$ZED_THEME_JSON")"
-    if jq -e --argjson style "$ZED_THEME_STYLE" \
-        '.theme_overrides["One Dark"] == $style' "$ZED_MERGE_FILE" &>/dev/null; then
-        ZED_SETTINGS_FILTER='
-          if .theme.dark == "One Dark" then .theme.dark = "Dracula-Sakura" else . end
-          | del(.theme_overrides["One Dark"])
-          | if .theme_overrides == {} then del(.theme_overrides) else . end
-        '
-    fi
-fi
-if merge_json_defaults "$ZED_CONFIG" "$ZED_SETTINGS_FILTER" "$ZED_MERGE_FILE" <<< "$ZED_DEFAULTS"; then
-    [[ -n "$ZED_JSONC_TMP" ]] && rm -f "$ZED_JSONC_TMP"
+# The house theme is an owned choice. Preserve every unrelated user setting.
+KIRO_SETTINGS_FILTER='
+  .["workbench.colorTheme"] = "Dracula-Sakura"
+  | .["workbench.preferredDarkColorTheme"] = "Dracula-Sakura"
+'
+if merge_json_defaults "$KIRO_CONFIG" "$KIRO_SETTINGS_FILTER" "$KIRO_MERGE_FILE" <<< "$KIRO_DEFAULTS"; then
+    [[ -n "$KIRO_JSONC_TMP" ]] && rm -f "$KIRO_JSONC_TMP"
     [[ "$DRY_RUN" == "true" ]] \
-        || success "Zed settings merged with Dracula-Sakura defaults and OMP ACP. Your changes remain."
+        || success "Kiro settings merged with Dracula-Sakura defaults. Your other settings remain."
 else
-    _zed_merge_status=$?
-    [[ -n "$ZED_JSONC_TMP" ]] && rm -f "$ZED_JSONC_TMP"
-    if [[ "$_zed_merge_status" -eq 2 ]]; then
-        warn "Zed settings exist, but jq is missing. New defaults did not merge."
+    _kiro_merge_status=$?
+    [[ -n "$KIRO_JSONC_TMP" ]] && rm -f "$KIRO_JSONC_TMP"
+    if [[ "$_kiro_merge_status" -eq 2 ]]; then
+        warn "Kiro settings exist, but jq is missing. New defaults did not merge."
     else
-        warn "Could not merge Zed settings. The script left $ZED_CONFIG unchanged."
+        warn "Could not merge Kiro settings. The script left $KIRO_CONFIG unchanged."
     fi
-    unset _zed_merge_status
+    unset _kiro_merge_status
 fi
-unset ZED_CONFIG_DIR ZED_CONFIG ZED_THEME ZED_MERGE_FILE ZED_JSONC_TMP
-unset ZED_THEME_JSON ZED_THEME_STYLE ZED_DEFAULTS ZED_SETTINGS_FILTER
+
+# Remove only the old named theme that carries this generator's provenance.
+# Zed settings can include user changes, so they remain untouched.
+ZED_THEME_SUPERSEDED="$HOME/.config/zed/themes/dracula-sakura.json"
+if [[ -f "$ZED_THEME_SUPERSEDED" ]] && installed jq &&
+   jq -e '.author == "vixygrey-dev-setup" and .name == "Dracula-Sakura"' \
+      "$ZED_THEME_SUPERSEDED" &>/dev/null; then
+    if [[ "$DRY_RUN" == "true" ]]; then
+        info "[DRY RUN] Would remove the superseded generated Zed Dracula-Sakura theme (#589)"
+    else
+        rm -f "$ZED_THEME_SUPERSEDED"
+        info "Removed the superseded generated Zed Dracula-Sakura theme (#589)"
+    fi
+fi
+
+unset KIRO_CONFIG_DIR KIRO_CONFIG KIRO_EXTENSION_DIR KIRO_EXTENSION_MANIFEST KIRO_THEME
+unset KIRO_EXTENSION_JSON KIRO_THEME_JSON KIRO_DEFAULTS KIRO_MERGE_FILE KIRO_JSONC_TMP
+unset KIRO_SETTINGS_FILTER ZED_THEME_SUPERSEDED
 
 # ---- Emeraldian Obsidian vault TUI ----
 # Emeraldian uses the macOS Application Support directory. Its custom themes sit
@@ -12409,7 +12608,7 @@ echo "  [~/.config/broot]       Broot git-aware defaults and Dracula-Sakura skin
 echo "  [~/.jqp.yaml]           jq playground theme overrides"
 echo "  [~/.omp/agent]          OMP settings, LSP policy, model routing, theme, and path guard"
 echo "  [~/.agents/skills]      Curated skills Oh My Pi reads natively"
-echo "  [~/.config/zed]         Zed house fonts, Dracula-Sakura theme, and OMP ACP agent"
+echo "  [Application Support/Kiro]  Kiro defaults and named Dracula-Sakura theme"
 echo "  [~/.config/croft]       Croft defaults and native Dracula-Sakura theme"
 echo "  [Application Support/emeraldian]  User-owned defaults and native Dracula-Sakura theme"
 echo "  [Obsidian vaults]       Per-vault Dracula-Sakura theme and appearance defaults"
@@ -12491,7 +12690,7 @@ Complete the manual permissions, credentials, and account steps after the script
 - [ ] Run `ngrok config add-authtoken <TOKEN>` before you create public tunnels.
 - [ ] Run `herald --demo`, then run `herald` to configure email and calendar accounts.
 - [ ] Run `mullvad account login <ACCOUNT_NUMBER>`, then open `mullvad-tui`.
-- [ ] Open Zed's Agent Panel and select **Oh My Pi** to confirm the `omp acp` connection.
+- [ ] Open Kiro and confirm that **Dracula-Sakura** is the selected color theme.
 - [ ] Sign in to Bitwarden.
 - [ ] Select the dark Bitwarden appearance.
 - [ ] Run `concord`.
@@ -12556,7 +12755,7 @@ Every binding is on screen: the **key menu** sits along the bottom, and there ar
 | Tool | Use |
 |------|-----|
 | `omp` | Primary coding agent with hosted roles and local Vulkan fallback |
-| Zed + `omp acp` | OMP inside Zed's Agent Panel through Agent Client Protocol |
+| Kiro | Native project editor with the generated Dracula-Sakura theme |
 | `llama-server` | Local Qwen2.5 Coder endpoint on `127.0.0.1:8081` |
 
 ## Terminal multiplexer & tools
@@ -12596,7 +12795,7 @@ The setup installs a Dracula-Sakura wallpaper at `~/Media/photos/dracula-sakura.
 
 ## Editor and AI
 - **micro** is the primary editor for files and commit messages.
-- **Zed** provides a native project editor with OMP available through ACP.
+- **Kiro** provides a native project editor with practical Code OSS defaults.
 - **OMP** provides coding-agent tools, hosted model roles, and a local fallback.
 - **llama.cpp** serves Qwen2.5 Coder 14B through Vulkan on `127.0.0.1:8081`.
 
@@ -14629,14 +14828,13 @@ mullvad-tui
 
 Mullvad uses fixed application colors and exposes no theme setting.
 
-### Zed and Oh My Pi
-Zed uses Inter for its interface and JetBrains Mono for code.
-The script installs both fonts and applies Dracula-Sakura theme overrides.
-The Agent Panel starts OMP through the configured `omp acp` server.
+### Kiro
+Kiro uses JetBrains Mono for code and the named Dracula-Sakura local theme.
+The script preserves unrelated settings in the standard macOS settings file.
 
 ```bash
-zed .
-omp acp --help
+kiro .
+kiro --version
 ```
 
 ## GUI apps & under-the-hood
@@ -14914,6 +15112,7 @@ if [[ "$DRY_RUN" == "false" ]]; then
         "uv:uv --version"
         "brew:brew --version"
         "micro:micro -version"
+        "kiro:kiro --version"
         "llama.cpp Vulkan:llama-server --list-devices | grep -i vulkan"
         "starship:starship --version"
         "fzf:fzf --version"

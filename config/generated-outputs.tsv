@@ -82,8 +82,9 @@ omp-env-file|$OMP_ENV_FILE|seed|dotenv|configs|bash|none
 omp-lsp-policy|$OMP_LSP_FILE|managed|yaml|configs|yq|none
 zshrc|$ZSHRC|managed|shell|configs|bash|none
 micro-settings|$MICRO_CONFIG_DIR/settings.json|merged|json|configs|jq|none
-zed-settings|$ZED_CONFIG|merged|json|configs|jq|none
-zed-theme|$ZED_THEME|generated|json|configs|jq|none
+kiro-settings|$KIRO_CONFIG|merged|json|configs|jq|none
+kiro-extension-manifest|$KIRO_EXTENSION_MANIFEST|generated|json|configs|jq|none
+kiro-theme|$KIRO_THEME|generated|json|configs|jq|none
 emeraldian-theme|$EMERALDIAN_THEME|generated|toml|configs|taplo|emeraldian
 emeraldian-config|$EMERALDIAN_CONFIG|seed|toml|configs|taplo|emeraldian
 linecast-config|$HOME/.config/linecast/config.json|superseded|json|configs|jq|none
