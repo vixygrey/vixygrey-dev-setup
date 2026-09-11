@@ -10,7 +10,7 @@ active_phase: review
 
 
 metrics:
-  story_start: "2026-09-11T04:51:08Z"
+  story_start: "2026-09-11T12:54:10Z"
 
 
 project:
@@ -21,15 +21,15 @@ project:
 
 status:
   summary: >-
-    Issue 596 removes Bigpowers provisioning, active references, installed plugin files,
-    and the stale MCP denylist entry. Focused checks, preflight, and installed verification pass.
+    The generator and this workstation use GPT-5.6-Luna for the default OMP role.
+    Specialized roles, retry policy, and provider-to-local fallbacks remain unchanged.
 
 git:
-  branch: feature/596-remove-bigpowers
-  hash: c174616
+  branch: feature/598-luna-default
+  hash: 3f4431e
 
 handoff:
-  last_step_completed: "Implemented and verified issue 596"
+  last_step_completed: "Implemented and verified issue 598"
   open_decisions: []
   required_reading:
     - CONVENTIONS.md

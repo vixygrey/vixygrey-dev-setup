@@ -1,35 +1,29 @@
 ## Target
 
-Bigpowers provisioning, OMP plugin state, generated documentation, and project scaffold language.
+The generated OMP `modelRoles.default` assignment and fallback chain.
 
-## Dependents (8)
+## Dependents (4)
 
-- `scripts/setup-dev-tools-mac.sh`: plugin installation helper and declaration.
-- `scripts/setup-dev-tools-mac.sh`: installed configuration verification target.
-- `scripts/setup-dev-tools-mac.sh`: OMP MCP denylist migration.
-- `scripts/setup-dev-tools-mac.sh`: generated project scaffold copy.
-- `scripts/setup-dev-tools-mac.sh`: generated machine reference copy.
-- `tests/helpers.bats`: plugin installation and MCP denylist behavior.
-- `README.md`: active tool inventory and OMP description.
-- `~/.omp/plugins`: installed plugin package, lock entry, and registry state.
+- `scripts/setup-dev-tools-mac.sh`: generated OMP configuration merge.
+- `tests/routing.bats`: exact role and fallback contract.
+- `README.md`: documented model routing behavior.
+- `~/.omp/agent/config.yml`: active merged configuration on provisioned machines.
 
 ## Affected Stories
 
-- Issue #576: original OMP plugin installation.
-- Issue #580: redundant Bigpowers MCP server suppression.
-- Issue #596: complete removal from provisioning and the current machine.
+- Issue #538: workload-based OMP model routing.
+- Issue #598: GPT-5.6-Luna as the default OMP agent.
 
 ## Test Coverage
 
-- `tests/helpers.bats`: OMP plugin lifecycle and atomic MCP JSON updates.
-- `tests/generated-config.bats`: generated scaffold and configuration parsing.
-- `just dry-run`: complete generator behavior without machine mutation.
-- Gap: OMP supplies no isolated plugin root flag for an end-to-end uninstall check.
+- `tests/routing.bats`: validates every model role, fallback chain, local final fallback, and retry policy.
+- `just verify`: asks OMP for the effective configuration.
+- Live model catalog: confirms the Luna selector and supported reasoning levels.
 
-## Risk: Medium
+## Risk: Low
 
-The removal crosses package state, user-owned JSON, generated references, and existing-machine delivery.
+One role changes to a model from the current OMP catalog. Specialized roles and fallback policy remain unchanged.
 
 ## Recommended action
 
-Proceed with a normal-run plugin retirement, an atomic denylist cleanup, focused helper checks, and a live uninstall on this machine.
+Proceed with an exact role update, an explicit Luna fallback chain, a routing contract update, and live configuration verification.

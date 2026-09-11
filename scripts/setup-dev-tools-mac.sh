@@ -12319,11 +12319,11 @@ lsp:
 # while this is off and is the right assignment if it is ever switched on.
 advisor:
   enabled: false
-# Hosted roles follow workload strengths. Codex handles interactive and task work.
-# Gemini handles vision, the advisor, and cheap fan-out. Claude Sonnet is primary
-# only for the two depth-first roles: slow and plan (#538).
+# Hosted roles follow workload strengths. Luna handles ordinary interactive work,
+# while GPT-5.6-Sol handles delegated tasks. Gemini handles vision, the advisor,
+# and cheap fan-out. Claude Sonnet is primary for slow and plan (#538, #598).
 modelRoles:
-  default: openai-codex/gpt-5.6-sol
+  default: openai-codex/gpt-5.6-luna
   task: openai-codex/gpt-5.6-sol
   vision: google/gemini-3.8-flash:medium
   slow: anthropic/claude-sonnet-5:high
@@ -12347,6 +12347,9 @@ retry:
   usageReservePct: 10
   usageReservePolicy: auto
   fallbackChains:
+    openai-codex/gpt-5.6-luna:
+      - google/gemini-3.8-flash:medium
+      - llama.cpp/qwen2.5-coder:14b
     openai-codex/gpt-5.6-sol:
       - google/gemini-3.8-flash:medium
       - llama.cpp/qwen2.5-coder:14b

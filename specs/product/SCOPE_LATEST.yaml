@@ -1,30 +1,29 @@
 # What is in and out of scope for the current initiative.
 # Written by the `scope-work` skill (planning spine step 1 of 3).
 in_scope:
-  - Stop installing and verifying the Bigpowers OMP plugin.
-  - Uninstall the plugin during normal setup runs on provisioned machines.
-  - Remove the stale Bigpowers MCP denylist entry without changing unrelated settings.
-  - Remove active Bigpowers references from generated documents and project scaffolds.
-  - Remove the installed plugin and stale denylist entry from this workstation.
-  - Update focused checks, user documentation, and the changelog.
+  - Set the generated OMP default role to openai-codex/gpt-5.6-luna.
+  - Add an explicit Luna fallback chain through Gemini and local Qwen.
+  - Preserve all specialized model roles and retry policies.
+  - Apply the generated routing to this workstation.
+  - Update focused routing checks, user documentation, and the changelog.
 out_of_scope:
-  - Delete project specifications or architecture records that remain useful without Bigpowers.
-  - Rewrite historical changelog entries, closed bug records, or issue history.
-  - Delete unrelated first-party skills under ~/.agents/skills.
-  - Remove user-owned OMP configuration, sessions, credentials, or unrelated plugins.
+  - Change the task, vision, slow, plan, advisor, smol, tiny, or commit roles.
+  - Change usage reserves, fallback recovery, provider caching, or disabled providers.
+  - Remove the existing GPT-5.6-Sol fallback chain used by the task role.
+  - Change provider credentials or account configuration.
 success_criteria:
-  - A normal setup run removes Bigpowers when OMP reports the plugin as installed.
-  - The setup script does not install or verify Bigpowers.
-  - The MCP cleanup removes only bigpowers-mcp from disabledServers.
-  - Active documentation and generated scaffolds do not require Bigpowers.
-  - OMP reports no installed Bigpowers plugin on this workstation.
+  - OMP reports openai-codex/gpt-5.6-luna for modelRoles.default.
+  - Every specialized model role retains its current assignment.
+  - Luna falls back to Gemini before local Qwen.
+  - Every fallback chain retains local Qwen as its final entry.
+  - A configs run applies the same routing on another provisioned machine.
   - The repository preflight and installed configuration verification pass.
 
 notes:
   prior_art:
-    verdict: replace
+    verdict: extend
     findings:
-      - OMP provides a native plugin uninstall command.
-      - The plugin package lives only in the OMP user plugin root on this workstation.
-      - The legacy global npm copy is already absent and remains in cleanup history.
-      - The existing JSON helper pattern supports an atomic denylist migration.
+      - OMP lists openai-codex/gpt-5.6-luna in its active model catalog.
+      - Luna supports text, images, reasoning, and the max thinking level.
+      - The existing merged configuration refreshes model roles on every configs run.
+      - The routing contract already checks exact roles and fallback invariants.

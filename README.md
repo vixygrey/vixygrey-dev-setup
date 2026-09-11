@@ -920,12 +920,13 @@ OMP installs from the `can1357/tap` Homebrew tap as a prebuilt binary.
 The OMP runtime remains available to shells, git hooks, and launchd jobs.
 
 OMP includes native tools, LSP operations, a DAP debugger, subagents, memory, and nine model roles.
+GPT-5.6-Luna handles ordinary interactive turns. GPT-5.6-Sol handles delegated tasks.
+Gemini handles vision and low-cost roles. Claude Sonnet handles slow and planning work.
 Automatic reasoning handles ordinary turns.
 Usage-aware fallback preserves 10 percent of coding-plan quotas.
 MiniMax Code is disabled. Provider prompt-cache retention stays on automatic defaults.
-The roles use Codex, Gemini, Claude Sonnet, and local Qwen 2.5 Coder.
 
-The local model is the final fallback for each hosted role.
+Each hosted model falls back to another provider before local Qwen 2.5 Coder.
 The `LLAMA_CPP_BASE_URL` variable points OMP to the Vulkan service on port 8081.
 
 OMP also carries the Dracula-Sakura theme and the generated `AGENTS.md`.
