@@ -21,8 +21,8 @@ project:
 
 status:
   summary: >-
-    Issue #589 is complete through PR #590.
-    Kiro replaces Zed with a local Dracula-Sakura theme and merged editor defaults.
+    Version 8.0.0 release metadata is complete.
+    The release compares v7.23.0 through v8.0.0.
 
 handoff:
   next_skill: survey-context
