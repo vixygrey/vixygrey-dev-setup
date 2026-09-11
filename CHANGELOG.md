@@ -8,6 +8,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Changed
+
+- Added runtime profiling for setup phases and installation helpers (#613).
+
 ### Removed
 
 - Removed the remaining Bigpowers cleanup and MCP migration code (#610).

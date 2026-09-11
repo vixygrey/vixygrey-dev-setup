@@ -140,6 +140,10 @@ error() {
 
 banner() {
     local title="$1"
+    timing_phase_end
+    TIMING_PHASE="$title"
+    TIMING_PHASE_START=$SECONDS
+    ((PHASE_COUNTS["$title"]++)) || true
     printf '\033[2K\r'
     echo ""
     echo -e "${MAGENTA}${BOLD}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
@@ -149,6 +153,40 @@ banner() {
     log "=== $title ==="
 }
 
+
+# Runtime profiling is coarse by design. Bash 4 guarantees `SECONDS`, while
+# nanosecond timestamps are not portable across the supported macOS Bash versions.
+declare -A PHASE_SECONDS PHASE_COUNTS HELPER_SECONDS HELPER_CALLS
+TIMING_PHASE=""
+TIMING_PHASE_START=$SECONDS
+timing_phase_end() {
+    [[ -n "$TIMING_PHASE" ]] || return 0
+    (( PHASE_SECONDS["$TIMING_PHASE"] += SECONDS - TIMING_PHASE_START )) || true
+    TIMING_PHASE_START=$SECONDS
+}
+_time_install_helper() {
+    local kind="$1"; shift
+    local started=$SECONDS rc
+    "$@"; rc=$?
+    (( HELPER_CALLS["$kind"]++ )) || true
+    (( HELPER_SECONDS["$kind"] += SECONDS - started )) || true
+    return "$rc"
+}
+
+timing_report() {
+    timing_phase_end
+    echo ""
+    echo -e "${BLUE}${BOLD}Runtime profile:${NC}"
+    echo "  Phases (seconds):"
+    for _timing_key in "${!PHASE_SECONDS[@]}"; do
+        printf '    %-28s %s\n' "$_timing_key" "${PHASE_SECONDS[$_timing_key]}"
+    done
+    echo "  Install helpers (calls, seconds):"
+    for _timing_key in "${!HELPER_SECONDS[@]}"; do
+        printf '    %-28s %s, %s\n' "$_timing_key" "${HELPER_CALLS[$_timing_key]}" "${HELPER_SECONDS[$_timing_key]}"
+    done
+    unset _timing_key
+}
 
 # -- Counters -----------------------------------------------------------------
 INSTALL_SUCCESS=0
@@ -1489,7 +1527,8 @@ _ensure_brew_snapshot() {
 _brew_has_formula() { _ensure_brew_snapshot; [[ "$_BREW_FORMULAE" == *" ${1##*/} "* ]]; }
 _brew_has_cask()    { _ensure_brew_snapshot; [[ "$_BREW_CASKS"    == *" ${1##*/} "* ]]; }
 
-brew_install() {
+brew_install() { _time_install_helper brew _brew_install "$@"; }
+_brew_install() {
     local formula="$1"
     local name="${2:-$1}"
     progress
@@ -1517,7 +1556,8 @@ brew_install() {
     fi
 }
 
-brew_cask_install() {
+brew_cask_install() { _time_install_helper cask _brew_cask_install "$@"; }
+_brew_cask_install() {
     local cask="$1"
     local name="${2:-$1}"
     progress
@@ -1571,7 +1611,8 @@ _npm_has() {
     return 1
 }
 
-npm_global_install() {
+npm_global_install() { _time_install_helper npm _npm_global_install "$@"; }
+_npm_global_install() {
     local pkg="$1"
     local name="${2:-$1}"
     # Any args after the display name go straight to `npm install -g`, for packages that
@@ -1616,7 +1657,8 @@ _ensure_kiro_extension_snapshot() {
 
 # kiro_extension_install <extension-id> <display-name>
 # Installs a registry extension through Kiro's Code OSS command-line interface.
-kiro_extension_install() {
+kiro_extension_install() { _time_install_helper kiro _kiro_extension_install "$@"; }
+_kiro_extension_install() {
     local extension="$1" name="${2:-$1}"
     progress
     if ! installed kiro; then
@@ -1645,7 +1687,8 @@ kiro_extension_install() {
 # Installs a Go tool into $GOBIN (the dir the login shell puts on PATH), so it's
 # reachable both during this run and in new shells. Skips if already present,
 # honors DRY_RUN, and advances the progress bar in every branch.
-go_install() {
+go_install() { _time_install_helper go _go_install "$@"; }
+_go_install() {
     local path="$1" name="$2" desc="${3:-$2}"
     if command -v "$name" &>/dev/null; then
         warn "$name already installed"; progress; return 0
@@ -1668,7 +1711,8 @@ go_install() {
 # Installs a PyPI tool via `uv tool install` (isolated venv, binary on PATH via
 # ~/.local/bin). Skips if present, honors DRY_RUN, advances the progress bar.
 # Pass all four positional args; any trailing args are forwarded to uv.
-uv_tool_install() {
+uv_tool_install() { _time_install_helper uv _uv_tool_install "$@"; }
+_uv_tool_install() {
     local spec="$1" name="$2" desc="$3" done_msg="$4"; shift 4
     if command -v "$name" &>/dev/null; then
         warn "$name already installed"; progress; return 0
@@ -1690,7 +1734,8 @@ uv_tool_install() {
 # cargo_install <pkg> <cmd-name> <description> [cargo install args...]
 # Installs a Rust CLI from crates.io or a Git repository. The command name is
 # checked first because package and binary names can differ (chamber-tui -> chamber).
-cargo_install() {
+cargo_install() { _time_install_helper cargo _cargo_install "$@"; }
+_cargo_install() {
     local package="$1" name="$2" desc="$3"; shift 3
     if command -v "$name" &>/dev/null; then
         warn "$name already installed"; progress; return 0
@@ -1711,7 +1756,8 @@ cargo_install() {
 
 # rustup_component_install <toolchain> <component> <probe-command> <display-name>
 # Installs a component and its toolchain together so a fresh machine needs one run.
-rustup_component_install() {
+rustup_component_install() { _time_install_helper rustup _rustup_component_install "$@"; }
+_rustup_component_install() {
     local toolchain="$1" component="$2" probe="$3" name="$4"
     progress
     if ! installed rustup; then
@@ -15462,6 +15508,7 @@ SCRIPT_END=$(date +%s)
 DURATION=$((SCRIPT_END - SCRIPT_START))
 MINUTES=$((DURATION / 60))
 SECONDS_REMAINING=$((DURATION % 60))
+timing_report
 
 echo ""
 echo -e "${MAGENTA}${BOLD}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
