@@ -6,7 +6,7 @@
 # See AGENTS.md, "Commits, PRs, CHANGELOG".
 workflow_mode: team-pr
 
-active_phase: implementation
+active_phase: review
 
 
 metrics:
@@ -26,10 +26,10 @@ status:
 
 git:
   branch: chore/610-remove-bigpowers
-  hash: fdea929
+  hash: b08d3a6
 
 handoff:
-  last_step_completed: "Started issue 610 implementation"
+  last_step_completed: "Implemented and verified issue 610"
   open_decisions: []
   required_reading:
     - CONVENTIONS.md
