@@ -427,7 +427,7 @@ The generated OMP policy selects Pyright for Python type intelligence and Ruff f
 | **Bun** | Package manager used by OMP to install and update plugin packages |
 | **micro** | The `$EDITOR` -- git/gh/lazygit commit messages, leaf's Ctrl+E, quick edits. Non-modal, on-screen key menu (`Ctrl+G` for help), Dracula theme |
 | **Croft** | VS Code-style terminal IDE with LSP, debugging, source control, PDF previews, and a Dracula-Sakura theme |
-| **Kiro** | Native agent-centric editor with Dracula-Sakura, Even Better TOML, and CodeLLDB extensions |
+| **Kiro** | Native agent-centric editor with 36 curated registry extensions, merged extension defaults, and Dracula-Sakura |
 | **omp** | Oh My Pi coding agent with LSP, DAP, subagents, and role-based routing across Codex, Gemini, Claude Sonnet, and local llama.cpp |
 | **Bigpowers** | OMP plugin with workflow skills, slash commands, and git safety guards |
 | **chezmoi** | Dotfile manager -- backup and restore configs across machines |
@@ -441,6 +441,10 @@ The generated OMP policy selects Pyright for Python type intelligence and Ruff f
 | **cargo-expand** | Show Rust source after macro expansion |
 | **cargo-edit** | Manage Cargo dependencies from the command line |
 | **MCP Inspector** | Inspect and debug Model Context Protocol servers |
+
+Kiro installs the active extension set from the maintainer's workstation. The set covers AWS, containers, Python, Rust, C#, web, markup, linting, formatting, debugging, Git, and editor ergonomics.
+
+The setup merges schema-derived defaults for every configurable extension. It disables extension telemetry and remote XML resources, keeps preview scripts disabled, and preserves user settings.
 
 ---
 
@@ -737,7 +741,7 @@ The script generates config files with sensible defaults:
 | `~/.config/gh-dash/config.yml` | gh-dash | PR/issue sections, Dracula-Sakura theme |
 | `~/Library/Application Support/ngrok/ngrok.yml` | ngrok | Base config (add authtoken). ngrok's real macOS path — **not** `~/.config/ngrok`, which it never reads; a stranded copy there is removed on the next run |
 | `~/.config/micro/settings.json` | micro | Dracula (`dracula-tc`), whitespace cleanup, soft wrap, mouse support, and the shared `$EDITOR` role |
-| `~/Library/Application Support/Kiro/User/settings.json` | Kiro | House fonts, Dracula-Sakura, format-on-save, autosave, editor guides, and terminal defaults |
+| `~/Library/Application Support/Kiro/User/settings.json` | Kiro | House editor defaults plus schema-derived settings for 35 configurable extensions. User values win except for the owned Dracula-Sakura theme |
 | `~/Library/Application Support/emeraldian/config.toml` | Emeraldian | Reading-first defaults, images, and an offline read-only assistant |
 | `~/Library/Application Support/emeraldian/themes/dracula-sakura.toml` | Emeraldian | Native Dracula-Sakura interface, Markdown, syntax, and graph theme |
 | `~/.config/croft/config.json` | Croft | Format on save, selection whitespace, copy on select, 20k terminal scrollback, and whole-project diagnostics |

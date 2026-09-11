@@ -543,6 +543,19 @@ EOF
     [ "$output" = '{"editor.fontSize":14,"personal":true,"workbench.colorTheme":"Dracula-Sakura"}' ]
 }
 
+@test "merge_json_defaults: adds Kiro extension defaults inside user language settings (#594)" {
+    run run_with_helpers '
+        cat > "$HOME/source.json" <<"EOF"
+{"[python]":{"editor.tabSize":8},"aws.profile":"personal"}
+EOF
+        merge_json_defaults "$HOME/settings.json" "." "$HOME/source.json" <<"EOF"
+{"[python]":{"editor.tabSize":4,"editor.defaultFormatter":"charliermarsh.ruff"},"aws.telemetry":false}
+EOF
+        jq -e ".[\"[python]\"][\"editor.defaultFormatter\"] == \"charliermarsh.ruff\" and .[\"[python]\"][\"editor.tabSize\"] == 8 and .[\"aws.profile\"] == \"personal\" and .[\"aws.telemetry\"] == false" "$HOME/settings.json"
+    '
+    [ "$status" -eq 0 ]
+}
+
 # ---------------------------------------------------------------------------
 # #532: the late mise linker is pure filesystem policy and can be exercised
 # without installing a runtime or relying on the current machine PATH.
@@ -632,7 +645,7 @@ EOF
     [[ "$output" == *"[DRY RUN] Would install: Miri for the nightly Rust toolchain"* ]]
 }
 
-@test "kiro_extension_install: installs once when the extension is absent (#592)" {
+@test "kiro_extension_install: caches the list and records successful installs (#594)" {
     run run_with_helpers '
         export LOG_FILE="$HOME/setup.log"
         export ERROR_LOG="$HOME/error.log"
@@ -640,9 +653,10 @@ EOF
         cat > "$HOME/bin/kiro" <<"EOF"
 #!/usr/bin/env bash
 if [[ "$1" == "--list-extensions" ]]; then
-  [[ -f "$HOME/extension-installed" ]] && printf "tamasfe.even-better-toml\n"
-elif [[ "$1 $2" == "--install-extension tamasfe.even-better-toml" ]]; then
-  touch "$HOME/extension-installed"
+  printf "list\n" >> "$HOME/list.log"
+  [[ -f "$HOME/extensions" ]] && cat "$HOME/extensions"
+elif [[ "$1" == "--install-extension" ]]; then
+  printf "%s\n" "$2" >> "$HOME/extensions"
   printf "install\n" >> "$HOME/install.log"
 fi
 EOF
@@ -650,13 +664,14 @@ EOF
         export PATH="$HOME/bin:$PATH"
 
         kiro_extension_install tamasfe.even-better-toml "Even Better TOML"
+        kiro_extension_install vadimcn.vscode-lldb "CodeLLDB"
         kiro_extension_install tamasfe.even-better-toml "Even Better TOML"
-        printf "installed=%s calls=%s\n" \
-          "$([[ -f "$HOME/extension-installed" ]] && echo yes || echo no)" \
-          "$(/usr/bin/wc -l < "$HOME/install.log" | tr -d " ")"
+        printf "installs=%s lists=%s\n" \
+          "$(/usr/bin/wc -l < "$HOME/install.log" | tr -d " ")" \
+          "$(/usr/bin/wc -l < "$HOME/list.log" | tr -d " ")"
     '
     [ "$status" -eq 0 ]
-    [[ "$output" == *"installed=yes calls=1"* ]]
+    [[ "$output" == *"installs=2 lists=1"* ]]
 }
 
 @test "kiro_extension_install: dry-run does not invoke Kiro installation (#592)" {

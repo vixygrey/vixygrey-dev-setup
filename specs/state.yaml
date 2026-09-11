@@ -6,11 +6,11 @@
 # See AGENTS.md, "Commits, PRs, CHANGELOG".
 workflow_mode: team-pr
 
-active_phase: review
+active_phase: verify
 
 
 metrics:
-  story_start: "2026-09-11T04:02:25Z"
+  story_start: "2026-09-11T04:33:00Z"
 
 
 project:
@@ -21,17 +21,18 @@ project:
 
 status:
   summary: >-
-    Issue 592 adds the missing Rust, Kiro, and MCP development tools.
-    The focused dry runs, preflight, and installed configuration verification pass.
+    Issue 594 mirrors the 36 active Kiro registry extensions.
+    The generated Kiro settings include schema-derived defaults for all 35 configurable extensions.
 
 git:
-  branch: feature/592-rust-mcp-tools
-  hash: 338d1b6
+  branch: feature/594-kiro-extensions
+  hash: ed81d1c
 
 handoff:
-  last_step_completed: "Implemented and verified issue 592"
+  last_step_completed: "Implemented issue 594"
   open_decisions: []
   required_reading:
     - CONVENTIONS.md
+    - specs/IMPACT_LATEST.md
     - specs/product/SCOPE_LATEST.yaml
   next_skill: audit-code

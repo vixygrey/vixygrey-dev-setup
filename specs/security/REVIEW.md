@@ -2,34 +2,37 @@
 
 Status: PASS
 
-Date: 2026-09-10
+Date: 2026-09-11
 
-Branch: `feature/replace-zed-with-kiro`
+Branch: `feature/594-kiro-extensions`
 
 ## Scope
 
-This review covers issue #589. The change installs Kiro, generates local editor files, merges user settings, and retires Zed.
+This review covers issue #594. The change installs 36 Kiro registry extensions and adds defaults for 35 configurable extensions.
 
 ## Data Flow
 
-The Kiro cask token and all generated paths are repository constants.
+The extension identifiers and generated settings are repository constants.
 
-`write_generated` writes the local extension manifest and theme. The helper backs up changed files before replacement.
+The script passes each fixed identifier as one argument to `kiro --install-extension`.
 
-`merge_json_defaults` parses existing settings with `jq`. The constant filter reasserts the house theme and preserves unrelated values.
+`merge_json_defaults` parses the generated defaults and existing user settings with `jq`.
 
-The Zed theme cleanup uses one fixed path. It removes the file only when its author and theme name prove generator ownership.
+The defaults-first merge preserves user values. The final filter reasserts only the generated Dracula-Sakura theme name.
+
+No setting contains a credential, account identifier, profile name, network endpoint, or project path.
 
 ## Assessment
 
 | Area | Result | Evidence |
 |---|---|---|
-| Command injection | PASS | No generated value enters a shell evaluation or command string. |
-| Path traversal | PASS | All new paths are fixed under the current user home directory. |
-| Unsafe deserialization | PASS | `jq` rejects malformed settings before any replacement occurs. |
-| User data loss | PASS | Kiro settings retain unrelated values. Zed settings remain untouched. |
-| Supply chain | PASS | Homebrew supplies Kiro. The theme extension contains only local static JSON. |
-| Secrets exposure | PASS | The diff contains no credential values or private keys. |
+| Command injection | PASS | Extension identifiers are fixed quoted arguments. No user value enters a command string. |
+| Path traversal | PASS | This change adds no path derived from user input. |
+| Unsafe deserialization | PASS | `jq` rejects malformed settings before replacement. |
+| User data loss | PASS | The recursive merge preserves user values and nested language settings. |
+| Supply chain | PASS | Kiro installs the explicit registry identifiers through its native extension command. |
+| Secrets exposure | PASS | The diff contains no credential, private key, or account value. |
+| External content | PASS | XML remote resources and Markdown preview scripts are disabled by default. |
 
 ## Findings
 
@@ -37,7 +40,8 @@ No security finding reached confidence 8 of 10. No unresolved HIGH finding exist
 
 ## Verification
 
-- Two focused editor checks passed.
-- The generated manifest, theme, and settings contract passed.
-- `just preflight` passed with 90 checks.
-- The Kiro cask is canonical in Homebrew.
+- The generated configuration smoke check passed with 136 extension settings.
+- All 136 extension settings matched the installed extension manifests.
+- The live inventory matched all 36 declarations.
+- `just preflight` passed with 95 checks.
+- `just verify` reported zero failures.
