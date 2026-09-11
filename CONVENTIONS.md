@@ -266,7 +266,8 @@ guard once, benefit forever.
 | `log` | Verbose detail to `$LOG_FILE`. |
 | `mark_done <key>`, `is_done <key>` | Resume state. No-op under `--dry-run`. |
 | `installed <cmd>` | `command -v <cmd>` test. |
-| `brew_install`, `brew_cask_install`, `npm_global_install`, `omp_plugin_install`, `go_install`, `uv_tool_install`, `cargo_install` | Inspect installed state and skip completed work. Don't call package managers directly. |
+| `brew_install`, `brew_cask_install`, `npm_global_install`, `go_install`, `uv_tool_install`, `cargo_install` | Inspect installed state and skip completed work. Do not call package managers directly. |
+| `retire_omp_plugin` | Remove a formerly provisioned OMP plugin only after the live registry proves that it remains installed. |
 | `write_managed <file> [comment-prefix]`, `write_managed_script <file>` | Wrap stdin in a managed block. Refresh in place on re-run. Back up + replace an unmarked pre-existing file. The `write_managed_script` form keeps the shebang on line 1 and `chmod +x`. |
 | `remove_superseded_managed <file> <explanation> [ref]` | For the *other* half of a path change: clears a copy we wrote at an address the tool no longer reads, and only when it is provably ours. |
 | `git_global` | A `git config --global` WRITE that honors `--dry-run` in one place. **Writes only** — reads stay as raw `git config`. |
@@ -281,9 +282,9 @@ question is "should this be a helper?".
 
 Every run must be safe to repeat. Use the existing guards: `mark_done` /
 `is_done "<key>"`, and the `brew_install` / `brew_cask_install` /
-`npm_global_install` / `omp_plugin_install` / `go_install` /
-`uv_tool_install` / `cargo_install` helpers. They inspect installed state and skip completed
-work. Don't call package managers directly.
+`npm_global_install` / `go_install` / `uv_tool_install` /
+`cargo_install` helpers. They inspect installed state and skip completed work.
+Do not call package managers directly.
 
 Honor `--dry-run`. Any block with side effects must do nothing when
 `$DRY_RUN == "true"` (print an `info "[DRY RUN] Would …"` line instead).
@@ -478,9 +479,8 @@ own periodic review (see "drift" below).
 
   An earlier version of this section rejected `specs/` outright, on the
   grounds that it would be "a single-source duplicate of this file". That
-  was right while nothing consumed it. It stopped being right once
-  bigpowers was adopted for work in this repo: a skill that needs to know
-  the active epic cannot get it from a normative rules document.
+  became obsolete when workflow tools started to consume the active project
+  state. That state cannot come from a normative rules document.
 
   Two boundaries follow, and both are load-bearing:
 

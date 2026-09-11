@@ -13,6 +13,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - Added four Cargo tools, Miri, MCP Inspector, and two Kiro extensions for Rust and TOML development (#592).
 - Added all 36 active Kiro registry extensions and merged safe defaults for every configurable extension (#594).
 
+### Removed
+
+- Removed Bigpowers provisioning, generated references, and installed OMP state (#596).
+
 ## [8.0.0] - 2026-09-11
 
 Version 8.0.0 rebuilds the workstation around OMP, local Vulkan inference, and a smaller set of maintained tools.

@@ -175,7 +175,7 @@ managed_list() { [[ -s "$MANAGED_STATE" ]] && awk -F'\t' -v k="$1" '$1 == k { pr
 # Count all install calls plus standalone progress calls for an accurate progress bar.
 # Note: `grep -c` prints "0" AND exits 1 on zero matches, so `|| echo 0` would append
 # a SECOND "0" ("0\n0") and break the arithmetic. Use `|| true` plus a default instead.
-_INSTALL_CALLS=$(grep -cE '^\s*(brew_install|brew_cask_install|npm_global_install|kiro_extension_install|omp_plugin_install|go_install|uv_tool_install|cargo_install|rustup_component_install) ' "$0" 2>/dev/null || true)
+_INSTALL_CALLS=$(grep -cE '^\s*(brew_install|brew_cask_install|npm_global_install|kiro_extension_install|go_install|uv_tool_install|cargo_install|rustup_component_install) ' "$0" 2>/dev/null || true)
 _PROGRESS_CALLS=$(grep -cE '^\s*progress\s*$' "$0" 2>/dev/null || true)
 INSTALL_TOTAL=$(( ${_INSTALL_CALLS:-0} + ${_PROGRESS_CALLS:-0} ))
 [[ "$INSTALL_TOTAL" -eq 0 ]] && INSTALL_TOTAL=200
@@ -1334,39 +1334,35 @@ merge_json_defaults() {
     return 1
 }
 
-# disable_omp_mcp_server <mcp-file> <server-name>
-# Adds one server to OMP's user denylist without changing definitions or other
-# disabled servers. OMP owns this JSON file, so update it through an atomic merge
-# rather than managed markers. Invalid JSON fails closed (#580).
-disable_omp_mcp_server() {
+# remove_omp_mcp_denylist_entry <mcp-file> <server-name>
+# Removes one retired server from OMP's user denylist without changing definitions
+# or other disabled servers. Invalid JSON fails closed (#596).
+remove_omp_mcp_denylist_entry() {
     local file="$1" server="$2"
     local current tmp
     [[ "$server" =~ ^[A-Za-z0-9_.:-]+$ ]] || return 1
     if [[ "$DRY_RUN" == "true" ]]; then
-        info "[DRY RUN] Would disable OMP MCP server: $server"
+        info "[DRY RUN] Would remove OMP MCP denylist entry: $server"
         return 0
     fi
+    [[ -f "$file" ]] || return 0
     command -v jq &>/dev/null || return 2
     current="$(mktemp)"
     tmp="$(mktemp)"
-    if [[ -f "$file" ]]; then
-        cat "$file" > "$current"
-    else
-        printf '{}\n' > "$current"
-    fi
+    cat "$file" > "$current"
     if jq -e --arg server "$server" '
         if type != "object" then
             error("OMP MCP config must be an object")
         elif (.disabledServers != null and (.disabledServers | type) != "array") then
             error("disabledServers must be an array")
         elif all((.disabledServers // [])[]; type == "string") then
-            .disabledServers = ((.disabledServers // []) | if index($server) then . else . + [$server] end)
+            .disabledServers = ((.disabledServers // []) | map(select(. != $server)))
+            | if .disabledServers == [] then del(.disabledServers) else . end
         else
             error("disabledServers entries must be strings")
         end
     ' "$current" > "$tmp" 2>/dev/null; then
-        mkdir -p "$(dirname "$file")"
-        if [[ -f "$file" ]] && cmp -s "$tmp" "$file"; then
+        if cmp -s "$tmp" "$file"; then
             rm -f "$current" "$tmp"
             return 0
         fi
@@ -1619,41 +1615,24 @@ kiro_extension_install() {
     fi
 }
 
-# omp_plugin_install <package-spec> <plugin-name> <display-name>
-# Installs an OMP plugin into the user plugin root. OMP records the package as
-# enabled, then loads its manifest-declared extensions, skills, and prompts.
-omp_plugin_install() {
-    local package="$1" plugin="$2" name="$3" plugins=""
-    progress
-    is_done "omp-plugin:$plugin" && { warn "$name already completed (resume)"; return 0; }
-
-    if installed omp; then
-        plugins="$(omp plugin list --json 2>> "$LOG_FILE")"
-    fi
-    if [[ "$plugins" =~ \"name\"[[:space:]]*:[[:space:]]*\"$plugin\" ]]; then
-        warn "$name already installed"
-        mark_done "omp-plugin:$plugin"
-        return 0
-    fi
+# retire_omp_plugin <plugin-name> <display-name>
+# Removes a plugin that this generator formerly installed. The live registry
+# proves ownership before the uninstall changes OMP's package root (#596).
+retire_omp_plugin() {
+    local plugin="$1" name="$2" plugins=""
+    installed omp || return 0
+    plugins="$(omp plugin list --json 2>> "$LOG_FILE")" || return 1
+    [[ "$plugins" =~ \"name\"[[:space:]]*:[[:space:]]*\"$plugin\" ]] || return 0
     if [[ "$DRY_RUN" == "true" ]]; then
-        info "[DRY RUN] Would install: $name"
+        info "[DRY RUN] Would uninstall retired OMP plugin: $name"
         return 0
     fi
-    if ! installed omp; then
-        warn "Skipping $name — omp not installed"
-        return 0
-    fi
-    if ! installed bun; then
-        warn "Skipping $name — Bun not installed"
-        return 0
-    fi
-
-    info "Installing $name..."
-    if omp plugin install "$package" >> "$LOG_FILE" 2>&1; then
-        success "$name installed"
-        mark_done "omp-plugin:$plugin"
+    info "Uninstalling retired OMP plugin: $name..."
+    if omp plugin uninstall "$plugin" >> "$LOG_FILE" 2>&1; then
+        success "$name removed from OMP"
     else
-        error "Failed to install $name"
+        error "Failed to uninstall retired OMP plugin: $name"
+        return 1
     fi
 }
 
@@ -2107,6 +2086,7 @@ if [[ "$CLEANUP" == "true" ]]; then
         "formula:keith/formulae/reminders-cli:reminders-cli:removed"
         "npm:@anthropic-ai/claude-code:Claude Code CLI:omp"
         "npm:bigpowers:bigpowers (global copy):OMP plugin"
+        "formula:bun:Bun (former OMP plugin runtime):removed"
         "formula:ikebastuz/wiper/wiper:wiper:removed"
         "formula:glab:glab:removed"
         "formula:doxx:doxx:removed"
@@ -2831,12 +2811,6 @@ if [[ "$VERIFY" == "true" ]]; then
             "$HOME/.config/kitty/kitty.conf"
     }
 
-    _verify_bigpowers() {
-        local out
-        out="$(omp plugin list --json 2>&1)" || return 1
-        jq -e '.npm[]? | select(.name == "bigpowers" and .enabled == true)' \
-            <<<"$out" >/dev/null
-    }
 
     VERIFY_TARGETS=(
         # `omp config get` prints the EFFECTIVE value, so a pass proves omp read the file
@@ -2844,9 +2818,6 @@ if [[ "$VERIFY" == "true" ]]; then
         # Reading theme.dark rather than a model role keeps it honest when no
         # GEMINI_API_KEY is set: the theme resolves with no provider reachable at all.
         "validate|omp|$HOME/.omp/agent/config.yml|_verify_output_has 'dracula-sakura' omp config get theme.dark"
-        # OMP records user plugins separately from agent config. This proves that
-        # Bigpowers is installed, enabled, and visible through OMP's own registry.
-        "validate|omp|$HOME/.omp/plugins/node_modules/bigpowers|_verify_bigpowers"
         # Parse the installed managed file through fastfetch itself. This catches
         # invalid managed-marker comments that body-only JSON checks cannot see (#561).
         "validate|fastfetch|$HOME/.config/fastfetch/config.jsonc|fastfetch --config '$HOME/.config/fastfetch/config.jsonc' --logo none --structure Title"
@@ -4235,13 +4206,10 @@ fi
 
 # pi was retired in #513. omp replaces its agent runtime, web search, local model
 # discovery, approval policies, and one-shot prompt use.
-# OMP ships as a prebuilt native binary. Its plugin manager uses Bun to install
-# package dependencies into the user plugin root.
-brew_install "bun" "Bun (package manager for OMP plugins)"
+# OMP ships as a prebuilt native binary.
 trust_tap can1357/tap
 brew_install "can1357/tap/omp" "omp (Oh My Pi — workload-routed agent harness)"
-omp_plugin_install "bigpowers" "bigpowers" \
-    "Bigpowers (OMP workflow skills and safety extension)"
+retire_omp_plugin "bigpowers" "Bigpowers"
 
 # Clipboard history
 # clipse — TUI clipboard manager (replaces Raycast clipboard history). Not on Homebrew.
@@ -9746,7 +9714,7 @@ SCRIPT
 # -- new-project: scaffold a new project --
 write_managed_script "$HOME/Scripts/bin/new-project" <<'SCRIPT'
 #!/usr/bin/env bash
-# Scaffold a new project with a Bigpowers-aligned repo template.
+# Scaffold a new project with an agent-ready repository template.
 # Usage: new-project <name> [work|personal|oss|learning] [--justfile] [--license SPDX]
 set -euo pipefail
 
@@ -9957,8 +9925,8 @@ fi
 cat > README.md <<README
 # $NAME
 
-A new project scaffolded with a Bigpowers aligned workflow, public agent instructions,
-and a specs first planning structure.
+A new project scaffolded with public agent instructions and a specs-first
+planning structure.
 
 ## Getting started
 
@@ -9975,8 +9943,7 @@ $README_COMMANDS
 
 ## Planning workflow
 
-Use the Bigpowers planning and build skills. Keep product and architecture documentation in
-\`specs/\`, not in ad hoc root files.
+Keep product and architecture documentation in \`specs/\`, not in ad hoc root files.
 README
 
 cat > CHANGELOG.md <<'CHANGELOG'
@@ -10155,8 +10122,7 @@ cat >> AGENTS.md <<'AGENTSMD'
 - Architecture decisions live under `specs/adr/`, one file per decision. Record a decision there once it is made, and keep the matching rule in `CONVENTIONS.md`.
 - Release and execution state live in `specs/release-plan.yaml`, `specs/planning-status.yaml`, `specs/execution-status.yaml`, and `specs/state.yaml`.
 
-## Bigpowers workflow
-- Use Bigpowers skills for planning, execution, and verification when available.
+## Project workflow
 - Read `specs/state.yaml` before resuming interrupted work.
 - Keep `AGENTS.md` stable. Put changing status in `specs/` documents.
 
@@ -11711,8 +11677,6 @@ numbers that appear above. End the report with this statement: "No tool can guar
 ASD-STE100 compliance. Final approval rests with the writer. The official standard is
 a free download at asd-ste100.org."
 
-For a formal audit of an existing document, the `simple-english` skill carries the
-same catalog plus a deterministic lint script.
 WRITING_RULES_BODY
 }
 
@@ -11920,7 +11884,7 @@ if [[ "$DRY_RUN" == "true" ]]; then
     info "[DRY RUN] Would write omp LSP policy -> $OMP_LSP_FILE"
     info "[DRY RUN] Would retire obsolete omp skills and extensions"
     info "[DRY RUN] Would write the protected-paths guard -> $OMP_EXTENSIONS_DIR/protected-paths.ts"
-    info "[DRY RUN] Would disable Bigpowers' redundant broken MCP server (#580)"
+    info "[DRY RUN] Would remove Bigpowers' stale MCP denylist entry (#596)"
 else
     mkdir -p "$OMP_THEME_DIR" "$OMP_SKILLS_DIR" "$OMP_EXTENSIONS_DIR" "$AGENTS_SKILLS"
     for _skill in "${OMP_RETIRED_SKILLS[@]}"; do
@@ -12433,16 +12397,12 @@ OMP_CONFIG_CONF
         warn "omp: yq missing — skipping config.yml merge"
     fi
 
-    # Bigpowers already exposes its catalog through OMP's native bigpowers_skill
-    # tool. Its separate MCP package is redundant and cannot start from the
-    # published npm package: `${workspaceFolder}` is not an OMP environment
-    # variable, and the nested runtime dependencies are not installed (#580,
-    # upstream bigpowers#123). Disable only that discovered server. Keep every
-    # user definition and every other denylist entry.
-    if disable_omp_mcp_server "$OMP_MCP_FILE" "bigpowers-mcp"; then
-        configured "omp: disabled Bigpowers' redundant MCP server; native skills remain available"
+    # The retired plugin no longer discovers this server. Remove only its stale
+    # denylist entry and preserve every user definition and unrelated entry.
+    if remove_omp_mcp_denylist_entry "$OMP_MCP_FILE" "bigpowers-mcp"; then
+        configured "omp: retired Bigpowers MCP denylist entry removed"
     else
-        warn "omp: could not update $OMP_MCP_FILE — Bigpowers MCP may report a startup error"
+        warn "omp: could not update $OMP_MCP_FILE"
     fi
 
     # The seed above owns only the initial template. OMP reads any pasted values

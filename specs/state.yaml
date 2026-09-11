@@ -6,11 +6,11 @@
 # See AGENTS.md, "Commits, PRs, CHANGELOG".
 workflow_mode: team-pr
 
-active_phase: verify
+active_phase: review
 
 
 metrics:
-  story_start: "2026-09-11T04:33:00Z"
+  story_start: "2026-09-11T04:51:08Z"
 
 
 project:
@@ -21,15 +21,15 @@ project:
 
 status:
   summary: >-
-    Issue 594 mirrors the 36 active Kiro registry extensions.
-    The generated Kiro settings include schema-derived defaults for all 35 configurable extensions.
+    Issue 596 removes Bigpowers provisioning, active references, installed plugin files,
+    and the stale MCP denylist entry. Focused checks, preflight, and installed verification pass.
 
 git:
-  branch: feature/594-kiro-extensions
-  hash: ed81d1c
+  branch: feature/596-remove-bigpowers
+  hash: c174616
 
 handoff:
-  last_step_completed: "Implemented issue 594"
+  last_step_completed: "Implemented and verified issue 596"
   open_decisions: []
   required_reading:
     - CONVENTIONS.md
