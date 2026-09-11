@@ -1619,6 +1619,36 @@ brew_install_batch() {
     fi
 }
 
+brew_cask_install_batch() {
+    local entry cask name
+    local -a pending_casks=() pending_names=()
+    _ensure_brew_snapshot
+    for entry in "$@"; do
+        cask="${entry%%|*}"
+        name="${entry#*|}"
+        [[ "$name" == "$entry" ]] && name="$cask"
+        is_done "cask:$cask" && continue
+        _brew_has_cask "$cask" && continue
+        pending_casks+=("$cask")
+        pending_names+=("$name")
+    done
+    ((${#pending_casks[@]} > 0)) || return 0
+    [[ "$DRY_RUN" == "true" ]] && return 0
+    info "Installing Homebrew cask batch (${#pending_casks[@]} casks)..."
+    if brew install --cask --adopt "${pending_casks[@]}" >> "$LOG_FILE" 2>&1; then
+        local i
+        for i in "${!pending_casks[@]}"; do
+            cask="${pending_casks[$i]}"
+            success "${pending_names[$i]} installed"
+            _BREW_CASKS="$_BREW_CASKS${cask##*/} "
+            mark_done "cask:$cask"
+        done
+    else
+        warn "Homebrew cask batch failed — retrying casks individually"
+        return 1
+    fi
+}
+
 brew_install() { _time_install_helper brew _brew_install "$@"; }
 _brew_install() {
     local formula="$1"
@@ -4490,6 +4520,9 @@ if should_run "mac-system"; then
 banner "Mac Apps — System & Utilities"
 
 # UniFi Identity Endpoint removed (dropped from setup).
+brew_cask_install_batch \
+    "lulu|LuLu (outbound firewall)" \
+    "mullvad-vpn|Mullvad VPN (privacy-focused VPN with bundled CLI)" || true
 brew_cask_install "lulu" "LuLu (outbound firewall)"
 # The app package also installs the supported `mullvad` CLI at /usr/local/bin.
 brew_cask_install "mullvad-vpn" "Mullvad VPN (privacy-focused VPN with bundled CLI)"
@@ -4663,6 +4696,10 @@ unset LLAMA_CPP_VERSION LLAMA_CPP_PREFIX LLAMA_CPP_BUILD_ID LLAMA_CPP_MODEL_DIR
 unset LLAMA_CPP_MODEL_NAME LLAMA_CPP_MODEL LLAMA_CPP_MODEL_SIZE LLAMA_CPP_MODEL_SHA256 LLAMA_CPP_MODEL_URL
 
 # LibreOffice is the headless office suite for local document validation and conversion.
+brew_cask_install_batch \
+    "libreoffice|LibreOffice (headless document validation and conversion)" \
+    "obsidian|Obsidian (local Markdown knowledge base)" \
+    "drawio|Draw.io (desktop diagram editor)" || true
 brew_cask_install "libreoffice" "LibreOffice (headless document validation and conversion)"
 brew_cask_install "obsidian" "Obsidian (local Markdown knowledge base)"
 brew_cask_install "drawio" "Draw.io (desktop diagram editor)"
@@ -4688,6 +4725,9 @@ fi  # mac-productivity
 if should_run "mac-browsers"; then
 banner "Mac Apps — Browsers"
 
+brew_cask_install_batch \
+    "google-chrome|Google Chrome" \
+    "firefox|Firefox" || true
 brew_cask_install "google-chrome" "Google Chrome"
 brew_cask_install "firefox" "Firefox"
 
@@ -6556,6 +6596,10 @@ unset OBSIDIAN_VAULTS OBSIDIAN_VAULT OBSIDIAN_THEME_DIR OBSIDIAN_THEME_MARKER
 # ---- Fonts (required for icons in eza, starship, lazygit, etc.) ----
 info "Installing development fonts..."
 
+brew_cask_install_batch \
+    "font-jetbrains-mono|JetBrains Mono (primary dev font)" \
+    "font-jetbrains-mono-nerd-font|JetBrains Mono Nerd Font (with icons)" \
+    "font-inter|Inter (best UI font for web/design)" || true
 brew_cask_install "font-jetbrains-mono" "JetBrains Mono (primary dev font)"
 brew_cask_install "font-jetbrains-mono-nerd-font" "JetBrains Mono Nerd Font (with icons)"
 brew_cask_install "font-inter" "Inter (best UI font for web/design)"
