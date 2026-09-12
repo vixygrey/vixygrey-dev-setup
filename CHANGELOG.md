@@ -6,19 +6,15 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 > Release notes for 7.0.0–7.1.1 live in [GitHub Releases](https://github.com/vixygrey/vixygrey-dev-setup/releases) (auto-generated). This file resumes hand-written notes at 7.2.0.
 
-## [8.3.0] - 2026-09-12
-
-### Added
-
-- Added Kiro global steering generation from the shared `AGENTS.md` instructions (#623).
+## [Unreleased]
 
 ### Changed
 
-- Changed the Kiro extension suite to match the current installed set (#623).
-- Removed the Bigpowers-era `specs/` planning tree and its generated scaffold references (#625).
-- Increased the generated Starship directory truncation length from four to eight components (#627).
+- Correct generated Desktop documentation for commands, safety, installed tools, and post-setup verification (#630).
 
-[8.3.0]: https://github.com/vixygrey/vixygrey-dev-setup/compare/v8.2.0...v8.3.0
+[Unreleased]: https://github.com/vixygrey/vixygrey-dev-setup/compare/v8.3.0...HEAD
+
+## [8.3.0] - 2026-09-12
 
 ## [8.2.0] - 2026-09-11
 
