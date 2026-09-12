@@ -83,6 +83,7 @@ omp-lsp-policy|$OMP_LSP_FILE|managed|yaml|configs|yq|none
 zshrc|$ZSHRC|managed|shell|configs|bash|none
 micro-settings|$MICRO_CONFIG_DIR/settings.json|merged|json|configs|jq|none
 kiro-settings|$KIRO_CONFIG|merged|json|configs|jq|none
+kiro-agents|$KIRO_AGENTS|generated|text|configs|none|none
 kiro-extension-manifest|$KIRO_EXTENSION_MANIFEST|generated|json|configs|jq|none
 kiro-theme|$KIRO_THEME|generated|json|configs|jq|none
 emeraldian-theme|$EMERALDIAN_THEME|generated|toml|configs|taplo|emeraldian

@@ -4275,7 +4275,6 @@ brew_cask_install "kiro" "Kiro (agent-centric native code editor)"
 # Kiro uses the Code OSS extension command-line interface. This list mirrors the
 # active registry extensions on the maintainer's Kiro installation (#594).
 kiro_extension_install "amazonwebservices.aws-toolkit-vscode" "AWS Toolkit"
-kiro_extension_install "charliermarsh.ruff" "Ruff"
 kiro_extension_install "christian-kohler.path-intellisense" "Path Intellisense"
 kiro_extension_install "coenraads.bracket-pair-colorizer-2" "Bracket Pair Colorizer 2"
 kiro_extension_install "davidanson.vscode-markdownlint" "markdownlint"
@@ -4287,19 +4286,14 @@ kiro_extension_install "esbenp.prettier-vscode" "Prettier"
 kiro_extension_install "formulahendry.auto-rename-tag" "Auto Rename Tag"
 kiro_extension_install "gruntfuggly.todo-tree" "Todo Tree"
 kiro_extension_install "llvm-vs-code-extensions.lldb-dap" "LLDB DAP"
-kiro_extension_install "mhutchie.git-graph" "Git Graph"
 kiro_extension_install "mikestead.dotenv" "DotENV"
 kiro_extension_install "ms-azuretools.vscode-containers" "Container Tools"
 kiro_extension_install "ms-dotnettools.vscode-dotnet-runtime" ".NET Install Tool"
-kiro_extension_install "ms-pyright.pyright" "Pyright"
 kiro_extension_install "ms-python.debugpy" "Python Debugger"
 kiro_extension_install "ms-python.python" "Python"
-kiro_extension_install "ms-python.vscode-python-envs" "Python Environments"
 kiro_extension_install "oderwat.indent-rainbow" "indent-rainbow"
 kiro_extension_install "redhat.vscode-xml" "XML"
 kiro_extension_install "redhat.vscode-yaml" "YAML"
-kiro_extension_install "ritwickdey.liveserver" "Live Server"
-kiro_extension_install "rust-lang.rust" "Rust"
 kiro_extension_install "rust-lang.rust-analyzer" "rust-analyzer"
 kiro_extension_install "shardulm94.trailing-spaces" "Trailing Spaces"
 kiro_extension_install "shd101wyy.markdown-preview-enhanced" "Markdown Preview Enhanced"
@@ -6200,7 +6194,7 @@ if [[ -f "$ZED_THEME_SUPERSEDED" ]] && installed jq &&
     fi
 fi
 
-unset KIRO_CONFIG_DIR KIRO_CONFIG KIRO_EXTENSION_DIR KIRO_EXTENSION_MANIFEST KIRO_THEME
+unset KIRO_CONFIG_DIR KIRO_CONFIG KIRO_STEERING_DIR KIRO_AGENTS KIRO_EXTENSION_DIR KIRO_EXTENSION_MANIFEST KIRO_THEME
 unset KIRO_EXTENSION_JSON KIRO_THEME_JSON KIRO_DEFAULTS KIRO_MERGE_FILE KIRO_JSONC_TMP
 unset KIRO_SETTINGS_FILTER ZED_THEME_SUPERSEDED
 
@@ -12116,6 +12110,8 @@ configured "OMP shared skills written (api-testing, d2-diagrams, inspect-machine
 OMP_DIR="$HOME/.omp/agent"
 OMP_THEME_DIR="$OMP_DIR/themes"
 OMP_THEME_FILE="$OMP_THEME_DIR/dracula-sakura.json"
+KIRO_STEERING_DIR="$HOME/.kiro/steering"
+KIRO_AGENTS="$KIRO_STEERING_DIR/AGENTS.md"
 # Two skill directories, both verified against omp's source rather than its docs,
 # which describe the layout without pinning the user-level path (#513):
 #   ~/.omp/agent/skills  — the `native` provider, priority 100.
@@ -12158,6 +12154,7 @@ if [[ "$DRY_RUN" == "true" ]]; then
     info "[DRY RUN] Would write omp LSP policy -> $OMP_LSP_FILE"
     info "[DRY RUN] Would retire obsolete omp skills and extensions"
     info "[DRY RUN] Would write the protected-paths guard -> $OMP_EXTENSIONS_DIR/protected-paths.ts"
+    info "[DRY RUN] Would write Kiro global AGENTS.md -> $KIRO_AGENTS"
 else
     mkdir -p "$OMP_THEME_DIR" "$OMP_SKILLS_DIR" "$OMP_EXTENSIONS_DIR" "$AGENTS_SKILLS"
     for _skill in "${OMP_RETIRED_SKILLS[@]}"; do
@@ -12179,6 +12176,14 @@ else
     emit_writing_rules
     } | write_generated "$OMP_DIR/AGENTS.md"
     success "omp: AGENTS.md written, with the shared writing rules (~/.omp/agent/AGENTS.md)"
+
+    # Kiro consumes the same global AGENTS.md instructions through its global
+    # steering directory. Keep both copies generated from the same emitters.
+    {
+    emit_agent_preferences "Oh My Pi"
+    emit_writing_rules
+    } | write_generated "$KIRO_AGENTS"
+    success "Kiro global AGENTS.md written (~/.kiro/steering/AGENTS.md)"
 
     # -- Dracula-Sakura theme -----------------------------------------------------
     # Same palette as pi's theme, different schema: omp requires every one of its
