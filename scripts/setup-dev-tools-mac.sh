@@ -13094,6 +13094,7 @@ Complete the manual permissions, credentials, and account steps after the script
 - [ ] Run `llama-server --list-devices` and confirm that the output lists a Vulkan device.
 - [ ] Set `GEMINI_API_KEY` before you use OMP roles that route to Gemini.
 - [ ] Run `omp models llama.cpp` to confirm that OMP discovers Qwen2.5 Coder.
+- [ ] Re-run the setup script with `--verify` to confirm that tools read generated configuration.
 
 ## Accounts and keys
 - [ ] Run `gh auth login` to enable the GitHub issue and pull request workflow.
@@ -13223,6 +13224,9 @@ The setup installs a Dracula-Sakura wallpaper at `~/Media/photos/dracula-sakura.
 - **lazygit**, **gh**, and **scc** support GitHub workflows and repository maintenance.
 - **Posting**, **xh**, and **Hurl** support API development.
 - **harlequin** and **usql** provide database clients.
+- **Prettier** formats JavaScript, TypeScript, CSS, Markdown, and YAML.
+- **Taplo** provides a TOML language server and formatter.
+- **MCP Inspector** provides web, CLI, and TUI tools for MCP servers.
 - **d2** provides diagrams as code.
 - **LibreOffice** and **poppler** support visual checks of Office documents.
 - **Draw.io** provides a local desktop diagram editor.
@@ -13293,15 +13297,14 @@ section below.
 | `du` | **dust** | visual disk-usage tree |
 | `df` | **duf** | colorful disk-free table |
 | `top` | **btop** | graphed system monitor |
-| `rm` | **trash** | moves to macOS Trash (recoverable) |
 | `ping` | **gping** | live latency graph |
 | `dig` | **doggo** | colorized DNS, DoH |
 | `watch` | **viddy** | diff-highlighted repeated runs |
 
 > These aliases are **interactive only**. Scripts and AI agents get the real
 > POSIX commands, because none of the replacements accept the original's flags
-> (`du -sh` prints dust's help, `ps aux` silently ignores `aux`). `rm` is the one
-> exception — it still routes to Trash everywhere, and accepts `-r`/`-f`.
+> (`du -sh` prints dust's help, `ps aux` silently ignores `aux`). The setup does
+> not replace `rm`; use `trash` when you need recoverable deletion.
 >
 > Tools without a classic-name alias, reached by their own names: **sd**
 > (find & replace — its own syntax, *not* a sed drop-in), **zoxide** (`z`/`zi`
@@ -13349,6 +13352,19 @@ omp -p "summarise the diff on this branch"
 > OMP loads this file directly.
 >
 > The final fallback is `llama.cpp/qwen2.5-coder:14b`, served locally through Vulkan.
+
+### `mcp-inspector` — MCP Inspector
+MCP Inspector provides web, CLI, and TUI tools for inspecting and debugging MCP servers.
+The setup installs a known-good release because the newest release can request unavailable npm dependencies.
+
+```bash
+# show the available modes and options
+mcp-inspector --help
+# inspect a server with the command-line interface
+mcp-inspector --cli --help
+# inspect a server with the terminal interface
+mcp-inspector --tui --help
+```
 
 ### `llama-server` — Vulkan Local LLM Runtime
 The setup builds llama.cpp v0.4.0 with Vulkan enabled and Metal disabled.
@@ -13452,7 +13468,7 @@ A toolkit of small interactive UI components — prompts, spinners, confirmation
 
 ```bash
 # ask for confirmation before a destructive action
-gum confirm "Delete all build artifacts?" && rm -rf dist/
+gum confirm "Delete all build artifacts?" && trash dist/
 # let the user pick from a list
 gum choose "staging" "production" "dev"
 # show a spinner while a long command runs
@@ -13667,7 +13683,7 @@ fd -e md
 # include hidden/ignored files in the search
 fd -H -I node_modules
 # run a command against each match
-fd -e log -x rm
+fd -e log -x trash
 ```
 
 ### `ast-grep` — ast-grep
@@ -13690,6 +13706,8 @@ Yazi is a fast terminal file manager with previews, fuzzy search, bulk operation
 y
 # launch Yazi in a specific directory
 y ~/Downloads
+# launch Yazi directly without changing the parent shell directory
+yazi ~/Downloads
 ```
 
 Press `q` to quit and change the parent shell directory. Press `Q` to quit without changing it.
@@ -13708,6 +13726,7 @@ ouch list project.zip
 
 ### `rsync` — rsync
 An incremental file-copy and sync tool that only transfers the parts of files that changed, making it far faster than `cp` for large trees or repeated transfers, and it works both locally and over SSH. It's the go-to for syncing project directories, backing up folders, or deploying files to a remote server. `-a` (archive) preserves permissions, timestamps, and symlinks.
+CAUTION: Confirm the destination before you run `rsync --delete`. The flag deletes destination files that are absent from the source.
 
 ```bash
 # sync a local directory, preserving attributes
@@ -13913,7 +13932,7 @@ git log -p
 ```
 
 ### `gh` — GitHub CLI
-The official GitHub CLI for managing pull requests, issues, releases, and repo settings without leaving the terminal. It's central to this PR-first workflow — `gh pr create` opens the PR, and the project's `gh pm` alias squash-merges and deletes the branch in one step. Reach for it anywhere you'd otherwise open github.com.
+The official GitHub CLI manages pull requests, issues, releases, and repository settings from the terminal. It is central to this PR-first workflow. `gh pr create` opens a pull request. Use `gh pr merge --squash --delete-branch` to merge a pull request and remove its branch.
 
 ```bash
 # create a pull request referencing an issue
@@ -13922,8 +13941,8 @@ gh pr create --title "feat(auth): add login" --body "Closes #42"
 gh issue list
 # check out a PR locally to review it
 gh pr checkout 123
-# squash-merge and delete the branch (project alias)
-gh pm
+# squash-merge and delete the branch
+gh pr merge 123 --squash --delete-branch
 ```
 
 ### `lazygit` — Terminal UI for Git
@@ -14250,7 +14269,7 @@ A full-screen terminal UI for Docker: browse containers, images, volumes, and Co
 # launch the TUI; auto-detects a docker-compose.yml in the current directory
 lazydocker
 # point it at a specific compose file
-DOCKER_COMPOSE_FILE=./docker/docker-compose.yml lazydocker
+lazydocker -f ./docker/docker-compose.yml
 ```
 
 > Tip: press `d` on a container to remove it, `[`/`]` to switch panels — check the in-app help (`?`) for the full keymap.
@@ -14627,6 +14646,17 @@ ruff check --fix .
 # format code (Black-compatible style)
 ruff format .
 ```
+
+### `prettier` — Prettier
+Prettier formats JavaScript, TypeScript, CSS, Markdown, and YAML. The global install provides a fallback. Projects can pin their own version.
+
+```bash
+# check formatting without changing files
+prettier --check .
+# format selected files in place
+prettier --write README.md
+```
+
 
 ### `shellcheck` — ShellCheck
 A static analysis linter for shell scripts that catches quoting mistakes, unsafe globbing, portability issues, and other classic bash/sh footguns before they bite in production. Each warning comes with a rationale and suggested fix, which makes it genuinely useful for learning shell pitfalls, not just flagging them. Run it on any script before committing, or wire it into CI/pre-commit for shell-heavy repos.
@@ -15050,16 +15080,6 @@ cliamp next
 
 > Tip: `cliamp setup` walks through connecting streaming providers like Spotify or Qobuz.
 
-### `yazi` (Terminal File Manager)
-Yazi provides file previews, fuzzy search, bulk operations, and directory navigation.
-The generated theme uses the Dracula-Sakura house palette.
-
-```bash
-# open Yazi in the current directory
-y
-# open a specific directory
-yazi ~/Code
-```
 
 
 ### `aria2c` — Multi-Protocol Download Utility
@@ -15303,6 +15323,7 @@ OMP discovers these servers from project markers and command names on `PATH`.
 | Lua | `lua-language-server` | `lua-language-server` |
 | Dockerfile | `docker-language-server start --stdio` | `docker-language-server` |
 | Markdown | `marksman` | `marksman` |
+| TOML | `taplo` | `taplo` |
 | TypeScript, JavaScript, JSON, and CSS lint | `biome lsp-proxy` | `@biomejs/biome` |
 
 The OMP policy disables `ty` and `basedpyright`, so Pyright provides Python type intelligence.
