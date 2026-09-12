@@ -8,9 +8,7 @@ if ((BASH_VERSINFO[0] < 4)); then
     _brew_prefix="$(brew --prefix 2>/dev/null || true)"
     for _newbash in "$_path_bash" "$_brew_prefix/bin/bash" /opt/homebrew/bin/bash /usr/local/bin/bash /opt/local/bin/bash; do
         [[ -n "$_newbash" && -x "$_newbash" ]] || continue
-        [[ "$_newbash" != "$BASH" ]] || continue
-        "$_newbash" -c '(( BASH_VERSINFO[0] >= 4 ))' >/dev/null 2>&1 || continue
-        # shellcheck disable=SC2093
+        # shellcheck disable=SC2093  # Re-exec must replace this shell process.
         exec "$_newbash" "$0" "$@"
     done
     echo "This setup script needs bash 4+ (macOS ships bash 3.2)." >&2
@@ -4355,7 +4353,8 @@ if [[ "$MCP_INSPECTOR_NODE_READY" == "true" ]] && ! ensure_mcp_inspector_node; t
 fi
 if installed npm; then
     npm_global_install "typescript-language-server" "TypeScript and JavaScript language server"
-    npm_global_install "vscode-langservers-extracted" "HTML, CSS, JSON, and ESLint language servers"
+    npm_global_install "vscode-langservers-extracted" "HTML, CSS, and JSON language servers"
+    npm_global_install "vscode-eslint-language-server" "ESLint language server"
     npm_global_install "bash-language-server" "Bash language server"
     npm_global_install "yaml-language-server" "YAML language server"
     npm_global_install "pyright" "Pyright language server"
@@ -15312,7 +15311,7 @@ OMP discovers these servers from project markers and command names on `PATH`.
 | HTML | `vscode-html-language-server` | `vscode-langservers-extracted` |
 | CSS, SCSS, Sass, and Less | `vscode-css-language-server` | `vscode-langservers-extracted` |
 | JSON and JSONC | `vscode-json-language-server` | `vscode-langservers-extracted` |
-| ESLint | `vscode-eslint-language-server` | `vscode-langservers-extracted` |
+| ESLint | `vscode-eslint-language-server` | `vscode-eslint-language-server` |
 | YAML | `yaml-language-server` | `yaml-language-server` |
 | Bash and Zsh | `bash-language-server` | `bash-language-server` |
 | Python types | `pyright-langserver` | `pyright` |
