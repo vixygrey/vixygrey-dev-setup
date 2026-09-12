@@ -4907,7 +4907,7 @@ format = "[@$hostname]($style) "
 [directory]
 style = "bold fg:cyan"
 format = "[✿ ](rose)[$path]($style)[$read_only]($read_only_style) "
-truncation_length = 4
+truncation_length = 8
 truncation_symbol = "…/"
 read_only = " 󰌾"
 read_only_style = "fg:red"
