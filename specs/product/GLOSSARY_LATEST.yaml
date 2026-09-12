@@ -1,6 +1,0 @@
-# Canonical terms, one meaning each. Written by the `define-language` skill.
-#
-# This repo already enforces one-term-per-concept through rules/writing.md.
-# Terms worth capturing here are the repo-specific ones: managed block, category,
-# configs segment, delivery path, delegator chain.
-terms: []

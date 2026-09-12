@@ -15,6 +15,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 ### Changed
 
 - Changed the Kiro extension suite to match the current installed set (#623).
+- Removed the Bigpowers-era `specs/` planning tree and its generated scaffold references (#625).
 
 [Unreleased]: https://github.com/vixygrey/vixygrey-dev-setup/compare/v8.2.0...HEAD
 
