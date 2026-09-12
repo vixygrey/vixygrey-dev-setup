@@ -39,24 +39,16 @@ fine, the tool is ignoring it*.
 The one manual prerequisite is **bash 4+** (`brew install bash`). macOS ships 3.2, and the
 script refuses to run without a newer one.
 
-## Planning and specs
+## Planning and decisions
 
-Evolving state lives in [`specs/`](specs/), not in this file. Read
-[`specs/state.yaml`](specs/state.yaml) before resuming interrupted work; `survey-context`
-does that for you and is the right entry point at the start of any task.
+GitHub issues are the system of record for work items and investigations. Keep
+standing rules in this file and `CONVENTIONS.md`. Keep project-specific plans
+with the issue or in the relevant user-facing documentation.
 
-- **Architecture decisions** are in [`specs/adr/`](specs/adr/), one file per decision. The
-  first seven were extracted from `CONVENTIONS.md`, which still explains the same rules to
-  someone working here today.
-- **What the project is built with, and why**, is in
-  [`specs/tech-architecture/tech-stack.md`](specs/tech-architecture/tech-stack.md).
-- **GitHub issues stay the system of record** for bugs and work items.
-  `specs/bugs/registry.yaml` holds working notes for an investigation in progress, not a
-  replacement for the issue.
-- `specs/state.yaml` carries `workflow_mode: team-pr`. Do not change it to `solo-git`: this
-  repo never commits to `main`.
+Architecture decisions that affect this repository belong in `CONVENTIONS.md`
+when they define a standing rule. Record the reason in the related GitHub issue.
 
-Keep this file stable. Put changing status in `specs/`.
+Keep this file stable. Do not use it for changing project status.
 
 ## The golden rule: edit the generator, never the output
 

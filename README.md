@@ -16,7 +16,7 @@ Homebrew is the primary package manager. npm, Cargo, Go, uv, the OMP plugin mana
 
 ## Project structure
 
-The script is the product. The other tracked files define its assets, generated outputs, documentation, tests, workflows, and planning state.
+The script is the product. The other tracked files define its assets, generated outputs, documentation, tests, and workflows.
 
 | Path | Holds |
 |---|---|
@@ -27,7 +27,6 @@ The script is the product. The other tracked files define its assets, generated 
 | [`AGENTS.md`](AGENTS.md) | Procedural rules: workflow, commands, verification loop |
 | [`CONVENTIONS.md`](CONVENTIONS.md) | Normative rules: how the code must look and behave |
 | [`CONTRIBUTING.md`](CONTRIBUTING.md) | How to open a change, for humans |
-| [`specs/`](specs/) | Planning state, architecture decision records, tech stack |
 | [`.github/`](.github/) | CI, issue templates, pull request template, and branch rules |
 | [`Justfile`](Justfile) | Local commands. Run `just preflight` before any commit. |
 | [`tests/`](tests/) | Helper unit tests and the Homebrew name check |
@@ -646,7 +645,7 @@ Spotlight to find things) rather than agonizing over where it "should" go.
 
 | Script | Alias | Description |
 |--------|-------|-------------|
-| `new-project` | `nproj` | Scaffold an agent-ready repo template: AGENTS.md, CONVENTIONS.md, specs/ cockpit, LF-safe .editorconfig and .gitattributes. Add `--justfile` for an optional minimal starter Justfile |
+| `new-project` | `nproj` | Scaffold an agent-ready repo template: AGENTS.md, CONVENTIONS.md, and LF-safe .editorconfig and .gitattributes. Add `--justfile` for an optional minimal starter Justfile |
 | `clone-work` | `cwork` | Clone a work repo into `~/Code/work/<org>/<repo>` |
 | `clone-personal` | `cpers` | Clone a personal repo into `~/Code/personal/<repo>` |
 | `clean-downloads` | `cleandl` | Delete files in ~/Downloads older than 30 days (interactive) |

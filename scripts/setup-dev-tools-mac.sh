@@ -10194,8 +10194,8 @@ fi
 cat > README.md <<README
 # $NAME
 
-A new project scaffolded with public agent instructions and a specs-first
-planning structure.
+A new project scaffolded with public agent instructions and a focused
+repository structure.
 
 ## Getting started
 
@@ -10207,12 +10207,12 @@ $README_COMMANDS
 
 - \`AGENTS.md\` — public instructions for coding agents
 - \`CONVENTIONS.md\` — normative code, test, and documentation rules
-- \`specs/\` — planning, scope, architecture, release, and verification artifacts
 - \`CHANGELOG.md\` — user facing release history
 
 ## Planning workflow
 
-Keep product and architecture documentation in \`specs/\`, not in ad hoc root files.
+Keep project plans with the related GitHub issue or in the relevant project
+documentation.
 README
 
 cat > CHANGELOG.md <<'CHANGELOG'
@@ -10278,7 +10278,6 @@ This file defines how the code and project artifacts should look and behave.
 
 ## Core rules
 
-- All planning, scope, release, and verification artifacts live in `specs/`.
 - Keep `AGENTS.md` procedural and public. Keep `CONVENTIONS.md` normative.
 - Treat warnings as errors. Investigate and resolve them.
 - Prefer the smallest correct change over broad rewrites.
@@ -10286,11 +10285,9 @@ This file defines how the code and project artifacts should look and behave.
 
 ## Decisions
 
-- Record an architecture decision in `specs/adr/`, one file per decision, named `NNNN-short-slug.md`.
-- Write the context that forced the choice, the choice, and what it costs.
-- Record a decision here once it is made. An open question belongs in an issue.
-- An ADR answers why a rule exists. This file answers what the rule is. Keep both.
-- When a decision changes, supersede the record and update the rule in the same change.
+- Record architecture decisions in the related GitHub issue.
+- Record standing rules in `CONVENTIONS.md`.
+- Update the rule and the issue when a decision changes.
 
 ## Line endings and text files
 
@@ -10334,8 +10331,6 @@ This file defines how the code and project artifacts should look and behave.
 ## Agent workflow
 
 - Read `AGENTS.md` before making structural changes.
-- Read the relevant files in `specs/` before planning or implementation.
-- Keep evolving state in `specs/`, not in `AGENTS.md`.
 CONVENTIONS
 
 cat > AGENTS.md <<'AGENTSMD'
@@ -10384,16 +10379,13 @@ cat >> AGENTS.md <<'AGENTSMD'
 ## Architecture
 <!-- Replace with a short module and boundary summary. -->
 
-## Planning and specs
-- All planning and verification artifacts live in `specs/`. Read `specs/README.md` for the full map.
-- Product scope lives under `specs/product/`.
-- Technical architecture lives under `specs/tech-architecture/`.
-- Architecture decisions live under `specs/adr/`, one file per decision. Record a decision there once it is made, and keep the matching rule in `CONVENTIONS.md`.
-- Release and execution state live in `specs/release-plan.yaml`, `specs/planning-status.yaml`, `specs/execution-status.yaml`, and `specs/state.yaml`.
+## Planning and decisions
+- Track planning, verification, and architecture decisions in GitHub issues.
+- Keep standing rules in `CONVENTIONS.md`.
+- Keep project plans with the related issue or in the relevant project documentation.
 
 ## Project workflow
-- Read `specs/state.yaml` before resuming interrupted work.
-- Keep `AGENTS.md` stable. Put changing status in `specs/` documents.
+- Keep `AGENTS.md` stable. Do not use it for changing project status.
 
 ## Git workflow
 - Use trunk based development. Keep branches short lived and merge back to `main` quickly.
@@ -10416,131 +10408,7 @@ cat >> AGENTS.md <<'AGENTSMD'
 - Do not write code before the issue exists for non trivial work.
 AGENTSMD
 
-mkdir -p specs/product/snapshots specs/epics/archive specs/tech-architecture specs/adr specs/verifications specs/bugs specs/metrics
 
-cat > specs/README.md <<'SPECSREADME'
-# Specs
-
-All planning, scope, architecture, release, and verification artifacts for this project live here.
-
-This directory holds **evolving state**. `CONVENTIONS.md` holds **normative rules** and
-`AGENTS.md` holds **procedure**. A fact that changes as work progresses belongs here. A
-standing rule belongs in one of those two files.
-
-Most files here are written by a skill rather than by hand. Each one names its owner.
-
-| Path | Holds | Written by |
-|---|---|---|
-| `state.yaml` | Workflow mode, active phase, handoff | `session-state` |
-| `planning-status.yaml` | Discover-phase checklist | `run-planning` |
-| `execution-status.yaml` | Per-story and per-epic status | `build-epic` |
-| `release-plan.yaml` | Release index, epics in WSJF order | `plan-release` |
-| `product/` | Scope, vision, glossary | `scope-work`, `elaborate-spec`, `define-language` |
-| `tech-architecture/` | Stack, test plan, security plan, design and refactor plans | `map-codebase`, `plan-tests`, `security-review` |
-| `adr/` | Architecture decision records | By hand, one file per decision |
-| `epics/` | Epic capsules and their stories | `slice-tasks`, `plan-work` |
-| `bugs/` | `registry.yaml` plus one `BUG-*.md` per investigation | `investigate-bug` |
-| `verifications/` | Verification output per story | `verify-work` |
-| `metrics/` | Cycle times and benchmark output | `generate-allure-report`, `run-benchmark` |
-
-Start with `state.yaml`. It names the active phase and the next skill to run.
-SPECSREADME
-
-# Five of the seven directories above hold no seeded file, and git does not track
-# an empty directory — so they never reached the first commit (#496). They existed
-# for whoever ran new-project and vanished on clone, which is the quietest possible
-# failure: the author sees the full tree and everyone else gets a partial one.
-#
-# A README rather than a .gitkeep, for the same reason _spec_stub writes a heading
-# instead of calling touch: an empty tracked file tells a reader nothing, and a tool
-# guarding on `[ -d ... ]` reads "present" as "done". Each one names what belongs
-# there and which skill fills it.
-_spec_dir_readme() { # <dir> <title> <brief>
-    printf '# %s\n\n%s\n' "$2" "$3" > "$1/README.md"
-}
-_spec_dir_readme specs/adr "Architecture decision records" \
-    "One file per decision, named \`NNNN-short-slug.md\`. Record the context that forced a choice, the choice, and what it costs. Written by hand. These are *made* decisions: an open question belongs in an issue. When a decision changes, supersede the record rather than editing it."
-_spec_dir_readme specs/verifications "Verifications" \
-    "Verification output, one file per story. Written by the \`verify-work\` skill."
-_spec_dir_readme specs/epics/archive "Archived epics" \
-    "Completed epic capsules, moved here once their stories are done. Written by the \`build-epic\` skill."
-_spec_dir_readme specs/product/snapshots "Product snapshots" \
-    "Point-in-time copies of the \`product/\` documents, kept when scope changes materially. Written by the \`scope-work\` skill."
-_spec_dir_readme specs/metrics "Metrics" \
-    "Cycle times and benchmark output. Written by the \`generate-allure-report\` and \`run-benchmark\` skills."
-
-cat > specs/state.yaml <<STATE
-workflow_mode: solo-git
-active_phase: discover
-project:
-  name: $NAME
-status:
-  summary: Project scaffolded
-handoff:
-  next_skill: survey-context
-STATE
-
-cat > specs/planning-status.yaml <<'PLANNING'
-discover:
-  survey_context: pending
-  scope_work: pending
-  research_first: pending
-  elaborate_spec: pending
-  plan_release: pending
-  slice_tasks: pending
-PLANNING
-
-cat > specs/execution-status.yaml <<'EXECUTION'
-epics: []
-current_epic: null
-current_story: null
-EXECUTION
-
-cat > specs/release-plan.yaml <<'RELEASE'
-epics: []
-RELEASE
-
-cat > specs/product/SCOPE_LATEST.yaml <<'SCOPE'
-in_scope: []
-out_of_scope: []
-success_criteria: []
-SCOPE
-
-cat > specs/product/VISION_LATEST.yaml <<'VISION'
-problem: ""
-users: []
-outcomes: []
-VISION
-
-cat > specs/product/GLOSSARY_LATEST.yaml <<'GLOSSARY'
-terms: []
-GLOSSARY
-
-cat > specs/bugs/registry.yaml <<'BUGS'
-bugs: []
-BUGS
-
-# A heading and a one-line brief, not `touch` (#472). An empty tracked file tells
-# a reader nothing about what belongs in it, and — the sharper problem — a tool
-# that guards on `[ -f ... ]` reads "present" as "done", so the skill that exists
-# to write the file skips it. The YAML placeholders in this scaffold already seed
-# a real empty value (`bugs: []`, `epics: []`); these were the only bare ones.
-# Naming the skill that fills each one makes the directory self-documenting.
-_spec_stub() { # <path> <title> <brief>
-    printf '# %s\n\n<!-- %s -->\n' "$2" "$3" > "$1"
-}
-_spec_stub specs/tech-architecture/tech-stack.md "Tech stack" \
-    "What this project is built with, and why. Derived by the map-codebase skill; keep it current as the stack changes."
-_spec_stub specs/tech-architecture/SECURITY_PLAN_LATEST.md "Security plan" \
-    "Threat model, trust boundaries, and the checks that guard them. Written by the security-review skill."
-_spec_stub specs/tech-architecture/TEST_PLAN_LATEST.md "Test plan" \
-    "Risk-scaled test architecture: what is tested, at which level, and why. Written by the plan-tests skill."
-_spec_stub specs/tech-architecture/DESIGN_PLAN_LATEST.md "Design plan" \
-    "Interface and module shape decisions, including alternatives considered. Written by the design-interface skill."
-_spec_stub specs/tech-architecture/REFACTOR_LATEST.md "Refactor plan" \
-    "Planned refactors broken into safe incremental steps. Written by the plan-refactor skill."
-_spec_stub specs/tech-architecture/IMPACT_LATEST.md "Impact analysis" \
-    "Blast radius of a proposed change: dependents, affected stories, test coverage. Written by the assess-impact skill."
 
 mkdir -p .github
 cat > .github/PULL_REQUEST_TEMPLATE.md <<'PRTEMPLATE'

@@ -466,33 +466,12 @@ own periodic review (see "drift" below).
 - The release workflow (tag-push → GitHub Actions → release publish) lives
   in `.github/workflows/release.yml` and is procedurally described in
   `AGENTS.md`.
-- **Evolving state.** That belongs in [`specs/`](specs/), which this repo
-  adopted in #493 along with the rest of the machine's `new-project`
-  template. The two do not overlap, and the boundary is worth stating
-  because it used to be drawn in the opposite place:
-
-  | This file | `specs/` |
-  | --- | --- |
-  | Standing rules. True until a decision changes them. | State. Changes as work progresses. |
-  | *How* code here must look and behave. | *What* is being built, and where it stands. |
-  | Read in full by anyone working here. | Read by whichever skill owns the file. |
-
-  An earlier version of this section rejected `specs/` outright, on the
-  grounds that it would be "a single-source duplicate of this file". That
-  became obsolete when workflow tools started to consume the active project
-  state. That state cannot come from a normative rules document.
-
-  Two boundaries follow, and both are load-bearing:
-
-  - **`specs/adr/` records decisions; this file states the rules they
-    produced.** ADRs 0001–0007 were extracted from sections 2, 6, 7, 12,
-    14, and 16. The prose here stays. An ADR answers "why is this the
-    rule", which is the question a reader has a year later; this file
-    answers "what is the rule", which is the question they have today.
-    When a decision changes, supersede the ADR **and** update the rule.
-  - **GitHub issues remain the system of record.** `specs/bugs/registry.yaml`
-    holds working notes for an investigation in progress. It does not
-    replace the issue, and nothing here is tracked only in `specs/`.
+- GitHub issues are the system of record for project work, investigations, and
+  architecture decisions. This file holds the standing rules that those
+  decisions produce.
+- Keep project-specific plans with the related issue or in the relevant
+  user-facing documentation. Do not create a parallel planning tree in this
+  repository.
 - The CHANGELOG. Hand-written from 7.2.0 onward; entries are added under
   `## [Unreleased]` in `### Added` / `### Changed` / `### Fixed` /
   `### Security`, cite the **issue** number rather than the PR, and are
