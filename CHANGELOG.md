@@ -9,7 +9,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 ## [Unreleased]
 
 ### Changed
-- Added the missing ESLint language server package and corrected its generated package mapping (#632).
+- Changed the default OMP model from GPT-5.6-Luna to GPT-5.6-Terra (#634).
 
 - Correct generated Desktop documentation for commands, safety, installed tools, and post-setup verification (#630).
 
