@@ -921,8 +921,7 @@ curl -s http://127.0.0.1:8081/v1/models | jq
 OMP installs from the `can1357/tap` Homebrew tap as a prebuilt binary.
 The OMP runtime remains available to shells, git hooks, and launchd jobs.
 
-OMP includes native tools, LSP operations, a DAP debugger, subagents, memory, and nine model roles.
-GPT-5.6-Luna handles ordinary interactive turns. GPT-5.6-Sol handles delegated tasks.
+GPT-5.6-Terra handles ordinary interactive turns. GPT-5.6-Sol handles delegated tasks.
 Gemini handles vision and low-cost roles. Claude Sonnet handles slow and planning work.
 Automatic reasoning handles ordinary turns.
 Usage-aware fallback preserves 10 percent of coding-plan quotas.
